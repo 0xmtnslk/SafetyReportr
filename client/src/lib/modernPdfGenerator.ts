@@ -35,9 +35,6 @@ export class ModernPDFGenerator {
     this.pageWidth = this.doc.internal.pageSize.width;
     this.currentY = 15;
     this.margin = 15;
-    
-    // Configure UTF-8 encoding for Turkish characters
-    this.doc.setFont('helvetica', 'normal');
   }
 
   private checkPageBreak(requiredSpace: number = 20) {

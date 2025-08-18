@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Download, Plus, FileText, ChevronRight, Edit } from "lucide-react";
 import { useLocation } from "wouter";
-import { downloadModernReportPDF } from "@/lib/modernPdfGenerator";
+import { downloadProfessionalReportPDF } from "@/lib/professionalPdfGenerator";
 
 export default function Reports() {
   const [, setLocation] = useLocation();
@@ -52,7 +52,7 @@ export default function Reports() {
         findings: findings || []
       };
 
-      downloadModernReportPDF(reportData);
+      downloadProfessionalReportPDF(reportData);
       
       toast({
         title: "PDF İndirildi",
