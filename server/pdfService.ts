@@ -166,7 +166,7 @@ const CoverPage = ({ reportData }: { reportData: ReportData }) =>
         ),
         React.createElement(View, { style: styles.tableRow },
           React.createElement(Text, { style: styles.tableLabel }, 'Rapor Tarihi'),
-          React.createElement(Text, { style: styles.tableValue }, reportData.reportDate || new Date().toLocaleDateString('tr-TR'))
+          React.createElement(Text, { style: styles.tableValue }, String(reportData.reportDate || new Date().toLocaleDateString('tr-TR')))
         ),
         React.createElement(View, { style: styles.tableRow },
           React.createElement(Text, { style: styles.tableLabel }, 'Proje Lokasyonu'),
@@ -178,7 +178,7 @@ const CoverPage = ({ reportData }: { reportData: ReportData }) =>
         ),
         React.createElement(View, { style: styles.tableRow },
           React.createElement(Text, { style: styles.tableLabel }, 'Toplam Bulgu Sayısı'),
-          React.createElement(Text, { style: styles.tableValue }, (reportData.findings?.length || 0).toString())
+          React.createElement(Text, { style: styles.tableValue }, String(reportData.findings?.length || 0))
         )
       )
     )
@@ -214,7 +214,7 @@ const FindingPage = ({ finding, findingNumber }: { finding: Finding; findingNumb
         ),
         React.createElement(View, { style: styles.tableRow },
           React.createElement(Text, { style: styles.tableLabel }, 'Tespit Tarihi'),
-          React.createElement(Text, { style: styles.tableValue }, new Date().toLocaleDateString('tr-TR'))
+          React.createElement(Text, { style: styles.tableValue }, String(new Date().toLocaleDateString('tr-TR')))
         )
       ),
 
@@ -251,9 +251,9 @@ const ReportDocument = ({ reportData }: { reportData: ReportData }) =>
       React.createElement(Text, { style: styles.contentText }, reportData.managementSummary)
     ),
 
-    ...(reportData.findings?.map((finding, index) => 
+    ...reportData.findings?.map((finding, index) => 
       React.createElement(FindingPage, { key: finding.id, finding, findingNumber: index + 1 })
-    ) || []),
+    ) || [],
 
     reportData.generalEvaluation && React.createElement(Page, { size: "A4", style: styles.page },
       React.createElement(Text, { style: styles.sectionTitle }, 'GENEL DEĞERLENDİRME VE ÖNERİLER'),

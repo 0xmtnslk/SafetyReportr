@@ -276,7 +276,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const reportData = {
         id: report.id,
         reportNumber: report.reportNumber || 'RPT-2025-001',
-        reportDate: report.reportDate || new Date().toLocaleDateString('tr-TR'),
+        reportDate: report.reportDate ? new Date(report.reportDate).toLocaleDateString('tr-TR') : new Date().toLocaleDateString('tr-TR'),
         projectLocation: report.projectLocation || 'İstinye Üniversitesi Topkapı Liv Hastanesi',
         reporter: report.reporter || 'Metin Salık',
         managementSummary: report.managementSummary,
