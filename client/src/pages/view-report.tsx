@@ -27,16 +27,47 @@ export default function ViewReport({ id }: ViewReportProps) {
   });
 
   const handleExportPDF = async () => {
+    if (!report) {
+      toast({
+        title: "Hata",
+        description: "Rapor verisi bulunamadı.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
+      console.log('PDF export başlıyor, rapor:', report);
+      console.log('Bulgular:', findings);
+
       toast({
         title: "PDF Oluşturuluyor",
         description: "Rapor PDF olarak hazırlanıyor...",
       });
 
       const reportData = {
-        ...(report as any),
-        findings: findings || []
+        id: (report as any).id,
+        reportNumber: (report as any).reportNumber,
+        reportDate: (report as any).reportDate,
+        projectLocation: (report as any).projectLocation,
+        reporter: (report as any).reporter,
+        managementSummary: (report as any).managementSummary,
+        generalEvaluation: (report as any).generalEvaluation,
+        findings: (findings as any[])?.map((finding: any) => ({
+          id: finding.id,
+          section: finding.section || 3,
+          title: finding.title,
+          description: finding.currentSituation || finding.description,
+          dangerLevel: finding.dangerLevel,
+          recommendation: finding.recommendation,
+          images: finding.images || [],
+          location: finding.location || finding.title,
+          processSteps: finding.processSteps || [],
+          isCompleted: finding.status === 'completed'
+        })) || []
       };
+
+      console.log('PDF için hazırlanan veri:', reportData);
 
       await downloadProfessionalReportPDF(reportData);
       
@@ -48,7 +79,7 @@ export default function ViewReport({ id }: ViewReportProps) {
       console.error('PDF export error:', error);
       toast({
         title: "Hata",
-        description: "PDF oluşturulurken bir hata oluştu.",
+        description: `PDF oluşturulurken hata: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}`,
         variant: "destructive",
       });
     }

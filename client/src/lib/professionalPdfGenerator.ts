@@ -50,40 +50,59 @@ export class ProfessionalPDFGenerator {
   }
 
   async generateReport(reportData: ReportData): Promise<Blob> {
-    // Generate cover page
-    await this.generateCoverPage(reportData);
-    
-    // Add management summary
-    if (reportData.managementSummary) {
-      this.addNewPage();
-      this.addManagementSummary(reportData.managementSummary);
-    }
+    console.log('PDF generate başlıyor:', reportData);
 
-    // Add findings - each finding on separate page with table layout
-    const sections = [
-      { number: 2, title: 'Tasarım/İmalat/Montaj Hataları' },
-      { number: 3, title: 'İş Sağlığı ve Güvenliği Bulguları' },
-      { number: 4, title: 'Tamamlanmış Bulgular' }
-    ];
-
-    let findingCounter = 1;
-    for (const section of sections) {
-      const sectionFindings = reportData.findings.filter(f => f.section === section.number);
+    try {
+      // Generate cover page
+      await this.generateCoverPage(reportData);
+      console.log('Kapak sayfası oluşturuldu');
       
-      for (const finding of sectionFindings) {
+      // Add management summary
+      if (reportData.managementSummary) {
         this.addNewPage();
-        await this.addFindingPage(finding, findingCounter, section.title);
-        findingCounter++;
+        this.addManagementSummary(reportData.managementSummary);
+        console.log('Yönetici özeti eklendi');
       }
-    }
 
-    // Add general evaluation
-    if (reportData.generalEvaluation) {
-      this.addNewPage();
-      this.addGeneralEvaluation(reportData.generalEvaluation);
-    }
+      // Add findings - each finding on separate page with table layout
+      const sections = [
+        { number: 2, title: 'Tasarım/İmalat/Montaj Hataları' },
+        { number: 3, title: 'İş Sağlığı ve Güvenliği Bulguları' },
+        { number: 4, title: 'Tamamlanmış Bulgular' }
+      ];
 
-    return this.doc.output('blob');
+      let findingCounter = 1;
+      console.log('Bulgular işleniyor, toplam:', reportData.findings?.length || 0);
+      
+      if (reportData.findings && reportData.findings.length > 0) {
+        for (const section of sections) {
+          const sectionFindings = reportData.findings.filter(f => f.section === section.number);
+          console.log(`Bölüm ${section.number} bulguları:`, sectionFindings.length);
+          
+          for (const finding of sectionFindings) {
+            this.addNewPage();
+            await this.addFindingPage(finding, findingCounter, section.title);
+            findingCounter++;
+          }
+        }
+      }
+
+      // Add general evaluation
+      if (reportData.generalEvaluation) {
+        this.addNewPage();
+        this.addGeneralEvaluation(reportData.generalEvaluation);
+        console.log('Genel değerlendirme eklendi');
+      }
+
+      console.log('PDF tamamlandı, blob oluşturuluyor');
+      const blob = this.doc.output('blob');
+      console.log('Blob oluştu, boyut:', blob.size);
+      return blob;
+
+    } catch (error) {
+      console.error('PDF oluşturma hatası:', error);
+      throw error;
+    }
   }
 
   private encodeTurkishText(text: string): string {
