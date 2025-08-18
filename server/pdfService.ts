@@ -153,7 +153,7 @@ const styles = StyleSheet.create({
   },
 });
 
-const CoverPage = ({ reportData }: { reportData: ReportData }) => (
+const CoverPage: React.FC<{ reportData: ReportData }> = ({ reportData }) => (
   <Page size="A4" style={styles.page}>
     <View style={styles.coverPage}>
       <Text style={styles.title}>İstinye Üniversite Topkapı Liv Hastanesi</Text>
@@ -185,7 +185,7 @@ const CoverPage = ({ reportData }: { reportData: ReportData }) => (
   </Page>
 );
 
-const FindingPage = ({ finding, findingNumber }: { finding: Finding; findingNumber: number }) => {
+const FindingPage: React.FC<{ finding: Finding; findingNumber: number }> = ({ finding, findingNumber }) => {
   const getRiskStyle = (level: string) => {
     switch (level) {
       case 'high': return [styles.riskBadge, styles.riskHigh];
@@ -245,7 +245,7 @@ const FindingPage = ({ finding, findingNumber }: { finding: Finding; findingNumb
   );
 };
 
-const ReportDocument = ({ reportData }: { reportData: ReportData }) => (
+const ReportDocument: React.FC<{ reportData: ReportData }> = ({ reportData }) => (
   <Document>
     <CoverPage reportData={reportData} />
 
