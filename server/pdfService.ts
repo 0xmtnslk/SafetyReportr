@@ -83,7 +83,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   tableRow: {
-    flexDirection: 'row',
+    flexDirection: ాణధడంత్అవచ: React.createElement('react-pdf/renderer'),
     borderBottom: '1px solid #e2e8f0',
   },
   tableLabel: {
@@ -153,37 +153,36 @@ const styles = StyleSheet.create({
   },
 });
 
-const CoverPage = ({ reportData }: { reportData: ReportData }) => (
-  <Page size="A4" style={styles.page}>
-    <View style={styles.coverPage}>
-      <Text style={styles.title}>İstinye Üniversite Topkapı Liv Hastanesi</Text>
-      <Text style={styles.subtitle}>İş Sağlığı ve Güvenliği Saha Gözlem Raporu</Text>
+const CoverPage = ({ reportData }: { reportData: ReportData }) => 
+  React.createElement(Page, { size: "A4", style: styles.page },
+    React.createElement(View, { style: styles.coverPage },
+      React.createElement(Text, { style: styles.title }, 'İstinye Üniversite Topkapı Liv Hastanesi'),
+      React.createElement(Text, { style: styles.subtitle }, 'İş Sağlığı ve Güvenliği Saha Gözlem Raporu'),
 
-      <View style={styles.infoTable}>
-        <View style={styles.tableRow}>
-          <Text style={styles.tableLabel}>Rapor Numarası</Text>
-          <Text style={styles.tableValue}>{reportData.reportNumber || 'RPT-2025-001'}</Text>
-        </View>
-        <View style={styles.tableRow}>
-          <Text style={styles.tableLabel}>Rapor Tarihi</Text>
-          <Text style={styles.tableValue}>{reportData.reportDate || new Date().toLocaleDateString('tr-TR')}</Text>
-        </View>
-        <View style={styles.tableRow}>
-          <Text style={styles.tableLabel}>Proje Lokasyonu</Text>
-          <Text style={styles.tableValue}>{reportData.projectLocation || 'İstinye Üniversitesi Topkapı Liv Hastanesi'}</Text>
-        </View>
-        <View style={styles.tableRow}>
-          <Text style={styles.tableLabel}>Raporlayan Uzman</Text>
-          <Text style={styles.tableValue}>{reportData.reporter || 'Metin Salık'}</Text>
-        </View>
-        <View style={styles.tableRow}>
-          <Text style={styles.tableLabel}>Toplam Bulgu Sayısı</Text>
-          <Text style={styles.tableValue}>{reportData.findings?.length || 0}</Text>
-        </View>
-      </View>
-    </View>
-  </Page>
-);
+      React.createElement(View, { style: styles.infoTable },
+        React.createElement(View, { style: styles.tableRow },
+          React.createElement(Text, { style: styles.tableLabel }, 'Rapor Numarası'),
+          React.createElement(Text, { style: styles.tableValue }, reportData.reportNumber || 'RPT-2025-001')
+        ),
+        React.createElement(View, { style: styles.tableRow },
+          React.createElement(Text, { style: styles.tableLabel }, 'Rapor Tarihi'),
+          React.createElement(Text, { style: styles.tableValue }, reportData.reportDate || new Date().toLocaleDateString('tr-TR'))
+        ),
+        React.createElement(View, { style: styles.tableRow },
+          React.createElement(Text, { style: styles.tableLabel }, 'Proje Lokasyonu'),
+          React.createElement(Text, { style: styles.tableValue }, reportData.projectLocation || 'İstinye Üniversitesi Topkapı Liv Hastanesi')
+        ),
+        React.createElement(View, { style: styles.tableRow },
+          React.createElement(Text, { style: styles.tableLabel }, 'Raporlayan Uzman'),
+          React.createElement(Text, { style: styles.tableValue }, reportData.reporter || 'Metin Salık')
+        ),
+        React.createElement(View, { style: styles.tableRow },
+          React.createElement(Text, { style: styles.tableLabel }, 'Toplam Bulgu Sayısı'),
+          React.createElement(Text, { style: styles.tableValue }, (reportData.findings?.length || 0).toString())
+        )
+      )
+    )
+  );
 
 const FindingPage = ({ finding, findingNumber }: { finding: Finding; findingNumber: number }) => {
   const getRiskStyle = (level: string) => {
@@ -204,70 +203,63 @@ const FindingPage = ({ finding, findingNumber }: { finding: Finding; findingNumb
     }
   };
 
-  return (
-    <Page size="A4" style={styles.page}>
-      <View style={styles.findingPage}>
-        <Text style={styles.findingTitle}>BULGU {findingNumber}: {finding.title}</Text>
+  return React.createElement(Page, { size: "A4", style: styles.page },
+    React.createElement(View, { style: styles.findingPage },
+      React.createElement(Text, { style: styles.findingTitle }, `BULGU ${findingNumber}: ${finding.title}`),
 
-        <View style={styles.infoTable}>
-          <View style={styles.tableRow}>
-            <Text style={styles.tableLabel}>Tespit Yeri/Konum</Text>
-            <Text style={styles.tableValue}>{finding.location || finding.title}</Text>
-          </View>
-          <View style={styles.tableRow}>
-            <Text style={styles.tableLabel}>Tespit Tarihi</Text>
-            <Text style={styles.tableValue}>{new Date().toLocaleDateString('tr-TR')}</Text>
-          </View>
-        </View>
+      React.createElement(View, { style: styles.infoTable },
+        React.createElement(View, { style: styles.tableRow },
+          React.createElement(Text, { style: styles.tableLabel }, 'Tespit Yeri/Konum'),
+          React.createElement(Text, { style: styles.tableValue }, finding.location || finding.title)
+        ),
+        React.createElement(View, { style: styles.tableRow },
+          React.createElement(Text, { style: styles.tableLabel }, 'Tespit Tarihi'),
+          React.createElement(Text, { style: styles.tableValue }, new Date().toLocaleDateString('tr-TR'))
+        )
+      ),
 
-        <View style={styles.contentSection}>
-          <Text style={styles.contentLabel}>Mevcut Durum</Text>
-          <Text style={styles.contentText}>{finding.description || 'Belirtilmemiş'}</Text>
-        </View>
+      React.createElement(View, { style: styles.contentSection },
+        React.createElement(Text, { style: styles.contentLabel }, 'Mevcut Durum'),
+        React.createElement(Text, { style: styles.contentText }, finding.description || 'Belirtilmemiş')
+      ),
 
-        <View style={styles.contentSection}>
-          <Text style={styles.contentLabel}>Yasal Dayanak</Text>
-          <Text style={styles.contentText}>İş Sağlığı ve Güvenliği Kanunu ve ilgili yönetmelikler kapsamında değerlendirilen bu bulgu, işyeri güvenliği standartlarına uygunluk açısından ele alınmıştır.</Text>
-        </View>
+      React.createElement(View, { style: styles.contentSection },
+        React.createElement(Text, { style: styles.contentLabel }, 'Yasal Dayanak'),
+        React.createElement(Text, { style: styles.contentText }, 'İş Sağlığı ve Güvenliği Kanunu ve ilgili yönetmelikler kapsamında değerlendirilen bu bulgu, işyeri güvenliği standartlarına uygunluk açısından ele alınmıştır.')
+      ),
 
-        <View style={styles.contentSection}>
-          <Text style={styles.contentLabel}>İSG Uzmanı Görüşü</Text>
-          <Text style={styles.contentText}>
-            {finding.recommendation || 'Tespit edilen durumun düzeltilmesi için gerekli önlemlerin alınması ve güvenlik standartlarına uygunluğun sağlanması önerilmektedir.'}
-          </Text>
-        </View>
+      React.createElement(View, { style: styles.contentSection },
+        React.createElement(Text, { style: styles.contentLabel }, 'İSG Uzmanı Görüşü'),
+        React.createElement(Text, { style: styles.contentText }, 
+          finding.recommendation || 'Tespit edilen durumun düzeltilmesi için gerekli önlemlerin alınması ve güvenlik standartlarına uygunluğun sağlanması önerilmektedir.'
+        )
+      ),
 
-        <View style={getRiskStyle(finding.dangerLevel || 'medium')}>
-          <Text>RİSK SEVİYESİ: {getRiskText(finding.dangerLevel || 'medium')}</Text>
-        </View>
-      </View>
-    </Page>
+      React.createElement(View, { style: getRiskStyle(finding.dangerLevel || 'medium') },
+        React.createElement(Text, null, `RİSK SEVİYESİ: ${getRiskText(finding.dangerLevel || 'medium')}`)
+      )
+    )
   );
 };
 
-const ReportDocument = ({ reportData }: { reportData: ReportData }) => (
-  <Document>
-    <CoverPage reportData={reportData} />
+const ReportDocument = ({ reportData }: { reportData: ReportData }) => 
+  React.createElement(Document, null,
+    React.createElement(CoverPage, { reportData }),
 
-    {reportData.managementSummary && (
-      <Page size="A4" style={styles.page}>
-        <Text style={styles.sectionTitle}>YÖNETİCİ ÖZETİ</Text>
-        <Text style={styles.contentText}>{reportData.managementSummary}</Text>
-      </Page>
-    )}
+    reportData.managementSummary && React.createElement(Page, { size: "A4", style: styles.page },
+      React.createElement(Text, { style: styles.sectionTitle }, 'YÖNETİCİ ÖZETİ'),
+      React.createElement(Text, { style: styles.contentText }, reportData.managementSummary)
+    ),
 
-    {reportData.findings?.map((finding, index) => (
-      <FindingPage key={finding.id} finding={finding} findingNumber={index + 1} />
-    ))}
+    ...(reportData.findings?.map((finding, index) => 
+      React.createElement(FindingPage, { key: finding.id, finding, findingNumber: index + 1 })
+    ) || []),
 
-    {reportData.generalEvaluation && (
-      <Page size="A4" style={styles.page}>
-        <Text style={styles.sectionTitle}>GENEL DEĞERLENDİRME VE ÖNERİLER</Text>
-        <Text style={styles.contentText}>{reportData.generalEvaluation}</Text>
-      </Page>
-    )}
-  </Document>
-);
+    reportData.generalEvaluation && React.createElement(Page, { size: "A4", style: styles.page },
+      React.createElement(Text, { style: styles.sectionTitle }, 'GENEL DEĞERLENDİRME VE ÖNERİLER'),
+      React.createElement(Text, { style: styles.contentText }, reportData.generalEvaluation)
+    )
+  );
 
 export class ReactPdfService {
   async generatePDF(reportData: ReportData): Promise<Uint8Array> {
