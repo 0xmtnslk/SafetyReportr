@@ -70,8 +70,27 @@ export default function ViewReport({ id }: ViewReportProps) {
       console.log('PDF için hazırlanan veri:', reportData);
       console.log('FinalPdfGenerator - print penceresi açılıyor...');
 
-      const pdfGenerator = new FinalPdfGenerator();
-      pdfGenerator.generateReport(reportData).catch(console.error);
+      // Backend'den PDF oluştur ve indir
+      const response = await fetch(`/api/reports/${id}/pdf`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('PDF oluşturulamadı');
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `ISG_Raporu_${reportData.reportNumber || new Date().toISOString().split('T')[0]}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
       
       toast({
         title: "PDF İndirildi",

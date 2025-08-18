@@ -3,6 +3,7 @@ import express from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertReportSchema, insertFindingSchema, insertOfflineQueueSchema } from "@shared/schema";
+import { PuppeteerPdfService } from "./pdfService";
 import jwt from "jsonwebtoken";
 import multer from "multer";
 import sharp from "sharp";
@@ -258,6 +259,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Mark processed error:", error);
       res.status(500).json({ message: "Failed to mark item as processed" });
+    }
+  });
+
+  // PDF Generation endpoint
+  app.post("/api/reports/:id/pdf", authenticateToken, async (req: any, res) => {
+    try {
+      const reportId = req.params.id;
+      const report = await storage.getReport(reportId, req.user.id);
+      if (!report) {
+        return res.status(404).json({ message: "Report not found" });
+      }
+
+      const findings = await storage.getReportFindings(reportId, req.user.id);
+      
+      const reportData = {
+        id: report.id,
+        reportNumber: report.reportNumber || 'RPT-2025-001',
+        reportDate: report.reportDate || new Date().toLocaleDateString('tr-TR'),
+        projectLocation: report.projectLocation || 'İstinye Üniversitesi Topkapı Liv Hastanesi',
+        reporter: report.reporter || 'Metin Salık',
+        managementSummary: report.managementSummary,
+        generalEvaluation: report.generalEvaluation,
+        findings: findings.map((finding: any) => ({
+          id: finding.id,
+          section: finding.section || 3,
+          title: finding.title,
+          description: finding.currentSituation || finding.description,
+          dangerLevel: finding.dangerLevel,
+          recommendation: finding.recommendation,
+          images: finding.images || [],
+          location: finding.location || finding.title,
+          processSteps: finding.processSteps || [],
+          isCompleted: finding.status === 'completed'
+        }))
+      };
+
+      const pdfService = new PuppeteerPdfService();
+      const pdfBuffer = await pdfService.generatePDF(reportData);
+
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="ISG_Raporu_${reportData.reportNumber}.pdf"`);
+      res.send(Buffer.from(pdfBuffer));
+    } catch (error) {
+      console.error("PDF generation error:", error);
+      res.status(500).json({ message: "PDF oluşturulurken hata oluştu" });
     }
   });
 
