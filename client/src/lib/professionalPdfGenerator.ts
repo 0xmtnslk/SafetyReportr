@@ -83,14 +83,12 @@ export class ProfessionalPDFGenerator {
       this.addGeneralEvaluation(reportData.generalEvaluation);
     }
 
-    return new Blob([this.doc.output('blob')], { type: 'application/pdf' });
+    return this.doc.output('blob');
   }
 
   private encodeTurkishText(text: string): string {
-    if (!text) return '';
-    
-    // Simple approach: keep Turkish characters as is since jsPDF can handle them with proper configuration
-    return text;
+    // No encoding needed - just return text as-is for Turkish characters
+    return text || '';
   }
 
   private async generateCoverPage(reportData: ReportData): Promise<void> {
@@ -462,42 +460,9 @@ export async function downloadProfessionalReportPDF(reportData: ReportData): Pro
       findingsCount: reportData.findings?.length || 0
     });
 
-    // Create a simple PDF using jsPDF without complex operations
-    const doc = new jsPDF('p', 'mm', 'a4');
-    
-    // Set font for Turkish characters
-    doc.setFont('helvetica', 'normal');
-    
-    // Title
-    doc.setFontSize(16);
-    doc.text('İSG Raporu', 20, 30);
-    
-    // Report info
-    doc.setFontSize(12);
-    doc.text(`Rapor No: ${reportData.reportNumber || 'Belirtilmemiş'}`, 20, 50);
-    doc.text(`Tarih: ${new Date(reportData.reportDate).toLocaleDateString('tr-TR')}`, 20, 60);
-    doc.text(`Lokasyon: ${reportData.projectLocation || 'Belirtilmemiş'}`, 20, 70);
-    doc.text(`Hazırlayan: ${reportData.reporter || 'Belirtilmemiş'}`, 20, 80);
-    
-    // Findings summary
-    if (reportData.findings && reportData.findings.length > 0) {
-      doc.text(`Toplam Tespit: ${reportData.findings.length}`, 20, 100);
-      
-      let yPos = 120;
-      const limitedFindings = reportData.findings.slice(0, 10);
-      for (let i = 0; i < limitedFindings.length; i++) {
-        const finding = limitedFindings[i];
-        if (yPos > 250) break; // Page break
-        
-        doc.setFontSize(10);
-        doc.text(`${i + 1}. ${finding.title || 'Başlıksız tespit'}`, 20, yPos);
-        doc.text(`   Risk: ${finding.dangerLevel === 'high' ? 'Yüksek' : finding.dangerLevel === 'medium' ? 'Orta' : 'Düşük'}`, 25, yPos + 5);
-        yPos += 15;
-      }
-    }
-
-    // Convert to blob and download
-    const pdfBlob = doc.output('blob');
+    // Use the professional PDF generator that already exists
+    const generator = new ProfessionalPDFGenerator();
+    const pdfBlob = await generator.generateReport(reportData);
     
     console.log('PDF blob oluşturuldu, boyut:', pdfBlob.size);
     
