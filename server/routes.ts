@@ -3,7 +3,7 @@ import express from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertReportSchema, insertFindingSchema, insertOfflineQueueSchema } from "@shared/schema";
-import { PuppeteerPdfService } from "./pdfService";
+import { ReactPdfService } from "./pdfService";
 import jwt from "jsonwebtoken";
 import multer from "multer";
 import sharp from "sharp";
@@ -295,7 +295,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }))
       };
 
-      const pdfService = new PuppeteerPdfService();
+      const pdfService = new ReactPdfService();
       const pdfBuffer = await pdfService.generatePDF(reportData);
 
       res.setHeader('Content-Type', 'application/pdf');

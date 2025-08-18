@@ -73,14 +73,14 @@ export default function ViewReport({ id }: ViewReportProps) {
 
       // Backend'den PDF oluştur ve indir
       const response = await fetch(`/api/reports/${id}/pdf`, {
-        method: 'POST',
+        method: 'GET',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
       });
 
       if (!response.ok) {
-        throw new Error('PDF oluşturulamadı');
+        throw new Error('PDF oluşturulamadı');dı');
       }
 
       const blob = await response.blob();
