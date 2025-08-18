@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { FileText, Download, Edit, ArrowLeft, Calendar, MapPin, User, AlertTriangle } from "lucide-react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
-import { ModernPdfGenerator } from "@/lib/modernPdfGenerator";
+import { FinalPdfGenerator } from "@/lib/finalPdfGenerator";
 
 interface ViewReportProps {
   id: string;
@@ -68,9 +68,9 @@ export default function ViewReport({ id }: ViewReportProps) {
       };
 
       console.log('PDF için hazırlanan veri:', reportData);
-      console.log('ModernPdfGenerator kullanılıyor - print window açılacak...');
+      console.log('FinalPdfGenerator - print penceresi açılıyor...');
 
-      const pdfGenerator = new ModernPdfGenerator();
+      const pdfGenerator = new FinalPdfGenerator();
       await pdfGenerator.generateReport(reportData);
       
       toast({
