@@ -1,4 +1,7 @@
 import jsPDF from 'jspdf';
+import logoPath from '@assets/logo_1755544106935.jpg';
+import coverImagePath from '@assets/image_1755544198442.png';
+import hospitalImagePath from '@assets/image_1755544216251.png';
 
 interface ReportData {
   id: string;
@@ -22,20 +25,6 @@ interface ReportData {
   }>;
 }
 
-// Türkçe karakter dönüşüm haritası - daha kapsamlı
-const turkishCharMap: Record<string, string> = {
-  'ç': 'c', 'Ç': 'C',
-  'ğ': 'g', 'Ğ': 'G',
-  'ı': 'i', 'İ': 'I',
-  'ö': 'o', 'Ö': 'O',
-  'ş': 's', 'Ş': 'S',
-  'ü': 'u', 'Ü': 'U'
-};
-
-function fixTurkishText(text: string): string {
-  return text.replace(/[çÇğĞıİöÖşŞüÜ]/g, (char) => turkishCharMap[char] || char);
-}
-
 export class ProfessionalPDFGenerator {
   private doc: jsPDF;
   private pageHeight: number;
@@ -50,9 +39,8 @@ export class ProfessionalPDFGenerator {
     this.currentY = 15;
     this.margin = 15;
     
-    // Türkçe karakter desteği için font ayarları
+    // UTF-8 encoding ayarları
     this.doc.setFont('helvetica', 'normal');
-    this.doc.setCharSpace(0);
   }
 
   private checkPageBreak(requiredSpace: number = 25) {
@@ -74,288 +62,399 @@ export class ProfessionalPDFGenerator {
       style = 'normal',
       color = [0, 0, 0],
       align = 'left',
-      maxWidth = this.pageWidth - 2 * this.margin
+      maxWidth = this.pageWidth - (this.margin * 2)
     } = options;
-
-    if (!text || text.trim() === '') return 5;
 
     this.doc.setFontSize(size);
     this.doc.setFont('helvetica', style);
     this.doc.setTextColor(color[0], color[1], color[2]);
 
-    // Türkçe karakterleri düzelt
-    const fixedText = fixTurkishText(text);
-
-    if (maxWidth) {
-      const lines = this.doc.splitTextToSize(fixedText, maxWidth);
-      for (let i = 0; i < lines.length; i++) {
-        const lineY = y + (i * 5);
-        if (align === 'center') {
-          this.doc.text(lines[i], this.pageWidth / 2, lineY, { align: 'center' });
-        } else if (align === 'right') {
-          this.doc.text(lines[i], this.pageWidth - this.margin, lineY, { align: 'right' });
-        } else {
-          this.doc.text(lines[i], x, lineY);
-        }
+    // Türkçe karakter desteği için encoding
+    const encodedText = this.encodeTurkishText(text);
+    
+    if (maxWidth && this.doc.getTextWidth(encodedText) > maxWidth) {
+      const lines = this.doc.splitTextToSize(encodedText, maxWidth);
+      
+      if (align === 'center') {
+        x = this.pageWidth / 2;
+      } else if (align === 'right') {
+        x = this.pageWidth - this.margin;
       }
-      return lines.length * 5;
+
+      lines.forEach((line: string, index: number) => {
+        this.doc.text(line, x, y + (index * size * 0.4), { align });
+      });
+      
+      return lines.length * size * 0.4;
     } else {
       if (align === 'center') {
-        this.doc.text(fixedText, this.pageWidth / 2, y, { align: 'center' });
+        x = this.pageWidth / 2;
       } else if (align === 'right') {
-        this.doc.text(fixedText, this.pageWidth - this.margin, y, { align: 'right' });
-      } else {
-        this.doc.text(fixedText, x, y);
+        x = this.pageWidth - this.margin;
       }
-      return 5;
+
+      this.doc.text(encodedText, x, y, { align });
+      return size * 0.4;
     }
   }
 
-  private addHeader() {
-    // Ana header - koyu mavi arka plan
-    this.doc.setFillColor(52, 73, 94); // Koyu mavi
-    this.doc.rect(this.margin, this.currentY, this.pageWidth - 2 * this.margin, 20, 'F');
-    
-    // Başlık metni - beyaz renkte
-    this.safeText('İŞ SAĞLIĞI VE GÜVENLİĞİ RAPORU', this.margin + 5, this.currentY + 12, {
-      size: 16,
+  private encodeTurkishText(text: string): string {
+    // jsPDF ile Türkçe karakterler için özel işlem
+    // Metni düzgün gösterebilmek için encode ediyoruz
+    try {
+      return decodeURIComponent(escape(text));
+    } catch (error) {
+      // Fallback: Türkçe karakterleri İngilizce eşdeğerleri ile değiştir
+      const turkishMap: { [key: string]: string } = {
+        'ç': 'c', 'Ç': 'C',
+        'ğ': 'g', 'Ğ': 'G', 
+        'ı': 'i', 'İ': 'I',
+        'ö': 'o', 'Ö': 'O',
+        'ş': 's', 'Ş': 'S',
+        'ü': 'u', 'Ü': 'U'
+      };
+      
+      return text.replace(/[çÇğĞıİöÖşŞüÜ]/g, (char) => turkishMap[char] || char);
+    }
+  }
+
+  private async loadImageAsBase64(imagePath: string): Promise<string> {
+    try {
+      const response = await fetch(imagePath);
+      const blob = await response.blob();
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(blob);
+      });
+    } catch (error) {
+      console.error('Image loading error:', error);
+      return '';
+    }
+  }
+
+  private async addCoverPage(reportData: ReportData) {
+    // Beyaz arka plan
+    this.doc.setFillColor(255, 255, 255);
+    this.doc.rect(0, 0, this.pageWidth, this.pageHeight, 'F');
+
+    // Logo (sol üst köşe)
+    try {
+      const logo = await this.loadImageAsBase64(logoPath);
+      if (logo) {
+        this.doc.addImage(logo, 'JPG', this.margin, this.margin, 60, 25, '', 'FAST');
+      }
+    } catch (error) {
+      console.error('Logo error:', error);
+    }
+
+    // Gri alan (sağ taraf)
+    this.doc.setFillColor(170, 170, 170);
+    this.doc.rect(this.pageWidth / 2, 0, this.pageWidth / 2, this.pageHeight, 'F');
+
+    // Yıl (gri alanda)
+    this.safeText('2025', this.pageWidth - 50, 80, {
+      size: 48,
       style: 'bold',
-      color: [255, 255, 255]
+      color: [255, 255, 255],
+      align: 'center'
+    });
+
+    // Siyah başlık çubuğu
+    this.doc.setFillColor(0, 0, 0);
+    this.doc.rect(0, 130, this.pageWidth, 25, 'F');
+
+    // Ana başlık (siyah çubukta beyaz yazı)
+    this.safeText('İstinye Üniversite Topkapı Liv Hastanesi', this.pageWidth / 2, 143, {
+      size: 12,
+      style: 'bold',
+      color: [255, 255, 255],
+      align: 'center'
+    });
+
+    // Alt başlık
+    this.safeText('İş Sağlığı ve Güvenliği Saha Gözlem Raporu', this.pageWidth / 2, 148, {
+      size: 10,
+      style: 'bold',
+      color: [255, 255, 255],
+      align: 'center'
+    });
+
+    // Hastane görseli (orta kısım)
+    try {
+      const hospitalImage = await this.loadImageAsBase64(hospitalImagePath);
+      if (hospitalImage) {
+        this.doc.addImage(hospitalImage, 'PNG', 20, 170, this.pageWidth - 120, 100, '', 'FAST');
+      }
+    } catch (error) {
+      console.error('Hospital image error:', error);
+    }
+
+    // Alt bilgiler (gri alanda)
+    this.safeText('Meslek Salk. - İş Güvenliği Uzmanı (A)', this.pageWidth - 30, this.pageHeight - 40, {
+      size: 8,
+      color: [255, 255, 255],
+      align: 'right'
     });
     
-    this.currentY += 25;
+    this.safeText('İSG Toplantısı Liv Hastanesi', this.pageWidth - 30, this.pageHeight - 30, {
+      size: 8,
+      color: [255, 255, 255],
+      align: 'right'
+    });
+    
+    this.safeText(new Date().toLocaleDateString('tr-TR'), this.pageWidth - 30, this.pageHeight - 20, {
+      size: 8,
+      color: [255, 255, 255],
+      align: 'right'
+    });
   }
 
-  private addReportInfoTable(data: ReportData) {
-    const tableY = this.currentY;
-    const tableWidth = this.pageWidth - 2 * this.margin;
-    const rowHeight = 8;
-    
-    // Tablo çerçevesi
-    this.doc.setDrawColor(200, 200, 200);
-    this.doc.setLineWidth(0.3);
-    
-    // İlk satır - Raporlayan
-    this.doc.setFillColor(245, 245, 245);
-    this.doc.rect(this.margin, tableY, tableWidth, rowHeight, 'FD');
-    
-    this.safeText('Raporlayan:', this.margin + 3, tableY + 5, { size: 10, style: 'bold' });
-    this.safeText(data.reporter, this.margin + tableWidth/2 + 3, tableY + 5, { size: 10 });
-    
-    // İkinci satır - Rapor Tarihi ve Rapor No
-    this.doc.rect(this.margin, tableY + rowHeight, tableWidth/2, rowHeight, 'D');
-    this.doc.rect(this.margin + tableWidth/2, tableY + rowHeight, tableWidth/2, rowHeight, 'D');
-    
-    this.safeText('Rapor Tar.:', this.margin + 3, tableY + rowHeight + 5, { size: 10, style: 'bold' });
-    this.safeText(new Date(data.reportDate).toLocaleDateString('tr-TR'), this.margin + 30, tableY + rowHeight + 5, { size: 10 });
-    
-    this.safeText('Rapor No:', this.margin + tableWidth/2 + 3, tableY + rowHeight + 5, { size: 10, style: 'bold' });
-    this.safeText(data.reportNumber, this.margin + tableWidth/2 + 25, tableY + rowHeight + 5, { size: 10 });
-    
-    this.currentY = tableY + 2 * rowHeight + 10;
+  private addTableOfContents(reportData: ReportData) {
+    this.safeText('İÇİNDEKİLER', this.margin, this.currentY, {
+      size: 16,
+      style: 'bold'
+    });
+    this.currentY += 15;
+
+    const contents = [
+      'YÖNETİCİ ÖZETİ',
+      'TASARIM/İMALAT/MONTAJ HATALARI',
+      'İŞ SAĞLIĞI VE GÜVENLİĞİ BULGULARI',
+      'TAMAMLANMIŞ BULGULAR',
+      'GENEL DEĞERLENDİRME'
+    ];
+
+    contents.forEach((item, index) => {
+      this.safeText(`${index + 1}. ${item}`, this.margin + 5, this.currentY, {
+        size: 10
+      });
+      this.currentY += 8;
+    });
   }
 
-  private addFinding(finding: any, index: number) {
-    this.checkPageBreak(100);
-    
-    const startY = this.currentY;
-    
-    // Başlık - bulgu numarası ve ismi
-    this.safeText(`${index + 1}. ${finding.title || 'Yangın Kapıları ve Manyetik Tutucullar'}`, 
-      this.margin, this.currentY, {
+  private addSection(title: string, content: string) {
+    this.safeText(title, this.margin, this.currentY, {
+      size: 14,
+      style: 'bold'
+    });
+    this.currentY += 10;
+
+    this.safeText(content, this.margin, this.currentY, {
+      size: 10,
+      maxWidth: this.pageWidth - (this.margin * 2)
+    });
+    this.currentY += 20;
+  }
+
+  private async addFindingsSections(reportData: ReportData) {
+    const sectionTitles = {
+      2: 'TASARIM/İMALAT/MONTAJ HATALARI',
+      3: 'İŞ SAĞLIĞI VE GÜVENLİĞİ BULGULARI',
+      4: 'TAMAMLANMIŞ BULGULAR'
+    };
+
+    // Her bölüm için ayrı sayfa
+    for (const sectionNum of [2, 3, 4]) {
+      const sectionFindings = reportData.findings.filter(f => 
+        sectionNum === 4 ? f.isCompleted : f.section === sectionNum && !f.isCompleted
+      );
+
+      if (sectionFindings.length > 0) {
+        this.doc.addPage();
+        this.currentY = this.margin;
+        
+        this.safeText(sectionTitles[sectionNum as keyof typeof sectionTitles] || `BÖLÜM ${sectionNum}`, 
+          this.margin, this.currentY, {
+            size: 14,
+            style: 'bold'
+          });
+        this.currentY += 15;
+
+        // Her bulguyu ayrı sayfada göster
+        for (let i = 0; i < sectionFindings.length; i++) {
+          if (i > 0) {
+            this.doc.addPage();
+            this.currentY = this.margin;
+          }
+          
+          await this.addFinding(sectionFindings[i], i + 1);
+        }
+      }
+    }
+  }
+
+  private async addFinding(finding: any, index: number) {
+    // Başlık
+    this.safeText(`${index}. ${finding.title}`, this.margin, this.currentY, {
       size: 12,
       style: 'bold'
     });
     this.currentY += 10;
-    
-    // İki sütunlu düzen
-    const imageX = this.margin;
-    const imageWidth = 70;
-    const imageHeight = 90;
-    const contentX = imageX + imageWidth + 8;
-    const contentWidth = this.pageWidth - contentX - this.margin;
-    
-    // Resim alanı - gri arka plan
-    this.doc.setFillColor(230, 230, 230);
-    this.doc.rect(imageX, this.currentY, imageWidth, imageHeight, 'F');
-    this.doc.setDrawColor(180, 180, 180);
-    this.doc.setLineWidth(0.5);
-    this.doc.rect(imageX, this.currentY, imageWidth, imageHeight, 'D');
-    
-    // Kırmızı ok işareti ekle
-    this.doc.setFillColor(220, 38, 38);
-    const arrowX = imageX + imageWidth/2;
-    const arrowY = this.currentY + imageHeight/2;
-    this.doc.triangle(arrowX - 8, arrowY, arrowX + 8, arrowY - 5, arrowX + 8, arrowY + 5, 'F');
-    
-    // İçerik alanı
-    let contentY = this.currentY;
-    
-    // Tespit Tarihi
-    this.safeText('Tespit Tarihi:', contentX, contentY, { size: 9, style: 'bold' });
-    this.safeText(new Date().toLocaleDateString('tr-TR'), contentX + 30, contentY, { size: 9 });
-    contentY += 8;
-    
-    // Mevcut Durum
-    this.safeText('Mevcut Durum:', contentX, contentY, { size: 9, style: 'bold' });
-    contentY += 6;
-    
-    const situationText = finding.currentSituation || 
-      'Medikal gaz sistem odasında FM-200 basınlı hava tamamlanmamış durumdadır.';
-    const situationHeight = this.safeText(situationText, contentX, contentY, { 
-      size: 9, 
-      maxWidth: contentWidth 
-    });
-    contentY += situationHeight + 8;
-    
-    // Dayanak
-    this.safeText('Dayanak:', contentX, contentY, { size: 9, style: 'bold' });
-    contentY += 6;
-    this.safeText('Binaların Yangından Korunması Hakkında Yönetmelik: TS EN 1634-3', 
-      contentX, contentY, { size: 9, maxWidth: contentWidth });
-    contentY += 12;
-    
-    // İGÜ Görüşü
-    this.safeText('İGÜ Görüşü:', contentX, contentY, { size: 9, style: 'bold' });
-    contentY += 6;
-    
-    const recommendationText = finding.recommendation || 
-      'FM-200 gazlı söndürme sistemi devreye alınmalıdır.';
-    this.safeText(recommendationText, contentX, contentY, { 
-      size: 9, 
-      maxWidth: contentWidth 
-    });
-    
-    this.currentY = Math.max(this.currentY + imageHeight, contentY + 20);
-    
-    // Tedbir Skalası tablosu
-    this.addActionTable();
-  }
 
-  private addActionTable() {
-    const tableY = this.currentY;
-    const tableWidth = this.pageWidth - 2 * this.margin;
-    const headerHeight = 10;
-    const rowHeight = 8;
+    // Risk seviyesi
+    const riskColors = {
+      high: [220, 38, 38],
+      medium: [234, 88, 12], 
+      low: [34, 197, 94]
+    };
     
-    // Yeşil header
-    this.doc.setFillColor(34, 197, 94);
-    this.doc.rect(this.margin, tableY, tableWidth, headerHeight, 'F');
-    this.safeText('Tedbike Skalası', this.margin + 5, tableY + 7, {
-      size: 11,
+    const riskTexts = {
+      high: 'YÜKSEK RİSK',
+      medium: 'ORTA RİSK',
+      low: 'DÜŞÜK RİSK'
+    };
+
+    const riskText = riskTexts[finding.dangerLevel as keyof typeof riskTexts];
+    const riskColor = riskColors[finding.dangerLevel as keyof typeof riskColors];
+    
+    this.safeText(riskText, this.margin, this.currentY, {
+      size: 10,
       style: 'bold',
-      color: [255, 255, 255]
+      color: riskColor as [number, number, number]
     });
-    
-    // Tablo başlıkları
-    this.doc.setFillColor(245, 245, 245);
-    this.doc.setDrawColor(200, 200, 200);
-    this.doc.rect(this.margin, tableY + headerHeight, tableWidth, rowHeight, 'FD');
-    
-    this.safeText('Süreç Yönetimi', this.margin + 3, tableY + headerHeight + 6, { 
-      size: 9, 
-      style: 'bold' 
-    });
-    this.safeText('Açıklama', this.margin + tableWidth/2 + 3, tableY + headerHeight + 6, { 
-      size: 9, 
-      style: 'bold' 
-    });
-    
-    // Veri satırı
-    this.doc.setFillColor(255, 255, 255);
-    this.doc.rect(this.margin, tableY + headerHeight + rowHeight, tableWidth, rowHeight, 'FD');
-    
-    this.safeText('Tarih', this.margin + 3, tableY + headerHeight + rowHeight + 6, { size: 9 });
-    this.safeText('01.08.2025', this.margin + 20, tableY + headerHeight + rowHeight + 6, { size: 9 });
-    
-    const actionText = 'Kapı koridor geçişlerinde bulunan yangın kapıları montajı ve açılışları yapılıyor ve tamamlanıyor.';
-    this.safeText(actionText, this.margin + tableWidth/2 + 3, tableY + headerHeight + rowHeight + 6, { 
-      size: 9, 
-      maxWidth: tableWidth/2 - 10 
-    });
-    
-    this.currentY = tableY + headerHeight + 2 * rowHeight + 15;
-  }
+    this.currentY += 8;
 
-  private addManagementSummary(summary: string) {
-    this.checkPageBreak(30);
-    
-    this.safeText('YÖNETİCİ ÖZETİ', this.margin, this.currentY, {
-      size: 14,
+    // Mevcut durum
+    this.safeText('Mevcut Durum:', this.margin, this.currentY, {
+      size: 10,
       style: 'bold'
     });
-    this.currentY += 12;
-    
-    const summaryText = summary || 'Yangın Güvenlik Eksiklikleri: Yangın tüpleri, batariyeler ve FM-200 yangın söndürme sistemleri birçok alanda eksik tespit edilmiştir. Yangın dolaplarının bazı lantı noktaları hatalı ve kapaklar uygun değil. Bu durum acil durumlarda ciddi risk oluşturmaktadır.';
-    
-    this.safeText(summaryText, this.margin, this.currentY, {
-      size: 10,
-      maxWidth: this.pageWidth - 2 * this.margin
+    this.currentY += 5;
+
+    const situationHeight = this.safeText(finding.currentSituation, this.margin, this.currentY, {
+      size: 9,
+      maxWidth: this.pageWidth - (this.margin * 2)
     });
+    this.currentY += situationHeight + 5;
+
+    // Yasal dayanak
+    if (finding.legalBasis) {
+      this.safeText('Yasal Dayanak:', this.margin, this.currentY, {
+        size: 10,
+        style: 'bold'
+      });
+      this.currentY += 5;
+
+      const basisHeight = this.safeText(finding.legalBasis, this.margin, this.currentY, {
+        size: 9,
+        maxWidth: this.pageWidth - (this.margin * 2)
+      });
+      this.currentY += basisHeight + 5;
+    }
+
+    // Öneri
+    if (finding.recommendation) {
+      this.safeText('Öneri:', this.margin, this.currentY, {
+        size: 10,
+        style: 'bold'
+      });
+      this.currentY += 5;
+
+      const recommendationHeight = this.safeText(finding.recommendation, this.margin, this.currentY, {
+        size: 9,
+        maxWidth: this.pageWidth - (this.margin * 2)
+      });
+      this.currentY += recommendationHeight + 5;
+    }
+
+    // Süreç adımları
+    if (finding.processSteps && finding.processSteps.length > 0) {
+      this.safeText('Süreç Adımları:', this.margin, this.currentY, {
+        size: 10,
+        style: 'bold'
+      });
+      this.currentY += 5;
+
+      finding.processSteps.forEach((step: any, stepIndex: number) => {
+        const stepText = `${stepIndex + 1}. ${step.date}: ${step.description}`;
+        const stepHeight = this.safeText(stepText, this.margin + 5, this.currentY, {
+          size: 9,
+          maxWidth: this.pageWidth - (this.margin * 2) - 5
+        });
+        this.currentY += stepHeight + 3;
+      });
+    }
+
+    // Durum
+    const statusText = finding.isCompleted ? 'TAMAMLANDI ✓' : 'DEVAM EDİYOR';
+    const statusColor = finding.isCompleted ? [34, 197, 94] : [234, 88, 12];
     
-    this.currentY += 25;
+    this.safeText(statusText, this.margin, this.currentY, {
+      size: 10,
+      style: 'bold',
+      color: statusColor as [number, number, number]
+    });
   }
 
-  private addGeneralEvaluation(evaluation: string) {
-    this.checkPageBreak(30);
-    
-    this.safeText('GENEL DEĞERLENDİRME', this.margin, this.currentY, {
-      size: 14,
-      style: 'bold'
-    });
-    this.currentY += 12;
-    
-    const evalText = evaluation || 'Tespit edilen eksikliklerin ivedilikle giderilmesi ve düzenli kontrollerin yapılması önerilmektedir.';
-    
-    this.safeText(evalText, this.margin, this.currentY, {
-      size: 10,
-      maxWidth: this.pageWidth - 2 * this.margin
-    });
-  }
-
-  public async generateReport(reportData: ReportData): Promise<Blob> {
-    // Header ekle
-    this.addHeader();
-    
-    // Rapor bilgileri tablosu
-    this.addReportInfoTable(reportData);
-    
-    // Bulgular (sadece section 2 ve 3)
-    const relevantFindings = reportData.findings.filter(f => 
-      f.section === 2 || f.section === 3
-    );
-    
-    relevantFindings.forEach((finding, index) => {
-      this.addFinding(finding, index);
-    });
-    
-    // Yönetici özeti
-    if (reportData.managementSummary) {
-      this.addManagementSummary(reportData.managementSummary);
-    }
-    
-    // Genel değerlendirme
-    if (reportData.generalEvaluation) {
-      this.addGeneralEvaluation(reportData.generalEvaluation);
-    }
-    
-    return new Promise((resolve) => {
+  async generateReport(reportData: ReportData): Promise<Blob> {
+    try {
+      console.log('Generating PDF report...', reportData);
+      
+      // Kapak sayfası
+      await this.addCoverPage(reportData);
+      
+      // Yeni sayfa - İçindekiler
+      this.doc.addPage();
+      this.currentY = this.margin;
+      this.addTableOfContents(reportData);
+      
+      // Yönetici özeti
+      if (reportData.managementSummary) {
+        this.doc.addPage();
+        this.currentY = this.margin;
+        this.addSection('YÖNETİCİ ÖZETİ', reportData.managementSummary);
+      }
+      
+      // Bulgular bölümleri - Her bulgu ayrı sayfa
+      await this.addFindingsSections(reportData);
+      
+      // Genel değerlendirme
+      if (reportData.generalEvaluation) {
+        this.doc.addPage();
+        this.currentY = this.margin;
+        this.addSection('GENEL DEĞERLENDİRME', reportData.generalEvaluation);
+      }
+      
       const pdfBlob = this.doc.output('blob');
-      resolve(pdfBlob);
-    });
+      console.log('PDF generated successfully');
+      return pdfBlob;
+      
+    } catch (error) {
+      console.error('PDF generation error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Bilinmeyen hata';
+      throw new Error('PDF oluşturulamadı: ' + errorMessage);
+    }
   }
 }
 
-export const downloadProfessionalReportPDF = async (reportData: ReportData) => {
+export async function generateProfessionalPDF(
+  report: any,
+  findings: any[]
+): Promise<Blob> {
   const generator = new ProfessionalPDFGenerator();
-  const pdfBlob = await generator.generateReport(reportData);
   
-  const url = URL.createObjectURL(pdfBlob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = `ISG_Rapor_${reportData.reportNumber}_${new Date().toLocaleDateString('tr-TR').replace(/\./g, '_')}.pdf`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-};
+  const reportData: ReportData = {
+    id: report.id,
+    reportNumber: report.reportNumber,
+    reportDate: new Date(report.createdAt).toLocaleDateString('tr-TR'),
+    projectLocation: report.projectLocation,
+    reporter: report.inspectorName,
+    managementSummary: report.managementSummary,
+    generalEvaluation: report.generalEvaluation,
+    findings: findings.map(f => ({
+      id: f.id,
+      title: f.title,
+      section: f.section,
+      currentSituation: f.currentSituation,
+      dangerLevel: f.dangerLevel,
+      recommendation: f.recommendation,
+      legalBasis: f.legalBasis,
+      images: f.images,
+      isCompleted: f.isCompleted,
+      processSteps: f.processSteps
+    }))
+  };
+
+  return generator.generateReport(reportData);
+}
