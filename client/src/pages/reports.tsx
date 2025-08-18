@@ -5,11 +5,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
 import { Download, Plus, FileText, ChevronRight } from "lucide-react";
 import { useLocation } from "wouter";
+import { downloadReportPDF } from "@/lib/pdfGenerator";
 
 export default function Reports() {
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
   const [filters, setFilters] = useState({
     status: "all",
     riskLevel: "all",
@@ -20,6 +23,46 @@ export default function Reports() {
   const { data: reports = [], isLoading } = useQuery({
     queryKey: ["/api/reports"],
   });
+
+  const handleExportPDF = async (report: any) => {
+    try {
+      toast({
+        title: "PDF Oluşturuluyor",
+        description: "Rapor PDF olarak hazırlanıyor...",
+      });
+
+      // Transform report data for PDF generator
+      const reportData = {
+        id: report.id,
+        title: report.title,
+        reportDate: report.reportDate,
+        location: report.location,
+        inspector: report.inspector || 'Bilinmiyor',
+        summary: {
+          executiveSummary: report.executiveSummary || '',
+          designManufacturingErrors: report.designManufacturingErrors || '',
+          safetyFindings: report.safetyFindings || '',
+          completedFindings: report.completedFindings || '',
+          generalEvaluation: report.generalEvaluation || '',
+        },
+        findings: report.findings || []
+      };
+
+      downloadReportPDF(reportData);
+      
+      toast({
+        title: "PDF İndirildi",
+        description: "Rapor başarıyla PDF olarak indirildi.",
+      });
+    } catch (error) {
+      console.error('PDF export error:', error);
+      toast({
+        title: "Hata",
+        description: "PDF oluşturulurken bir hata oluştu.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const filteredReports = Array.isArray(reports) ? reports.filter((report: any) => {
     if (filters.status !== "all" && report.status !== filters.status) return false;
@@ -207,7 +250,20 @@ export default function Reports() {
                       <span className="text-sm text-gray-600">0 Düşük</span>
                     </div>
                   </div>
-                  <ChevronRight className="text-gray-400" size={16} />
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleExportPDF(report);
+                      }}
+                      data-testid={`button-export-${report.id}`}
+                    >
+                      <Download size={14} />
+                    </Button>
+                    <ChevronRight className="text-gray-400" size={16} />
+                  </div>
                 </div>
               </CardContent>
             </Card>

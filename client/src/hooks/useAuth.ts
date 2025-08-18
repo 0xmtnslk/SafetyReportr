@@ -11,7 +11,7 @@ export function useAuth() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem("auth_token");
+    const token = localStorage.getItem("token");
     const storedUser = localStorage.getItem("user");
 
     if (token && storedUser) {
@@ -19,7 +19,7 @@ export function useAuth() {
         setUser(JSON.parse(storedUser));
       } catch (error) {
         console.error("Error parsing stored user:", error);
-        localStorage.removeItem("auth_token");
+        localStorage.removeItem("token");
         localStorage.removeItem("user");
       }
     }
@@ -28,7 +28,7 @@ export function useAuth() {
   }, []);
 
   const logout = () => {
-    localStorage.removeItem("auth_token");
+    localStorage.removeItem("token");
     localStorage.removeItem("user");
     setUser(null);
     window.location.reload();
