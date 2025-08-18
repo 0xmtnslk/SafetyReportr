@@ -71,7 +71,7 @@ export default function ViewReport({ id }: ViewReportProps) {
       console.log('FinalPdfGenerator - print penceresi açılıyor...');
 
       const pdfGenerator = new FinalPdfGenerator();
-      await pdfGenerator.generateReport(reportData);
+      pdfGenerator.generateReport(reportData).catch(console.error);
       
       toast({
         title: "PDF İndirildi",

@@ -31,27 +31,32 @@ interface ProcessStep {
 
 export class FinalPdfGenerator {
   async generateReport(reportData: ReportData): Promise<void> {
-    // Create print-friendly HTML content
-    const printContent = this.generatePrintableHTML(reportData);
-    
-    // Create new window for printing
-    const printWindow = window.open('', '_blank', 'width=800,height=600');
-    if (!printWindow) {
-      throw new Error('Popup engellendi. Lütfen popup engelleyiciyi devre dışı bırakın.');
+    try {
+      // Create print-friendly HTML content
+      const printContent = this.generatePrintableHTML(reportData);
+      
+      // Create new window for printing
+      const printWindow = window.open('', '_blank', 'width=800,height=600');
+      if (!printWindow) {
+        throw new Error('Popup engellendi. Lütfen popup engelleyiciyi devre dışı bırakın.');
+      }
+
+      // Write content to new window
+      printWindow.document.open();
+      printWindow.document.write(printContent);
+      printWindow.document.close();
+
+      // Wait for images to load then print
+      printWindow.onload = () => {
+        setTimeout(() => {
+          printWindow.print();
+          // Don't close automatically, let user close after printing
+        }, 1000);
+      };
+    } catch (error) {
+      console.error('PDF Generation Error:', error);
+      throw error;
     }
-
-    // Write content to new window
-    printWindow.document.open();
-    printWindow.document.write(printContent);
-    printWindow.document.close();
-
-    // Wait for images to load then print
-    printWindow.onload = () => {
-      setTimeout(() => {
-        printWindow.print();
-        // Don't close automatically, let user close after printing
-      }, 1000);
-    };
   }
 
   private generatePrintableHTML(reportData: ReportData): string {
