@@ -36,6 +36,14 @@ Preferred communication style: Simple, everyday language.
 - **Password Security**: bcrypt for password hashing
 - **Token Storage**: localStorage for client-side token persistence
 - **Protected Routes**: Middleware-based route protection with user context injection
+- **Test User**: admin/password for system testing
+
+### PDF Generation and Export
+- **Library**: jsPDF with html2canvas for comprehensive PDF creation
+- **Turkish Support**: Full Turkish character support with proper encoding
+- **Font**: Helvetica (closest web equivalent to Tahoma) for professional appearance
+- **Sections**: Executive Summary, Design/Manufacturing Errors, Safety Findings, Completed Findings, General Evaluation
+- **Features**: Risk level color coding, automatic file naming, compressed output
 
 ### Key Features and Design Patterns
 - **Offline-First Design**: Local data persistence with background synchronization

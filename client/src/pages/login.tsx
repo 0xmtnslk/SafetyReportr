@@ -24,7 +24,7 @@ export default function Login() {
       });
 
       const data = await response.json();
-      localStorage.setItem("auth_token", data.token);
+      localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
       
       // Reload to trigger auth state update

@@ -19,25 +19,23 @@ const TURKISH_CHARS = {
 
 interface ReportData {
   id: string;
-  title: string;
+  reportNumber: string;
   reportDate: string;
-  location: string;
-  inspector: string;
-  summary: {
-    executiveSummary: string;
-    designManufacturingErrors: string;
-    safetyFindings: string;
-    completedFindings: string;
-    generalEvaluation: string;
-  };
+  projectLocation: string;
+  reporter: string;
+  managementSummary?: string;
+  generalEvaluation?: string;
   findings: Array<{
     id: string;
     title: string;
-    description: string;
+    section: number;
+    currentSituation: string;
     dangerLevel: 'high' | 'medium' | 'low';
-    recommendation: string;
+    recommendation?: string;
+    legalBasis?: string;
     images?: string[];
-    status: 'open' | 'in_progress' | 'completed';
+    isCompleted: boolean;
+    processSteps?: Array<{date: string, description: string}>;
   }>;
 }
 
@@ -112,11 +110,10 @@ export class PDFGenerator {
     this.doc.setTextColor(0, 0, 0);
     
     // Report info
-    this.addText(`Rapor No: ${reportData.id}`, 12, 'bold');
-    this.addText(`Başlık: ${reportData.title}`, 12, 'bold');
+    this.addText(`Rapor No: ${reportData.reportNumber}`, 12, 'bold');
     this.addText(`Tarih: ${new Date(reportData.reportDate).toLocaleDateString('tr-TR')}`, 11);
-    this.addText(`Konum: ${reportData.location}`, 11);
-    this.addText(`Müfettiş: ${reportData.inspector}`, 11);
+    this.addText(`Konum: ${reportData.projectLocation}`, 11);
+    this.addText(`Müfettiş: ${reportData.reporter}`, 11);
     this.currentY += 10;
   }
 
@@ -147,9 +144,14 @@ export class PDFGenerator {
     this.currentY += 3;
     
     // Finding content
-    this.addText(`Açıklama: ${finding.description}`, 10);
-    this.addText(`Öneri: ${finding.recommendation}`, 10);
-    this.addText(`Durum: ${this.getStatusText(finding.status)}`, 10);
+    this.addText(`Mevcut Durum: ${finding.currentSituation}`, 10);
+    if (finding.legalBasis) {
+      this.addText(`Yasal Dayanak: ${finding.legalBasis}`, 10);
+    }
+    if (finding.recommendation) {
+      this.addText(`Öneri: ${finding.recommendation}`, 10);
+    }
+    this.addText(`Durum: ${finding.isCompleted ? 'Tamamlandı' : 'Açık'}`, 10);
     
     this.currentY += 5;
   }
@@ -185,40 +187,38 @@ export class PDFGenerator {
     // Header
     this.addHeader(reportData);
     
-    // Executive Summary Section
-    this.addSection('1. YÖNETİCİ ÖZETİ', reportData.summary.executiveSummary);
+    // Management Summary Section
+    this.addSection('1. YÖNETİCİ ÖZETİ', reportData.managementSummary || '');
     
-    // Design/Manufacturing Errors Section
-    this.addSection('2. TASARIM/İMALAT/MONTAJ HATALARI', reportData.summary.designManufacturingErrors);
-    
-    // Safety Findings Section
-    this.addSection('3. İŞ SAĞLIĞI VE GÜVENLİĞİ BULGULARI', reportData.summary.safetyFindings);
-    
-    // Individual findings
-    const openFindings = reportData.findings.filter(f => f.status !== 'completed');
-    if (openFindings.length > 0) {
-      this.currentY += 5;
-      this.addText('Açık Bulgular:', 12, 'bold');
-      this.currentY += 3;
-      
-      openFindings.forEach((finding, index) => {
+    // Design/Manufacturing Errors Section (Section 2)
+    const designFindings = reportData.findings.filter(f => f.section === 2);
+    if (designFindings.length > 0) {
+      this.addSection('2. TASARIM/İMALAT/MONTAJ HATALARI', '');
+      designFindings.forEach((finding, index) => {
         this.addFinding(finding, index);
       });
     }
     
-    // Completed Findings Section
-    this.addSection('4. TAMAMLANMIŞ BULGULAR', reportData.summary.completedFindings);
+    // Safety Findings Section (Section 3)
+    const safetyFindings = reportData.findings.filter(f => f.section === 3);
+    if (safetyFindings.length > 0) {
+      this.addSection('3. İŞ SAĞLIĞI VE GÜVENLİĞİ BULGULARI', '');
+      safetyFindings.forEach((finding, index) => {
+        this.addFinding(finding, index);
+      });
+    }
     
-    const completedFindings = reportData.findings.filter(f => f.status === 'completed');
+    // Completed Findings Section (Section 4)
+    const completedFindings = reportData.findings.filter(f => f.section === 4 || f.isCompleted);
     if (completedFindings.length > 0) {
-      this.currentY += 3;
+      this.addSection('4. TAMAMLANMIŞ BULGULAR', '');
       completedFindings.forEach((finding, index) => {
         this.addFinding(finding, index);
       });
     }
     
     // General Evaluation Section
-    this.addSection('5. GENEL DEĞERLENDİRME', reportData.summary.generalEvaluation);
+    this.addSection('5. GENEL DEĞERLENDİRME', reportData.generalEvaluation || '');
     
     // Footer
     this.currentY = this.pageHeight - 20;

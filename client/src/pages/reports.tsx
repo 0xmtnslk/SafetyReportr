@@ -31,21 +31,25 @@ export default function Reports() {
         description: "Rapor PDF olarak hazırlanıyor...",
       });
 
+      // Fetch findings for the report
+      const findingsResponse = await fetch(`/api/reports/${report.id}/findings`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      const findings = await findingsResponse.json();
+
       // Transform report data for PDF generator
       const reportData = {
         id: report.id,
-        title: report.title,
+        reportNumber: report.reportNumber,
         reportDate: report.reportDate,
-        location: report.location,
-        inspector: report.inspector || 'Bilinmiyor',
-        summary: {
-          executiveSummary: report.executiveSummary || '',
-          designManufacturingErrors: report.designManufacturingErrors || '',
-          safetyFindings: report.safetyFindings || '',
-          completedFindings: report.completedFindings || '',
-          generalEvaluation: report.generalEvaluation || '',
-        },
-        findings: report.findings || []
+        projectLocation: report.projectLocation,
+        reporter: report.reporter,
+        managementSummary: report.managementSummary,
+        generalEvaluation: report.generalEvaluation,
+        findings: findings || []
       };
 
       downloadReportPDF(reportData);
@@ -239,15 +243,15 @@ export default function Reports() {
                   <div className="flex items-center space-x-4">
                     <div className="flex items-center">
                       <div className="w-3 h-3 bg-danger rounded-full mr-2"></div>
-                      <span className="text-sm text-gray-600">0 Yüksek</span>
+                      <span className="text-sm text-gray-600">{report.highRiskCount || 0} Yüksek</span>
                     </div>
                     <div className="flex items-center">
                       <div className="w-3 h-3 bg-warning rounded-full mr-2"></div>
-                      <span className="text-sm text-gray-600">0 Orta</span>
+                      <span className="text-sm text-gray-600">{report.mediumRiskCount || 0} Orta</span>
                     </div>
                     <div className="flex items-center">
                       <div className="w-3 h-3 bg-success rounded-full mr-2"></div>
-                      <span className="text-sm text-gray-600">0 Düşük</span>
+                      <span className="text-sm text-gray-600">{report.lowRiskCount || 0} Düşük</span>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
