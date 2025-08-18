@@ -218,7 +218,7 @@ export default function Reports() {
               key={report.id}
               className="hover:shadow-md transition-shadow cursor-pointer"
               data-testid={`report-card-${report.id}`}
-              onClick={() => setLocation(`/edit-report/${report.id}`)}
+              onClick={() => setLocation(`/view-report/${report.id}`)}
             >
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-4">

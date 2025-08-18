@@ -450,16 +450,35 @@ export class ProfessionalPDFGenerator {
 }
 
 export async function downloadProfessionalReportPDF(reportData: ReportData): Promise<void> {
-  const generator = new ProfessionalPDFGenerator();
-  const pdfBlob = await generator.generateReport(reportData);
-  
-  // Create download link
-  const url = URL.createObjectURL(pdfBlob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = `ISG-Raporu-${reportData.reportNumber || 'Yeni'}-${new Date().toLocaleDateString('tr-TR').replace(/\./g, '-')}.pdf`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  try {
+    console.log('Starting PDF generation for report:', reportData);
+    
+    const generator = new ProfessionalPDFGenerator();
+    const pdfBlob = await generator.generateReport(reportData);
+    
+    console.log('PDF blob generated successfully, size:', pdfBlob.size);
+    
+    // Create download link
+    const url = URL.createObjectURL(pdfBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `ISG-Raporu-${reportData.reportNumber || 'Yeni'}-${new Date().toLocaleDateString('tr-TR').replace(/\./g, '-')}.pdf`;
+    
+    // Add to DOM and trigger download
+    document.body.appendChild(link);
+    link.style.display = 'none';
+    link.click();
+    
+    // Clean up with delay to ensure download starts
+    setTimeout(() => {
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }, 100);
+    
+    console.log('PDF download triggered successfully');
+    
+  } catch (error) {
+    console.error('PDF generation error:', error);
+    throw new Error(`PDF oluşturma başarısız: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}`);
+  }
 }

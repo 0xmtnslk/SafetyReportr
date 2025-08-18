@@ -112,7 +112,7 @@ export default function Dashboard() {
                   key={report.id}
                   className="flex items-center justify-between p-4 hover:bg-gray-50 rounded-xl transition-colors cursor-pointer"
                   data-testid={`report-item-${report.id}`}
-                  onClick={() => setLocation(`/edit-report/${report.id}`)}
+                  onClick={() => setLocation(`/view-report/${report.id}`)}
                 >
                   <div className="flex items-center">
                     <div className="w-10 h-10 bg-primary bg-opacity-10 rounded-xl flex items-center justify-center mr-3">
