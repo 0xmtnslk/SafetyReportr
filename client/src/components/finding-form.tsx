@@ -13,19 +13,20 @@ import ImageUpload from "./image-upload";
 interface FindingFormProps {
   reportId: string;
   section: number;
+  initialData?: any;
   onClose: () => void;
-  onSaved: () => void;
+  onSave: () => void;
 }
 
-export default function FindingForm({ reportId, section, onClose, onSaved }: FindingFormProps) {
+export default function FindingForm({ reportId, section, initialData, onClose, onSave }: FindingFormProps) {
   const [formData, setFormData] = useState({
-    title: "",
-    dangerLevel: "",
-    currentSituation: "",
-    legalBasis: "",
-    recommendation: "",
-    images: [] as string[],
-    processSteps: [] as Array<{ date: string; description: string }>,
+    title: initialData?.title || "",
+    dangerLevel: initialData?.dangerLevel || "",
+    currentSituation: initialData?.currentSituation || "",
+    legalBasis: initialData?.legalBasis || "",
+    recommendation: initialData?.recommendation || "",
+    images: initialData?.images || [],
+    processSteps: initialData?.processSteps || [],
   });
 
   const [newProcessStep, setNewProcessStep] = useState({ date: "", description: "" });
@@ -33,15 +34,37 @@ export default function FindingForm({ reportId, section, onClose, onSaved }: Fin
 
   const createFindingMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await apiRequest("POST", "/api/findings", data);
-      return response.json();
+      if (initialData?.id) {
+        const response = await apiRequest("PUT", `/api/findings/${initialData.id}`, data);
+        return response.json();
+      } else {
+        const response = await apiRequest("POST", "/api/findings", data);
+        return response.json();
+      }
     },
-    onSuccess: () => {
-      toast({
-        title: "Başarılı",
-        description: "Bulgu başarıyla kaydedildi",
-      });
-      onSaved();
+    onSuccess: (result) => {
+      // If danger level is set to 'low', automatically move to completed section
+      if (formData.dangerLevel === 'low' && (section === 2 || section === 3) && !initialData?.id) {
+        // Create a copy in section 4 (completed findings)
+        apiRequest("POST", "/api/findings", {
+          reportId,
+          section: 4,
+          ...formData,
+          isCompleted: true,
+        }).then(() => {
+          toast({
+            title: "Başarılı",
+            description: "Bulgu kaydedildi ve tamamlanmış bulgulara eklendi",
+          });
+          onSave();
+        });
+      } else {
+        toast({
+          title: "Başarılı",
+          description: initialData?.id ? "Bulgu başarıyla güncellendi" : "Bulgu başarıyla kaydedildi",
+        });
+        onSave();
+      }
     },
     onError: () => {
       toast({
@@ -54,11 +77,13 @@ export default function FindingForm({ reportId, section, onClose, onSaved }: Fin
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    createFindingMutation.mutate({
+    const submitData = {
       reportId,
-      section,
+      section: formData.dangerLevel === 'low' && (section === 2 || section === 3) ? 4 : section,
       ...formData,
-    });
+      isCompleted: formData.dangerLevel === 'low' && (section === 2 || section === 3),
+    };
+    createFindingMutation.mutate(submitData);
   };
 
   const handleDangerLevelSelect = (level: string) => {

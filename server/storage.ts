@@ -1,6 +1,6 @@
 import { reports, findings, users, offlineQueue, type User, type InsertUser, type Report, type InsertReport, type Finding, type InsertFinding, type OfflineQueueItem, type InsertOfflineQueueItem } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, inArray } from "drizzle-orm";
 import bcrypt from "bcrypt";
 
 export interface IStorage {
@@ -81,7 +81,53 @@ export class DatabaseStorage implements IStorage {
       .insert(reports)
       .values(report)
       .returning();
+    
+    // Copy unresolved findings from the latest report
+    await this.copyUnresolvedFindings(newReport.id, report.userId);
+    
     return newReport;
+  }
+  
+  async copyUnresolvedFindings(newReportId: string, userId: string) {
+    // Get the latest completed report (excluding the current one)
+    const [latestReport] = await db
+      .select()
+      .from(reports)
+      .where(eq(reports.userId, userId))
+      .orderBy(desc(reports.createdAt))
+      .limit(2); // Get 2 to exclude the current one
+    
+    if (!latestReport || latestReport.id === newReportId) return;
+    
+    // Get high and medium risk findings from the latest report
+    const unresolvedFindings = await db
+      .select()
+      .from(findings)
+      .where(
+        and(
+          eq(findings.reportId, latestReport.id),
+          inArray(findings.dangerLevel, ['high', 'medium']),
+          eq(findings.isCompleted, false)
+        )
+      );
+    
+    // Copy these findings to the new report
+    if (unresolvedFindings.length > 0) {
+      const findingsToInsert = unresolvedFindings.map(finding => ({
+        reportId: newReportId,
+        section: finding.section,
+        title: finding.title,
+        dangerLevel: finding.dangerLevel,
+        currentSituation: finding.currentSituation,
+        legalBasis: finding.legalBasis,
+        recommendation: finding.recommendation,
+        images: finding.images,
+        processSteps: [], // Start with empty process steps for new report
+        isCompleted: false,
+      }));
+      
+      await db.insert(findings).values(findingsToInsert);
+    }
   }
 
   async updateReport(id: string, report: Partial<InsertReport>): Promise<Report> {
