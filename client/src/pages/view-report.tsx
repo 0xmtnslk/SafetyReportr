@@ -18,10 +18,12 @@ export default function ViewReport({ id }: ViewReportProps) {
 
   const { data: report, isLoading: reportLoading } = useQuery({
     queryKey: [`/api/reports/${id}`],
+    enabled: !!id && id !== 'undefined'
   });
 
   const { data: findings = [], isLoading: findingsLoading } = useQuery({
     queryKey: [`/api/reports/${id}/findings`],
+    enabled: !!id && id !== 'undefined'
   });
 
   const handleExportPDF = async () => {

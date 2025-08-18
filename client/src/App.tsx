@@ -38,7 +38,9 @@ function Router() {
         <Route path="/create-report" component={CreateReport} />
         <Route path="/reports" component={Reports} />
         <Route path="/edit-report/:id" component={EditReport} />
-        <Route path="/view-report/:id" component={ViewReport} />
+        <Route path="/view-report/:id">
+          {(params) => <ViewReport id={params.id} />}
+        </Route>
         <Route component={() => <div>404 - Page Not Found</div>} />
       </Switch>
     </div>

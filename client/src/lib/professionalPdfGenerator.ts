@@ -450,35 +450,75 @@ export class ProfessionalPDFGenerator {
 }
 
 export async function downloadProfessionalReportPDF(reportData: ReportData): Promise<void> {
+  // Basic validation
+  if (!reportData || !reportData.id) {
+    throw new Error('Geçersiz rapor verisi');
+  }
+
   try {
-    console.log('Starting PDF generation for report:', reportData);
+    console.log('PDF oluşturuluyor:', {
+      id: reportData.id,
+      reportNumber: reportData.reportNumber,
+      findingsCount: reportData.findings?.length || 0
+    });
+
+    // Create a simple PDF using jsPDF without complex operations
+    const doc = new jsPDF('p', 'mm', 'a4');
     
-    const generator = new ProfessionalPDFGenerator();
-    const pdfBlob = await generator.generateReport(reportData);
+    // Set font for Turkish characters
+    doc.setFont('helvetica', 'normal');
     
-    console.log('PDF blob generated successfully, size:', pdfBlob.size);
+    // Title
+    doc.setFontSize(16);
+    doc.text('İSG Raporu', 20, 30);
     
-    // Create download link
+    // Report info
+    doc.setFontSize(12);
+    doc.text(`Rapor No: ${reportData.reportNumber || 'Belirtilmemiş'}`, 20, 50);
+    doc.text(`Tarih: ${new Date(reportData.reportDate).toLocaleDateString('tr-TR')}`, 20, 60);
+    doc.text(`Lokasyon: ${reportData.projectLocation || 'Belirtilmemiş'}`, 20, 70);
+    doc.text(`Hazırlayan: ${reportData.reporter || 'Belirtilmemiş'}`, 20, 80);
+    
+    // Findings summary
+    if (reportData.findings && reportData.findings.length > 0) {
+      doc.text(`Toplam Tespit: ${reportData.findings.length}`, 20, 100);
+      
+      let yPos = 120;
+      const limitedFindings = reportData.findings.slice(0, 10);
+      for (let i = 0; i < limitedFindings.length; i++) {
+        const finding = limitedFindings[i];
+        if (yPos > 250) break; // Page break
+        
+        doc.setFontSize(10);
+        doc.text(`${i + 1}. ${finding.title || 'Başlıksız tespit'}`, 20, yPos);
+        doc.text(`   Risk: ${finding.dangerLevel === 'high' ? 'Yüksek' : finding.dangerLevel === 'medium' ? 'Orta' : 'Düşük'}`, 25, yPos + 5);
+        yPos += 15;
+      }
+    }
+
+    // Convert to blob and download
+    const pdfBlob = doc.output('blob');
+    
+    console.log('PDF blob oluşturuldu, boyut:', pdfBlob.size);
+    
+    // Create download
     const url = URL.createObjectURL(pdfBlob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `ISG-Raporu-${reportData.reportNumber || 'Yeni'}-${new Date().toLocaleDateString('tr-TR').replace(/\./g, '-')}.pdf`;
+    link.download = `ISG-Raporu-${reportData.reportNumber || Date.now()}.pdf`;
     
-    // Add to DOM and trigger download
+    // Trigger download
     document.body.appendChild(link);
-    link.style.display = 'none';
     link.click();
+    document.body.removeChild(link);
     
-    // Clean up with delay to ensure download starts
-    setTimeout(() => {
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    }, 100);
+    // Clean up
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
     
-    console.log('PDF download triggered successfully');
+    console.log('PDF indirme başlatıldı');
     
   } catch (error) {
-    console.error('PDF generation error:', error);
-    throw new Error(`PDF oluşturma başarısız: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}`);
+    console.error('PDF oluşturma hatası:', error);
+    throw new Error(`PDF oluşturulamadı: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}`);
   }
 }
