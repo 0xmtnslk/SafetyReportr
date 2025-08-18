@@ -153,7 +153,7 @@ const styles = StyleSheet.create({
   },
 });
 
-const CoverPage: React.FC<{ reportData: ReportData }> = ({ reportData }) => (
+const CoverPage = ({ reportData }: { reportData: ReportData }) => (
   <Page size="A4" style={styles.page}>
     <View style={styles.coverPage}>
       <Text style={styles.title}>İstinye Üniversite Topkapı Liv Hastanesi</Text>
@@ -185,7 +185,7 @@ const CoverPage: React.FC<{ reportData: ReportData }> = ({ reportData }) => (
   </Page>
 );
 
-const FindingPage: React.FC<{ finding: Finding; findingNumber: number }> = ({ finding, findingNumber }) => {
+const FindingPage = ({ finding, findingNumber }: { finding: Finding; findingNumber: number }) => {
   const getRiskStyle = (level: string) => {
     switch (level) {
       case 'high': return [styles.riskBadge, styles.riskHigh];
@@ -245,7 +245,7 @@ const FindingPage: React.FC<{ finding: Finding; findingNumber: number }> = ({ fi
   );
 };
 
-const ReportDocument: React.FC<{ reportData: ReportData }> = ({ reportData }) => (
+const ReportDocument = ({ reportData }: { reportData: ReportData }) => (
   <Document>
     <CoverPage reportData={reportData} />
 
@@ -272,7 +272,7 @@ const ReportDocument: React.FC<{ reportData: ReportData }> = ({ reportData }) =>
 export class ReactPdfService {
   async generatePDF(reportData: ReportData): Promise<Uint8Array> {
     try {
-      const pdfBuffer = await renderToBuffer(<ReportDocument reportData={reportData} />);
+      const pdfBuffer = await renderToBuffer(React.createElement(ReportDocument, { reportData }));
       return new Uint8Array(pdfBuffer);
     } catch (error) {
       console.error('React-PDF generation error:', error);
