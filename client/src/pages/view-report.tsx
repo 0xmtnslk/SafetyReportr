@@ -68,9 +68,12 @@ export default function ViewReport({ id }: ViewReportProps) {
       };
 
       console.log('PDF için hazırlanan veri:', reportData);
+      console.log('HTMLToPDFGenerator kullanılıyor...');
 
       const pdfGenerator = new HTMLToPDFGenerator();
+      console.log('PDF generator oluşturuldu');
       const pdfBlob = await pdfGenerator.generateReport(reportData);
+      console.log('PDF blob oluşturuldu:', pdfBlob.size, 'bytes');
       
       // PDF'i indir
       const url = URL.createObjectURL(pdfBlob);
