@@ -31,7 +31,7 @@ export default function ImageUpload({ onImageUploaded, images, onRemoveImage }: 
         const formData = new FormData();
         formData.append('image', compressedFile);
         
-        const token = localStorage.getItem('auth_token');
+        const token = localStorage.getItem('token');
         const response = await fetch('/api/upload-image', {
           method: 'POST',
           headers: {

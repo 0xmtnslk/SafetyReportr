@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Download, Plus, FileText, ChevronRight, Edit } from "lucide-react";
 import { useLocation } from "wouter";
 import { downloadProfessionalReportPDF } from "@/lib/professionalPdfGenerator";
+import PDFPreview from "@/components/pdf-preview";
 
 export default function Reports() {
   const [, setLocation] = useLocation();
@@ -266,6 +267,10 @@ export default function Reports() {
                     >
                       <Edit size={14} />
                     </Button>
+                    <PDFPreview
+                      reportData={report}
+                      findings={[]}
+                    />
                     <Button
                       size="sm"
                       variant="outline"

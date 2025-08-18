@@ -100,7 +100,7 @@ export default function FindingForm({ reportId, section, initialData, onClose, o
   const handleRemoveImage = (index: number) => {
     setFormData({
       ...formData,
-      images: formData.images.filter((_, i) => i !== index),
+      images: formData.images.filter((_: string, i: number) => i !== index),
     });
   };
 
@@ -215,7 +215,7 @@ export default function FindingForm({ reportId, section, initialData, onClose, o
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="recommendation">İçili Görülü</Label>
+                  <Label htmlFor="recommendation">İSG Görüşü</Label>
                   <Textarea
                     id="recommendation"
                     rows={3}
@@ -283,7 +283,7 @@ export default function FindingForm({ reportId, section, initialData, onClose, o
                 {formData.processSteps.length > 0 && (
                   <div className="space-y-2">
                     <h5 className="font-medium text-gray-700">Eklenen Süreçler:</h5>
-                    {formData.processSteps.map((step, index) => (
+                    {formData.processSteps.map((step: any, index: number) => (
                       <div
                         key={index}
                         className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"

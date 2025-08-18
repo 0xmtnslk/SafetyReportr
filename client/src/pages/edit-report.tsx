@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import FindingForm from "@/components/finding-form";
+import PDFPreview from "@/components/pdf-preview";
 
 export default function EditReport() {
   const { id } = useParams();
@@ -232,10 +233,24 @@ export default function EditReport() {
                   />
                 </div>
               </div>
-              <Button type="submit" disabled={updateReportMutation.isPending} data-testid="button-save-info">
-                <Save size={16} className="mr-2" />
-                Bilgileri Kaydet
-              </Button>
+              <div className="flex gap-2">
+                <Button type="submit" disabled={updateReportMutation.isPending} data-testid="button-save-info">
+                  <Save size={16} className="mr-2" />
+                  Bilgileri Kaydet
+                </Button>
+                <PDFPreview
+                  reportData={{
+                    id: report.id,
+                    reportNumber: reportData.reportNumber,
+                    reportDate: reportData.reportDate,
+                    projectLocation: reportData.projectLocation,
+                    reporter: reportData.reporter,
+                    managementSummary: reportData.managementSummary,
+                    generalEvaluation: reportData.generalEvaluation,
+                  }}
+                  findings={findings}
+                />
+              </div>
             </form>
           </CardContent>
         </Card>
