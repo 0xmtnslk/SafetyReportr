@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Eye, FileText, Loader2 } from "lucide-react";
-import { downloadProfessionalReportPDF } from "@/lib/professionalPdfGenerator";
 import { useToast } from "@/hooks/use-toast";
 
 interface PDFPreviewProps {
@@ -32,12 +31,12 @@ export default function PDFPreview({ reportData, findings, isLoading = false }: 
         findings: findings || []
       };
 
-      // Generate PDF blob
-      const generator = (await import('@/lib/professionalPdfGenerator')).ProfessionalPDFGenerator;
-      const pdfGenerator = new generator();
+      // Dynamically import and generate PDF
+      const { ProfessionalPDFGenerator } = await import('@/lib/professionalPdfGenerator');
+      const pdfGenerator = new ProfessionalPDFGenerator();
       const pdfBlob = await pdfGenerator.generateReport(formattedData);
       
-      // Create URL for preview
+      // Create blob URL for iframe preview
       const url = URL.createObjectURL(pdfBlob);
       setPdfUrl(url);
       
@@ -48,8 +47,8 @@ export default function PDFPreview({ reportData, findings, isLoading = false }: 
     } catch (error) {
       console.error('PDF preview error:', error);
       toast({
-        title: "Hata",
-        description: "PDF önizlemesi oluşturulamadı",
+        title: "Hata", 
+        description: "PDF önizlemesi oluşturulamadı: " + (error as Error).message,
         variant: "destructive",
       });
     } finally {
@@ -58,30 +57,47 @@ export default function PDFPreview({ reportData, findings, isLoading = false }: 
   };
 
   const handleDialogClose = () => {
-    setIsOpen(false);
     if (pdfUrl) {
       URL.revokeObjectURL(pdfUrl);
       setPdfUrl(null);
     }
+    setIsOpen(false);
   };
 
   const handleDownload = async () => {
     try {
-      await downloadProfessionalReportPDF({
-        id: reportData.id,
-        reportNumber: reportData.reportNumber,
-        reportDate: reportData.reportDate,
-        projectLocation: reportData.projectLocation,
-        reporter: reportData.reporter,
-        managementSummary: reportData.managementSummary,
-        generalEvaluation: reportData.generalEvaluation,
-        findings: findings || []
-      });
-      
-      toast({
-        title: "PDF İndirildi",
-        description: "Rapor başarıyla PDF olarak indirildi.",
-      });
+      if (pdfUrl) {
+        // Use existing PDF blob for download
+        const link = document.createElement('a');
+        link.href = pdfUrl;
+        link.download = `ISG-Raporu-${reportData.reportNumber || 'Yeni'}-${new Date().toLocaleDateString('tr-TR').replace(/\./g, '-')}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        toast({
+          title: "PDF İndirildi",
+          description: "Rapor başarıyla indirildi",
+        });
+      } else {
+        // Generate new PDF if not available
+        const { downloadProfessionalReportPDF } = await import('@/lib/professionalPdfGenerator');
+        await downloadProfessionalReportPDF({
+          id: reportData.id,
+          reportNumber: reportData.reportNumber,
+          reportDate: reportData.reportDate,
+          projectLocation: reportData.projectLocation,
+          reporter: reportData.reporter,
+          managementSummary: reportData.managementSummary,
+          generalEvaluation: reportData.generalEvaluation,
+          findings: findings || []
+        });
+        
+        toast({
+          title: "PDF İndirildi",
+          description: "Rapor başarıyla indirildi",
+        });
+      }
     } catch (error) {
       console.error('PDF download error:', error);
       toast({
@@ -93,21 +109,26 @@ export default function PDFPreview({ reportData, findings, isLoading = false }: 
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleDialogClose}>
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      if (!open) {
+        handleDialogClose();
+      }
+      setIsOpen(open);
+    }}>
       <DialogTrigger asChild>
         <Button 
           variant="outline" 
+          size="sm"
           disabled={isLoading || !reportData}
           onClick={() => {
-            setIsOpen(true);
             if (!pdfUrl && !isGenerating) {
               generatePreview();
             }
           }}
           data-testid="button-pdf-preview"
         >
-          <Eye size={16} className="mr-2" />
-          Raporu Görüntüle
+          <Eye size={14} className="mr-1" />
+          Önizle
         </Button>
       </DialogTrigger>
       
@@ -119,7 +140,7 @@ export default function PDFPreview({ reportData, findings, isLoading = false }: 
           </DialogTitle>
         </DialogHeader>
         
-        <div className="flex-1 min-h-[500px]">
+        <div className="flex-1 min-h-[600px]">
           {isGenerating ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-center space-y-4">
@@ -128,17 +149,21 @@ export default function PDFPreview({ reportData, findings, isLoading = false }: 
               </div>
             </div>
           ) : pdfUrl ? (
-            <iframe
-              src={pdfUrl}
-              className="w-full h-full border rounded-lg"
-              title="PDF Önizlemesi"
-            />
+            <div className="h-full">
+              <iframe
+                src={`${pdfUrl}#view=FitH`}
+                className="w-full h-full border rounded-lg"
+                title="PDF Önizlemesi"
+                style={{ minHeight: '600px' }}
+              />
+            </div>
           ) : (
             <div className="flex items-center justify-center h-full">
               <div className="text-center space-y-4">
                 <FileText className="h-12 w-12 text-muted-foreground mx-auto" />
-                <p className="text-muted-foreground">PDF önizlemesi yükleniyor...</p>
+                <p className="text-muted-foreground">PDF önizlemesi için tıklayın</p>
                 <Button onClick={generatePreview} disabled={isGenerating}>
+                  <FileText size={16} className="mr-2" />
                   Önizleme Oluştur
                 </Button>
               </div>
