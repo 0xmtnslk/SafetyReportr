@@ -83,7 +83,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   tableRow: {
-    flexDirection: ాణధడంత్అవచ: React.createElement('react-pdf/renderer'),
+    flexDirection: 'row',
     borderBottom: '1px solid #e2e8f0',
   },
   tableLabel: {
