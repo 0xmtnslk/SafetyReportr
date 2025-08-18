@@ -106,45 +106,85 @@ export class ProfessionalPDFGenerator {
   }
 
   private encodeTurkishText(text: string): string {
-    // No encoding needed - just return text as-is for Turkish characters
-    return text || '';
+    if (!text) return '';
+    
+    // Proper Turkish character mapping for jsPDF
+    const turkishMap: { [key: string]: string } = {
+      'ç': 'ç', 'Ç': 'Ç',
+      'ğ': 'ğ', 'Ğ': 'Ğ', 
+      'ı': 'ı', 'I': 'I', 'İ': 'İ',
+      'ö': 'ö', 'Ö': 'Ö',
+      'ş': 'ş', 'Ş': 'Ş',
+      'ü': 'ü', 'Ü': 'Ü'
+    };
+
+    return text.replace(/[çÇğĞıIİöÖşŞüÜ]/g, (match) => turkishMap[match] || match);
   }
 
   private async generateCoverPage(reportData: ReportData): Promise<void> {
-    // Set font
-    this.doc.setFont('helvetica', 'bold');
+    // Professional cover page design
     
-    // Main title with proper Turkish encoding
-    this.doc.setFontSize(16);
+    // Add header border
+    this.doc.setDrawColor(0, 51, 102); // Dark blue
+    this.doc.setLineWidth(2);
+    this.doc.line(this.margin, 20, this.pageWidth - this.margin, 20);
+    
+    // Main title
+    this.doc.setFont('helvetica', 'bold');
+    this.doc.setFontSize(18);
+    this.doc.setTextColor(0, 51, 102); // Dark blue
     const titleText = this.encodeTurkishText('İstinye Üniversite Topkapı Liv Hastanesi');
     const titleWidth = this.doc.getTextWidth(titleText);
-    this.doc.text(titleText, (this.pageWidth - titleWidth) / 2, 30);
+    this.doc.text(titleText, (this.pageWidth - titleWidth) / 2, 35);
     
-    this.doc.setFontSize(14);
+    // Subtitle
+    this.doc.setFontSize(16);
+    this.doc.setTextColor(0, 0, 0); // Black
     const subtitleText = this.encodeTurkishText('İş Sağlığı ve Güvenliği Saha Gözlem Raporu');
     const subtitleWidth = this.doc.getTextWidth(subtitleText);
-    this.doc.text(subtitleText, (this.pageWidth - subtitleWidth) / 2, 45);
+    this.doc.text(subtitleText, (this.pageWidth - subtitleWidth) / 2, 50);
 
-    // Logo and hospital image placeholders
+    // Logo areas with better styling
     this.doc.setFont('helvetica', 'normal');
     this.doc.setFontSize(10);
-    this.doc.text('[Logo]', 15, 80);
-    this.doc.text('[Hastane Görseli]', 150, 80);
+    this.doc.setDrawColor(200, 200, 200);
+    this.doc.setLineWidth(1);
+    
+    // Left logo area
+    this.doc.rect(15, 60, 50, 30);
+    this.doc.text(this.encodeTurkishText('LOGO ALANI'), 25, 78);
+    
+    // Right logo area  
+    this.doc.rect(this.pageWidth - 65, 60, 50, 30);
+    this.doc.text(this.encodeTurkishText('HASTANE'), this.pageWidth - 55, 75);
+    this.doc.text(this.encodeTurkishText('LOGOSU'), this.pageWidth - 50, 82);
 
-    // Report information table with Turkish encoding
-    const startY = 120;
-    this.drawTable(startY, [
-      [this.encodeTurkishText('Rapor No:'), this.encodeTurkishText(reportData.reportNumber || '')],
-      [this.encodeTurkishText('Rapor Tarihi:'), reportData.reportDate ? new Date(reportData.reportDate).toLocaleDateString('tr-TR') : ''],
-      [this.encodeTurkishText('Proje Lokasyonu:'), this.encodeTurkishText(reportData.projectLocation || '')],
-      [this.encodeTurkishText('Raporlayan:'), this.encodeTurkishText(reportData.reporter || '')],
+    // Professional report information section
+    this.doc.setFont('helvetica', 'bold');
+    this.doc.setFontSize(14);
+    this.doc.setTextColor(0, 51, 102);
+    this.doc.text(this.encodeTurkishText('RAPOR BİLGİLERİ'), this.margin, 110);
+    
+    // Information table with better styling
+    const startY = 125;
+    this.drawProfessionalTable(startY, [
+      [this.encodeTurkishText('Rapor Numarası:'), this.encodeTurkishText(reportData.reportNumber || 'N/A')],
+      [this.encodeTurkishText('Rapor Tarihi:'), reportData.reportDate ? new Date(reportData.reportDate).toLocaleDateString('tr-TR') : 'N/A'],
+      [this.encodeTurkishText('Proje Lokasyonu:'), this.encodeTurkishText(reportData.projectLocation || 'N/A')],
+      [this.encodeTurkishText('Raporlayan Uzman:'), this.encodeTurkishText(reportData.reporter || 'N/A')],
+      [this.encodeTurkishText('Toplam Bulgu Sayısı:'), (reportData.findings?.length || 0).toString()],
     ]);
 
-    // Footer with Turkish encoding
+    // Footer section
+    this.doc.setDrawColor(0, 51, 102);
+    this.doc.setLineWidth(1);
+    this.doc.line(this.margin, this.pageHeight - 40, this.pageWidth - this.margin, this.pageHeight - 40);
+    
     this.doc.setFont('helvetica', 'normal');
     this.doc.setFontSize(10);
-    const footerText = this.encodeTurkishText(`Rapor Oluşturulma Tarihi: ${new Date().toLocaleDateString('tr-TR')}`);
-    this.doc.text(footerText, this.margin, this.pageHeight - 20);
+    this.doc.setTextColor(100, 100, 100);
+    const footerText = this.encodeTurkishText(`Bu rapor ${new Date().toLocaleDateString('tr-TR')} tarihinde oluşturulmuştur.`);
+    this.doc.text(footerText, this.margin, this.pageHeight - 25);
   }
 
   private async addLogoAndHospitalImage(): Promise<void> {
@@ -156,75 +196,109 @@ export class ProfessionalPDFGenerator {
   }
 
   private async addFindingPage(finding: Finding, findingNumber: number, sectionTitle: string): Promise<void> {
+    // Page header with section info
+    this.doc.setDrawColor(0, 51, 102);
+    this.doc.setLineWidth(2);
+    this.doc.line(this.margin, 15, this.pageWidth - this.margin, 15);
+    
     // Finding title with number
     this.doc.setFont('helvetica', 'bold');
-    this.doc.setFontSize(12);
-    const findingTitle = this.encodeTurkishText(`${findingNumber}. ${sectionTitle}`);
+    this.doc.setFontSize(14);
+    this.doc.setTextColor(0, 51, 102);
+    const findingTitle = this.encodeTurkishText(`BULGU ${findingNumber}: ${sectionTitle}`);
     this.doc.text(findingTitle, this.margin, 25);
 
-    // Draw main table structure like in the example
+    // Location and inspection date info
     let currentY = 35;
-    
-    // Location and inspection date table
-    this.drawTableRow(currentY, [
-      { text: this.encodeTurkishText('Yer-Konum:'), width: 40 },
-      { text: this.encodeTurkishText(finding.location || finding.title), width: 70 },
-      { text: this.encodeTurkishText('Tespit Tarihi:'), width: 30 },
-      { text: new Date().toLocaleDateString('tr-TR'), width: 30 }
+    this.drawProfessionalTable(currentY, [
+      [this.encodeTurkishText('Tespit Yeri/Konum:'), this.encodeTurkishText(finding.location || finding.title)],
+      [this.encodeTurkishText('Tespit Tarihi:'), new Date().toLocaleDateString('tr-TR')],
+      [this.encodeTurkishText('Risk Seviyesi:'), this.getDangerLevelText(finding.dangerLevel)]
     ]);
-    currentY += 15;
+    currentY += 50;
 
-    // Image section (left side)
+    // Main content sections
+    this.doc.setFont('helvetica', 'bold');
+    this.doc.setFontSize(12);
+    this.doc.setTextColor(0, 51, 102);
+    this.doc.text(this.encodeTurkishText('MEVCUT DURUM'), this.margin, currentY);
+    currentY += 10;
+    
     this.doc.setFont('helvetica', 'normal');
     this.doc.setFontSize(10);
-    this.doc.text(this.encodeTurkishText('Öncesi'), this.margin + 2, currentY + 8);
-    
-    // Draw image placeholder/actual image
-    const imageX = this.margin;
-    const imageY = currentY;
-    const imageWidth = 85;
-    const imageHeight = 120;
-    
-    // Image border
-    this.doc.setDrawColor(0, 0, 0);
-    this.doc.setLineWidth(0.5);
-    this.doc.rect(imageX, imageY, imageWidth, imageHeight);
+    this.doc.setTextColor(0, 0, 0);
+    const currentSituation = this.doc.splitTextToSize(
+      this.encodeTurkishText(finding.description || 'Belirtilmemiş'), 
+      this.pageWidth - 2 * this.margin
+    );
+    this.doc.text(currentSituation, this.margin, currentY);
+    currentY += Math.max(20, currentSituation.length * 5);
 
-    // Skip finding images for now to avoid errors
-    if (finding.images && finding.images.length > 0) {
-      this.doc.setFont('helvetica', 'normal');
-      this.doc.setFontSize(8);
-      this.doc.text('Fotoğraf mevcut', imageX + 5, imageY + 60);
-    }
-
-    // Right side - content sections
-    const rightX = imageX + imageWidth + 5;
-    const rightWidth = this.pageWidth - rightX - this.margin;
+    // Legal basis section
+    this.doc.setFont('helvetica', 'bold');
+    this.doc.setFontSize(12);
+    this.doc.setTextColor(0, 51, 102);
+    this.doc.text(this.encodeTurkishText('YASAL DAYANAK'), this.margin, currentY);
+    currentY += 10;
     
-    // Current situation
-    this.drawContentSection(rightX, currentY, rightWidth, 35, this.encodeTurkishText('Mevcut Durum:'), this.encodeTurkishText(finding.description));
-    currentY += 40;
-    
-    // Recommendation  
-    this.drawContentSection(rightX, currentY, rightWidth, 35, this.encodeTurkishText('Dayanak:'), this.encodeTurkishText(finding.recommendation || ''));
-    currentY += 40;
-    
-    // ISG Opinion
-    this.drawContentSection(rightX, currentY, rightWidth, 35, this.encodeTurkishText('İSG Görüşü:'), this.encodeTurkishText(finding.recommendation || ''));
-
-    // Bottom section - "After" area
-    currentY = imageY + imageHeight + 5;
-    this.doc.text(this.encodeTurkishText('Sonrası'), this.margin + 2, currentY + 8);
-    this.doc.rect(this.margin, currentY, imageWidth, 25);
-
-    // Danger level table at bottom
-    currentY += 30;
-    const dangerColor = this.getDangerColor(finding.dangerLevel);
-    this.drawDangerLevelTable(currentY, finding.dangerLevel, dangerColor);
-
-    // Process management table
+    this.doc.setFont('helvetica', 'normal');
+    this.doc.setFontSize(10);
+    this.doc.setTextColor(0, 0, 0);
+    const legalBasis = this.doc.splitTextToSize(
+      this.encodeTurkishText('İş Sağlığı ve Güvenliği Kanunu ve ilgili yönetmelikler'), 
+      this.pageWidth - 2 * this.margin
+    );
+    this.doc.text(legalBasis, this.margin, currentY);
     currentY += 25;
-    this.drawProcessTable(currentY, finding.processSteps || []);
+
+    // ISG Opinion section
+    this.doc.setFont('helvetica', 'bold');
+    this.doc.setFontSize(12);
+    this.doc.setTextColor(0, 51, 102);
+    this.doc.text(this.encodeTurkishText('İSG UZMANI GÖRÜŞü'), this.margin, currentY);
+    currentY += 10;
+    
+    this.doc.setFont('helvetica', 'normal');
+    this.doc.setFontSize(10);
+    this.doc.setTextColor(0, 0, 0);
+    const isgOpinion = this.doc.splitTextToSize(
+      this.encodeTurkishText(finding.recommendation || 'Düzeltici faaliyet önerileri değerlendirilmelidir.'), 
+      this.pageWidth - 2 * this.margin
+    );
+    this.doc.text(isgOpinion, this.margin, currentY);
+    currentY += Math.max(25, isgOpinion.length * 5);
+
+    // Image section
+    this.doc.setFont('helvetica', 'bold');
+    this.doc.setFontSize(12);
+    this.doc.setTextColor(0, 51, 102);
+    this.doc.text(this.encodeTurkishText('FOTOĞRAF ALANI'), this.margin, currentY);
+    currentY += 10;
+    
+    // Image placeholders
+    const imageWidth = 80;
+    const imageHeight = 60;
+    const spacing = 10;
+    
+    // Before image
+    this.doc.setDrawColor(150, 150, 150);
+    this.doc.setLineWidth(1);
+    this.doc.rect(this.margin, currentY, imageWidth, imageHeight);
+    this.doc.setFont('helvetica', 'normal');
+    this.doc.setFontSize(10);
+    this.doc.text(this.encodeTurkishText('ÖNCESİ'), this.margin + 5, currentY + 15);
+    if (finding.images && finding.images.length > 0) {
+      this.doc.text(this.encodeTurkishText('Fotoğraf mevcut'), this.margin + 5, currentY + 30);
+    }
+    
+    // After image
+    this.doc.rect(this.margin + imageWidth + spacing, currentY, imageWidth, imageHeight);
+    this.doc.text(this.encodeTurkishText('SONRASI'), this.margin + imageWidth + spacing + 5, currentY + 15);
+    
+    currentY += imageHeight + 15;
+
+    // Danger level indicator with color
+    this.addDangerLevelSection(currentY, finding.dangerLevel);
   }
 
   private drawTableRow(y: number, cells: Array<{text: string, width: number}>): void {
@@ -347,7 +421,7 @@ export class ProfessionalPDFGenerator {
   }
 
   private drawTable(startY: number, rows: string[][]): void {
-    const rowHeight = 10;
+    const rowHeight = 12;
     const colWidth = (this.pageWidth - 2 * this.margin) / 2;
     
     this.doc.setDrawColor(0, 0, 0);
@@ -363,34 +437,102 @@ export class ProfessionalPDFGenerator {
       // Add text
       this.doc.setFont('helvetica', 'bold');
       this.doc.setFontSize(10);
-      this.doc.text(row[0], this.margin + 2, y + 7);
+      this.doc.text(row[0], this.margin + 2, y + 8);
       
       this.doc.setFont('helvetica', 'normal');
       const splitText = this.doc.splitTextToSize(row[1], colWidth - 4);
-      this.doc.text(splitText, this.margin + colWidth + 2, y + 7);
+      this.doc.text(splitText, this.margin + colWidth + 2, y + 8);
+    });
+  }
+
+  private drawProfessionalTable(startY: number, rows: string[][]): void {
+    const rowHeight = 15;
+    const labelWidth = 80;
+    const valueWidth = this.pageWidth - 2 * this.margin - labelWidth;
+    
+    this.doc.setDrawColor(100, 100, 100);
+    this.doc.setLineWidth(0.5);
+    
+    rows.forEach((row, index) => {
+      const y = startY + (index * rowHeight);
+      
+      // Header cell with light blue background
+      this.doc.setFillColor(240, 248, 255);
+      this.doc.rect(this.margin, y, labelWidth, rowHeight, 'F');
+      this.doc.rect(this.margin, y, labelWidth, rowHeight);
+      
+      // Value cell  
+      this.doc.rect(this.margin + labelWidth, y, valueWidth, rowHeight);
+      
+      // Label text
+      this.doc.setFont('helvetica', 'bold');
+      this.doc.setFontSize(10);
+      this.doc.setTextColor(0, 51, 102);
+      this.doc.text(row[0], this.margin + 3, y + 10);
+      
+      // Value text
+      this.doc.setFont('helvetica', 'normal');
+      this.doc.setTextColor(0, 0, 0);
+      const splitText = this.doc.splitTextToSize(row[1], valueWidth - 6);
+      this.doc.text(splitText, this.margin + labelWidth + 3, y + 10);
     });
   }
 
   private addManagementSummary(summary: string): void {
-    this.doc.setFont('helvetica', 'bold');
-    this.doc.setFontSize(14);
-    this.doc.text(this.encodeTurkishText('Yönetici Özeti'), this.margin, 30);
+    // Header
+    this.doc.setDrawColor(0, 51, 102);
+    this.doc.setLineWidth(2);
+    this.doc.line(this.margin, 15, this.pageWidth - this.margin, 15);
     
+    this.doc.setFont('helvetica', 'bold');
+    this.doc.setFontSize(16);
+    this.doc.setTextColor(0, 51, 102);
+    this.doc.text(this.encodeTurkishText('YÖNETİCİ ÖZETİ'), this.margin, 30);
+    
+    // Content
     this.doc.setFont('helvetica', 'normal');
     this.doc.setFontSize(11);
+    this.doc.setTextColor(0, 0, 0);
     const splitText = this.doc.splitTextToSize(this.encodeTurkishText(summary), this.pageWidth - 2 * this.margin);
-    this.doc.text(splitText, this.margin, 45);
+    this.doc.text(splitText, this.margin, 50);
   }
 
   private addGeneralEvaluation(evaluation: string): void {
-    this.doc.setFont('helvetica', 'bold');
-    this.doc.setFontSize(14);
-    this.doc.text(this.encodeTurkishText('Genel Değerlendirme'), this.margin, 30);
+    // Header
+    this.doc.setDrawColor(0, 51, 102);
+    this.doc.setLineWidth(2);
+    this.doc.line(this.margin, 15, this.pageWidth - this.margin, 15);
     
+    this.doc.setFont('helvetica', 'bold');
+    this.doc.setFontSize(16);
+    this.doc.setTextColor(0, 51, 102);
+    this.doc.text(this.encodeTurkishText('GENEL DEĞERLENDİRME'), this.margin, 30);
+    
+    // Content
     this.doc.setFont('helvetica', 'normal');
     this.doc.setFontSize(11);
+    this.doc.setTextColor(0, 0, 0);
     const splitText = this.doc.splitTextToSize(this.encodeTurkishText(evaluation), this.pageWidth - 2 * this.margin);
-    this.doc.text(splitText, this.margin, 45);
+    this.doc.text(splitText, this.margin, 50);
+  }
+
+  private addDangerLevelSection(currentY: number, dangerLevel: string): void {
+    this.doc.setFont('helvetica', 'bold');
+    this.doc.setFontSize(12);
+    this.doc.setTextColor(0, 51, 102);
+    this.doc.text(this.encodeTurkishText('TEHLİKE SKALASI'), this.margin, currentY);
+    
+    // Danger level box with color
+    const dangerColor = this.getDangerColor(dangerLevel);
+    this.doc.setFillColor(dangerColor[0], dangerColor[1], dangerColor[2]);
+    this.doc.rect(this.margin, currentY + 5, 60, 15, 'F');
+    this.doc.setDrawColor(0, 0, 0);
+    this.doc.rect(this.margin, currentY + 5, 60, 15);
+    
+    this.doc.setFont('helvetica', 'bold');
+    this.doc.setFontSize(10);
+    this.doc.setTextColor(255, 255, 255);
+    this.doc.text(this.encodeTurkishText(this.getDangerLevelText(dangerLevel).toUpperCase()), this.margin + 5, currentY + 15);
   }
 
   private addNewPage(): void {
