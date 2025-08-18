@@ -458,3 +458,47 @@ export async function generateProfessionalPDF(
 
   return generator.generateReport(reportData);
 }
+
+export async function downloadProfessionalReportPDF(reportData: any) {
+  try {
+    const generator = new ProfessionalPDFGenerator();
+    
+    const formattedData: ReportData = {
+      id: reportData.id,
+      reportNumber: reportData.reportNumber || 'RPT-' + Date.now(),
+      reportDate: reportData.reportDate || new Date().toLocaleDateString('tr-TR'),
+      projectLocation: reportData.projectLocation || 'İstinye Üniversite Topkapı Liv Hastanesi',
+      reporter: reportData.reporter || 'İSG Uzmanı',
+      managementSummary: reportData.managementSummary,
+      generalEvaluation: reportData.generalEvaluation,
+      findings: (reportData.findings || []).map((f: any) => ({
+        id: f.id,
+        title: f.title,
+        section: f.section,
+        currentSituation: f.currentSituation,
+        dangerLevel: f.dangerLevel,
+        recommendation: f.recommendation,
+        legalBasis: f.legalBasis,
+        images: f.images,
+        isCompleted: f.isCompleted,
+        processSteps: f.processSteps
+      }))
+    };
+
+    const pdfBlob = await generator.generateReport(formattedData);
+    
+    // PDF'i indir
+    const url = URL.createObjectURL(pdfBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `ISG-Raporu-${formattedData.reportNumber}-${new Date().toLocaleDateString('tr-TR').replace(/\./g, '-')}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    
+  } catch (error) {
+    console.error('PDF download error:', error);
+    throw error;
+  }
+}
