@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { FileText, Download, Edit, ArrowLeft, Calendar, MapPin, User, AlertTriangle } from "lucide-react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
-import { HTMLToPDFGenerator } from "@/lib/htmlToPdfGenerator";
+import { ModernPdfGenerator } from "@/lib/modernPdfGenerator";
 
 interface ViewReportProps {
   id: string;
@@ -68,22 +68,10 @@ export default function ViewReport({ id }: ViewReportProps) {
       };
 
       console.log('PDF için hazırlanan veri:', reportData);
-      console.log('HTMLToPDFGenerator kullanılıyor...');
+      console.log('ModernPdfGenerator kullanılıyor - print window açılacak...');
 
-      const pdfGenerator = new HTMLToPDFGenerator();
-      console.log('PDF generator oluşturuldu');
-      const pdfBlob = await pdfGenerator.generateReport(reportData);
-      console.log('PDF blob oluşturuldu:', pdfBlob.size, 'bytes');
-      
-      // PDF'i indir
-      const url = URL.createObjectURL(pdfBlob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `ISG_Raporu_${reportData.reportNumber || new Date().toISOString().split('T')[0]}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      const pdfGenerator = new ModernPdfGenerator();
+      await pdfGenerator.generateReport(reportData);
       
       toast({
         title: "PDF İndirildi",

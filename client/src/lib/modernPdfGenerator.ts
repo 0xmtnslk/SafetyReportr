@@ -1,5 +1,3 @@
-import jsPDF from 'jspdf';
-
 interface ReportData {
   id: string;
   reportNumber: string;
@@ -8,286 +6,472 @@ interface ReportData {
   reporter: string;
   managementSummary?: string;
   generalEvaluation?: string;
-  findings: Array<{
-    id: string;
-    title: string;
-    section: number;
-    currentSituation: string;
-    dangerLevel: 'high' | 'medium' | 'low';
-    recommendation?: string;
-    legalBasis?: string;
-    images?: string[];
-    isCompleted: boolean;
-    processSteps?: Array<{date: string, description: string}>;
-  }>;
+  findings: Finding[];
 }
 
-export class ModernPDFGenerator {
-  private doc: jsPDF;
-  private pageHeight: number;
-  private pageWidth: number;
-  private currentY: number;
-  private margin: number;
+interface Finding {
+  id: string;
+  section: number;
+  title: string;
+  description: string;
+  dangerLevel: 'high' | 'medium' | 'low';
+  recommendation?: string;
+  images?: string[];
+  location?: string;
+  processSteps?: ProcessStep[];
+  isCompleted?: boolean;
+}
 
-  constructor() {
-    this.doc = new jsPDF('p', 'mm', 'a4');
-    this.pageHeight = this.doc.internal.pageSize.height;
-    this.pageWidth = this.doc.internal.pageSize.width;
-    this.currentY = 15;
-    this.margin = 15;
-  }
+interface ProcessStep {
+  description: string;
+  targetDate: string;
+  responsible: string;
+  status: string;
+}
 
-  private checkPageBreak(requiredSpace: number = 20) {
-    if (this.currentY + requiredSpace > this.pageHeight - this.margin) {
-      this.doc.addPage();
-      this.currentY = this.margin;
+export class ModernPdfGenerator {
+  async generateReport(reportData: ReportData): Promise<void> {
+    // Open new window for printing
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      throw new Error('Popup engellendi. Popup engelleyiciyi devre dışı bırakın.');
     }
+
+    const htmlContent = this.generateFullHTML(reportData);
+    
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+    
+    // Wait for content to load then print
+    printWindow.onload = () => {
+      setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+      }, 500);
+    };
   }
 
-  private addText(text: string, x: number, y: number, options: {
-    size?: number;
-    style?: 'normal' | 'bold' | 'italic';
-    color?: number[];
-    align?: 'left' | 'center' | 'right';
-    maxWidth?: number;
-  } = {}) {
-    const {
-      size = 10,
-      style = 'normal',
-      color = [0, 0, 0],
-      align = 'left',
-      maxWidth = this.pageWidth - 2 * this.margin
-    } = options;
-
-    this.doc.setFontSize(size);
-    this.doc.setFont('helvetica', style);
-    this.doc.setTextColor(...color);
-
-    if (text.length > 0) {
-      if (maxWidth) {
-        const lines = this.doc.splitTextToSize(text, maxWidth);
-        for (let i = 0; i < lines.length; i++) {
-          if (align === 'center') {
-            this.doc.text(lines[i], this.pageWidth / 2, y + (i * 5), { align: 'center' });
-          } else if (align === 'right') {
-            this.doc.text(lines[i], this.pageWidth - this.margin, y + (i * 5), { align: 'right' });
-          } else {
-            this.doc.text(lines[i], x, y + (i * 5));
-          }
+  private generateFullHTML(reportData: ReportData): string {
+    return `
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>İSG Raporu - ${reportData.reportNumber}</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-        return lines.length * 5;
-      } else {
-        this.doc.text(text, x, y);
-        return 5;
+
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+
+        @media print {
+            body { 
+                font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; 
+                font-size: 12px;
+                line-height: 1.4;
+                color: #000;
+            }
+            
+            .page-break {
+                page-break-before: always;
+            }
+            
+            .no-break {
+                page-break-inside: avoid;
+            }
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-size: 12px;
+            line-height: 1.4;
+            color: #000;
+            background: white;
+        }
+
+        .cover-page {
+            text-align: center;
+            padding: 40px 0;
+        }
+
+        .header-line {
+            width: 100%;
+            height: 6px;
+            background: linear-gradient(90deg, #003366, #0066cc);
+            margin-bottom: 40px;
+            border-radius: 3px;
+        }
+
+        .main-title {
+            color: #003366;
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 15px;
+        }
+
+        .subtitle {
+            color: #003366;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 50px;
+        }
+
+        .logo-section {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 60px;
+            margin: 50px 0;
+            flex-wrap: wrap;
+        }
+
+        .logo-box {
+            width: 120px;
+            height: 80px;
+            border: 2px dashed #ccc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            background: #f8f9fa;
+        }
+
+        .logo-box img {
+            max-width: 100px;
+            max-height: 60px;
+            object-fit: contain;
+        }
+
+        .report-info {
+            margin-top: 80px;
+        }
+
+        .section-title {
+            color: #003366;
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #003366;
+            padding-bottom: 10px;
+        }
+
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 40px;
+        }
+
+        .info-table td {
+            padding: 15px;
+            border: 1px solid #ddd;
+        }
+
+        .info-table .label {
+            background: #f0f8ff;
+            font-weight: 600;
+            color: #003366;
+            width: 40%;
+        }
+
+        .page-header {
+            height: 4px;
+            background: linear-gradient(90deg, #003366, #0066cc);
+            margin-bottom: 30px;
+            border-radius: 2px;
+        }
+
+        .finding-title {
+            color: #003366;
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 25px;
+        }
+
+        .finding-section h3 {
+            color: #003366;
+            font-size: 14px;
+            font-weight: 600;
+            margin: 20px 0 8px 0;
+        }
+
+        .finding-content {
+            margin-bottom: 15px;
+            text-align: justify;
+        }
+
+        .risk-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            color: white;
+            font-weight: 600;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+
+        .risk-high { background-color: #dc2626; }
+        .risk-medium { background-color: #f59e0b; }
+        .risk-low { background-color: #22c55e; }
+
+        .process-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .process-table th,
+        .process-table td {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+
+        .process-table th {
+            background: #f0f8ff;
+            color: #003366;
+            font-weight: 600;
+        }
+
+        .footer {
+            position: fixed;
+            bottom: 2cm;
+            left: 2cm;
+            right: 2cm;
+        }
+
+        .footer-line {
+            height: 1px;
+            background: #003366;
+            margin-bottom: 10px;
+        }
+
+        .footer-text {
+            color: #666;
+            font-size: 10px;
+            text-align: center;
+        }
+
+        @media screen {
+            body {
+                max-width: 800px;
+                margin: 20px auto;
+                padding: 20px;
+                background: #f5f5f5;
+            }
+            
+            .page-break {
+                margin-top: 50px;
+                padding-top: 50px;
+                border-top: 2px dashed #ccc;
+            }
+        }
+    </style>
+</head>
+<body>
+    ${this.generateCoverPage(reportData)}
+    
+    ${reportData.managementSummary ? this.generateManagementSummary(reportData.managementSummary) : ''}
+    
+    ${this.generateFindingsPages(reportData)}
+    
+    ${reportData.generalEvaluation ? this.generateGeneralEvaluation(reportData.generalEvaluation) : ''}
+</body>
+</html>`;
+  }
+
+  private generateCoverPage(reportData: ReportData): string {
+    return `
+    <div class="cover-page">
+        <div class="header-line"></div>
+        
+        <h1 class="main-title">İstinye Üniversite Topkapı Liv Hastanesi</h1>
+        <h2 class="subtitle">İş Sağlığı ve Güvenliği Saha Gözlem Raporu</h2>
+        
+        <div class="logo-section">
+            <div class="logo-box">
+                <span style="color: #666; font-size: 11px;">LOGO ALANI</span>
+            </div>
+            
+            <div class="logo-box">
+                <img src="/attached_assets/logo_1755548921510.jpg" alt="MLP Care" 
+                     onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                <span style="color: #666; font-size: 11px; display: none;">MLP CARE</span>
+            </div>
+            
+            <div class="logo-box">
+                <div style="text-align: center;">
+                    <div style="color: #666; font-size: 10px;">HASTANE</div>
+                    <div style="color: #666; font-size: 10px;">LOGOSU</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="report-info">
+            <h3 class="section-title">RAPOR BİLGİLERİ</h3>
+            
+            <table class="info-table">
+                <tr>
+                    <td class="label">Rapor Numarası:</td>
+                    <td>${reportData.reportNumber || '2025-001'}</td>
+                </tr>
+                <tr>
+                    <td class="label">Rapor Tarihi:</td>
+                    <td>${reportData.reportDate || new Date().toLocaleDateString('tr-TR')}</td>
+                </tr>
+                <tr>
+                    <td class="label">Proje Lokasyonu:</td>
+                    <td>${reportData.projectLocation || 'İstinye Üniversitesi Topkapı Liv Hastanesi'}</td>
+                </tr>
+                <tr>
+                    <td class="label">Raporlayan Uzman:</td>
+                    <td>${reportData.reporter || 'Metin Salık'}</td>
+                </tr>
+                <tr>
+                    <td class="label">Toplam Bulgu Sayısı:</td>
+                    <td>${reportData.findings?.length || 0}</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+    
+    <div class="footer">
+        <div class="footer-line"></div>
+        <p class="footer-text">Bu rapor ${new Date().toLocaleDateString('tr-TR')} tarihinde oluşturulmuştur.</p>
+    </div>`;
+  }
+
+  private generateManagementSummary(summary: string): string {
+    return `
+    <div class="page-break">
+        <div class="page-header"></div>
+        <h1 class="section-title">YÖNETİCİ ÖZETİ</h1>
+        <div class="finding-content">
+            ${summary.split('\n').map(paragraph => 
+                paragraph.trim() ? `<p style="margin-bottom: 15px;">${paragraph}</p>` : ''
+            ).join('')}
+        </div>
+    </div>`;
+  }
+
+  private generateFindingsPages(reportData: ReportData): string {
+    if (!reportData.findings || reportData.findings.length === 0) {
+      return '';
+    }
+
+    const sections = [
+      { number: 2, title: 'Tasarım/İmalat/Montaj Hataları' },
+      { number: 3, title: 'İş Sağlığı ve Güvenliği Bulguları' },
+      { number: 4, title: 'Tamamlanmış Bulgular' }
+    ];
+
+    let html = '';
+    let findingCounter = 1;
+
+    for (const section of sections) {
+      const sectionFindings = reportData.findings.filter(f => f.section === section.number);
+      
+      for (const finding of sectionFindings) {
+        html += this.generateFindingPage(finding, findingCounter, section.title);
+        findingCounter++;
       }
     }
-    return 0;
+
+    return html;
   }
 
-  private addTableHeader() {
-    // Company logo area - simple blue header
-    this.doc.setFillColor(52, 73, 94); // Dark blue
-    this.doc.rect(this.margin, this.currentY, this.pageWidth - 2 * this.margin, 25, 'F');
-    
-    // Company name in white
-    this.addText('İŞ SAĞLIĞI VE GÜVENLİĞİ RAPORU', this.margin + 5, this.currentY + 8, {
-      size: 14,
-      style: 'bold',
-      color: [255, 255, 255]
-    });
-    
-    this.currentY += 30;
+  private generateFindingPage(finding: Finding, findingNumber: number, sectionTitle: string): string {
+    const riskClass = `risk-${finding.dangerLevel || 'medium'}`;
+    const riskTexts = {
+      'high': 'YÜKSEK RİSK',
+      'medium': 'ORTA RİSK',
+      'low': 'DÜŞÜK RİSK'
+    };
+
+    return `
+    <div class="page-break">
+        <div class="page-header"></div>
+        <h1 class="finding-title">BULGU ${findingNumber}: ${sectionTitle}</h1>
+
+        <table class="info-table">
+            <tr>
+                <td class="label">Tespit Yeri/Konum:</td>
+                <td>${finding.location || finding.title}</td>
+            </tr>
+            <tr>
+                <td class="label">Tespit Tarihi:</td>
+                <td>${new Date().toLocaleDateString('tr-TR')}</td>
+            </tr>
+        </table>
+
+        <div class="finding-section">
+            <h3>MEVCUT DURUM</h3>
+            <div class="finding-content">${finding.description || 'Belirtilmemiş'}</div>
+
+            <h3>YASAL DAYANAK</h3>
+            <div class="finding-content">İş Sağlığı ve Güvenliği Kanunu ve ilgili yönetmelikler</div>
+
+            <h3>İSG UZMANI GÖRÜŞÜ</h3>
+            <div class="finding-content">${finding.recommendation || 'Gerekli önlemler alınmalıdır.'}</div>
+
+            <h3>FOTOĞRAF ALANI</h3>
+            <div style="display: flex; gap: 15px; margin-bottom: 20px;">
+                <div style="width: 150px; height: 100px; border: 2px dashed #ccc; display: flex; align-items: center; justify-content: center; background: #f8f9fa; border-radius: 4px;">
+                    <span style="color: #666; font-size: 11px;">Fotoğraf 1</span>
+                </div>
+                <div style="width: 150px; height: 100px; border: 2px dashed #ccc; display: flex; align-items: center; justify-content: center; background: #f8f9fa; border-radius: 4px;">
+                    <span style="color: #666; font-size: 11px;">Fotoğraf 2</span>
+                </div>
+            </div>
+
+            <div class="risk-badge ${riskClass}">
+                RİSK: ${riskTexts[finding.dangerLevel as keyof typeof riskTexts] || 'ORTA RİSK'}
+            </div>
+
+            ${finding.processSteps && finding.processSteps.length > 0 ? `
+                <h3>SÜREÇ YÖNETİMİ</h3>
+                <table class="process-table">
+                    <thead>
+                        <tr>
+                            <th>Faaliyet</th>
+                            <th>Hedef Tarih</th>
+                            <th>Sorumlu</th>
+                            <th>Durum</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${finding.processSteps.map(step => `
+                            <tr>
+                                <td>${step.description}</td>
+                                <td>${step.targetDate}</td>
+                                <td>${step.responsible}</td>
+                                <td>${step.status}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            ` : ''}
+        </div>
+    </div>`;
   }
 
-  private addReportInfo(data: ReportData) {
-    // Report info table
-    const tableY = this.currentY;
-    const colWidth = (this.pageWidth - 2 * this.margin) / 2;
-    
-    // Table borders
-    this.doc.setDrawColor(200, 200, 200);
-    this.doc.setLineWidth(0.2);
-    
-    // Header row with report details
-    this.doc.setFillColor(240, 240, 240);
-    this.doc.rect(this.margin, tableY, this.pageWidth - 2 * this.margin, 8, 'FD');
-    
-    this.addText('Raporlayan:', this.margin + 2, tableY + 5, { size: 8, style: 'bold' });
-    this.addText(data.reporter, this.margin + colWidth + 2, tableY + 5, { size: 8 });
-    
-    // Report date and number
-    this.doc.rect(this.margin, tableY + 8, colWidth, 8, 'D');
-    this.doc.rect(this.margin + colWidth, tableY + 8, colWidth, 8, 'D');
-    
-    this.addText('Rapor Tar.:', this.margin + 2, tableY + 13, { size: 8, style: 'bold' });
-    this.addText(new Date(data.reportDate).toLocaleDateString('tr-TR'), this.margin + 25, tableY + 13, { size: 8 });
-    
-    this.addText('Rapor No:', this.margin + colWidth + 2, tableY + 13, { size: 8, style: 'bold' });
-    this.addText(data.reportNumber, this.margin + colWidth + 25, tableY + 13, { size: 8 });
-    
-    this.currentY = tableY + 20;
-  }
-
-  private addFindingSection(finding: any, index: number) {
-    this.checkPageBreak(50);
-    
-    const startY = this.currentY;
-    
-    // Finding number and title
-    this.addText(`${index + 1}. Yangın Kapıları ve Manyetik Tutucullar`, this.margin, this.currentY, {
-      size: 10,
-      style: 'bold'
-    });
-    this.currentY += 8;
-    
-    // Two column layout for image and content
-    const imageX = this.margin;
-    const imageWidth = 60;
-    const imageHeight = 80;
-    const contentX = imageX + imageWidth + 5;
-    const contentWidth = this.pageWidth - contentX - this.margin;
-    
-    // Image placeholder (you can add actual image loading here)
-    this.doc.setFillColor(220, 220, 220);
-    this.doc.rect(imageX, this.currentY, imageWidth, imageHeight, 'F');
-    this.doc.setDrawColor(180, 180, 180);
-    this.doc.rect(imageX, this.currentY, imageWidth, imageHeight, 'D');
-    
-    // Add red arrow indicator in image area
-    this.doc.setFillColor(220, 38, 38);
-    this.doc.triangle(imageX + 10, this.currentY + 40, imageX + 20, this.currentY + 35, imageX + 20, this.currentY + 45, 'F');
-    
-    // Content area
-    let contentY = this.currentY;
-    
-    // Tespit Tarihi
-    this.addText('Tespit Tarihi:', contentX, contentY, { size: 8, style: 'bold' });
-    this.addText(new Date().toLocaleDateString('tr-TR'), contentX + 25, contentY, { size: 8 });
-    contentY += 6;
-    
-    // Mevcut Durum
-    this.addText('Mevcut Durum:', contentX, contentY, { size: 8, style: 'bold' });
-    contentY += 5;
-    const situationHeight = this.addText(finding.currentSituation || 'Yangın kapıları merdiven ayrılığı konumunda değildir. Kapıların manyetik tutucudan ayrıldığımızda kendini kendine kapanmıyor. Kapıların yolun dışarısını sertifikasyonun tespit edilememiştir. Açma kuvveti ve kapıları olan saha yapılamamıştır.', 
-      contentX, contentY, { size: 8, maxWidth: contentWidth });
-    contentY += situationHeight + 5;
-    
-    // Dayanak
-    this.addText('Dayanak:', contentX, contentY, { size: 8, style: 'bold' });
-    contentY += 5;
-    this.addText('Binaların Yangından Korunması Hakkında Yönetmelik: TS EN 1634-3', contentX, contentY, { size: 8 });
-    contentY += 6;
-    
-    // İGÜ Görüşü
-    this.addText('İGÜ Görüşü:', contentX, contentY, { size: 8, style: 'bold' });
-    contentY += 5;
-    const recommendationHeight = this.addText(finding.recommendation || 'Yangın kapıları, TS EN 1634-3 standardına uygun şekilde yangın merdiven sahalarını ayrı ötelemektedir. Sistemlerin alınması gereken tedbirler; Kapı merdiverileri kontrol edilmeli ve acil durum anında güvenlik manyetik tutucular bırakıldığında kapılar ek herhangi bir müdahale gerek duyulmadan kendi', 
-      contentX, contentY, { size: 8, maxWidth: contentWidth });
-    
-    this.currentY = Math.max(this.currentY + imageHeight, contentY + recommendationHeight) + 10;
-    
-    // Action table at bottom
-    this.addActionTable();
-  }
-
-  private addActionTable() {
-    const tableY = this.currentY;
-    const tableWidth = this.pageWidth - 2 * this.margin;
-    
-    // Green header
-    this.doc.setFillColor(34, 197, 94);
-    this.doc.rect(this.margin, tableY, tableWidth, 8, 'F');
-    this.addText('Tedbike Skalası', this.margin + 2, tableY + 5, {
-      size: 9,
-      style: 'bold',
-      color: [255, 255, 255]
-    });
-    
-    // Table rows
-    const rowHeight = 8;
-    this.doc.setFillColor(255, 255, 255);
-    this.doc.setDrawColor(200, 200, 200);
-    
-    // Header row
-    this.doc.rect(this.margin, tableY + 8, tableWidth, rowHeight, 'D');
-    this.addText('Süreç Yönetimi', this.margin + 2, tableY + 13, { size: 8, style: 'bold' });
-    this.addText('Açıklama', this.margin + tableWidth/2, tableY + 13, { size: 8, style: 'bold' });
-    
-    // Data row
-    this.doc.rect(this.margin, tableY + 16, tableWidth, rowHeight, 'D');
-    this.addText('Tarih', this.margin + 2, tableY + 21, { size: 8 });
-    this.addText('01.08.2025', this.margin + 20, tableY + 21, { size: 8 });
-    this.addText('Kapı koridor geçişlerinde bulunan yangın kapıları montajı ve açılışları yapılıyor ve tamamlanıyor.', 
-      this.margin + tableWidth/2, tableY + 21, { size: 8, maxWidth: tableWidth/2 - 5 });
-    
-    this.currentY = tableY + 30;
-  }
-
-  public async generateReport(reportData: ReportData): Promise<Blob> {
-    // Add header
-    this.addTableHeader();
-    
-    // Add report info
-    this.addReportInfo(reportData);
-    
-    // Add findings from different sections
-    const relevantFindings = reportData.findings.filter(f => f.section === 2 || f.section === 3);
-    
-    relevantFindings.forEach((finding, index) => {
-      this.addFindingSection(finding, index);
-      this.currentY += 10; // Space between findings
-    });
-    
-    // Add management summary if available
-    if (reportData.managementSummary) {
-      this.checkPageBreak(30);
-      this.addText('YÖNETİCİ ÖZETİ', this.margin, this.currentY, {
-        size: 12,
-        style: 'bold'
-      });
-      this.currentY += 10;
-      
-      this.addText(reportData.managementSummary, this.margin, this.currentY, {
-        size: 10,
-        maxWidth: this.pageWidth - 2 * this.margin
-      });
-      this.currentY += 20;
-    }
-    
-    // Add general evaluation if available
-    if (reportData.generalEvaluation) {
-      this.checkPageBreak(30);
-      this.addText('GENEL DEĞERLENDİRME', this.margin, this.currentY, {
-        size: 12,
-        style: 'bold'
-      });
-      this.currentY += 10;
-      
-      this.addText(reportData.generalEvaluation, this.margin, this.currentY, {
-        size: 10,
-        maxWidth: this.pageWidth - 2 * this.margin
-      });
-    }
-    
-    // Generate and return PDF blob
-    return new Promise((resolve) => {
-      const pdfBlob = this.doc.output('blob');
-      resolve(pdfBlob);
-    });
+  private generateGeneralEvaluation(evaluation: string): string {
+    return `
+    <div class="page-break">
+        <div class="page-header"></div>
+        <h1 class="section-title">GENEL DEĞERLENDİRME</h1>
+        <div class="finding-content">
+            ${evaluation.split('\n').map(paragraph => 
+                paragraph.trim() ? `<p style="margin-bottom: 15px;">${paragraph}</p>` : ''
+            ).join('')}
+        </div>
+    </div>`;
   }
 }
-
-export const downloadModernReportPDF = async (reportData: ReportData) => {
-  const generator = new ModernPDFGenerator();
-  const pdfBlob = await generator.generateReport(reportData);
-  
-  // Create download link
-  const url = URL.createObjectURL(pdfBlob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = `ISG_Rapor_${reportData.reportNumber}_${new Date().toLocaleDateString('tr-TR').replace(/\./g, '_')}.pdf`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-};
