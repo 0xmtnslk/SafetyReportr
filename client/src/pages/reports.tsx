@@ -218,6 +218,7 @@ export default function Reports() {
               key={report.id}
               className="hover:shadow-md transition-shadow cursor-pointer"
               data-testid={`report-card-${report.id}`}
+              onClick={() => setLocation(`/edit-report/${report.id}`)}
             >
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-4">
@@ -240,7 +241,7 @@ export default function Reports() {
                   {new Date(report.reportDate).toLocaleDateString("tr-TR")} - {report.reporter}
                 </p>
 
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                   <div className="flex items-center space-x-4">
                     <div className="flex items-center">
                       <div className="w-3 h-3 bg-danger rounded-full mr-2"></div>
@@ -255,7 +256,7 @@ export default function Reports() {
                       <span className="text-sm text-gray-600">{report.lowRiskCount || 0} Düşük</span>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2">
+                  <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2">
                     <Button
                       size="sm"
                       variant="outline"
@@ -264,15 +265,20 @@ export default function Reports() {
                         setLocation(`/edit-report/${report.id}`);
                       }}
                       data-testid={`button-edit-${report.id}`}
+                      className="w-full sm:w-auto text-xs"
                     >
-                      <Edit size={14} />
+                      <Edit size={12} className="mr-1" />
+                      Düzenle
                     </Button>
-                    <PDFPreview
-                      reportData={report}
-                      findings={[]}
-                    />
+                    <div className="w-full sm:w-auto">
+                      <PDFPreview
+                        reportData={report}
+                        findings={[]}
+                      />
+                    </div>
                     <Button
                       size="sm"
+                      className="w-full sm:w-auto text-xs"
                       variant="outline"
                       onClick={(e) => {
                         e.stopPropagation();
@@ -280,9 +286,9 @@ export default function Reports() {
                       }}
                       data-testid={`button-export-${report.id}`}
                     >
-                      <Download size={14} />
+                      <Download size={12} className="mr-1" />
+                      İndir
                     </Button>
-                    <ChevronRight className="text-gray-400" size={16} />
                   </div>
                 </div>
               </CardContent>

@@ -2,9 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileText, AlertTriangle, CheckCircle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useLocation } from "wouter";
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const [, setLocation] = useLocation();
 
   const { data: stats = {}, isLoading: statsLoading } = useQuery({
     queryKey: ["/api/stats"],
@@ -110,6 +112,7 @@ export default function Dashboard() {
                   key={report.id}
                   className="flex items-center justify-between p-4 hover:bg-gray-50 rounded-xl transition-colors cursor-pointer"
                   data-testid={`report-item-${report.id}`}
+                  onClick={() => setLocation(`/edit-report/${report.id}`)}
                 >
                   <div className="flex items-center">
                     <div className="w-10 h-10 bg-primary bg-opacity-10 rounded-xl flex items-center justify-center mr-3">

@@ -83,13 +83,24 @@ export default function PDFPreview({ reportData, findings, isLoading = false }: 
   const handleDownload = async () => {
     try {
       if (pdfUrl) {
-        // Use existing PDF blob for download
+        // Create a new fetch request to download the blob
+        const response = await fetch(pdfUrl);
+        const blob = await response.blob();
+        
         const link = document.createElement('a');
-        link.href = pdfUrl;
+        const url = URL.createObjectURL(blob);
+        link.href = url;
         link.download = `ISG-Raporu-${reportData.reportNumber || 'Yeni'}-${new Date().toLocaleDateString('tr-TR').replace(/\./g, '-')}.pdf`;
+        link.style.display = 'none';
+        
         document.body.appendChild(link);
         link.click();
-        document.body.removeChild(link);
+        
+        // Cleanup
+        setTimeout(() => {
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+        }, 100);
         
         toast({
           title: "PDF İndirildi",
@@ -159,8 +170,9 @@ export default function PDFPreview({ reportData, findings, isLoading = false }: 
             }
           }}
           data-testid="button-pdf-preview"
+          className="w-full sm:w-auto text-xs"
         >
-          <Eye size={14} className="mr-1" />
+          <Eye size={12} className="mr-1" />
           Önizle
         </Button>
       </DialogTrigger>
