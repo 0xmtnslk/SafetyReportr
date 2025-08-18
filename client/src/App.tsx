@@ -9,6 +9,7 @@ import Dashboard from "@/pages/dashboard";
 import CreateReport from "@/pages/create-report";
 import Reports from "@/pages/reports";
 import EditReport from "@/pages/edit-report";
+import ViewReport from "@/pages/view-report";
 import Navigation from "@/components/navigation";
 import OfflineIndicator from "@/components/offline-indicator";
 import { useOfflineSync } from "./hooks/useOfflineSync";
@@ -37,6 +38,7 @@ function Router() {
         <Route path="/create-report" component={CreateReport} />
         <Route path="/reports" component={Reports} />
         <Route path="/edit-report/:id" component={EditReport} />
+        <Route path="/view-report/:id" component={ViewReport} />
         <Route component={() => <div>404 - Page Not Found</div>} />
       </Switch>
     </div>

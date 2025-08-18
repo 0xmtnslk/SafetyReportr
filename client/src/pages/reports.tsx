@@ -6,10 +6,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Download, Plus, FileText, ChevronRight, Edit } from "lucide-react";
+import { Download, Plus, FileText, Edit, Eye } from "lucide-react";
 import { useLocation } from "wouter";
 import { downloadProfessionalReportPDF } from "@/lib/professionalPdfGenerator";
-import PDFPreview from "@/components/pdf-preview";
+
 
 export default function Reports() {
   const [, setLocation] = useLocation();
@@ -241,7 +241,7 @@ export default function Reports() {
                   {new Date(report.reportDate).toLocaleDateString("tr-TR")} - {report.reporter}
                 </p>
 
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="space-y-3">
                   <div className="flex items-center space-x-4">
                     <div className="flex items-center">
                       <div className="w-3 h-3 bg-danger rounded-full mr-2"></div>
@@ -256,39 +256,48 @@ export default function Reports() {
                       <span className="text-sm text-gray-600">{report.lowRiskCount || 0} Düşük</span>
                     </div>
                   </div>
-                  <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setLocation(`/edit-report/${report.id}`);
-                      }}
-                      data-testid={`button-edit-${report.id}`}
-                      className="w-full sm:w-auto text-xs"
-                    >
-                      <Edit size={12} className="mr-1" />
-                      Düzenle
-                    </Button>
-                    <div className="w-full sm:w-auto">
-                      <PDFPreview
-                        reportData={report}
-                        findings={[]}
-                      />
+                  <div className="flex justify-between items-center">
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setLocation(`/edit-report/${report.id}`);
+                        }}
+                        data-testid={`button-edit-${report.id}`}
+                        className="text-xs px-3 py-1"
+                      >
+                        <Edit size={12} className="mr-1" />
+                        Düzenle
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setLocation(`/view-report/${report.id}`);
+                        }}
+                        data-testid={`button-view-${report.id}`}
+                        className="text-xs px-3 py-1"
+                      >
+                        <Eye size={12} className="mr-1" />
+                        Önizle
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleExportPDF(report);
+                        }}
+                        data-testid={`button-export-${report.id}`}
+                        className="text-xs px-3 py-1"
+                      >
+                        <Download size={12} className="mr-1" />
+                        İndir
+                      </Button>
                     </div>
-                    <Button
-                      size="sm"
-                      className="w-full sm:w-auto text-xs"
-                      variant="outline"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleExportPDF(report);
-                      }}
-                      data-testid={`button-export-${report.id}`}
-                    >
-                      <Download size={12} className="mr-1" />
-                      İndir
-                    </Button>
                   </div>
                 </div>
               </CardContent>
