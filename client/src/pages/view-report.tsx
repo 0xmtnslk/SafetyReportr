@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { FileText, Download, Edit, ArrowLeft, Calendar, MapPin, User, AlertTriangle } from "lucide-react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
-import { TurkishPDFGenerator } from "@/lib/turkishPdfGenerator";
+import { HTMLToPDFGenerator } from "@/lib/htmlToPdfGenerator";
 
 interface ViewReportProps {
   id: string;
@@ -69,7 +69,7 @@ export default function ViewReport({ id }: ViewReportProps) {
 
       console.log('PDF için hazırlanan veri:', reportData);
 
-      const pdfGenerator = new TurkishPDFGenerator();
+      const pdfGenerator = new HTMLToPDFGenerator();
       const pdfBlob = await pdfGenerator.generateReport(reportData);
       
       // PDF'i indir
