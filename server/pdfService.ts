@@ -1,3 +1,4 @@
+
 import puppeteer from 'puppeteer';
 
 interface ReportData {
@@ -35,11 +36,23 @@ export class PuppeteerPdfService {
   async generatePDF(reportData: ReportData): Promise<Uint8Array> {
     const browser = await puppeteer.launch({
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
+      args: [
+        '--no-sandbox', 
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--no-first-run',
+        '--no-zygote',
+        '--single-process',
+        '--disable-gpu'
+      ]
     });
 
     try {
       const page = await browser.newPage();
+      
+      // Set viewport for consistent rendering
+      await page.setViewport({ width: 1200, height: 1600 });
       
       const htmlContent = this.generateHTML(reportData);
       
@@ -51,13 +64,14 @@ export class PuppeteerPdfService {
       const pdfBuffer = await page.pdf({
         format: 'A4',
         margin: {
-          top: '20mm',
+          top: '15mm',
           right: '15mm',
-          bottom: '20mm',
+          bottom: '15mm',
           left: '15mm'
         },
         printBackground: true,
-        displayHeaderFooter: false
+        displayHeaderFooter: false,
+        preferCSSPageSize: true
       });
 
       return pdfBuffer;
@@ -74,8 +88,12 @@ export class PuppeteerPdfService {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>İSG Raporu ${reportData.reportNumber}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        @page {
+            size: A4;
+            margin: 15mm;
+        }
         
         * {
             margin: 0;
@@ -84,16 +102,17 @@ export class PuppeteerPdfService {
         }
         
         body {
-            font-family: 'Inter', Arial, sans-serif;
-            font-size: 11pt;
-            line-height: 1.4;
-            color: #000;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-size: 12px;
+            line-height: 1.5;
+            color: #1a1a1a;
+            background: white;
         }
         
         .page {
-            min-height: 100vh;
-            padding: 20px;
             page-break-after: always;
+            min-height: 100vh;
+            padding: 20px 0;
         }
         
         .page:last-child {
@@ -113,10 +132,11 @@ export class PuppeteerPdfService {
             height: 8px;
             background: linear-gradient(90deg, #1e3a8a, #3b82f6);
             margin-bottom: 40px;
+            border-radius: 4px;
         }
         
         .hospital-title {
-            font-size: 24pt;
+            font-size: 28px;
             font-weight: 700;
             color: #1e3a8a;
             margin-bottom: 15px;
@@ -124,7 +144,7 @@ export class PuppeteerPdfService {
         }
         
         .report-title {
-            font-size: 18pt;
+            font-size: 20px;
             font-weight: 500;
             color: #1e3a8a;
             margin-bottom: 60px;
@@ -136,6 +156,7 @@ export class PuppeteerPdfService {
             align-items: center;
             gap: 40px;
             margin: 40px 0;
+            flex-wrap: wrap;
         }
         
         .logo-placeholder {
@@ -147,41 +168,52 @@ export class PuppeteerPdfService {
             justify-content: center;
             background: #f8fafc;
             color: #64748b;
-            font-size: 10pt;
+            font-size: 11px;
             border-radius: 8px;
+            font-weight: 500;
         }
         
         .info-section {
             margin-top: 40px;
             text-align: left;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
         }
         
         .section-header {
-            font-size: 16pt;
+            font-size: 18px;
             font-weight: 700;
             color: #1e3a8a;
             margin-bottom: 20px;
-            border-bottom: 2px solid #1e3a8a;
-            padding-bottom: 5px;
+            border-bottom: 3px solid #1e3a8a;
+            padding-bottom: 8px;
         }
         
         .info-table {
             width: 100%;
             border-collapse: collapse;
             margin-bottom: 30px;
-            border: 1px solid #1e3a8a;
+            border: 2px solid #1e3a8a;
+            border-radius: 8px;
+            overflow: hidden;
         }
         
         .info-table td {
-            padding: 10px 12px;
-            border: 1px solid #cbd5e1;
+            padding: 12px 15px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .info-table tr:last-child td {
+            border-bottom: none;
         }
         
         .info-label {
-            background: #e0f2fe;
+            background: #f1f5f9;
             font-weight: 600;
             color: #1e3a8a;
-            width: 35%;
+            width: 40%;
+            border-right: 1px solid #e2e8f0;
         }
         
         .info-value {
@@ -189,7 +221,7 @@ export class PuppeteerPdfService {
             color: #374151;
         }
         
-        .finding-page {
+        .content-page {
             padding-top: 20px;
         }
         
@@ -197,87 +229,127 @@ export class PuppeteerPdfService {
             height: 4px;
             background: linear-gradient(90deg, #1e3a8a, #3b82f6);
             margin-bottom: 25px;
+            border-radius: 2px;
         }
         
         .finding-title {
-            font-size: 16pt;
+            font-size: 18px;
             font-weight: 700;
             color: #1e3a8a;
             margin-bottom: 20px;
         }
         
         .content-section {
-            margin-bottom: 15px;
+            margin-bottom: 20px;
         }
         
         .content-label {
-            font-size: 12pt;
+            font-size: 13px;
             font-weight: 600;
             color: #1e3a8a;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
             text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
         
         .content-text {
-            font-size: 10pt;
-            line-height: 1.5;
+            font-size: 11px;
+            line-height: 1.6;
             color: #374151;
             text-align: justify;
+            background: #f8fafc;
+            padding: 12px;
+            border-radius: 6px;
+            border-left: 4px solid #e2e8f0;
         }
         
         .risk-badge {
             display: inline-block;
-            padding: 6px 12px;
+            padding: 8px 16px;
             font-weight: 700;
-            font-size: 10pt;
-            border-radius: 4px;
+            font-size: 11px;
+            border-radius: 6px;
             margin: 10px 0;
             color: white;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
         
-        .risk-high { background-color: #dc2626; }
-        .risk-medium { background-color: #ea580c; }
-        .risk-low { background-color: #16a34a; }
+        .risk-high { background: linear-gradient(135deg, #dc2626, #b91c1c); }
+        .risk-medium { background: linear-gradient(135deg, #ea580c, #c2410c); }
+        .risk-low { background: linear-gradient(135deg, #16a34a, #15803d); }
         
         .photo-section {
             display: flex;
             gap: 15px;
-            margin: 10px 0;
+            margin: 15px 0;
+            flex-wrap: wrap;
         }
         
         .photo-placeholder {
-            width: 120px;
-            height: 80px;
+            width: 140px;
+            height: 100px;
             border: 2px dashed #9ca3af;
             display: flex;
             align-items: center;
             justify-content: center;
             background: #f9fafb;
             color: #6b7280;
-            font-size: 9pt;
+            font-size: 10px;
+            border-radius: 6px;
+            font-weight: 500;
         }
         
         .process-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 10px;
-            border: 1px solid #1e3a8a;
+            margin-top: 15px;
+            border: 2px solid #1e3a8a;
+            border-radius: 8px;
+            overflow: hidden;
         }
         
         .process-table th {
-            background: #e0f2fe;
-            color: #1e3a8a;
+            background: linear-gradient(135deg, #1e3a8a, #1e40af);
+            color: white;
             font-weight: 600;
-            padding: 6px 8px;
-            border: 1px solid #cbd5e1;
-            font-size: 9pt;
+            padding: 10px 8px;
+            border-right: 1px solid #3b82f6;
+            font-size: 10px;
+            text-align: left;
+        }
+        
+        .process-table th:last-child {
+            border-right: none;
         }
         
         .process-table td {
-            padding: 5px 8px;
-            border: 1px solid #cbd5e1;
-            font-size: 9pt;
+            padding: 8px;
+            border-right: 1px solid #e2e8f0;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 10px;
             color: #374151;
+            background: white;
+        }
+        
+        .process-table td:last-child {
+            border-right: none;
+        }
+        
+        .process-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .footer {
+            position: fixed;
+            bottom: 10mm;
+            left: 15mm;
+            right: 15mm;
+            text-align: center;
+            font-size: 9px;
+            color: #6b7280;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 8px;
         }
     </style>
 </head>
@@ -290,9 +362,9 @@ export class PuppeteerPdfService {
         <h2 class="report-title">İş Sağlığı ve Güvenliği Saha Gözlem Raporu</h2>
         
         <div class="logo-section">
-            <div class="logo-placeholder">ÜNIVERSITE LOGOSU</div>
-            <div class="logo-placeholder">MLP CARE</div>
-            <div class="logo-placeholder">HASTANE LOGOSU</div>
+            <div class="logo-placeholder">ÜNİVERSİTE<br>LOGOSU</div>
+            <div class="logo-placeholder">MLP CARE<br>LOGO</div>
+            <div class="logo-placeholder">HASTANE<br>LOGOSU</div>
         </div>
         
         <div class="info-section">
@@ -328,13 +400,17 @@ export class PuppeteerPdfService {
     ${this.generateFindingPages(reportData)}
     
     ${reportData.generalEvaluation ? this.generateGeneralEvaluation(reportData.generalEvaluation) : ''}
+    
+    <div class="footer">
+        Bu rapor ${new Date().toLocaleDateString('tr-TR')} tarihinde oluşturulmuştur. | İstinye Üniversite Topkapı Liv Hastanesi
+    </div>
 </body>
 </html>`;
   }
 
   private generateManagementSummary(summary: string): string {
     return `
-    <div class="page">
+    <div class="page content-page">
         <div class="page-header"></div>
         <h2 class="section-header">YÖNETİCİ ÖZETİ</h2>
         <div class="content-text">${summary.replace(/\n/g, '<br><br>')}</div>
@@ -376,7 +452,7 @@ export class PuppeteerPdfService {
     };
 
     return `
-    <div class="page finding-page">
+    <div class="page content-page">
         <div class="page-header"></div>
         <h2 class="finding-title">BULGU ${findingNumber}: ${sectionTitle}</h2>
 
@@ -398,12 +474,12 @@ export class PuppeteerPdfService {
 
         <div class="content-section">
             <div class="content-label">Yasal Dayanak</div>
-            <div class="content-text">İş Sağlığı ve Güvenliği Kanunu ve ilgili yönetmelikler</div>
+            <div class="content-text">İş Sağlığı ve Güvenliği Kanunu ve ilgili yönetmelikler kapsamında değerlendirilen bu bulgu, işyeri güvenliği standartlarına uygunluk açısından ele alınmıştır.</div>
         </div>
 
         <div class="content-section">
             <div class="content-label">İSG Uzmanı Görüşü</div>
-            <div class="content-text">${finding.recommendation || 'Gerekli önlemler alınmalıdır.'}</div>
+            <div class="content-text">${finding.recommendation || 'Tespit edilen durumun düzeltilmesi için gerekli önlemlerin alınması ve güvenlik standartlarına uygunluğun sağlanması önerilmektedir.'}</div>
         </div>
 
         <div class="content-section">
@@ -411,23 +487,24 @@ export class PuppeteerPdfService {
             <div class="photo-section">
                 <div class="photo-placeholder">Fotoğraf 1</div>
                 <div class="photo-placeholder">Fotoğraf 2</div>
+                <div class="photo-placeholder">Fotoğraf 3</div>
             </div>
         </div>
 
         <div class="risk-badge ${riskClass}">
-            RİSK: ${riskTexts[finding.dangerLevel as keyof typeof riskTexts] || 'ORTA RİSK'}
+            RİSK SEVİYESİ: ${riskTexts[finding.dangerLevel as keyof typeof riskTexts] || 'ORTA RİSK'}
         </div>
 
         ${finding.processSteps && finding.processSteps.length > 0 ? `
             <div class="content-section">
-                <div class="content-label">Süreç Yönetimi</div>
+                <div class="content-label">Süreç Yönetimi ve İzleme</div>
                 <table class="process-table">
                     <thead>
                         <tr>
-                            <th>Faaliyet</th>
-                            <th>Hedef Tarih</th>
-                            <th>Sorumlu</th>
-                            <th>Durum</th>
+                            <th style="width: 40%;">Faaliyet Açıklaması</th>
+                            <th style="width: 20%;">Hedef Tarih</th>
+                            <th style="width: 20%;">Sorumlu Kişi</th>
+                            <th style="width: 20%;">Mevcut Durum</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -448,10 +525,18 @@ export class PuppeteerPdfService {
 
   private generateGeneralEvaluation(evaluation: string): string {
     return `
-    <div class="page">
+    <div class="page content-page">
         <div class="page-header"></div>
-        <h2 class="section-header">GENEL DEĞERLENDİRME</h2>
+        <h2 class="section-header">GENEL DEĞERLENDİRME VE ÖNERİLER</h2>
         <div class="content-text">${evaluation.replace(/\n/g, '<br><br>')}</div>
+        
+        <div class="content-section" style="margin-top: 30px;">
+            <div class="content-label">Sonuç ve Öneriler</div>
+            <div class="content-text">
+                Bu rapor kapsamında yapılan incelemelerde tespit edilen bulgular, işyeri güvenliği ve çalışan sağlığı açısından değerlendirilmiştir. 
+                Önerilen düzeltici ve önleyici faaliyetlerin planlandığı şekilde uygulanması ve düzenli olarak izlenmesi önemlidir.
+            </div>
+        </div>
     </div>`;
   }
 }

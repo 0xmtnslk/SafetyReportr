@@ -1,8 +1,8 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Eye, FileText, Loader2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Eye, FileText, Loader2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 interface PDFPreviewProps {
   reportData: any;
@@ -17,58 +17,61 @@ export default function PDFPreview({ reportData, findings, isLoading = false }: 
   const { toast } = useToast();
 
   const generatePreview = async () => {
+    if (!reportData) {
+      toast({
+        title: "Hata",
+        description: "Rapor verileri bulunamadı",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsGenerating(true);
     try {
-      // Transform report data for PDF generator
-      const formattedData = {
-        id: reportData.id || '',
-        reportNumber: reportData.reportNumber || '',
-        reportDate: reportData.reportDate || '',
-        projectLocation: reportData.projectLocation || '',
-        reporter: reportData.reporter || '',
-        managementSummary: reportData.managementSummary || '',
-        generalEvaluation: reportData.generalEvaluation || '',
-        findings: findings?.map(finding => ({
-          id: finding.id || '',
-          section: finding.section || 3,
-          title: finding.title || '',
-          description: finding.currentSituation || finding.description || '',
-          dangerLevel: finding.dangerLevel as 'high' | 'medium' | 'low',
-          recommendation: finding.recommendation || '',
-          images: finding.images || [],
-          location: finding.title || '',
-          processSteps: finding.processSteps?.map((step: any) => ({
-            description: step.description || '',
-            targetDate: step.date || '',
-            responsible: 'Sorumlular',
-            status: 'Bekliyor'
-          })) || [],
-          isCompleted: finding.isCompleted || false
-        })) || []
-      };
+      const response = await fetch(`/api/reports/${reportData.id}/pdf`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
 
-      // Dynamically import and generate PDF
-      const { ProfessionalPDFGenerator } = await import('@/lib/professionalPdfGenerator');
-      const pdfGenerator = new ProfessionalPDFGenerator();
-      const pdfBlob = await pdfGenerator.generateReport(formattedData);
-      
-      // Create blob URL for iframe preview
-      const url = URL.createObjectURL(pdfBlob);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
       setPdfUrl(url);
-      
+
       toast({
-        title: "PDF Hazır",
-        description: "PDF önizlemesi oluşturuldu",
+        title: "Başarılı",
+        description: "PDF önizlemesi hazırlandı",
       });
     } catch (error) {
-      console.error('PDF preview error:', error);
+      console.error('PDF generation error:', error);
       toast({
-        title: "Hata", 
-        description: "PDF önizlemesi oluşturulamadı: " + (error as Error).message,
+        title: "Hata",
+        description: `PDF oluşturulurken hata: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}`,
         variant: "destructive",
       });
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleDownload = () => {
+    if (pdfUrl) {
+      const a = document.createElement('a');
+      a.href = pdfUrl;
+      a.download = `ISG_Raporu_${reportData?.reportNumber || 'Yeni'}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+
+      toast({
+        title: "İndirildi",
+        description: "PDF başarıyla indirildi",
+      });
     }
   };
 
@@ -78,78 +81,6 @@ export default function PDFPreview({ reportData, findings, isLoading = false }: 
       setPdfUrl(null);
     }
     setIsOpen(false);
-  };
-
-  const handleDownload = async () => {
-    try {
-      if (pdfUrl) {
-        // Create a new fetch request to download the blob
-        const response = await fetch(pdfUrl);
-        const blob = await response.blob();
-        
-        const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
-        link.href = url;
-        link.download = `ISG-Raporu-${reportData.reportNumber || 'Yeni'}-${new Date().toLocaleDateString('tr-TR').replace(/\./g, '-')}.pdf`;
-        link.style.display = 'none';
-        
-        document.body.appendChild(link);
-        link.click();
-        
-        // Cleanup
-        setTimeout(() => {
-          document.body.removeChild(link);
-          URL.revokeObjectURL(url);
-        }, 100);
-        
-        toast({
-          title: "PDF İndirildi",
-          description: "Rapor başarıyla indirildi",
-        });
-      } else {
-        // Generate new PDF if not available
-        const { downloadProfessionalReportPDF } = await import('@/lib/professionalPdfGenerator');
-        const downloadData = {
-          id: reportData.id || '',
-          reportNumber: reportData.reportNumber || '',
-          reportDate: reportData.reportDate || '',
-          projectLocation: reportData.projectLocation || '',
-          reporter: reportData.reporter || '',
-          managementSummary: reportData.managementSummary || '',
-          generalEvaluation: reportData.generalEvaluation || '',
-          findings: findings?.map(finding => ({
-            id: finding.id || '',
-            section: finding.section || 3,
-            title: finding.title || '',
-            description: finding.currentSituation || finding.description || '',
-            dangerLevel: finding.dangerLevel as 'high' | 'medium' | 'low',
-            recommendation: finding.recommendation || '',
-            images: finding.images || [],
-            location: finding.title || '',
-            processSteps: finding.processSteps?.map((step: any) => ({
-              description: step.description || '',
-              targetDate: step.date || '',
-              responsible: 'Sorumlular',
-              status: 'Bekliyor'
-            })) || [],
-            isCompleted: finding.isCompleted || false
-          })) || []
-        };
-        await downloadProfessionalReportPDF(downloadData);
-        
-        toast({
-          title: "PDF İndirildi",
-          description: "Rapor başarıyla indirildi",
-        });
-      }
-    } catch (error) {
-      console.error('PDF download error:', error);
-      toast({
-        title: "Hata",
-        description: "PDF indirme sırasında hata oluştu.",
-        variant: "destructive",
-      });
-    }
   };
 
   return (
@@ -173,10 +104,10 @@ export default function PDFPreview({ reportData, findings, isLoading = false }: 
           className="w-full sm:w-auto text-xs"
         >
           <Eye size={12} className="mr-1" />
-          Önizle
+          PDF Önizle
         </Button>
       </DialogTrigger>
-      
+
       <DialogContent className="max-w-4xl max-h-[90vh]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -184,20 +115,21 @@ export default function PDFPreview({ reportData, findings, isLoading = false }: 
             PDF Önizlemesi - {reportData?.reportNumber || 'Yeni Rapor'}
           </DialogTitle>
         </DialogHeader>
-        
+
         <div className="flex-1 min-h-[600px]">
           {isGenerating ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-center space-y-4">
-                <Loader2 className="h-8 w-8 animate-spin mx-auto" />
-                <p className="text-muted-foreground">PDF oluşturuluyor...</p>
+                <Loader2 className="h-8 w-8 animate-spin mx-auto text-blue-600" />
+                <p className="text-muted-foreground">Professional PDF oluşturuluyor...</p>
+                <p className="text-sm text-muted-foreground">Puppeteer ile yüksek kaliteli render</p>
               </div>
             </div>
           ) : pdfUrl ? (
             <div className="h-full">
               <iframe
                 src={`${pdfUrl}#view=FitH`}
-                className="w-full h-full border rounded-lg"
+                className="w-full h-full border-0 rounded-lg"
                 title="PDF Önizlemesi"
                 style={{ minHeight: '600px' }}
               />
@@ -215,7 +147,7 @@ export default function PDFPreview({ reportData, findings, isLoading = false }: 
             </div>
           )}
         </div>
-        
+
         <div className="flex justify-end gap-2 mt-4">
           <Button variant="outline" onClick={handleDialogClose}>
             Kapat
