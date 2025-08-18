@@ -6,9 +6,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Download, Plus, FileText, ChevronRight } from "lucide-react";
+import { Download, Plus, FileText, ChevronRight, Edit } from "lucide-react";
 import { useLocation } from "wouter";
-import { downloadReportPDF } from "@/lib/pdfGenerator";
+import { downloadModernReportPDF } from "@/lib/modernPdfGenerator";
 
 export default function Reports() {
   const [, setLocation] = useLocation();
@@ -52,7 +52,7 @@ export default function Reports() {
         findings: findings || []
       };
 
-      downloadReportPDF(reportData);
+      downloadModernReportPDF(reportData);
       
       toast({
         title: "PDF İndirildi",
@@ -255,6 +255,17 @@ export default function Reports() {
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setLocation(`/edit-report/${report.id}`);
+                      }}
+                      data-testid={`button-edit-${report.id}`}
+                    >
+                      <Edit size={14} />
+                    </Button>
                     <Button
                       size="sm"
                       variant="outline"

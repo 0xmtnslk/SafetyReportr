@@ -8,8 +8,10 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import FindingForm from "@/components/finding-form";
+import { useLocation } from "wouter";
 
 export default function CreateReport() {
+  const [, setLocation] = useLocation();
   const [reportData, setReportData] = useState({
     reportNumber: "",
     reportDate: "",
@@ -30,8 +32,12 @@ export default function CreateReport() {
       setCurrentReport(data);
       toast({
         title: "Başarılı",
-        description: "Rapor başarıyla oluşturuldu",
+        description: "Rapor başarıyla oluşturuldu. Şimdi bölümleri doldurun.",
       });
+      // Redirect to edit page after creation
+      setTimeout(() => {
+        setLocation(`/edit-report/${data.id}`);
+      }, 1500);
     },
     onError: () => {
       toast({
