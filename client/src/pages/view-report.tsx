@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { FileText, Download, Edit, ArrowLeft, Calendar, MapPin, User, AlertTriangle } from "lucide-react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
-import { downloadProfessionalReportPDF } from "@/lib/professionalPdfGenerator";
+import { TurkishPDFGenerator } from "@/lib/turkishPdfGenerator";
 
 interface ViewReportProps {
   id: string;
@@ -69,7 +69,18 @@ export default function ViewReport({ id }: ViewReportProps) {
 
       console.log('PDF için hazırlanan veri:', reportData);
 
-      await downloadProfessionalReportPDF(reportData);
+      const pdfGenerator = new TurkishPDFGenerator();
+      const pdfBlob = await pdfGenerator.generateReport(reportData);
+      
+      // PDF'i indir
+      const url = URL.createObjectURL(pdfBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `ISG_Raporu_${reportData.reportNumber || new Date().toISOString().split('T')[0]}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
       
       toast({
         title: "PDF İndirildi",
