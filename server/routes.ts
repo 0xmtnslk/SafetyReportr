@@ -104,7 +104,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/reports", authenticateToken, async (req: any, res) => {
     try {
-      const validatedData = insertReportSchema.parse(req.body);
+      // Convert string date to Date object
+      const body = { ...req.body };
+      if (body.reportDate && typeof body.reportDate === 'string') {
+        body.reportDate = new Date(body.reportDate);
+      }
+      
+      const validatedData = insertReportSchema.parse(body);
       const report = await storage.createReport({ ...validatedData, userId: req.user.id });
       res.status(201).json(report);
     } catch (error) {
@@ -115,7 +121,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/reports/:id", authenticateToken, async (req, res) => {
     try {
-      const validatedData = insertReportSchema.partial().parse(req.body);
+      // Convert string date to Date object
+      const body = { ...req.body };
+      if (body.reportDate && typeof body.reportDate === 'string') {
+        body.reportDate = new Date(body.reportDate);
+      }
+      
+      const validatedData = insertReportSchema.partial().parse(body);
       const report = await storage.updateReport(req.params.id, validatedData);
       res.json(report);
     } catch (error) {
