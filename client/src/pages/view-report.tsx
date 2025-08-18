@@ -7,6 +7,7 @@ import { FileText, Download, Edit, ArrowLeft, Calendar, MapPin, User, AlertTrian
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { FinalPdfGenerator } from "@/lib/finalPdfGenerator";
+import PDFPreview from "@/components/pdf-preview";
 
 interface ViewReportProps {
   id: string;
@@ -91,7 +92,7 @@ export default function ViewReport({ id }: ViewReportProps) {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      
+
       toast({
         title: "PDF İndirildi",
         description: "Rapor başarıyla PDF olarak indirildi.",
@@ -206,6 +207,11 @@ export default function ViewReport({ id }: ViewReportProps) {
             <Download size={16} className="mr-2" />
             PDF İndir
           </Button>
+          <PDFPreview
+            reportData={report}
+            findings={findings}
+            isLoading={reportLoading || findingsLoading}
+          />
         </div>
       </div>
 
@@ -288,7 +294,7 @@ export default function ViewReport({ id }: ViewReportProps) {
                     </h3>
                   </div>
                 </div>
-                
+
                 {finding.currentSituation && (
                   <div className="mb-4">
                     <h4 className="font-medium text-gray-900 mb-2">Mevcut Durum</h4>

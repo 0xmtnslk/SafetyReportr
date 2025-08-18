@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Download, Plus, FileText, Edit, Eye } from "lucide-react";
 import { useLocation } from "wouter";
-import { downloadProfessionalReportPDF } from "@/lib/professionalPdfGenerator";
+import PDFPreview from "@/components/pdf-preview";
 
 
 export default function Reports() {
@@ -25,6 +25,9 @@ export default function Reports() {
     queryKey: ["/api/reports"],
   });
 
+  const [selectedReportForPDF, setSelectedReportForPDF] = useState<any>(null);
+  const [reportFindings, setReportFindings] = useState<any[]>([]);
+
   const handleExportPDF = async (report: any) => {
     try {
       toast({
@@ -38,7 +41,7 @@ export default function Reports() {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
-      
+
       const findings = await findingsResponse.json();
 
       // Transform report data for PDF generator
@@ -53,8 +56,9 @@ export default function Reports() {
         findings: findings || []
       };
 
-      downloadProfessionalReportPDF(reportData);
-      
+      setSelectedReportForPDF(reportData);
+      setReportFindings(findings || []);
+
       toast({
         title: "PDF İndirildi",
         description: "Rapor başarıyla PDF olarak indirildi.",
@@ -120,7 +124,7 @@ export default function Reports() {
           Tüm Raporlar
         </h2>
         <div className="flex space-x-3">
-          <Button variant="outline" data-testid="button-export">
+          <Button variant="outline" data-testid="button-export" onClick={() => toast({ title: "Export functionality is under development." })}>
             <Download className="mr-2" size={16} />
             Dışa Aktar
           </Button>
@@ -305,6 +309,14 @@ export default function Reports() {
           ))
         )}
       </div>
+
+      {selectedReportForPDF && (
+        <PDFPreview
+          reportData={selectedReportForPDF}
+          findings={reportFindings}
+          onClose={() => setSelectedReportForPDF(null)}
+        />
+      )}
     </div>
   );
 }

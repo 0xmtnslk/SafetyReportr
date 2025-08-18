@@ -263,7 +263,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // PDF Generation endpoint
-  app.post("/api/reports/:id/pdf", authenticateToken, async (req: any, res) => {
+  app.get("/api/reports/:id/pdf", authenticateToken, async (req: any, res) => {
     try {
       const reportId = req.params.id;
       const report = await storage.getReport(reportId, req.user.id);
