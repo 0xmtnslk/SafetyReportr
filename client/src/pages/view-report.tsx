@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { FileText, Download, Edit, ArrowLeft, Calendar, MapPin, User, AlertTriangle } from "lucide-react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
-import { FinalPdfGenerator } from "@/lib/finalPdfGenerator";
+
 import PDFPreview from "@/components/pdf-preview";
 
 interface ViewReportProps {
@@ -38,38 +38,10 @@ export default function ViewReport({ id }: ViewReportProps) {
     }
 
     try {
-      console.log('PDF export başlıyor, rapor:', report);
-      console.log('Bulgular:', findings);
-
       toast({
         title: "PDF Oluşturuluyor",
         description: "Rapor PDF olarak hazırlanıyor...",
       });
-
-      const reportData = {
-        id: (report as any).id,
-        reportNumber: (report as any).reportNumber,
-        reportDate: (report as any).reportDate,
-        projectLocation: (report as any).projectLocation,
-        reporter: (report as any).reporter,
-        managementSummary: (report as any).managementSummary,
-        generalEvaluation: (report as any).generalEvaluation,
-        findings: (findings as any[])?.map((finding: any) => ({
-          id: finding.id,
-          section: finding.section || 3,
-          title: finding.title,
-          description: finding.currentSituation || finding.description,
-          dangerLevel: finding.dangerLevel,
-          recommendation: finding.recommendation,
-          images: finding.images || [],
-          location: finding.location || finding.title,
-          processSteps: finding.processSteps || [],
-          isCompleted: finding.status === 'completed'
-        })) || []
-      };
-
-      console.log('PDF için hazırlanan veri:', reportData);
-      console.log('FinalPdfGenerator - print penceresi açılıyor...');
 
       // Backend'den PDF oluştur ve indir
       const response = await fetch(`/api/reports/${id}/pdf`, {
@@ -80,7 +52,7 @@ export default function ViewReport({ id }: ViewReportProps) {
       });
 
       if (!response.ok) {
-        throw new Error('PDF oluşturulamadı');dı');
+        throw new Error('PDF oluşturulamadı');
       }
 
       const blob = await response.blob();

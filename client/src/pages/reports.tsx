@@ -35,29 +35,27 @@ export default function Reports() {
         description: "Rapor PDF olarak hazırlanıyor...",
       });
 
-      // Fetch findings for the report
-      const findingsResponse = await fetch(`/api/reports/${report.id}/findings`, {
+      // Backend'den PDF oluştur ve indir
+      const response = await fetch(`/api/reports/${report.id}/pdf`, {
+        method: 'GET',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
       });
 
-      const findings = await findingsResponse.json();
+      if (!response.ok) {
+        throw new Error('PDF oluşturulamadı');
+      }
 
-      // Transform report data for PDF generator
-      const reportData = {
-        id: report.id,
-        reportNumber: report.reportNumber,
-        reportDate: report.reportDate,
-        projectLocation: report.projectLocation,
-        reporter: report.reporter,
-        managementSummary: report.managementSummary,
-        generalEvaluation: report.generalEvaluation,
-        findings: findings || []
-      };
-
-      setSelectedReportForPDF(reportData);
-      setReportFindings(findings || []);
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `ISG_Raporu_${report.reportNumber || new Date().toISOString().split('T')[0]}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
 
       toast({
         title: "PDF İndirildi",
@@ -67,7 +65,7 @@ export default function Reports() {
       console.error('PDF export error:', error);
       toast({
         title: "Hata",
-        description: "PDF oluşturulurken bir hata oluştu.",
+        description: `PDF oluşturulurken hata: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}`,
         variant: "destructive",
       });
     }
