@@ -39,12 +39,20 @@ export class ProfessionalPDFGenerator {
   private margin: number;
 
   constructor() {
-    this.doc = new jsPDF('p', 'mm', 'a4');
-    this.pageWidth = this.doc.internal.pageSize.getWidth();
-    this.pageHeight = this.doc.internal.pageSize.getHeight();
-    this.margin = 15;
+    this.doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm', 
+      format: 'a4',
+      putOnlyUsedFonts: true,
+      compress: true
+    });
     
-    // Configure font for Turkish characters
+    // A4 exact dimensions for proper printing
+    this.pageWidth = 210;
+    this.pageHeight = 297;
+    this.margin = 20; // Professional A4 margin
+    
+    // Configure font for Turkish characters  
     this.doc.setFont('helvetica', 'normal');
     this.doc.setCharSpace(0);
   }
@@ -108,17 +116,20 @@ export class ProfessionalPDFGenerator {
   private encodeTurkishText(text: string): string {
     if (!text) return '';
     
-    // Proper Turkish character mapping for jsPDF
-    const turkishMap: { [key: string]: string } = {
-      'ç': 'ç', 'Ç': 'Ç',
-      'ğ': 'ğ', 'Ğ': 'Ğ', 
-      'ı': 'ı', 'I': 'I', 'İ': 'İ',
-      'ö': 'ö', 'Ö': 'Ö',
-      'ş': 'ş', 'Ş': 'Ş',
-      'ü': 'ü', 'Ü': 'Ü'
-    };
-
-    return text.replace(/[çÇğĞıIİöÖşŞüÜ]/g, (match) => turkishMap[match] || match);
+    // jsPDF Türkçe karakter desteği için düzgün encoding
+    return text
+      .replace(/ç/g, 'c')
+      .replace(/Ç/g, 'C')
+      .replace(/ğ/g, 'g')
+      .replace(/Ğ/g, 'G')
+      .replace(/ı/g, 'i')
+      .replace(/İ/g, 'I')
+      .replace(/ö/g, 'o')
+      .replace(/Ö/g, 'O')
+      .replace(/ş/g, 's')
+      .replace(/Ş/g, 'S')
+      .replace(/ü/g, 'u')
+      .replace(/Ü/g, 'U');
   }
 
   private async generateCoverPage(reportData: ReportData): Promise<void> {
@@ -144,20 +155,8 @@ export class ProfessionalPDFGenerator {
     const subtitleWidth = this.doc.getTextWidth(subtitleText);
     this.doc.text(subtitleText, (this.pageWidth - subtitleWidth) / 2, 50);
 
-    // Logo areas with better styling
-    this.doc.setFont('helvetica', 'normal');
-    this.doc.setFontSize(10);
-    this.doc.setDrawColor(200, 200, 200);
-    this.doc.setLineWidth(1);
-    
-    // Left logo area
-    this.doc.rect(15, 60, 50, 30);
-    this.doc.text(this.encodeTurkishText('LOGO ALANI'), 25, 78);
-    
-    // Right logo area  
-    this.doc.rect(this.pageWidth - 65, 60, 50, 30);
-    this.doc.text(this.encodeTurkishText('HASTANE'), this.pageWidth - 55, 75);
-    this.doc.text(this.encodeTurkishText('LOGOSU'), this.pageWidth - 50, 82);
+    // Add logos
+    await this.addLogoAndHospitalImage();
 
     // Professional report information section
     this.doc.setFont('helvetica', 'bold');
@@ -188,11 +187,72 @@ export class ProfessionalPDFGenerator {
   }
 
   private async addLogoAndHospitalImage(): Promise<void> {
-    // Skip images to avoid errors - just add placeholder text
-    this.doc.setFont('helvetica', 'normal');
-    this.doc.setFontSize(10);
-    this.doc.text('[Logo]', 15, 80);
-    this.doc.text('[Hastane Görseli]', 150, 80);
+    try {
+      // Load and add MLPCARE logo (top left) 
+      const logoImg = new Image();
+      logoImg.crossOrigin = 'anonymous';
+      
+      await new Promise((resolve, reject) => {
+        logoImg.onload = () => {
+          try {
+            // Create canvas to convert image
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = logoImg.width;
+            canvas.height = logoImg.height;
+            ctx?.drawImage(logoImg, 0, 0);
+            
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+            this.doc.addImage(dataUrl, 'JPEG', 15, 60, 40, 20);
+            resolve(null);
+          } catch (err) {
+            console.warn('Logo could not be added:', err);
+            resolve(null);
+          }
+        };
+        logoImg.onerror = () => {
+          console.warn('Logo could not be loaded');
+          resolve(null);
+        };
+        logoImg.src = '/attached_assets/logo_1755544106935.jpg';
+      });
+
+      // Load and add hospital image (top right)
+      const hospitalImg = new Image();
+      hospitalImg.crossOrigin = 'anonymous';
+      
+      await new Promise((resolve, reject) => {
+        hospitalImg.onload = () => {
+          try {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = hospitalImg.width;
+            canvas.height = hospitalImg.height;
+            ctx?.drawImage(hospitalImg, 0, 0);
+            
+            const dataUrl = canvas.toDataURL('image/png', 0.8);
+            this.doc.addImage(dataUrl, 'PNG', this.pageWidth - 55, 60, 40, 20);
+            resolve(null);
+          } catch (err) {
+            console.warn('Hospital image could not be added:', err);
+            resolve(null);
+          }
+        };
+        hospitalImg.onerror = () => {
+          console.warn('Hospital image could not be loaded');
+          resolve(null);
+        };
+        hospitalImg.src = '/attached_assets/image_1755544248685.png';
+      });
+      
+    } catch (error) {
+      console.warn('Images could not be loaded:', error);
+      // Fallback to text placeholders
+      this.doc.setFont('helvetica', 'normal');
+      this.doc.setFontSize(8);
+      this.doc.text('[Logo]', 25, 75);
+      this.doc.text('[Hastane]', this.pageWidth - 45, 75);
+    }
   }
 
   private async addFindingPage(finding: Finding, findingNumber: number, sectionTitle: string): Promise<void> {
@@ -275,7 +335,7 @@ export class ProfessionalPDFGenerator {
     this.doc.text(this.encodeTurkishText('FOTOĞRAF ALANI'), this.margin, currentY);
     currentY += 10;
     
-    // Image placeholders
+    // Image section with actual images
     const imageWidth = 80;
     const imageHeight = 60;
     const spacing = 10;
@@ -286,12 +346,15 @@ export class ProfessionalPDFGenerator {
     this.doc.rect(this.margin, currentY, imageWidth, imageHeight);
     this.doc.setFont('helvetica', 'normal');
     this.doc.setFontSize(10);
-    this.doc.text(this.encodeTurkishText('ÖNCESİ'), this.margin + 5, currentY + 15);
+    this.doc.text(this.encodeTurkishText('ONCESI'), this.margin + 5, currentY + 15);
+    
+    // Try to add finding images if available
     if (finding.images && finding.images.length > 0) {
-      this.doc.text(this.encodeTurkishText('Fotoğraf mevcut'), this.margin + 5, currentY + 30);
+      await this.addFindingImage(finding.images[0], this.margin + 2, currentY + 2, imageWidth - 4, imageHeight - 4);
+      this.doc.text(this.encodeTurkishText('Fotograf mevcut'), this.margin + 5, currentY + imageHeight - 5);
     }
     
-    // After image
+    // After image placeholder
     this.doc.rect(this.margin + imageWidth + spacing, currentY, imageWidth, imageHeight);
     this.doc.text(this.encodeTurkishText('SONRASI'), this.margin + imageWidth + spacing + 5, currentY + 15);
     
@@ -398,8 +461,36 @@ export class ProfessionalPDFGenerator {
   }
 
   private async addFindingImage(imagePath: string, x: number, y: number, width: number, height: number): Promise<void> {
-    // Skip image loading to avoid errors - just show placeholder
-    console.log('Finding image skipped:', imagePath);
+    try {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      
+      await new Promise((resolve, reject) => {
+        img.onload = () => {
+          try {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx?.drawImage(img, 0, 0);
+            
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+            this.doc.addImage(dataUrl, 'JPEG', x, y, width, height);
+            resolve(null);
+          } catch (err) {
+            console.warn('Finding image could not be added:', err);
+            resolve(null);
+          }
+        };
+        img.onerror = () => {
+          console.warn('Finding image could not be loaded:', imagePath);
+          resolve(null);
+        };
+        img.src = imagePath;
+      });
+    } catch (error) {
+      console.warn('Could not add finding image:', error);
+    }
   }
 
   private getDangerColor(level: string): [number, number, number] {
