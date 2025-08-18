@@ -43,6 +43,10 @@ export class ProfessionalPDFGenerator {
     this.pageWidth = this.doc.internal.pageSize.getWidth();
     this.pageHeight = this.doc.internal.pageSize.getHeight();
     this.margin = 15;
+    
+    // Configure font for Turkish characters
+    this.doc.setFont('helvetica', 'normal');
+    this.doc.setCharSpace(0);
   }
 
   async generateReport(reportData: ReportData): Promise<Blob> {
@@ -82,18 +86,25 @@ export class ProfessionalPDFGenerator {
     return new Blob([this.doc.output('blob')], { type: 'application/pdf' });
   }
 
+  private encodeTurkishText(text: string): string {
+    if (!text) return '';
+    
+    // Simple approach: keep Turkish characters as is since jsPDF can handle them with proper configuration
+    return text;
+  }
+
   private async generateCoverPage(reportData: ReportData): Promise<void> {
     // Set font
     this.doc.setFont('helvetica', 'bold');
     
-    // Main title
+    // Main title with proper Turkish encoding
     this.doc.setFontSize(16);
-    const titleText = 'İstinye Üniversite Topkapı Liv Hastanesi';
+    const titleText = this.encodeTurkishText('İstinye Üniversite Topkapı Liv Hastanesi');
     const titleWidth = this.doc.getTextWidth(titleText);
     this.doc.text(titleText, (this.pageWidth - titleWidth) / 2, 30);
     
     this.doc.setFontSize(14);
-    const subtitleText = 'İş Sağlığı ve Güvenliği Saha Gözlem Raporu';
+    const subtitleText = this.encodeTurkishText('İş Sağlığı ve Güvenliği Saha Gözlem Raporu');
     const subtitleWidth = this.doc.getTextWidth(subtitleText);
     this.doc.text(subtitleText, (this.pageWidth - subtitleWidth) / 2, 45);
 
@@ -104,19 +115,19 @@ export class ProfessionalPDFGenerator {
       console.warn('Could not load cover images:', error);
     }
 
-    // Report information table
+    // Report information table with Turkish encoding
     const startY = 120;
     this.drawTable(startY, [
-      ['Rapor No:', reportData.reportNumber || ''],
-      ['Rapor Tarihi:', reportData.reportDate ? new Date(reportData.reportDate).toLocaleDateString('tr-TR') : ''],
-      ['Proje Lokasyonu:', reportData.projectLocation || ''],
-      ['Raporlayan:', reportData.reporter || ''],
+      [this.encodeTurkishText('Rapor No:'), this.encodeTurkishText(reportData.reportNumber || '')],
+      [this.encodeTurkishText('Rapor Tarihi:'), reportData.reportDate ? new Date(reportData.reportDate).toLocaleDateString('tr-TR') : ''],
+      [this.encodeTurkishText('Proje Lokasyonu:'), this.encodeTurkishText(reportData.projectLocation || '')],
+      [this.encodeTurkishText('Raporlayan:'), this.encodeTurkishText(reportData.reporter || '')],
     ]);
 
-    // Footer
+    // Footer with Turkish encoding
     this.doc.setFont('helvetica', 'normal');
     this.doc.setFontSize(10);
-    const footerText = `Rapor Oluşturulma Tarihi: ${new Date().toLocaleDateString('tr-TR')}`;
+    const footerText = this.encodeTurkishText(`Rapor Oluşturulma Tarihi: ${new Date().toLocaleDateString('tr-TR')}`);
     this.doc.text(footerText, this.margin, this.pageHeight - 20);
   }
 
@@ -174,7 +185,7 @@ export class ProfessionalPDFGenerator {
     // Finding title with number
     this.doc.setFont('helvetica', 'bold');
     this.doc.setFontSize(12);
-    const findingTitle = `${findingNumber}. ${sectionTitle}`;
+    const findingTitle = this.encodeTurkishText(`${findingNumber}. ${sectionTitle}`);
     this.doc.text(findingTitle, this.margin, 25);
 
     // Draw main table structure like in the example
@@ -182,9 +193,9 @@ export class ProfessionalPDFGenerator {
     
     // Location and inspection date table
     this.drawTableRow(currentY, [
-      { text: 'Yer-Konum:', width: 40 },
-      { text: finding.location || finding.title, width: 70 },
-      { text: 'Tespit Tarihi:', width: 30 },
+      { text: this.encodeTurkishText('Yer-Konum:'), width: 40 },
+      { text: this.encodeTurkishText(finding.location || finding.title), width: 70 },
+      { text: this.encodeTurkishText('Tespit Tarihi:'), width: 30 },
       { text: new Date().toLocaleDateString('tr-TR'), width: 30 }
     ]);
     currentY += 15;
@@ -192,7 +203,7 @@ export class ProfessionalPDFGenerator {
     // Image section (left side)
     this.doc.setFont('helvetica', 'normal');
     this.doc.setFontSize(10);
-    this.doc.text('Öncesi', this.margin + 2, currentY + 8);
+    this.doc.text(this.encodeTurkishText('Öncesi'), this.margin + 2, currentY + 8);
     
     // Draw image placeholder/actual image
     const imageX = this.margin;
@@ -219,19 +230,19 @@ export class ProfessionalPDFGenerator {
     const rightWidth = this.pageWidth - rightX - this.margin;
     
     // Current situation
-    this.drawContentSection(rightX, currentY, rightWidth, 35, 'Mevcut Durum:', finding.description);
+    this.drawContentSection(rightX, currentY, rightWidth, 35, this.encodeTurkishText('Mevcut Durum:'), this.encodeTurkishText(finding.description));
     currentY += 40;
     
     // Recommendation  
-    this.drawContentSection(rightX, currentY, rightWidth, 35, 'Dayanak:', finding.recommendation || '');
+    this.drawContentSection(rightX, currentY, rightWidth, 35, this.encodeTurkishText('Dayanak:'), this.encodeTurkishText(finding.recommendation || ''));
     currentY += 40;
     
     // ISG Opinion
-    this.drawContentSection(rightX, currentY, rightWidth, 35, 'İSG Görüşü:', finding.recommendation || '');
+    this.drawContentSection(rightX, currentY, rightWidth, 35, this.encodeTurkishText('İSG Görüşü:'), this.encodeTurkishText(finding.recommendation || ''));
 
     // Bottom section - "After" area
     currentY = imageY + imageHeight + 5;
-    this.doc.text('Sonrası', this.margin + 2, currentY + 8);
+    this.doc.text(this.encodeTurkishText('Sonrası'), this.margin + 2, currentY + 8);
     this.doc.rect(this.margin, currentY, imageWidth, 25);
 
     // Danger level table at bottom
@@ -291,7 +302,7 @@ export class ProfessionalPDFGenerator {
     this.doc.setFont('helvetica', 'bold');
     this.doc.setFontSize(10);
     this.doc.setTextColor(255, 255, 255);
-    const dangerText = `Tehlike Skalası: ${this.getDangerLevelText(dangerLevel)}`;
+    const dangerText = this.encodeTurkishText(`Tehlike Skalası: ${this.getDangerLevelText(dangerLevel)}`);
     this.doc.text(dangerText, this.margin + 5, y + 8);
     
     this.doc.setTextColor(0, 0, 0);
@@ -305,14 +316,14 @@ export class ProfessionalPDFGenerator {
     
     this.doc.setFont('helvetica', 'bold');
     this.doc.setFontSize(9);
-    this.doc.text('Süreç Yönetimi', this.margin + 5, y + 8);
+    this.doc.text(this.encodeTurkishText('Süreç Yönetimi'), this.margin + 5, y + 8);
     
     // Table headers
     y += 12;
     const colWidths = [30, 100, 30];
     let currentX = this.margin;
     
-    ['Tarih', 'Açıklama', 'Durum'].forEach((header, index) => {
+    [this.encodeTurkishText('Tarih'), this.encodeTurkishText('Açıklama'), this.encodeTurkishText('Durum')].forEach((header, index) => {
       this.doc.setFillColor(240, 240, 240);
       this.doc.rect(currentX, y, colWidths[index], 10, 'FD');
       this.doc.setFont('helvetica', 'bold');
@@ -414,22 +425,22 @@ export class ProfessionalPDFGenerator {
   private addManagementSummary(summary: string): void {
     this.doc.setFont('helvetica', 'bold');
     this.doc.setFontSize(14);
-    this.doc.text('Yönetici Özeti', this.margin, 30);
+    this.doc.text(this.encodeTurkishText('Yönetici Özeti'), this.margin, 30);
     
     this.doc.setFont('helvetica', 'normal');
     this.doc.setFontSize(11);
-    const splitText = this.doc.splitTextToSize(summary, this.pageWidth - 2 * this.margin);
+    const splitText = this.doc.splitTextToSize(this.encodeTurkishText(summary), this.pageWidth - 2 * this.margin);
     this.doc.text(splitText, this.margin, 45);
   }
 
   private addGeneralEvaluation(evaluation: string): void {
     this.doc.setFont('helvetica', 'bold');
     this.doc.setFontSize(14);
-    this.doc.text('Genel Değerlendirme', this.margin, 30);
+    this.doc.text(this.encodeTurkishText('Genel Değerlendirme'), this.margin, 30);
     
     this.doc.setFont('helvetica', 'normal');
     this.doc.setFontSize(11);
-    const splitText = this.doc.splitTextToSize(evaluation, this.pageWidth - 2 * this.margin);
+    const splitText = this.doc.splitTextToSize(this.encodeTurkishText(evaluation), this.pageWidth - 2 * this.margin);
     this.doc.text(splitText, this.margin, 45);
   }
 

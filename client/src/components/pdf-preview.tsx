@@ -21,14 +21,30 @@ export default function PDFPreview({ reportData, findings, isLoading = false }: 
     try {
       // Transform report data for PDF generator
       const formattedData = {
-        id: reportData.id,
-        reportNumber: reportData.reportNumber,
-        reportDate: reportData.reportDate,
-        projectLocation: reportData.projectLocation,
-        reporter: reportData.reporter,
-        managementSummary: reportData.managementSummary,
-        generalEvaluation: reportData.generalEvaluation,
-        findings: findings || []
+        id: reportData.id || '',
+        reportNumber: reportData.reportNumber || '',
+        reportDate: reportData.reportDate || '',
+        projectLocation: reportData.projectLocation || '',
+        reporter: reportData.reporter || '',
+        managementSummary: reportData.managementSummary || '',
+        generalEvaluation: reportData.generalEvaluation || '',
+        findings: findings?.map(finding => ({
+          id: finding.id || '',
+          section: finding.section || 3,
+          title: finding.title || '',
+          description: finding.currentSituation || finding.description || '',
+          dangerLevel: finding.dangerLevel as 'high' | 'medium' | 'low',
+          recommendation: finding.recommendation || '',
+          images: finding.images || [],
+          location: finding.title || '',
+          processSteps: finding.processSteps?.map((step: any) => ({
+            description: step.description || '',
+            targetDate: step.date || '',
+            responsible: 'Sorumlular',
+            status: 'Bekliyor'
+          })) || [],
+          isCompleted: finding.isCompleted || false
+        })) || []
       };
 
       // Dynamically import and generate PDF
@@ -82,16 +98,33 @@ export default function PDFPreview({ reportData, findings, isLoading = false }: 
       } else {
         // Generate new PDF if not available
         const { downloadProfessionalReportPDF } = await import('@/lib/professionalPdfGenerator');
-        await downloadProfessionalReportPDF({
-          id: reportData.id,
-          reportNumber: reportData.reportNumber,
-          reportDate: reportData.reportDate,
-          projectLocation: reportData.projectLocation,
-          reporter: reportData.reporter,
-          managementSummary: reportData.managementSummary,
-          generalEvaluation: reportData.generalEvaluation,
-          findings: findings || []
-        });
+        const downloadData = {
+          id: reportData.id || '',
+          reportNumber: reportData.reportNumber || '',
+          reportDate: reportData.reportDate || '',
+          projectLocation: reportData.projectLocation || '',
+          reporter: reportData.reporter || '',
+          managementSummary: reportData.managementSummary || '',
+          generalEvaluation: reportData.generalEvaluation || '',
+          findings: findings?.map(finding => ({
+            id: finding.id || '',
+            section: finding.section || 3,
+            title: finding.title || '',
+            description: finding.currentSituation || finding.description || '',
+            dangerLevel: finding.dangerLevel as 'high' | 'medium' | 'low',
+            recommendation: finding.recommendation || '',
+            images: finding.images || [],
+            location: finding.title || '',
+            processSteps: finding.processSteps?.map((step: any) => ({
+              description: step.description || '',
+              targetDate: step.date || '',
+              responsible: 'Sorumlular',
+              status: 'Bekliyor'
+            })) || [],
+            isCompleted: finding.isCompleted || false
+          })) || []
+        };
+        await downloadProfessionalReportPDF(downloadData);
         
         toast({
           title: "PDF İndirildi",
