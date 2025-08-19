@@ -96,6 +96,11 @@ export const insertReportSchema = createInsertSchema(reports).pick({
   status: true,
   managementSummary: true,
   generalEvaluation: true,
+}).extend({
+  reportDate: z.union([
+    z.string().transform((str) => new Date(str)),
+    z.date()
+  ])
 });
 
 export const insertFindingSchema = createInsertSchema(findings).pick({

@@ -52,7 +52,7 @@ export default function CreateReport() {
     e.preventDefault();
     createReportMutation.mutate({
       ...reportData,
-      reportDate: new Date(reportData.reportDate),
+      reportDate: reportData.reportDate, // Send as string, backend will handle conversion
       status: "draft",
     });
   };
@@ -113,7 +113,7 @@ export default function CreateReport() {
         reportId={currentReport.id}
         section={selectedSection}
         onClose={() => setShowFindingForm(false)}
-        onSaved={() => {
+        onSave={() => {
           setShowFindingForm(false);
           queryClient.invalidateQueries({ queryKey: ["/api/reports"] });
         }}

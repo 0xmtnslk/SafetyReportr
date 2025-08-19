@@ -73,31 +73,45 @@ export class ReactPdfService {
     }
   }
 
-  // Font setup geçici olarak kapatıldı
-  // private setupFonts(pdf: jsPDF) {
-  //   try {
-  //     if (this.tahomaFont) {
-  //       pdf.addFileToVFS('Tahoma.ttf', this.tahomaFont);
-  //       pdf.addFont('Tahoma.ttf', 'Tahoma', 'normal');
-  //     }
-  //     if (this.tahomaBoldFont) {
-  //       pdf.addFileToVFS('TahomaBold.ttf', this.tahomaBoldFont);
-  //       pdf.addFont('TahomaBold.ttf', 'Tahoma', 'bold');
-  //     }
-  //   } catch (error) {
-  //     console.warn('Font setup failed, using default fonts:', error);
-  //   }
-  // }
+  // Helper function to properly encode Turkish characters
+  private encodeTurkishText(text: string): string {
+    // Keep Turkish characters as-is, both Helvetica and Tahoma support them
+    // Just ensure consistent encoding
+    return text.normalize('NFC');
+  }
+
+  private setupFonts(pdf: jsPDF) {
+    try {
+      if (this.tahomaFont) {
+        pdf.addFileToVFS('Tahoma.ttf', this.tahomaFont);
+        pdf.addFont('Tahoma.ttf', 'Tahoma', 'normal');
+      }
+      if (this.tahomaBoldFont) {
+        pdf.addFileToVFS('TahomaBold.ttf', this.tahomaBoldFont);
+        pdf.addFont('TahomaBold.ttf', 'Tahoma', 'bold');
+      }
+    } catch (error) {
+      console.warn('Font setup failed, using Helvetica for Turkish support:', error);
+    }
+  }
 
   // Helper function to add text with proper Turkish encoding and word wrap
   private addTextWithWrap(pdf: jsPDF, text: string, x: number, y: number, fontSize: number = 10, fontStyle: string = 'normal', maxWidth: number = 170): number {
     pdf.setFontSize(fontSize);
     
-    // Use Helvetica for Turkish character support
-    pdf.setFont('helvetica', fontStyle);
+    // Try to use Tahoma font for better Turkish character support, fallback to Helvetica
+    try {
+      if (this.tahomaFont) {
+        pdf.setFont('Tahoma', fontStyle);
+      } else {
+        pdf.setFont('helvetica', fontStyle);
+      }
+    } catch (error) {
+      pdf.setFont('helvetica', fontStyle);
+    }
     
-    // Keep Turkish characters as-is - both fonts support Turkish
-    const processedText = text || '';
+    // Properly encode Turkish characters
+    const processedText = this.encodeTurkishText(text || '');
     const lines = pdf.splitTextToSize(processedText, maxWidth);
     const lineHeight = fontSize * 0.35;
 
@@ -124,7 +138,15 @@ export class ReactPdfService {
     const pageWidth = pdf.internal.pageSize.getWidth();
     
     pdf.setFontSize(9);
-    pdf.setFont('helvetica', 'normal');
+    try {
+      if (this.tahomaFont) {
+        pdf.setFont('Tahoma', 'normal');
+      } else {
+        pdf.setFont('helvetica', 'normal');
+      }
+    } catch (error) {
+      pdf.setFont('helvetica', 'normal');
+    }
     pdf.setTextColor(100, 100, 100);
     
     // Footer line
@@ -132,53 +154,59 @@ export class ReactPdfService {
     pdf.line(15, pageHeight - 20, pageWidth - 15, pageHeight - 20);
     
     // Page info with Turkish characters
-    pdf.text('MLPCARE Medical Park Hospital - İSG Raporu', 15, pageHeight - 10);
-    pdf.text(`Sayfa ${pageNumber}`, pageWidth - 35, pageHeight - 10);
+    const footerText = this.encodeTurkishText('MLPCARE Medical Park Hospital - İSG Raporu');
+    const pageText = this.encodeTurkishText(`Sayfa ${pageNumber}`);
+    pdf.text(footerText, 15, pageHeight - 10);
+    pdf.text(pageText, pageWidth - 35, pageHeight - 10);
   }
 
-  // Optimize and convert image to base64
+  // Optimize and convert image to base64 using Sharp (server-side)
   private async optimizeImage(imageUrl: string): Promise<string> {
-    return new Promise((resolve) => {
-      if (typeof window === 'undefined') {
-        resolve('');
-        return;
+    try {
+      // Import Sharp dynamically since it's a server-side only package
+      const sharp = await import('sharp');
+      const fs = await import('fs');
+      const path = await import('path');
+      
+      let imagePath = imageUrl;
+      
+      // Handle different types of image URLs/paths
+      if (imageUrl.startsWith('data:')) {
+        // Already a base64 image, extract and process
+        const base64Data = imageUrl.split(',')[1];
+        const buffer = Buffer.from(base64Data, 'base64');
+        
+        const optimized = await sharp.default(buffer)
+          .resize(400, 400, { fit: 'inside', withoutEnlargement: true })
+          .jpeg({ quality: 80 })
+          .toBuffer();
+        
+        return `data:image/jpeg;base64,${optimized.toString('base64')}`;
+      } else if (imageUrl.startsWith('/uploads/')) {
+        // Local upload path
+        imagePath = path.join(process.cwd(), imageUrl);
+      } else if (imageUrl.startsWith('uploads/')) {
+        // Relative upload path
+        imagePath = path.join(process.cwd(), imageUrl);
       }
-
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      const img = new Image();
-
-      img.onload = () => {
-        const maxSize = 400;
-        let { width, height } = img;
-
-        if (width > height) {
-          if (width > maxSize) {
-            height = (height * maxSize) / width;
-            width = maxSize;
-          }
-        } else {
-          if (height > maxSize) {
-            width = (width * maxSize) / height;
-            height = maxSize;
-          }
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-        ctx!.drawImage(img, 0, 0, width, height);
-
-        const optimizedImageData = canvas.toDataURL('image/jpeg', 0.8);
-        resolve(optimizedImageData);
-      };
-
-      img.onerror = () => {
-        resolve('');
-      };
-
-      img.crossOrigin = 'anonymous';
-      img.src = imageUrl;
-    });
+      
+      // Check if file exists
+      if (!fs.existsSync(imagePath)) {
+        console.warn('Image file not found:', imagePath);
+        return '';
+      }
+      
+      // Process the image with Sharp
+      const optimized = await sharp.default(imagePath)
+        .resize(400, 400, { fit: 'inside', withoutEnlargement: true })
+        .jpeg({ quality: 80 })
+        .toBuffer();
+      
+      return `data:image/jpeg;base64,${optimized.toString('base64')}`;
+    } catch (error) {
+      console.warn('Could not optimize image:', error);
+      return '';
+    }
   }
 
   async generatePDF(reportData: ReportData): Promise<Uint8Array> {
@@ -186,8 +214,8 @@ export class ReactPdfService {
 
     const pdf = new jsPDF('p', 'mm', 'a4');
     
-    // Tahoma font desteği geçici kapalı - Helvetica kullanıyor
-    // this.setupFonts(pdf);
+    // Setup Tahoma fonts for better Turkish character support
+    this.setupFonts(pdf);
     
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
@@ -216,10 +244,18 @@ export class ReactPdfService {
     pdf.setFont('helvetica', 'bold');
     pdf.text('MLPCARE', margin + (this.logoBase64 ? 35 : 0), 25);
 
-    // Title with REAL Turkish characters - we won't convert them anymore
+    // Title with proper Turkish character encoding
     pdf.setTextColor(37, 99, 235);
     pdf.setFontSize(24);
-    pdf.setFont('helvetica', 'bold');
+    try {
+      if (this.tahomaFont) {
+        pdf.setFont('Tahoma', 'bold');
+      } else {
+        pdf.setFont('helvetica', 'bold');
+      }
+    } catch (error) {
+      pdf.setFont('helvetica', 'bold');
+    }
     currentY = 70;
     currentY = this.addTextWithWrap(pdf, 'İŞ SAĞLIĞI VE GÜVENLİĞİ', margin, currentY, 24, 'bold', contentWidth);
     currentY = this.addTextWithWrap(pdf, 'SAHA GÖZLEM RAPORU', margin, currentY, 24, 'bold', contentWidth);
@@ -385,7 +421,15 @@ export class ReactPdfService {
     pdf.rect(0, 0, pageWidth, 35, 'F');
     pdf.setTextColor(255, 255, 255);
     pdf.setFontSize(14);
-    pdf.setFont('helvetica', 'bold');
+    try {
+      if (this.tahomaFont) {
+        pdf.setFont('Tahoma', 'bold');
+      } else {
+        pdf.setFont('helvetica', 'bold');
+      }
+    } catch (error) {
+      pdf.setFont('helvetica', 'bold');
+    }
     
     if (this.logoBase64) {
       try {
@@ -396,7 +440,7 @@ export class ReactPdfService {
     }
     
     pdf.text('MLPCARE', margin + (this.logoBase64 ? 30 : 0), 15);
-    pdf.text(title, margin + (this.logoBase64 ? 30 : 0), 25);
+    pdf.text(this.encodeTurkishText(title), margin + (this.logoBase64 ? 30 : 0), 25);
   }
 
   private async addSectionContent(pdf: jsPDF, sectionTitle: string, findings: Finding[], startY: number, margin: number, contentWidth: number, pageHeight: number): Promise<number> {
