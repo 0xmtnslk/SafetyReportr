@@ -187,9 +187,16 @@ export class DatabaseStorage implements IStorage {
     const [newFinding] = await db
       .insert(findings)
       .values({
-        ...finding,
-        images: finding.images,
-        processSteps: finding.processSteps || []
+        reportId: finding.reportId,
+        section: finding.section,
+        title: finding.title,
+        dangerLevel: finding.dangerLevel,
+        currentSituation: finding.currentSituation,
+        legalBasis: finding.legalBasis,
+        recommendation: finding.recommendation,
+        images: finding.images || [],
+        processSteps: finding.processSteps || [],
+        isCompleted: finding.isCompleted || false
       })
       .returning();
     return newFinding;
@@ -229,13 +236,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async addToOfflineQueue(item: InsertOfflineQueueItem): Promise<OfflineQueueItem> {
-    const itemWithUser = {
-      ...item,
-      userId: item.userId || 'unknown-user'
-    };
+    // Ensure userId is provided for offline queue items
     const [newItem] = await db
       .insert(offlineQueue)
-      .values(itemWithUser)
+      .values({
+        ...item,
+        userId: (item as any).userId || 'system'
+      } as any)
       .returning();
     return newItem;
   }

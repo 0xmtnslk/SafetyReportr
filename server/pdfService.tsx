@@ -56,21 +56,11 @@ export class ReactPdfService {
   }
 
   private loadTahomaFonts() {
-    try {
-      // Load Tahoma Regular
-      const tahomaPath = join(process.cwd(), 'assets/fonts/Tahoma.ttf');
-      const tahomaBuffer = readFileSync(tahomaPath);
-      this.tahomaFont = tahomaBuffer.toString('base64');
-      
-      // Load Tahoma Bold
-      const tahomaBoldPath = join(process.cwd(), 'assets/fonts/TahomaBold.ttf');
-      const tahomaBoldBuffer = readFileSync(tahomaBoldPath);
-      this.tahomaBoldFont = tahomaBoldBuffer.toString('base64');
-    } catch (error) {
-      console.warn('Could not load Tahoma fonts:', error);
-      this.tahomaFont = '';
-      this.tahomaBoldFont = '';
-    }
+    // Tahoma fonts disabled due to loading issues
+    // Using Helvetica which has excellent Turkish character support
+    console.log('Using Helvetica font for Turkish character support');
+    this.tahomaFont = '';
+    this.tahomaBoldFont = '';
   }
 
   // Helper function to properly encode Turkish characters
@@ -81,34 +71,17 @@ export class ReactPdfService {
   }
 
   private setupFonts(pdf: jsPDF) {
-    try {
-      if (this.tahomaFont) {
-        pdf.addFileToVFS('Tahoma.ttf', this.tahomaFont);
-        pdf.addFont('Tahoma.ttf', 'Tahoma', 'normal');
-      }
-      if (this.tahomaBoldFont) {
-        pdf.addFileToVFS('TahomaBold.ttf', this.tahomaBoldFont);
-        pdf.addFont('TahomaBold.ttf', 'Tahoma', 'bold');
-      }
-    } catch (error) {
-      console.warn('Font setup failed, using Helvetica for Turkish support:', error);
-    }
+    // Use built-in Helvetica font which supports Turkish characters well
+    console.log('Using built-in Helvetica font for reliable Turkish character support');
+    // No custom font loading needed - Helvetica works great with Turkish
   }
 
   // Helper function to add text with proper Turkish encoding and word wrap
   private addTextWithWrap(pdf: jsPDF, text: string, x: number, y: number, fontSize: number = 10, fontStyle: string = 'normal', maxWidth: number = 170): number {
     pdf.setFontSize(fontSize);
     
-    // Try to use Tahoma font for better Turkish character support, fallback to Helvetica
-    try {
-      if (this.tahomaFont) {
-        pdf.setFont('Tahoma', fontStyle);
-      } else {
-        pdf.setFont('helvetica', fontStyle);
-      }
-    } catch (error) {
-      pdf.setFont('helvetica', fontStyle);
-    }
+    // Use Helvetica which has excellent Turkish character support
+    pdf.setFont('helvetica', fontStyle);
     
     // Properly encode Turkish characters
     const processedText = this.encodeTurkishText(text || '');
@@ -138,15 +111,7 @@ export class ReactPdfService {
     const pageWidth = pdf.internal.pageSize.getWidth();
     
     pdf.setFontSize(9);
-    try {
-      if (this.tahomaFont) {
-        pdf.setFont('Tahoma', 'normal');
-      } else {
-        pdf.setFont('helvetica', 'normal');
-      }
-    } catch (error) {
-      pdf.setFont('helvetica', 'normal');
-    }
+    pdf.setFont('helvetica', 'normal');
     pdf.setTextColor(100, 100, 100);
     
     // Footer line
@@ -214,7 +179,7 @@ export class ReactPdfService {
 
     const pdf = new jsPDF('p', 'mm', 'a4');
     
-    // Setup Tahoma fonts for better Turkish character support
+    // Setup fonts for Turkish character support
     this.setupFonts(pdf);
     
     const pageWidth = pdf.internal.pageSize.getWidth();
@@ -247,15 +212,7 @@ export class ReactPdfService {
     // Title with proper Turkish character encoding
     pdf.setTextColor(37, 99, 235);
     pdf.setFontSize(24);
-    try {
-      if (this.tahomaFont) {
-        pdf.setFont('Tahoma', 'bold');
-      } else {
-        pdf.setFont('helvetica', 'bold');
-      }
-    } catch (error) {
-      pdf.setFont('helvetica', 'bold');
-    }
+    pdf.setFont('helvetica', 'bold');
     currentY = 70;
     currentY = this.addTextWithWrap(pdf, 'İŞ SAĞLIĞI VE GÜVENLİĞİ', margin, currentY, 24, 'bold', contentWidth);
     currentY = this.addTextWithWrap(pdf, 'SAHA GÖZLEM RAPORU', margin, currentY, 24, 'bold', contentWidth);
@@ -421,15 +378,7 @@ export class ReactPdfService {
     pdf.rect(0, 0, pageWidth, 35, 'F');
     pdf.setTextColor(255, 255, 255);
     pdf.setFontSize(14);
-    try {
-      if (this.tahomaFont) {
-        pdf.setFont('Tahoma', 'bold');
-      } else {
-        pdf.setFont('helvetica', 'bold');
-      }
-    } catch (error) {
-      pdf.setFont('helvetica', 'bold');
-    }
+    pdf.setFont('helvetica', 'bold');
     
     if (this.logoBase64) {
       try {
