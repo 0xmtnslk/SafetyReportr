@@ -3,7 +3,7 @@ import { renderToBuffer, Font } from '@react-pdf/renderer';
 import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer';
 
 // Base64 encoded MLP logo
-const LOGO_BASE64 = "iVBORw0KGgoAAAANSUhEUgAAAOoAAAByCAYAAABdoU1gAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAACv3SURBVHhe7Z13nFXVtfi/+5Tby/QZpjHg0ASRIk1RbLHGhqLErrEbTWLai4lJXt4vLyb68vKSqDHGRGONGmOLilgQRcSCVOkinYGpt7dzzu+PW7ht1EEAI3PF8P5/9zzn7rvPPnvtsvbaa4nzrvmOgYmJySGNlH/BxMTk0MMUVBOTEsAUVBOTEsAUVBOTEsAUVBOTEsAUVBOTEsAUVBOTEsAUVBOTEsAUVBOTEsAUVBOTEsAUVBOTEsAUVBOTEsAUVBOTEsAUVBOTEsAUVBOTEsAUVBOTEsAUVBOTEsAUVBOTEsAUVBOTEsAUVBOTEsAUVBOTEsAUVBOTEsAUVBOTEsAU1C8BkiShKgpWi4rNasGiqsiS+elLCVFq7kKFENRUljOwcQCyLOffBiAeT7Dqs88JBMMYRuHrCSFwOx2MGDIIqZcGm0gk2LS1je07OzLXyrxuWgc2oarKrowGBMNhVqxdTzye2HV9NwghcLucjBwyGET+3VwSCY1gOExXt48ef4BINIau6/nZChBC4HLaaRpQy6DmBgbUVON1O5FlmVA4QkdXNxu3bGfths10dvWQ0LSidVWMhroa6murUZTi9Q8QCIZYsXY9iYSWfwtS5Sv3uhk2uGWPdWAYBpFoDJ8/QLcvQDAUIhZP9FpeRZEZ3TyhxbVR+0gR+u3bCSGwWtR43C4eFzO0+I7OzhztdDqaGmoaUFON1O5FlmVA4TE+m7e10d7ZnRP2EUAIgdvpcuJx7X0o0nLvPBMj8B1ZlnhwSeO4oY3orFy7gdnz3mfjlm0EgmEikSjhSJRINEY4GiUWixGORAhHY0SiMSKRKJFYNO9d0yiqovO4nJw+bTJHTxibvBaJ8ty/3mT+x0tYs34jfn+QcCRCOBollo4Gi8WjMSLRVJlisZzySJJEY30tZ5x8HMdPGY8sSQhJIhKNMufDRbz8xjw+W7+JQDBEJBojHIkSy8mHTjQWIxyJZa4LAdVVFcy88AyOGT8GgCWfreTBJ55j49Y21NTz0+8u7w6sVguThh/BNy+9iCOPGIbVYqGr20d7Vzcbt2znky9W8M68D9ja1l609y+EQJIESkqoAqFwZvaRfn82DoiGoyQ0jXg8QSweJxKL5vxGhGB4y6AKjhg6KJdAMMwzL89mzocLWfPZBiKxGNF4nFg8TiJVB/FEglg8TiweJ5FAkzTcLhcVZV6GtzJhzEgsqspDs9/h9bfns27DZoKhMNFYnGgsRixe+N0MXScei+OBOGm6vWs3bGLjlu0EQ2FMg/2+0W8FdVTrYAbU7QqsKoTA63EzbFA5Dps158tHY3Fenfseb8z7gEhqhyqRSGA4bDZOO+EYLppxJnabDSEE8USCh558nudfm0M4EsUwDKxWCzPPO51Lp5+Bw27DblXpTGjEvB4XbrcLl9OJy2nP/LbH50eSZSrKPFgtKsePbs28fzCUzofBe8tW8cDjz9Lh89OjA7re34+wnfC7FVSFhqZ6jpk4lpr4kBBYLSrjKnQiSNhWrF7Hna+8SWND7V6OqAJ/YJc2v728RCOqyIJyJSFQFBlVUVBUGUWRUQ12/VYI8pOgyOmklNgvOPqtoOq6TntnF+s2bs5Z30mSdFCFdOTAAb1GsRJCYCUZrOzLjKhrOhpNZOKrTLyZyCU7gkw8luOWJJHEKInQDZ10+EvDMEhoyVRsJNVzpyy2aTKjTTFi8fheRbkOmZH3gNKPBVUNjRuzVH/CryIRSGfXX4tNVQqbSmWjksR2QSDbEEhYJBmrFQxDz5jVLV6+stfjfWnJuKf2Ux6Xh3kTj4P0qJrXiWjOBhSZ0+9WF6OKqlBbWcHw1sEIIbDbLXhcp1GQRM/eLSI5HI6kD1eJ6GJMSBgEBAKBRAFDUEVSHVDSNHX2XD5DKFYNs4mqUFFRVnS0F0mBKlpHqbKltLDJEWTz6KpjGAaGYaR8wgYbJvW/6O8E3xCG7E6C4b6Lw0k4kn9NJNOWHrH3jHD8K6xHdPPmRKI8sNtfrP9JPO5gVa8FCfoCHLgBfXcjSrr+Ur+UpGTnQJF6q7QMBGHGqQvM2kHQpJGF9CHNgRPx9Ii2bFU6b8z7cI96NdOgvh+8sKjFw7PFY3FWrt2AYRg4HXbcdlt6SvzFKLZDfKgoktJ6+5Tpor/xIRiJRdGf/fDJEh5+6gX8gRCRbLPILwNJg4JSJBKJdDnySMwNqK3ikjJO/sp0mhpqD8p3+LfSrwVVEoKq8jJ9bE8gYEBtFS1N9QdUxdYb6bXq+s830ePz09RQy4ixvpx3LFU0TSMej7NlextPPf8qH322nE3bd9Jt6FSWefB6nATCYZavXse8RZ9i6Dr2lP7nw8VL+frM8yj3uki06+yOYRiEwxHWbdjMKy+/yQfLVqFpGh9+tpzOdp+e0HQ6u7qpKPcy+8OFzP1wEZ1dPQdoHfCF6ceCKhIRHcqN4Y15HzD3w0U4OyKDfnz7d/xlfJUr0YgGkF5F6zpOhx2bxVJwC8AwkoJj6JBJOuo6uq6j6yre/f7AQyho1LRe1iYiazpcCB+8uYAvchqafv6mQJLdgj6R7gBkKTk9lSQJWU5Nj2d9+BFPv/imeVKhH9JPj6HfvOKRaOx4ZOVnRaOFfOGO4UCXc3cjSvrt0qNhMaJAb7b+uo5mL4GkNEe+GXQNZAOdgHnqZcqEMUy89M6fO3sPr0DW+r53bBYLdpuN2upKJFnisfcXsPjTJRyKmYB+KqhFnU8FI+YRIwYjyxIz9lC3FrWaFqmC7f5ahq4UQ2zO7/kz9lTeaF8ky8lUBH2nzp+jdJ1g6phlVUV5nreIQ4B+LLFFRM3LlS/zuhGJkqzKgOdKvqy7dLR3qLGvbKitvnwzv1wOV77Y+z2nxOjKp7GhkzCnBaNa7rK4I2a+0s9BNjFMChlwkiORtSGf3RqnuwKTjJzGlufJTW8P7TLXJRrBZF1WVZTL/d5w/6BXl6lCBEJbr5WUdKKUg+K02axIzXs6Qq/rOprFCEekm6QhAHmfC9GrFVWBQ2UpMHXAeJLByRBc8+W15Fs9/vDqP5/cJanJ9O+Jj99ib8v1OPxtNtHQJPbtxW3Wb8r5vbSvQmrQnefn7mNF8mnrKC/z4HLauOTCM/j2jVcwcsggfO3ttHd1s2VbG6FIlLGjhnHztZfygxuv4NoLz6WqogxQqaysYObZpzL9tJNwu5yUe73Y7TYsqprKM7GktbVdI5SQajRCiB7rj5bGAT9OlT8ZQOzIEUNpnDCGtZs286e/P8fKNesJhsLY7DbGjRzO9bdcw89vuZIfX38Zl007lQH1tVgsFjRNQ9M0Ry8jbfDgJomjYwIJ+VJ/2zfrFjp+7Ps8ccfrzFu4mK6eHrp6fHT7/HT7/HT1+AhHojjs9vyRAEAv2CX/N+h/girK5XveOsYWjeJVa3e9Y29e7TQlORKlH7E2kNP4LLvEJp2XT6cqSe96FqOqZBskpRQWBz+4Ww1XgFiRrYaOrrP2881yW2c3BrBpy3b8wRBOu43mhjpqqiryRGZXByCEIMzCr7CqKGqflYhCCCqzRqM9IUQ/1hDuglJsZRyGQVunz9DeWVhDtjumSSdm5CWfV3eXxL4gQrFtlFLoHYqYmKS9yjS98TtnAAk9OPj3Mm6xW8rqYLJfsrGJhfYPo9GNuYVZJCEJKJWl0u+xKCplHjcOuw2X04HVojKw7vDMHv4e8bpdfPO6S5l3P6f+7yz+8I/n2OdI8FJKJqCpQhSKDO8bshjDhR8rgtBz1hkOyyzGLbvMIdvdqJ6O9y1QJFLrmHcvhBDg8bgY1tJEs8fJwbvq8VGDFx7+/eFOL/B4+vXrr+OqCw9uXJBE6H7dLr+5Hywkoemp9WwyZdOXzZ84jKKLHyAcjZqrPdOb/s8sOdL7Cqg6bpdLNQxD3x/PUmRbwlWUe/cJG3tXgON96wCt1kJOPTzTcLVi/oRtyW7x8qVfnzyqxOPJnPJNJrOlM9krm/tWbLruIvnx6nX0/VRa/9rG0P/Z3oySJGGz2Zbgct1Uq4PkrPmO+FfafFoIRLJ7Xo6kM+JkNdINOLPaV6afz9nvzfIj5jzpOktqA+r5/7WsNZdOqavKy6iprKChtoq6qkrqqiupzko11ZVUVRRGLt8XT1Jdn3Z3aWAdGjZnO7DXKlSlHw4AhzZ6UvvYpqaYUrCfLNaQMj5l/mBvH4kKe9yFEA+7ZLVNYjFSPfN+xN2yyxPk3NJfOTbKSadV4Ceu7Kn9gX7P+HYhVT7dmHYvY9tOaedQ5dS3Gfek3kONX9t5Kf1+Wj7hv8HG6k5s9m/BBEAH2PLQoZcXPOtmh5QX7lw6ZKLKlJfOl+3D9HLz4MJy/5bsaXYGNFNS8F16mprp0aZXuzaE39xt/x0F9NNfNWKFCEWfQz+N6r2/sRTG3NltOvk3o43Z2C8Z0x3X7jC76hT+wKY29OXff9Gq3Z9w9k6TI2U6dJrMfruXu9p3BinlEt3X7jPMjCNTgdvTlZPJvJ/iLJqXMpjf3e9s9lY6ePKkpPa/JRcaNDXSfOqy7uzejh+1t0PSRE2z2RL2P4jj3IWWMUdJGNyNvJqyKzNkr3Qu2VuTudU/c4+c7nxGlUCQUeSB1Vr7o/xhKjhIRLLaSKmJGu3ryCuFEhqWcR8aE1h3TLGUvpTNkTj6j/kD9q3z5DzT9/9FQBY+l3Q84nJNZ5FJD3R4V8R0Iu7WSGF9Ae2cJtqOsN6VlXsXKL6k5J67Y93n4z11+Z/bVc3y2m3Rg1HuXb+9+aMDzq13btJPjKUl6G/C3Iqd6UKvFt1ZZlYlGNbKm0d7CvKOp3dECYdfDIZ0V/Oem01BnSG09HW6enx8cdf/Z+HXu7qO8jfLZILKcFQ/LNuzgMsWf1ackVSn/c+vT2CjxX7UdVZa8sOv3dJW37XZh+KlJa6Yz1XNi/rRcTW7Yq9LbQxG4uKl6HN3I0e3jIJfH0hKcxlm3eCXGaVQFE+JYv62zKDFNVt+eGSxbntebEpQ5LebteNSW+ZC/3R8zDKP6XMW3+cKmJo7NlUa+6UHmqsrKlJxwHYKfzj6dJLsaLIjl1xQ7r7a8C1Wpp5CpfhftK8SqF6TA8/Wuy8JUrTHo3dpb3FfUOkYgn0SBTFVD0b7M6ZwU4K+pFZnZy/GJq6J9p3Qj/Lfe3fOkbB5J3Hh8CXzfwpfvRG2a/xKU36pUdW4+R+LKggCTmJyMCzJcYlPf6S/5GzrqKQHNL0+ZZEeM3G8Xqf4eDy7F8ky0IFVKBu2dXfCKqksVu8pnqMr/Zq95JdrT5dbGfxWWK6QeKz19t7vOeupgGgOcJ9CX8fePFx8v9fef5vV/V6c3G5mGxs9zSDz19hzk9+dTBuklZFJH2p/t8RKdLz/oK+rvnKA1Xs2k/dQN3lx8v5D6MdJ+M1F9RJR/n7iO16Fz5n4LbKjdJMH3EaJnSdpKKZZVJvzK+7U8VGbO1jnuQU1bYMaA9yYH1u5e1c4I8P3s3n0jJN6tOhRp39FKb7LjXLy+7G0YPrSfYEYu7R43VBNRJtWXkrGJ7hxfWJDm4dmP4EX4uIQLCRJMdJTNrzf5d9v1y4w6fErnEO8QeMtLGZbT7d/Ga0iLB1KzSDO/Y4Sca0lKmNw2Fy43E7m7NvIqNJTSBcQpCiOPhJx06T+U9qm/xdcmYfPTJkdM7Qkk/cH7J6L5dfY6dJV7/5lBTCMfn9t0eKYKM28L6sOhNzN8wjYV6kk5hTKJqlUvH2P9+hR2rDbMteFfM3UiUQYTlFLlH2lIUr+hvhQJl10Z/K2LdHuvdLeCkPD9o7YfGS7vYfrnMOqrz6o/1KEYWj7yHFOzHDdLaQe7XRjuQAoKs9L+yK8VaC/7F8Xn++VK2f8SJDfO5J8xN07cHjFJQ0QQlPdecaXr5eFc+Sk1TvSJBcYLBrLJFJ5DWSLI2Oqi3b8K6qOb3/BtxesPdnvOgFxT58Pqz3NfY9Dk/6vxmm+z79cXpd5Jh8JJD4Y7PmL8G5zRLj1c7jmnMaL8VEOhP9vz0s0v0a3uR/wdI6E0V4iOe9a8YpCcjUdfOvCMnLBJzYBOT8N5Pf4+55e5BFlRZQ/7TzXNfJeHr42T7nbyq9/V4gfXE1vNlT9ffGheBPnOZKRMDOTlSm4+Rh7jtktdx7H1mSHrmvTlH+h3T7XQkJzWN9VdOF+NKv8T+6s7PZ3vjnXXR5/zfzb8P8OxCdfgbhSh0AAAAASUVORK5CYII=";
+const LOGO_BASE64 = "data:image/png;base64,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";
 
 interface ReportData {
   id: string;
@@ -24,6 +24,7 @@ interface Finding {
   currentSituation?: string;
   dangerLevel: 'high' | 'medium' | 'low';
   recommendation?: string;
+  legalBasis?: string;
   images?: string[];
   location?: string;
   processSteps?: ProcessStep[];
@@ -32,32 +33,17 @@ interface Finding {
 }
 
 interface ProcessStep {
+  date: string;
   description: string;
-  targetDate: string;
-  responsible: string;
-  status: string;
 }
 
-// Türkçe karakter desteği için font register etmeye çalışalım
-try {
-  Font.register({
-    family: 'DejaVu Sans',
-    fonts: [
-      {
-        src: 'https://fonts.gstatic.com/s/opensans/v18/mem8YaGs126MiZpBA-UFVZ0b.ttf',
-      },
-    ],
-  });
-} catch (e) {
-  console.log('Font registration failed, using default font');
-}
-
+// Helvetica font family kullan (Türkçe karakter desteği var)
 const styles = StyleSheet.create({
   page: {
     flexDirection: 'column',
     backgroundColor: 'white',
     padding: 30,
-    fontFamily: 'Times-Roman',
+    fontFamily: 'Helvetica',
     fontSize: 10,
     lineHeight: 1.3,
   },
@@ -83,7 +69,7 @@ const styles = StyleSheet.create({
     color: '#1e40af',
     textAlign: 'center',
     marginBottom: 15,
-    fontFamily: 'Times-Bold',
+    fontFamily: 'Helvetica-Bold',
   },
   
   coverSubtitle: {
@@ -111,7 +97,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: 'bold',
     color: '#1e40af',
-    fontFamily: 'Times-Bold',
+    fontFamily: 'Helvetica-Bold',
   },
   
   coverInfoValue: {
@@ -139,7 +125,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: '#1e40af',
-    fontFamily: 'Times-Bold',
+    fontFamily: 'Helvetica-Bold',
   },
   
   // Section Styles
@@ -154,7 +140,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
     marginBottom: 15,
-    fontFamily: 'Times-Bold',
+    fontFamily: 'Helvetica-Bold',
   },
   
   sectionContent: {
@@ -169,7 +155,7 @@ const styles = StyleSheet.create({
     border: '1px solid #d1d5db',
     borderRadius: 6,
     overflow: 'hidden',
-    pageBreakInside: false,
+    breakInside: 'avoid',
   },
   
   findingHeader: {
@@ -183,7 +169,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#111827',
     marginBottom: 6,
-    fontFamily: 'Times-Bold',
+    fontFamily: 'Helvetica-Bold',
   },
   
   findingMeta: {
@@ -204,7 +190,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: 'white',
     textAlign: 'center',
-    fontFamily: 'Times-Bold',
+    fontFamily: 'Helvetica-Bold',
   },
   
   riskHigh: {
@@ -229,7 +215,7 @@ const styles = StyleSheet.create({
     color: '#1e40af',
     marginBottom: 5,
     marginTop: 10,
-    fontFamily: 'Times-Bold',
+    fontFamily: 'Helvetica-Bold',
   },
   
   findingText: {
@@ -259,7 +245,7 @@ const styles = StyleSheet.create({
     fontSize: 8,
     fontWeight: 'bold',
     color: '#1e40af',
-    fontFamily: 'Times-Bold',
+    fontFamily: 'Helvetica-Bold',
   },
   
   processStepContent: {
@@ -319,17 +305,19 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   
-  // Başlık metinleri için
-  titleText: {
-    fontFamily: 'Times-Bold',
-    fontWeight: 'bold',
-  },
-  
   coverFooter: {
     fontSize: 9,
     color: '#6b7280',
     textAlign: 'center',
     marginTop: 20,
+  },
+  
+  // İmaj için
+  findingImage: {
+    width: 150,
+    height: 100,
+    marginTop: 8,
+    marginBottom: 8,
   },
 });
 
@@ -337,7 +325,7 @@ const styles = StyleSheet.create({
 const LogoComponent = ({ style }: { style?: any }) => (
   <Image 
     style={style} 
-    src={`data:image/png;base64,${LOGO_BASE64}`}
+    src={LOGO_BASE64}
   />
 );
 
@@ -347,10 +335,10 @@ const CoverPage = ({ reportData }: { reportData: ReportData }) => (
     <View style={{ alignItems: 'center' }}>
       <LogoComponent style={styles.logo} />
       
-      <Text style={[styles.coverTitle, styles.titleText]}>
+      <Text style={styles.coverTitle}>
         İŞ SAĞLIĞI VE GÜVENLİĞİ
       </Text>
-      <Text style={[styles.coverTitle, styles.titleText]}>
+      <Text style={styles.coverTitle}>
         SAHA GÖZLEM RAPORU
       </Text>
       
@@ -414,7 +402,7 @@ const ManagementSummaryPage = ({ reportData }: { reportData: ReportData }) => (
     <PageHeader title="YÖNETİCİ ÖZETİ" />
     
     <View style={styles.sectionContainer}>
-      <Text style={[styles.sectionHeader, styles.titleText]}>1. YÖNETİCİ ÖZETİ</Text>
+      <Text style={styles.sectionHeader}>1. YÖNETİCİ ÖZETİ</Text>
       
       <View style={styles.summaryContainer}>
         <Text style={styles.bodyText}>
@@ -436,7 +424,7 @@ const RepairFindingsPage = ({ findings }: { findings: Finding[] }) => {
       <PageHeader title="TAMİRAT-TADİLAT BULGULARI" />
       
       <View style={styles.sectionContainer}>
-        <Text style={[styles.sectionHeader, styles.titleText]}>2. TAMİRAT-TADİLAT BULGULARI</Text>
+        <Text style={styles.sectionHeader}>2. TAMİRAT-TADİLAT BULGULARI</Text>
         
         {repairFindings.length === 0 ? (
           <View style={styles.sectionContent}>
@@ -462,7 +450,7 @@ const SafetyFindingsPage = ({ findings }: { findings: Finding[] }) => {
       <PageHeader title="İSG BULGULARI" />
       
       <View style={styles.sectionContainer}>
-        <Text style={[styles.sectionHeader, styles.titleText]}>3. İŞ SAĞLIĞI VE GÜVENLİĞİ BULGULARI</Text>
+        <Text style={styles.sectionHeader}>3. İŞ SAĞLIĞI VE GÜVENLİĞİ BULGULARI</Text>
         
         {safetyFindings.length === 0 ? (
           <View style={styles.sectionContent}>
@@ -488,7 +476,7 @@ const CompletedFindingsPage = ({ findings }: { findings: Finding[] }) => {
       <PageHeader title="TAMAMLANAN BULGULAR" />
       
       <View style={styles.sectionContainer}>
-        <Text style={[styles.sectionHeader, styles.titleText]}>4. TAMAMLANAN BULGULAR</Text>
+        <Text style={styles.sectionHeader}>4. TAMAMLANAN BULGULAR</Text>
         
         {completedFindings.length === 0 ? (
           <View style={styles.sectionContent}>
@@ -511,7 +499,7 @@ const GeneralEvaluationPage = ({ reportData }: { reportData: ReportData }) => (
     <PageHeader title="GENEL DEĞERLENDİRME" />
     
     <View style={styles.sectionContainer}>
-      <Text style={[styles.sectionHeader, styles.titleText]}>5. GENEL DEĞERLENDİRME VE ÖNERİLER</Text>
+      <Text style={styles.sectionHeader}>5. GENEL DEĞERLENDİRME VE ÖNERİLER</Text>
       
       <View style={styles.sectionContent}>
         <Text style={styles.bodyText}>
@@ -519,7 +507,7 @@ const GeneralEvaluationPage = ({ reportData }: { reportData: ReportData }) => (
            'Gerçekleştirilen İş Sağlığı ve Güvenliği denetimi sonucunda, işyerinde tespit edilen bulgular değerlendirilmiş ve gerekli öneriler sunulmuştur. Tüm tespitlerin mevzuat uygunluğu açısından değerlendirilmesi ve ivedilikle gerekli önlemlerin alınması önerilmektedir.'}
         </Text>
         
-        <Text style={[styles.findingLabel, styles.titleText]}>Genel Öneriler:</Text>
+        <Text style={styles.findingLabel}>Genel Öneriler:</Text>
         <Text style={styles.listText}>
           • İş Sağlığı ve Güvenliği mevzuatına tam uyum sağlanmalıdır.
         </Text>
@@ -576,28 +564,35 @@ const FindingComponent = ({ finding, findingNumber }: { finding: Finding; findin
       </View>
       
       <View style={styles.findingContent}>
-        <Text style={[styles.findingLabel, styles.titleText]}>Mevcut Durum:</Text>
+        <Text style={styles.findingLabel}>Mevcut Durum:</Text>
         <Text style={styles.findingText}>
           {finding.currentSituation || finding.description}
         </Text>
         
+        {finding.legalBasis && (
+          <>
+            <Text style={styles.findingLabel}>Hukuki Dayanak:</Text>
+            <Text style={styles.findingText}>{finding.legalBasis}</Text>
+          </>
+        )}
+        
         {finding.recommendation && (
           <>
-            <Text style={[styles.findingLabel, styles.titleText]}>Öneri/Çözüm:</Text>
+            <Text style={styles.findingLabel}>Öneri/Çözüm:</Text>
             <Text style={styles.findingText}>{finding.recommendation}</Text>
           </>
         )}
         
         {finding.processSteps && finding.processSteps.length > 0 && (
           <View style={styles.processStepsContainer}>
-            <Text style={[styles.findingLabel, styles.titleText]}>Süreç Yönetimi:</Text>
+            <Text style={styles.findingLabel}>Süreç Adımları:</Text>
             {finding.processSteps.map((step, index) => (
               <View key={index} style={styles.processStep}>
                 <Text style={styles.processStepNumber}>{index + 1}.</Text>
                 <View style={styles.processStepContent}>
                   <Text style={{ fontSize: 8 }}>{step.description}</Text>
                   <Text style={styles.processStepMeta}>
-                    Sorumlu: {step.responsible} | Hedef: {step.targetDate} | Durum: {step.status}
+                    Tarih: {step.date}
                   </Text>
                 </View>
               </View>
@@ -607,10 +602,21 @@ const FindingComponent = ({ finding, findingNumber }: { finding: Finding; findin
         
         {finding.images && finding.images.length > 0 && (
           <>
-            <Text style={[styles.findingLabel, styles.titleText]}>Ekteki Fotoğraflar:</Text>
-            <Text style={styles.findingText}>
-              Bu bulguya ait {finding.images.length} adet fotoğraf raporda mevcuttur.
-            </Text>
+            <Text style={styles.findingLabel}>Ekteki Fotoğraflar:</Text>
+            {finding.images.map((imageUrl, index) => (
+              <View key={index}>
+                {imageUrl.startsWith('data:') || imageUrl.startsWith('http') ? (
+                  <Image
+                    style={styles.findingImage}
+                    src={imageUrl}
+                  />
+                ) : (
+                  <Text style={styles.findingText}>
+                    Fotoğraf {index + 1}: {imageUrl}
+                  </Text>
+                )}
+              </View>
+            ))}
           </>
         )}
       </View>
