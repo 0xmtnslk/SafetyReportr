@@ -1,0 +1,1933 @@
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { jsPDF } from 'jspdf';
+import * as XLSX from 'xlsx';
+import html2canvas from 'html2canvas';
+import { API } from './api';
+import './App.css';
+
+// Debounce hook for delayed API calls
+const useDebounce = (value: string, delay: number) => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+};
+
+export interface ChecklistItem {
+  id: string;
+  name: string;
+  suitable: boolean;
+  notSuitable: boolean;
+  description: string;
+}
+
+export interface Photo {
+  id: string;
+  url: string;
+  description: string;
+}
+
+export interface Department {
+  id: string;
+  name: string;
+}
+
+export interface Room {
+  id: string;
+  name: string;
+  departmentId: string;
+  departmentName: string;
+  checklist: ChecklistItem[];
+  photos: Photo[];
+  generalNotes: string;
+}
+
+const departmentChecklistTemplates: Record<string, string[]> = {
+  'İdari Müdürlük': [
+    'Masa', 'Sandalye', 'Bilgisayar', 'Telefon', 'Dolap', 'Aydınlatma', 
+    'Klima/Havalandırma', 'Elektrik Prizleri', 'İnternet Bağlantısı', 'Güvenlik Kamerası'
+  ],
+  'Bilgi İşlem': [
+    'WI-FI bağlantısı çalışıyor ve yeterli hızda mı?', 'Data bağlantıları aktif halde mi?', 
+    'Data bağlantı etiketi tanımlanmış mı?', 'Yazıcı yeri ve bağlantısı tamamlanmış mı?'
+  ],
+  'İş Sağlığı ve Güvenliği': [
+    'Tahliye Planı mevcut mu?', 'Kullanıma uygun şekilde yangın tüpü mevcut mu?', 
+    'Sağlık ve Güvenlik işaretleri takılı mı?', 'Elektrik prizleri çocuk koruması mevcut mu?', 
+    'Engelli tutunma barları sabitlenmiş mi?', 'Hareketli tüm ekipman ve mobilyalar sabitlenmiş mi?', 
+    'Sabit mobilya ve ekipmanların kesin kenarları var mı?', 'Acil durum aydınlatması yeterli mi?', 
+    'Yangın Dolabı Hortum bağlantıları uygun mu?', 'Şaft kapakları kolay açılabilir şekilde mi?', 
+    'Acil Durum Yönlendirmeleri uygun ve yeterli mi?'
+  ],
+  'Hasta Odası': [
+    'Yatak', 'Monitör', 'Oksijen Ünitesi', 'Hasta Çağrı Sistemi', 'Aydınlatma', 
+    'Klima/Havalandırma', 'Lavabo', 'Elektrik Prizleri', 'Acil Durum Butonu', 'Hijyen Malzemeleri'
+  ],
+  'Ameliyathane': [
+    'Ameliyat Masası', 'Anestezi Cihazı', 'Monitör', 'Elektrokoter', 'Aydınlatma Sistemi',
+    'Havalandırma/HEPA Filtre', 'Oksijen/Gaz Sistemi', 'Acil Durum Butonu', 
+    'Sterilizasyon Ekipmanları', 'İletişim Sistemi'
+  ],
+  'Yoğun Bakım': [
+    'Yoğun Bakım Yatağı', 'Ventilatör', 'Monitör', 'Oksijen Sistemi', 'Hasta Çağrı Sistemi',
+    'Aydınlatma', 'Havalandırma', 'Elektrik Prizleri', 'Acil Durum Ekipmanları', 
+    'İlaç Dolabı', 'El Hijyeni Sistemi'
+  ],
+  'Laboratuvar': [
+    'Çalışma Tezgahı', 'Mikroskop', 'Santrifüj', 'Buzdolabı/Dondurucular', 'Aspiratör Sistemi',
+    'Kimyasal Dolabı', 'Güvenlik Duşu', 'Göz Yıkama İstasyonu', 'Havalandırma', 'Atık Sistemi'
+  ],
+  'Eczane': [
+    'İlaç Dolabı', 'Buzdolabı', 'Bilgisayar/Yazılım', 'Terazi', 'Güvenlik Sistemi',
+    'Klima/Havalandırma', 'Aydınlatma', 'Yangın Söndürücü', 'İlk Yardım Malzemeleri', 'İletişim Sistemi'
+  ]
+};
+
+const getDefaultChecklistForDepartment = (departmentName: string): string[] => {
+  // Exact match first
+  if (departmentChecklistTemplates[departmentName]) {
+    return departmentChecklistTemplates[departmentName];
+  }
+
+  // Partial match for similar names
+  const lowerCaseName = departmentName.toLowerCase();
+  if (lowerCaseName.includes('idari') || lowerCaseName.includes('müdür')) {
+    return departmentChecklistTemplates['İdari Müdürlük'];
+  }
+  if (lowerCaseName.includes('bilgi') || lowerCaseName.includes('işlem') || lowerCaseName.includes('it')) {
+    return departmentChecklistTemplates['Bilgi İşlem'];
+  }
+  if (lowerCaseName.includes('güvenlik') || lowerCaseName.includes('isg')) {
+    return departmentChecklistTemplates['İş Sağlığı ve Güvenliği'];
+  }
+  if (lowerCaseName.includes('ameliyat')) {
+    return departmentChecklistTemplates['Ameliyathane'];
+  }
+  if (lowerCaseName.includes('yoğun') || lowerCaseName.includes('bakım')) {
+    return departmentChecklistTemplates['Yoğun Bakım'];
+  }
+  if (lowerCaseName.includes('lab')) {
+    return departmentChecklistTemplates['Laboratuvar'];
+  }
+  if (lowerCaseName.includes('eczane') || lowerCaseName.includes('farma')) {
+    return departmentChecklistTemplates['Eczane'];
+  }
+
+  // Default fallback to hospital room
+  return departmentChecklistTemplates['Hasta Odası'];
+};
+
+interface ModernModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: (value: string) => void;
+  title: string;
+  placeholder: string;
+  inputType?: 'text' | 'textarea';
+}
+
+const ModernModal: React.FC<ModernModalProps> = ({ isOpen, onClose, onConfirm, title, placeholder, inputType = 'text' }) => {
+  const [value, setValue] = useState('');
+
+  useEffect(() => {
+    if (!isOpen) {
+      setValue('');
+    }
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  const handleConfirm = () => {
+    if (value.trim()) {
+      onConfirm(value.trim());
+      setValue('');
+      onClose();
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey && inputType !== 'textarea') {
+      e.preventDefault();
+      handleConfirm();
+    }
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3>{title}</h3>
+          <button className="modal-close" onClick={onClose}>×</button>
+        </div>
+        <div className="modal-body">
+          {inputType === 'textarea' ? (
+            <textarea
+              className="modal-input"
+              placeholder={placeholder}
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              autoFocus
+              rows={4}
+            />
+          ) : (
+            <input
+              type="text"
+              className="modal-input"
+              placeholder={placeholder}
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              onKeyPress={handleKeyPress}
+              autoFocus
+            />
+          )}
+        </div>
+        <div className="modal-footer">
+          <button className="modal-btn cancel" onClick={onClose}>
+            İptal
+          </button>
+          <button 
+            className="modal-btn confirm" 
+            onClick={handleConfirm}
+            disabled={!value.trim()}
+          >
+            Onayla
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+interface ConfirmModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  title: string;
+  message: string;
+}
+
+const ConfirmModal: React.FC<ConfirmModalProps> = ({ isOpen, onClose, onConfirm, title, message }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3>{title}</h3>
+          <button className="modal-close" onClick={onClose}>×</button>
+        </div>
+        <div className="modal-body">
+          <p>{message}</p>
+        </div>
+        <div className="modal-footer">
+          <button className="modal-btn cancel" onClick={() => {
+            onClose();
+            if (typeof (window as any).exitWithoutSaving === 'function') {
+              (window as any).exitWithoutSaving();
+            }
+          }}>
+            Kaydetmeden Çık
+          </button>
+          <button className="modal-btn confirm" onClick={onConfirm}>
+            Kaydet ve Çık
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+interface PhotoModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  photo: Photo | null;
+}
+
+const PhotoModal: React.FC<PhotoModalProps> = ({ isOpen, onClose, photo }) => {
+  if (!isOpen || !photo) return null;
+
+  return (
+    <div className="photo-modal-overlay" onClick={onClose}>
+      <div className="photo-modal-content" onClick={e => e.stopPropagation()}>
+        <button className="photo-modal-close" onClick={onClose}>×</button>
+        <img src={photo.url} alt={photo.description} className="photo-modal-image" />
+        <div className="photo-modal-description">
+          <p>{photo.description}</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
+
+export default function App() {
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(null);
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [currentRoom, setCurrentRoom] = useState<Room | null>(null);
+  const [originalRoom, setOriginalRoom] = useState<Room | null>(null); // Original state for comparison
+  const [showReport, setShowReport] = useState(false);
+  const [showGeneralReport, setShowGeneralReport] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const reportRef = useRef<HTMLDivElement>(null);
+
+  const [showDepartmentModal, setShowDepartmentModal] = useState(false);
+  const [showRoomModal, setShowRoomModal] = useState(false);
+  const [showItemModal, setShowItemModal] = useState(false);
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
+  const [pendingPhoto, setPendingPhoto] = useState<File | null>(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showPhotoViewModal, setShowPhotoViewModal] = useState(false);
+  const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
+
+  useEffect(() => {
+    const initializeApp = async () => {
+      try {
+        await API.initialize();
+        const departmentsData = await API.getDepartments();
+        setDepartments(departmentsData);
+
+        // If we have departments and none selected, auto-select first one
+        if (departmentsData.length > 0) {
+          setSelectedDepartment(departmentsData[0]);
+        }
+      } catch (error) {
+        console.error('Failed to initialize app:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initializeApp();
+  }, []);
+
+  useEffect(() => {
+    if (selectedDepartment) {
+      const loadRooms = async () => {
+        try {
+          const roomsData = await API.getRooms(selectedDepartment.id);
+          setRooms(roomsData);
+        } catch (error) {
+          console.error('Failed to load rooms:', error);
+          setRooms([]); // Set empty array on error
+        }
+      };
+      loadRooms();
+    } else {
+      setRooms([]);
+    }
+  }, [selectedDepartment]);
+
+  const createNewDepartment = async (departmentName: string) => {
+    try {
+      await API.createDepartment(departmentName);
+      const updatedDepartments = await API.getDepartments();
+      setDepartments(updatedDepartments);
+
+      // Select the new department
+      const newDepartment = updatedDepartments.find(d => d.name === departmentName);
+      if (newDepartment) {
+        setSelectedDepartment(newDepartment);
+      }
+    } catch (error) {
+      console.error('Failed to create department:', error);
+    }
+  };
+
+  const createNewRoom = async (roomName: string) => {
+    if (!selectedDepartment) {
+      alert('Lütfen önce bir departman seçin.');
+      return;
+    }
+
+    try {
+      console.log('Creating room:', roomName, 'for department:', selectedDepartment.id);
+      const newRoom = await API.createRoom(roomName, selectedDepartment.id);
+
+      // Reload rooms for the current department
+      const updatedRooms = await API.getRooms(selectedDepartment.id);
+      setRooms(updatedRooms);
+
+      // Set the new room as current
+      setCurrentRoom(newRoom);
+      setOriginalRoom(JSON.parse(JSON.stringify(newRoom))); // Deep copy
+      setHasUnsavedChanges(false);
+      setShowReport(false);
+
+      console.log('Room created successfully:', newRoom);
+    } catch (error) {
+      console.error('Failed to create room:', error);
+      alert(`Oda oluşturulurken bir hata oluştu: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}`);
+    }
+  };
+
+  const selectRoom = (room: Room) => {
+    setCurrentRoom(room);
+    setOriginalRoom(JSON.parse(JSON.stringify(room))); // Deep copy
+    setHasUnsavedChanges(false);
+  };
+
+  const updateChecklistItem = (itemId: string, field: keyof ChecklistItem, value: any) => {
+    if (!currentRoom) return;
+
+    const updatedRoom = { ...currentRoom };
+    updatedRoom.checklist = updatedRoom.checklist.map(item => {
+      if (item.id === itemId) {
+        const updatedItem = { ...item };
+        if (field === 'suitable' && value) {
+          updatedItem.suitable = true;
+          updatedItem.notSuitable = false;
+          updatedItem.description = '';
+        } else if (field === 'notSuitable' && value) {
+          updatedItem.suitable = false;
+          updatedItem.notSuitable = true;
+        } else {
+          (updatedItem as any)[field] = value;
+        }
+        return updatedItem;
+      }
+      return item;
+    });
+
+    setCurrentRoom(updatedRoom);
+    setHasUnsavedChanges(true);
+  };
+
+  const addChecklistItem = (itemName: string) => {
+    if (!currentRoom) return;
+
+    const newItem: ChecklistItem = {
+      id: `temp_${Date.now()}_${Math.random()}`,
+      name: itemName,
+      suitable: false,
+      notSuitable: false,
+      description: ''
+    };
+
+    const updatedRoom = {
+      ...currentRoom,
+      checklist: [...currentRoom.checklist, newItem]
+    };
+
+    setCurrentRoom(updatedRoom);
+    setHasUnsavedChanges(true);
+  };
+
+  const removeChecklistItem = (itemId: string) => {
+    if (!currentRoom) return;
+
+    const updatedRoom = {
+      ...currentRoom,
+      checklist: currentRoom.checklist.filter(item => item.id !== itemId)
+    };
+
+    setCurrentRoom(updatedRoom);
+    setHasUnsavedChanges(true);
+  };
+
+  const handlePhotoSelection = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!event.target.files || !event.target.files[0]) return;
+
+    const file = event.target.files[0];
+    setPendingPhoto(file);
+    setShowPhotoModal(true);
+  };
+
+  const compressImage = (file: File, quality: number = 0.7): Promise<string> => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+
+      img.onload = () => {
+        // Calculate new dimensions (max 1200px width/height)
+        const MAX_SIZE = 1200;
+        let { width, height } = img;
+
+        if (width > height) {
+          if (width > MAX_SIZE) {
+            height = (height * MAX_SIZE) / width;
+            width = MAX_SIZE;
+          }
+        } else {
+          if (height > MAX_SIZE) {
+            width = (width * MAX_SIZE) / height;
+            height = MAX_SIZE;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        // Draw and compress
+        ctx!.drawImage(img, 0, 0, width, height);
+        const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+        resolve(compressedDataUrl);
+      };
+
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
+  const handlePhotoDescription = async (description: string) => {
+    if (!currentRoom || !pendingPhoto) return;
+
+    try {
+      const compressedImageUrl = await compressImage(pendingPhoto);
+
+      const newPhoto: Photo = {
+        id: `temp_${Date.now()}_${Math.random()}`,
+        url: compressedImageUrl,
+        description
+      };
+
+      const updatedRoom = {
+        ...currentRoom,
+        photos: [...currentRoom.photos, newPhoto]
+      };
+
+      setCurrentRoom(updatedRoom);
+      setHasUnsavedChanges(true);
+      setPendingPhoto(null);
+    } catch (error) {
+      console.error('Image compression failed:', error);
+      // Fallback to original method if compression fails
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const newPhoto: Photo = {
+          id: `temp_${Date.now()}_${Math.random()}`,
+          url: e.target?.result as string,
+          description
+        };
+
+        const updatedRoom = {
+          ...currentRoom,
+          photos: [...currentRoom.photos, newPhoto]
+        };
+
+        setCurrentRoom(updatedRoom);
+        setHasUnsavedChanges(true);
+        setPendingPhoto(null);
+      };
+      reader.readAsDataURL(pendingPhoto);
+    }
+  };
+
+  const updateGeneralNotes = (notes: string) => {
+    if (!currentRoom) return;
+
+    const updatedRoom = {
+      ...currentRoom,
+      generalNotes: notes
+    };
+
+    setCurrentRoom(updatedRoom);
+    setHasUnsavedChanges(true);
+  };
+
+  const generatePDFReport = async () => {
+    if (!currentRoom) return;
+
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const margin = 15;
+    const contentWidth = pageWidth - (margin * 2);
+    let currentY = margin;
+
+    // Helper function to add new page if needed
+    const checkNewPage = (neededHeight: number) => {
+      if (currentY + neededHeight > pageHeight - margin) {
+        pdf.addPage();
+        currentY = margin;
+        return true;
+      }
+      return false;
+    };
+
+    // Helper function to handle Turkish characters properly in PDF
+    const handleTurkishText = (text: string) => {
+      // Convert Turkish characters to UTF-8 compatible equivalents for PDF
+      return text
+        .replace(/ğ/g, 'g')
+        .replace(/Ğ/g, 'G')
+        .replace(/ü/g, 'u')
+        .replace(/Ü/g, 'U')
+        .replace(/ş/g, 's')
+        .replace(/Ş/g, 'S')
+        .replace(/ı/g, 'i')
+        .replace(/İ/g, 'I')
+        .replace(/ö/g, 'o')
+        .replace(/Ö/g, 'O')
+        .replace(/ç/g, 'c')
+        .replace(/Ç/g, 'C');
+    };
+
+    // Helper function to add text with word wrap and full Turkish support
+    const addTextWithWrap = (text: string, fontSize: number = 10, fontStyle: string = 'normal', maxWidth: number = contentWidth) => {
+      pdf.setFontSize(fontSize);
+      pdf.setFont('helvetica', fontStyle);
+      const lines = pdf.splitTextToSize(handleTurkishText(text), maxWidth);
+      const lineHeight = fontSize * 0.35;
+
+      checkNewPage(lines.length * lineHeight);
+
+      lines.forEach((line: string) => {
+        pdf.text(line, margin, currentY);
+        currentY += lineHeight;
+      });
+      currentY += 2; // Extra spacing
+    };
+
+    // Modern grey header with hospital logo and name
+    pdf.setFillColor(108, 117, 125); // Grey theme to match logo
+    pdf.rect(0, 0, pageWidth, 45, 'F');
+
+    try {
+      // Add hospital logo
+      const logoImg = new Image();
+      await new Promise<void>((resolve) => {
+        logoImg.onload = () => {
+          // Add logo with proper sizing
+          pdf.addImage(logoImg, 'PNG', margin, 8, 30, 12);
+          resolve();
+        };
+        logoImg.src = '/hospital-logo.png';
+      });
+    } catch (error) {
+      console.error('Logo could not be loaded:', error);
+    }
+
+    // Hospital name and report title
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(14);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text(handleTurkishText('Istinye Universitesi Topkapi Liv Hastanesi'), margin + 35, 12);
+    pdf.text(handleTurkishText('MLP Care Medical Park'), margin + 35, 17);
+
+    pdf.setFontSize(16);
+    const reportDepartmentName = currentRoom.departmentName || selectedDepartment?.name || 'Bilinmeyen Departman';
+    pdf.text(handleTurkishText(`${reportDepartmentName} - Degerlendirme Raporu`), margin, 28);
+
+    pdf.setFontSize(11);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(handleTurkishText(`${currentRoom.name} | ${new Date().toLocaleDateString('tr-TR')}`), margin, 35);
+
+    currentY = 55;
+    pdf.setTextColor(0, 0, 0);
+
+    // Checklist section with grey theme
+    pdf.setFontSize(16);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(108, 117, 125); // Grey theme to match logo
+    pdf.text(handleTurkishText('Kontrol Listesi'), margin, currentY);
+    currentY += 12;
+
+    // Table with proper column widths for full descriptions
+    const col1Width = contentWidth * 0.35; // Öğe column
+    const col2Width = contentWidth * 0.20; // Durum column  
+    const col3Width = contentWidth * 0.45; // Açıklama column (wider for full descriptions)
+
+    // Table header
+    checkNewPage(15);
+    pdf.setFillColor(230, 230, 230);
+    pdf.rect(margin, currentY - 2, contentWidth, 10, 'F');
+    pdf.setDrawColor(0, 0, 0);
+    pdf.setLineWidth(0.3);
+    pdf.rect(margin, currentY - 2, col1Width, 10);
+    pdf.rect(margin + col1Width, currentY - 2, col2Width, 10);
+    pdf.rect(margin + col1Width + col2Width, currentY - 2, col3Width, 10);
+
+    pdf.setFontSize(11);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(0, 0, 0);
+    pdf.text(handleTurkishText('Oge'), margin + 2, currentY + 4);
+    pdf.text(handleTurkishText('Durum'), margin + col1Width + 2, currentY + 4);
+    pdf.text(handleTurkishText('Aciklama'), margin + col1Width + col2Width + 2, currentY + 4);
+    currentY += 12;
+
+    // Table content with full description support
+    pdf.setFont('helvetica', 'normal');
+    currentRoom.checklist.forEach((item, index) => {
+      const description = item.description || '-';
+
+      // Calculate proper row height based on content
+      const itemNameLines = pdf.splitTextToSize(handleTurkishText(item.name), col1Width - 4);
+      const descLines = pdf.splitTextToSize(handleTurkishText(description), col3Width - 4);
+      const maxLines = Math.max(itemNameLines.length, descLines.length, 1);
+      const rowHeight = Math.max(12, maxLines * 4 + 6);
+
+      checkNewPage(rowHeight + 4);
+
+      // Alternating row colors
+      if (index % 2 === 0) {
+        pdf.setFillColor(248, 248, 248);
+        pdf.rect(margin, currentY - 2, contentWidth, rowHeight, 'F');
+      }
+
+      // Draw cell borders
+      pdf.setDrawColor(0, 0, 0);
+      pdf.setLineWidth(0.2);
+      pdf.rect(margin, currentY - 2, col1Width, rowHeight);
+      pdf.rect(margin + col1Width, currentY - 2, col2Width, rowHeight);
+      pdf.rect(margin + col1Width + col2Width, currentY - 2, col3Width, rowHeight);
+
+      // Item name with proper wrapping
+      pdf.setTextColor(0, 0, 0);
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      itemNameLines.forEach((line: string, lineIndex: number) => {
+        pdf.text(line, margin + 2, currentY + 2 + (lineIndex * 4));
+      });
+
+      // Status with proper Turkish text and colors
+      const status = item.suitable ? 'Uygun' : item.notSuitable ? 'Uygun Degil' : 'Degerlendirilmedi';
+      const statusColor = item.suitable ? [34, 139, 34] : item.notSuitable ? [220, 20, 60] : [105, 105, 105];
+      pdf.setTextColor(statusColor[0], statusColor[1], statusColor[2]);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(10);
+      pdf.text(handleTurkishText(status), margin + col1Width + 2, currentY + 5);
+
+      // Full description with proper wrapping
+      pdf.setTextColor(0, 0, 0);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(9);
+      descLines.forEach((line: string, lineIndex: number) => {
+        pdf.text(line, margin + col1Width + col2Width + 2, currentY + 2 + (lineIndex * 4));
+      });
+
+      currentY += rowHeight + 2;
+    });
+
+    currentY += 15;
+
+    // General notes section with full content display
+    if (currentRoom.generalNotes && currentRoom.generalNotes.trim()) {
+      checkNewPage(25);
+      pdf.setFontSize(16);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(108, 117, 125); // Grey theme to match logo
+      pdf.text(handleTurkishText('Genel Notlar'), margin, currentY);
+      currentY += 10;
+
+      pdf.setFontSize(11);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setTextColor(0, 0, 0);
+      addTextWithWrap(currentRoom.generalNotes, 11);
+      currentY += 10;
+    }
+
+    // Photos section with complete descriptions
+    if (currentRoom.photos.length > 0) {
+      checkNewPage(40);
+      pdf.setFontSize(16);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(108, 117, 125); // Grey theme to match logo
+      pdf.text(handleTurkishText(`Fotograflar (${currentRoom.photos.length} adet)`), margin, currentY);
+      currentY += 15;
+
+      // Display photos 2 per row with full descriptions
+      const photoWidth = (contentWidth - 10) / 2;
+      const photoHeight = photoWidth * 0.65;
+      let photosPerRow = 0;
+      let photoX = margin;
+
+      for (let i = 0; i < currentRoom.photos.length; i++) {
+        const photo = currentRoom.photos[i];
+
+        // Calculate space needed for photo + full description
+        pdf.setFontSize(9);
+        const descLines = pdf.splitTextToSize(handleTurkishText(photo.description), photoWidth);
+        const totalHeight = photoHeight + (descLines.length * 4) + 15;
+
+        if (photosPerRow === 0) {
+          checkNewPage(totalHeight);
+        }
+
+        try {
+          // Optimize image
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          const img = new Image();
+
+          await new Promise<void>((resolve) => {
+            img.onload = () => {
+              const maxSize = 350;
+              let { width, height } = img;
+
+              if (width > height) {
+                if (width > maxSize) {
+                  height = (height * maxSize) / width;
+                  width = maxSize;
+                }
+              } else {
+                if (height > maxSize) {
+                  width = (width * maxSize) / height;
+                  height = maxSize;
+                }
+              }
+
+              canvas.width = width;
+              canvas.height = height;
+              ctx!.drawImage(img, 0, 0, width, height);
+
+              const optimizedImageData = canvas.toDataURL('image/jpeg', 0.75);
+              pdf.addImage(optimizedImageData, 'JPEG', photoX, currentY, photoWidth, photoHeight);
+              resolve();
+            };
+            img.src = photo.url;
+          });
+
+          // Add complete photo description
+          pdf.setFontSize(9);
+          pdf.setFont('times', 'normal');
+          pdf.setTextColor(0, 0, 0);
+          descLines.forEach((line: string, lineIndex: number) => {
+            pdf.text(line, photoX, currentY + photoHeight + 8 + (lineIndex * 4));
+          });
+
+        } catch (error) {
+          console.error('Error adding photo:', error);
+          // Add placeholder
+          pdf.setDrawColor(180, 180, 180);
+          pdf.setLineWidth(1);
+          pdf.rect(photoX, currentY, photoWidth, photoHeight);
+          pdf.setFontSize(10);
+          pdf.setFont('times', 'italic');
+          pdf.setTextColor(120, 120, 120);
+          pdf.text(handleTurkishText('Fotoğraf yüklenemedi'), photoX + 10, currentY + photoHeight/2);
+
+          // Still add description
+          pdf.setFontSize(9);
+          pdf.setFont('times', 'normal');
+          pdf.setTextColor(0, 0, 0);
+          descLines.forEach((line: string, lineIndex: number) => {
+            pdf.text(line, photoX, currentY + photoHeight + 8 + (lineIndex * 4));
+          });
+        }
+
+        photosPerRow++;
+        if (photosPerRow === 2) {
+          photosPerRow = 0;
+          photoX = margin;
+          const maxDescLines = Math.max(
+            ...currentRoom.photos.slice(Math.max(0, i-1), i+1).map(p => 
+              pdf.splitTextToSize(handleTurkishText(p.description), photoWidth).length
+            )
+          );
+          currentY += photoHeight + (maxDescLines * 4) + 20;
+        } else {
+          photoX += photoWidth + 10;
+        }
+      }
+
+      // Adjust for odd number of photos
+      if (currentRoom.photos.length % 2 === 1) {
+        const lastPhoto = currentRoom.photos[currentRoom.photos.length - 1];
+        const lastDescLines = pdf.splitTextToSize(handleTurkishText(lastPhoto.description), photoWidth);
+        currentY += photoHeight + (lastDescLines.length * 4) + 20;
+      }
+    }
+
+    // Save with proper Turkish filename
+    const pdfDepartmentName = currentRoom.departmentName || selectedDepartment?.name || 'Bilinmeyen_Departman';    pdf.save(`${pdfDepartmentName.replace(/[\s\/\\:*?"<>|]/g, '_')}_${currentRoom.name.replace(/[\s\/\\:*?"<>|]/g, '_')}_rapor.pdf`);
+  };
+
+  const generateExcelReport = () => {
+    if (!currentRoom) return;
+
+    const worksheetData = [
+      ['Oda Adı', currentRoom.name],
+      ['Tarih', new Date().toLocaleDateString('tr-TR')],
+      [''],
+      ['KONTROL LİSTESİ'],
+      ['Öğe', 'Durum', 'Açıklama'],
+      ...currentRoom.checklist.map(item => [
+        item.name,
+        item.suitable ? 'Uygun' : item.notSuitable ? 'Uygun Değil' : 'Değerlendirilmedi',
+        item.description || '-'
+      ]),
+      [''],
+      ['GENEL NOTLAR'],
+      [currentRoom.generalNotes || '-'],
+      [''],
+      ['FOTOĞRAFLAR'],
+      ...currentRoom.photos.map(photo => [photo.description])
+    ];
+
+    const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Oda Raporu');
+    XLSX.writeFile(workbook, `${currentRoom.name}_rapor.xlsx`);
+  };
+
+  const generateGeneralPDFReport = async () => {
+    if (!selectedDepartment) return;
+
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const margin = 15;
+    const contentWidth = pageWidth - (margin * 2);
+    let currentY = margin;
+
+    // Helper function to handle Turkish characters properly in PDF
+    const handleTurkishText = (text: string) => {
+      // Convert Turkish characters to UTF-8 compatible equivalents for PDF
+      return text
+        .replace(/ğ/g, 'g')
+        .replace(/Ğ/g, 'G')
+        .replace(/ü/g, 'u')
+        .replace(/Ü/g, 'U')
+        .replace(/ş/g, 's')
+        .replace(/Ş/g, 'S')
+        .replace(/ı/g, 'i')
+        .replace(/İ/g, 'I')
+        .replace(/ö/g, 'o')
+        .replace(/Ö/g, 'O')
+        .replace(/ç/g, 'c')
+        .replace(/Ç/g, 'C');
+    };
+
+    // Helper function to add new page if needed
+    const checkNewPage = (neededHeight: number) => {
+      if (currentY + neededHeight > pageHeight - margin) {
+        pdf.addPage();
+        currentY = margin;
+        return true;
+      }
+      return false;
+    };
+
+    // Modern grey header with hospital logo and name for general report
+    pdf.setFillColor(108, 117, 125); // Grey theme to match logo
+    pdf.rect(0, 0, pageWidth, 45, 'F');
+
+    try {
+      // Add hospital logo
+      const logoImg = new Image();
+      await new Promise<void>((resolve) => {
+        logoImg.onload = () => {
+          // Add logo with proper sizing
+          pdf.addImage(logoImg, 'PNG', margin, 8, 30, 12);
+          resolve();
+        };
+        logoImg.src = '/hospital-logo.png';
+      });
+    } catch (error) {
+      console.error('Logo could not be loaded:', error);
+    }
+
+    // Hospital name and report title
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(14);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text(handleTurkishText('Istinye Universitesi Topkapi Liv Hastanesi'), margin + 35, 12);
+    pdf.text(handleTurkishText('MLP Care Medical Park'), margin + 35, 17);
+
+    pdf.setFontSize(16);
+    pdf.text(handleTurkishText(`${selectedDepartment.name} - Genel Degerlendirme Raporu`), margin, 28);
+
+    pdf.setFontSize(11);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(handleTurkishText(`Tarih: ${new Date().toLocaleDateString('tr-TR')} | Toplam Oda: ${rooms.length}`), margin, 35);
+
+    currentY = 55;
+    pdf.setTextColor(0, 0, 0);
+
+    // Summary of all rooms
+    pdf.setFontSize(16);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(108, 117, 125); // Grey theme to match logo
+    pdf.text(handleTurkishText('Oda/Alan Özeti'), margin, currentY);
+    currentY += 15;
+
+    // Create summary table for overview
+    rooms.forEach((room, index) => {
+      checkNewPage(45);
+      const suitableItems = room.checklist.filter(item => item.suitable).length;
+      const unsuitableItems = room.checklist.filter(item => item.notSuitable).length;
+
+      // Room summary box with better styling
+      pdf.setFillColor(245, 245, 245);
+      pdf.rect(margin, currentY - 2, contentWidth, 40, 'F');
+      pdf.setDrawColor(33, 150, 243);
+      pdf.setLineWidth(0.5);
+      pdf.rect(margin, currentY - 2, contentWidth, 40);
+
+      // Room name with grey accent
+      pdf.setFontSize(16);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(108, 117, 125); // Grey theme to match logo
+      pdf.text(handleTurkishText(room.name), margin + 5, currentY + 8);
+
+      // Statistics in blue boxes
+      const boxWidth = 50;
+      const boxHeight = 15;
+      const startX = margin + 5;
+      const statY = currentY + 15;
+
+      // Uygun Öğe box
+      pdf.setFillColor(108, 117, 125); // Grey theme to match logo
+      pdf.rect(startX, statY, boxWidth, boxHeight, 'F');
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(9);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(handleTurkishText('Uygun Öğe:'), startX + 2, statY + 5);
+      pdf.setFontSize(12);
+      pdf.text(suitableItems.toString(), startX + 2, statY + 11);
+
+      // Uygun Olmayan Öğe box
+      pdf.setFillColor(108, 117, 125); // Grey theme to match logo
+      pdf.rect(startX + boxWidth + 5, statY, boxWidth + 20, boxHeight, 'F');
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(9);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(handleTurkishText('Uygun Olmayan Öğe:'), startX + boxWidth + 7, statY + 5);
+      pdf.setFontSize(12);
+      pdf.text(unsuitableItems.toString(), startX + boxWidth + 7, statY + 11);
+
+      // Fotoğraf Sayısı box
+      pdf.setFillColor(108, 117, 125); // Grey theme to match logo
+      pdf.rect(startX + boxWidth * 2 + 30, statY, boxWidth, boxHeight, 'F');
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(9);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(handleTurkishText('Fotoğraf Sayısı:'), startX + boxWidth * 2 + 32, statY + 5);
+      pdf.setFontSize(12);
+      pdf.text(room.photos.length.toString(), startX + boxWidth * 2 + 32, statY + 11);
+
+      currentY += 50;
+    });
+
+    // Now create individual pages for each room
+    for (let index = 0; index < rooms.length; index++) {
+      const room = rooms[index];
+
+      // Start new page for each room
+      pdf.addPage();
+      currentY = margin;
+
+      // Room header with grey theme
+      pdf.setFillColor(108, 117, 125); // Grey theme to match logo
+      pdf.rect(0, 0, pageWidth, 35, 'F');
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(16);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(handleTurkishText(room.name), margin, 15);
+
+      // Statistics in header
+      const suitableItems = room.checklist.filter(item => item.suitable).length;
+      const unsuitableItems = room.checklist.filter(item => item.notSuitable).length;
+
+      pdf.setFontSize(10);
+      pdf.setFont('times', 'normal');
+      pdf.text(handleTurkishText(`Uygun Öğe: ${suitableItems}`), margin, 22);
+      pdf.text(handleTurkishText(`Uygun Olmayan Öğe: ${unsuitableItems}`), margin + 60, 22);
+      pdf.text(handleTurkishText(`Fotoğraf Sayısı: ${room.photos.length}`), margin + 140, 22);
+
+      pdf.setFontSize(8);
+      pdf.text(handleTurkishText(`Sayfa ${index + 2} / ${rooms.length + 1}`), margin, 30);
+
+      currentY = 45;
+      pdf.setTextColor(0, 0, 0);
+
+      // Kontrol Listesi section with improved table
+      pdf.setFontSize(16);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(108, 117, 125); // Grey theme to match logo
+      pdf.text(handleTurkishText('Kontrol Listesi'), margin, currentY);
+      currentY += 12;
+
+      // Create table with better column widths for full descriptions
+      const col1Width = contentWidth * 0.35; // Öğe column
+      const col2Width = contentWidth * 0.20; // Durum column  
+      const col3Width = contentWidth * 0.45; // Açıklama column (wider)
+
+      // Table header
+      pdf.setFillColor(230, 230, 230);
+      pdf.rect(margin, currentY, contentWidth, 10, 'F');
+      pdf.setDrawColor(0, 0, 0);
+      pdf.setLineWidth(0.3);
+      pdf.rect(margin, currentY, col1Width, 10);
+      pdf.rect(margin + col1Width, currentY, col2Width, 10);
+      pdf.rect(margin + col1Width + col2Width, currentY, col3Width, 10);
+
+      pdf.setFontSize(11);
+      pdf.setFont('times', 'bold');
+      pdf.setTextColor(0, 0, 0);
+      pdf.text(handleTurkishText('Öğe'), margin + 2, currentY + 6);
+      pdf.text(handleTurkishText('Durum'), margin + col1Width + 2, currentY + 6);
+      pdf.text(handleTurkishText('Açıklama'), margin + col1Width + col2Width + 2, currentY + 6);
+      currentY += 12;
+
+      // Table rows with full description support
+      pdf.setFont('times', 'normal');
+      room.checklist.forEach((item, itemIndex) => {
+        const description = item.description || '-';
+
+        // Calculate proper row height based on content
+        const itemNameLines = pdf.splitTextToSize(handleTurkishText(item.name), col1Width - 4);
+        const descLines = pdf.splitTextToSize(handleTurkishText(description), col3Width - 4);
+        const maxLines = Math.max(itemNameLines.length, descLines.length, 1);
+        const rowHeight = Math.max(12, maxLines * 4 + 6);
+
+        checkNewPage(rowHeight + 4);
+
+        // Alternate row colors
+        if (itemIndex % 2 === 0) {
+          pdf.setFillColor(248, 248, 248);
+          pdf.rect(margin, currentY, contentWidth, rowHeight, 'F');
+        }
+
+        // Draw cell borders
+        pdf.setDrawColor(0, 0, 0);
+        pdf.setLineWidth(0.2);
+        pdf.rect(margin, currentY, col1Width, rowHeight);
+        pdf.rect(margin + col1Width, currentY, col2Width, rowHeight);
+        pdf.rect(margin + col1Width + col2Width, currentY, col3Width, rowHeight);
+
+        // Item name with proper wrapping
+        pdf.setTextColor(0, 0, 0);
+        pdf.setFontSize(10);
+        pdf.setFont('times', 'normal');
+        itemNameLines.forEach((line: string, lineIndex: number) => {
+          pdf.text(line, margin + 2, currentY + 4 + (lineIndex * 4));
+        });
+
+        // Status with proper Turkish text - "Uygun" and "Uygun Değil"
+        const status = item.suitable ? 'Uygun' : item.notSuitable ? 'Uygun Değil' : 'Değerlendirilmedi';
+        const statusColor = item.suitable ? [34, 139, 34] : item.notSuitable ? [220, 20, 60] : [105, 105, 105];
+        pdf.setTextColor(statusColor[0], statusColor[1], statusColor[2]);
+        pdf.setFont('times', 'bold');
+        pdf.setFontSize(10);
+        pdf.text(handleTurkishText(status), margin + col1Width + 2, currentY + 7);
+
+        // Full description with proper wrapping
+        pdf.setTextColor(0, 0, 0);
+        pdf.setFont('times', 'normal');
+        pdf.setFontSize(9);
+        descLines.forEach((line: string, lineIndex: number) => {
+          pdf.text(line, margin + col1Width + col2Width + 2, currentY + 4 + (lineIndex * 4));
+        });
+
+        currentY += rowHeight + 2;
+      });
+
+      currentY += 15;
+
+      // General notes section with full content display
+      if (room.generalNotes && room.generalNotes.trim()) {
+        checkNewPage(25);
+        pdf.setFontSize(16);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setTextColor(108, 117, 125); // Grey theme to match logo
+        pdf.text(handleTurkishText('Genel Notlar'), margin, currentY);
+        currentY += 10;
+
+        pdf.setFontSize(11);
+        pdf.setFont('times', 'normal');
+        pdf.setTextColor(0, 0, 0);
+        const noteLines = pdf.splitTextToSize(handleTurkishText(room.generalNotes), contentWidth);
+        noteLines.forEach((line: string) => {
+          checkNewPage(5);
+          pdf.text(line, margin, currentY);
+          currentY += 5;
+        });
+        currentY += 15;
+      }
+
+      // Photos section with complete descriptions
+      if (room.photos.length > 0) {
+        checkNewPage(40);
+        pdf.setFontSize(16);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setTextColor(108, 117, 125); // Grey theme to match logo
+        pdf.text(handleTurkishText('Fotoğraflar'), margin, currentY);
+        currentY += 15;
+
+        // Display photos 2 per row with full descriptions
+        const photoWidth = (contentWidth - 10) / 2;
+        const photoHeight = photoWidth * 0.65;
+        let photosPerRow = 0;
+        let photoX = margin;
+
+        for (let i = 0; i < room.photos.length; i++) {
+          const photo = room.photos[i];
+
+          // Calculate space needed for photo + full description
+          pdf.setFontSize(9);
+          const descLines = pdf.splitTextToSize(handleTurkishText(photo.description), photoWidth);
+          const totalHeight = photoHeight + (descLines.length * 4) + 15;
+
+          if (photosPerRow === 0) {
+            checkNewPage(totalHeight);
+          }
+
+          try {
+            // Create optimized image
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const img = new Image();
+
+            await new Promise<void>((resolve) => {
+              img.onload = () => {
+                const maxSize = 350;
+                let { width, height } = img;
+
+                if (width > height) {
+                  if (width > maxSize) {
+                    height = (height * maxSize) / width;
+                    width = maxSize;
+                  }
+                } else {
+                  if (height > maxSize) {
+                    width = (width * maxSize) / height;
+                    height = maxSize;
+                  }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                ctx!.drawImage(img, 0, 0, width, height);
+
+                const optimizedImageData = canvas.toDataURL('image/jpeg', 0.75);
+                pdf.addImage(optimizedImageData, 'JPEG', photoX, currentY, photoWidth, photoHeight);
+                resolve();
+              };
+              img.src = photo.url;
+            });
+
+            // Add complete photo description
+            pdf.setFontSize(9);
+            pdf.setFont('times', 'normal');
+            pdf.setTextColor(0, 0, 0);
+            descLines.forEach((line: string, lineIndex: number) => {
+              pdf.text(line, photoX, currentY + photoHeight + 8 + (lineIndex * 4));
+            });
+
+          } catch (error) {
+            console.error('Error adding photo:', error);
+            // Add placeholder
+            pdf.setDrawColor(180, 180, 180);
+            pdf.setLineWidth(1);
+            pdf.rect(photoX, currentY, photoWidth, photoHeight);
+            pdf.setFontSize(10);
+            pdf.setFont('times', 'italic');
+            pdf.setTextColor(120, 120, 120);
+            pdf.text(handleTurkishText('Fotoğraf yüklenemedi'), photoX + 10, currentY + photoHeight/2);
+
+            // Still add complete description
+            pdf.setFontSize(9);
+            pdf.setFont('times', 'normal');
+            pdf.setTextColor(0, 0, 0);
+            descLines.forEach((line: string, lineIndex: number) => {
+              pdf.text(line, photoX, currentY + photoHeight + 8 + (lineIndex * 4));
+            });
+          }
+
+          photosPerRow++;
+          if (photosPerRow === 2) {
+            photosPerRow = 0;
+            photoX = margin;
+            const maxDescLines = Math.max(
+              ...room.photos.slice(Math.max(0, i-1), i+1).map(p => 
+                pdf.splitTextToSize(handleTurkishText(p.description), photoWidth).length
+              )
+            );
+            currentY += photoHeight + (maxDescLines * 4) + 20;
+          } else {
+            photoX += photoWidth + 10;
+          }
+        }
+
+        // Adjust for odd number of photos
+        if (room.photos.length % 2 === 1) {
+          const lastPhoto = room.photos[room.photos.length - 1];
+          const lastDescLines = pdf.splitTextToSize(handleTurkishText(lastPhoto.description), photoWidth);
+          currentY += photoHeight + (lastDescLines.length * 4) + 20;
+        }
+      }
+    }
+
+    // Save with proper Turkish filename
+    pdf.save(`${selectedDepartment.name.replace(/[\s\/\\:*?"<>|]/g, '_')}_Genel_Rapor_${new Date().toLocaleDateString('tr-TR').replace(/\./g, '_')}.pdf`);
+  };
+
+  const generateGeneralExcelReport = () => {
+    const worksheetData = [
+      ['HASTANE GENEL DEĞERLENDİRME RAPORU'],
+      ['Tarih', new Date().toLocaleDateString('tr-TR')],
+      ['Toplam Oda Sayısı', rooms.length.toString()],
+      ['']
+    ];
+
+    rooms.forEach((room, index) => {
+      const suitableItems = room.checklist.filter(item => item.suitable).length;
+      const unsuitableItems = room.checklist.filter(item => item.notSuitable).length;
+
+      worksheetData.push(
+        [`${index + 1}. ${room.name.toUpperCase()}`],
+        ['Uygun Öğe Sayısı', suitableItems.toString()],
+        ['Uygun Olmayan Öğe Sayısı', unsuitableItems.toString()],
+        ['Fotoğraf Sayısı', room.photos.length.toString()],
+        ['']
+      );
+
+      worksheetData.push(['KONTROL LİSTESİ']);
+      worksheetData.push(['Öğe', 'Durum', 'Açıklama']);
+      room.checklist.forEach(item => {
+        worksheetData.push([
+          item.name,
+          item.suitable ? 'Uygun' : item.notSuitable ? 'Uygun Değil' : 'Değerlendirilmedi',
+          item.description || '-'
+        ]);
+      });
+
+      if (room.generalNotes) {
+        worksheetData.push([''], ['GENEL NOTLAR'], [room.generalNotes]);
+      }
+
+      if (room.photos.length > 0) {
+        worksheetData.push([''], ['FOTOĞRAFLAR']);
+        room.photos.forEach(photo => {
+          worksheetData.push([photo.description]);
+        });
+      }
+
+      worksheetData.push(['', '---', '', '']);
+    });
+
+    const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Genel Rapor');
+    XLSX.writeFile(workbook, `Genel_Hastane_Raporu_${new Date().toLocaleDateString('tr-TR').replace(/\./g, '_')}.xlsx`);
+  };
+
+  const deletePhoto = (photoId: string) => {
+    if (!currentRoom) return;
+
+    const updatedRoom = {
+      ...currentRoom,
+      photos: currentRoom.photos.filter(photo => photo.id !== photoId)
+    };
+
+    setCurrentRoom(updatedRoom);
+    setHasUnsavedChanges(true);
+  };
+
+  const handlePhotoClick = (photo: Photo) => {
+    setSelectedPhoto(photo);
+    setShowPhotoViewModal(true);
+  };
+
+  const saveChanges = async () => {
+    if (!currentRoom || !originalRoom || !selectedDepartment) return;
+
+    setSaving(true);
+    try {
+      console.log('Saving changes for room:', currentRoom.id);
+
+      // Save checklist changes
+      for (const item of currentRoom.checklist) {
+        const originalItem = originalRoom.checklist.find(orig => orig.id === item.id);
+
+        if (!originalItem) {
+          // New item
+          console.log('Adding new checklist item:', item.name);
+          await API.addChecklistItem(currentRoom.id, item.name);
+          // Get the new ID from server and update local state
+          const updatedRoom = await API.getRoom(currentRoom.id);
+          const serverItem = updatedRoom.checklist.find(serverItem => 
+            serverItem.name === item.name && 
+            !originalRoom.checklist.some(orig => orig.id === serverItem.id)
+          );
+          if (serverItem && (item.suitable || item.notSuitable || item.description)) {
+            if (item.suitable) await API.updateChecklistItem(serverItem.id, 'suitable', true);
+            if (item.notSuitable) await API.updateChecklistItem(serverItem.id, 'notSuitable', true);
+            if (item.description) await API.updateChecklistItem(serverItem.id, 'description', item.description);
+          }
+        } else {
+          // Updated item
+          if (item.suitable !== originalItem.suitable) {
+            console.log('Updating suitable status for:', item.name);
+            await API.updateChecklistItem(item.id, 'suitable', item.suitable);
+          }
+          if (item.notSuitable !== originalItem.notSuitable) {
+            console.log('Updating not suitable status for:', item.name);
+            await API.updateChecklistItem(item.id, 'notSuitable', item.notSuitable);
+          }
+          if (item.description !== originalItem.description) {
+            console.log('Updating description for:', item.name);
+            await API.updateChecklistItem(item.id, 'description', item.description);
+          }
+        }
+      }
+
+      // Remove deleted items
+      for (const originalItem of originalRoom.checklist) {
+        if (!currentRoom.checklist.find(item => item.id === originalItem.id)) {
+          console.log('Removing checklist item:', originalItem.name);
+          await API.removeChecklistItem(originalItem.id);
+        }
+      }
+
+      // Save photos
+      for (const photo of currentRoom.photos) {
+        if (!originalRoom.photos.find(orig => orig.id === photo.id)) {
+          console.log('Adding new photo:', photo.description);
+          await API.addPhoto(currentRoom.id, photo.url, photo.description);
+        }
+      }
+
+      // Remove deleted photos
+      for (const originalPhoto of originalRoom.photos) {
+        if (!currentRoom.photos.find(photo => photo.id === originalPhoto.id)) {
+          console.log('Removing photo:', originalPhoto.description);
+          await API.deletePhoto(originalPhoto.id);
+        }
+      }
+
+      // Save general notes
+      if (currentRoom.generalNotes !== originalRoom.generalNotes) {
+        console.log('Updating general notes');
+        await API.updateRoomNotes(currentRoom.id, currentRoom.generalNotes);
+      }
+
+      // Refresh data from server
+      console.log('Refreshing data from server...');
+      const updatedRoom = await API.getRoom(currentRoom.id);
+      const updatedRooms = await API.getRooms(selectedDepartment.id);
+      setRooms(updatedRooms);
+      setCurrentRoom(updatedRoom);
+      setOriginalRoom(JSON.parse(JSON.stringify(updatedRoom)));
+      setHasUnsavedChanges(false);
+
+      console.log('Changes saved successfully');
+
+    } catch (error) {
+      console.error('Failed to save changes:', error);
+      alert(`Kaydetme işlemi başarısız oldu: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}. Lütfen tekrar deneyin.`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const saveAndExit = async () => {
+    if (hasUnsavedChanges) {
+      await saveChanges();
+    }
+    setShowConfirmModal(false);
+    setCurrentRoom(null);
+    setOriginalRoom(null);
+    setHasUnsavedChanges(false);
+  };
+
+  const exitWithoutSaving = () => {
+    setShowConfirmModal(false);
+    setCurrentRoom(null);
+    setOriginalRoom(null);
+    setHasUnsavedChanges(false);
+  };
+
+  const handleBack = () => {
+    if (hasUnsavedChanges) {
+      setShowConfirmModal(true);
+    } else {
+      setCurrentRoom(null);
+      setOriginalRoom(null);
+    }
+  };
+
+  if (showGeneralReport) {
+    return (
+      <div className="app">
+        <div className="header">
+          <button onClick={() => setShowGeneralReport(false)} className="back-btn">
+            ← Geri
+          </button>
+          <h1>Genel Hastane Raporu</h1>
+          <div className="export-buttons">
+            <button onClick={generateGeneralPDFReport} className="export-btn pdf">
+              PDF İndir
+            </button>
+            <button onClick={generateGeneralExcelReport} className="export-btn excel">
+              Excel İndir
+            </button>
+          </div>
+        </div>
+
+        <div ref={reportRef} className="report">
+          <div className="report-header">
+            <h2>{selectedDepartment?.name} - Genel Değerlendirme Raporu</h2>
+            <p>Tarih: {new Date().toLocaleDateString('tr-TR')}</p>
+            <p>Toplam Oda Sayısı: {rooms.length}</p>
+          </div>
+
+          {rooms.map(room => {
+            const suitableItems = room.checklist.filter(item => item.suitable).length;
+            const unsuitableItems = room.checklist.filter(item => item.notSuitable).length;
+
+            return (
+              <div key={room.id} className="report-section room-section">
+                <h3>{room.name}</h3>
+                <div className="room-summary">
+                  <p><strong>Uygun Öğe:</strong> {suitableItems}</p>
+                  <p><strong>Uygun Olmayan Öğe:</strong> {unsuitableItems}</p>
+                  <p><strong>Fotoğraf Sayısı:</strong> {room.photos.length}</p>
+                </div>
+
+                <h4>Kontrol Listesi</h4>
+                <table className="checklist-table">
+                  <thead>
+                    <tr>
+                      <th>Öğe</th>
+                      <th>Durum</th>
+                      <th>Açıklama</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {room.checklist.map(item => (
+                      <tr key={item.id}>
+                        <td>{item.name}</td>
+                        <td style={{color: item.suitable ? '#4CAF50' : item.notSuitable ? '#f44336' : '#999'}}>
+                          {item.suitable ? '✓' : item.notSuitable ? '✗' : '-'}
+                        </td>
+                        <td>{item.description || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                {room.generalNotes && (
+                  <div>
+                    <h4>Genel Notlar</h4>
+                    <p>{room.generalNotes}</p>
+                  </div>
+                )}
+
+                {room.photos.length > 0 && (
+                  <div>
+                    <h4>Fotoğraflar</h4>
+                    <div className="photos-grid">
+                      {room.photos.map(photo => (
+                        <div key={photo.id} className="photo-item">
+                          <img 
+                            src={photo.url} 
+                            alt={photo.description} 
+                            onClick={() => handlePhotoClick(photo)}
+                            style={{ cursor: 'pointer' }}
+                          />
+                          <p>{photo.description}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  if (showReport && currentRoom) {
+    return (
+      <div className="app">
+        <div className="header">
+          <button onClick={() => setShowReport(false)} className="back-btn">
+            ← Geri
+          </button>
+          <h1>Oda Raporu</h1>
+          <div className="export-buttons">
+            <button onClick={generatePDFReport} className="export-btn pdf">
+              PDF İndir
+            </button>
+            <button onClick={generateExcelReport} className="export-btn excel">
+              Excel İndir
+            </button>
+          </div>
+        </div>
+
+        <div ref={reportRef} className="report">
+          <div className="report-header">
+            <h2>{currentRoom.departmentName} - {currentRoom.name}</h2>
+            <h3>Değerlendirme Raporu</h3>
+            <p>Tarih: {new Date().toLocaleDateString('tr-TR')}</p>
+          </div>
+
+          <div className="report-section">
+            <h3>Kontrol Listesi</h3>
+            <table className="checklist-table">
+              <thead>
+                <tr>
+                  <th>Öğe</th>
+                  <th>Durum</th>
+                  <th>Açıklama</th>
+                </tr>
+              </thead>
+              <tbody>
+                {currentRoom.checklist.map(item => (
+                  <tr key={item.id}>
+                    <td>{item.name}</td>
+                    <td style={{color: item.suitable ? '#4CAF50' : item.notSuitable ? '#f44336' : '#999'}}>
+                      {item.suitable ? '✓' : item.notSuitable ? '✗' : '-'}
+                    </td>
+                    <td>{item.description || '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {currentRoom.generalNotes && (
+            <div className="report-section">
+              <h3>Genel Notlar</h3>
+              <p>{currentRoom.generalNotes}</p>
+            </div>
+          )}
+
+          {currentRoom.photos.length > 0 && (
+            <div className="report-section">
+              <h3>Fotoğraflar</h3>
+              <div className="photos-grid">
+                {currentRoom.photos.map(photo => (
+                  <div key={photo.id} className="photo-item">
+                    <img 
+                      src={photo.url} 
+                      alt={photo.description} 
+                      onClick={() => handlePhotoClick(photo)}
+                      style={{ cursor: 'pointer' }}
+                    />
+                    <p>{photo.description}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}</div>
+
+        <PhotoModal
+          isOpen={showPhotoViewModal}
+          onClose={() => {
+            setShowPhotoViewModal(false);
+            setSelectedPhoto(null);
+          }}
+          photo={selectedPhoto}
+        />
+      </div>
+    );
+  }
+
+  if (currentRoom) {
+    return (
+      <div className="app">
+        <div className="header">
+          <button onClick={handleBack} className="back-btn">
+            ← Odalar
+          </button>
+          <h1>{currentRoom.name}</h1>
+          <button onClick={() => setShowReport(true)} className="report-btn">
+            Rapor Görüntüle
+          </button>
+        </div>
+
+        <div className="content">
+          {hasUnsavedChanges && (
+            <div className="save-notification">
+              <span>⚠️ Kaydedilmemiş değişiklikleriniz var</span>
+              <button 
+                onClick={saveChanges} 
+                className="save-btn"
+                disabled={saving}
+              >
+                {saving ? 'Kaydediliyor...' : '💾 Kaydet'}
+              </button>
+            </div>
+          )}
+
+          <div className="section">
+            <div className="section-header">
+              <h2>Kontrol Listesi</h2>
+              <button onClick={() => setShowItemModal(true)} className="add-item-btn">
+                + Yeni Madde Ekle
+              </button>
+            </div>
+            {currentRoom.checklist
+              .sort((a, b) => {
+                // Get default checklist for current department
+                const departmentDefaults = getDefaultChecklistForDepartment(
+                  currentRoom.departmentName || selectedDepartment?.name || ''
+                );
+
+                // Keep original order by using creation order or item names
+                const aIsDefault = departmentDefaults.some((defaultItem: string) => defaultItem === a.name);
+                const bIsDefault = departmentDefaults.some((defaultItem: string) => defaultItem === b.name);
+
+                if (aIsDefault && bIsDefault) {
+                  const aIndex = departmentDefaults.findIndex((defaultItem: string) => defaultItem === a.name);
+                  const bIndex = departmentDefaults.findIndex((defaultItem: string) => defaultItem === b.name);
+                  return aIndex - bIndex;
+                }
+
+                if (aIsDefault && !bIsDefault) return -1;
+                if (!aIsDefault && bIsDefault) return 1;
+
+                return a.name.localeCompare(b.name);
+              })
+              .map(item => {
+                const itemClassName = `checklist-item ${item.suitable ? 'checked' : ''} ${item.notSuitable ? 'not-suitable' : ''}`;
+
+                return (
+                  <div key={item.id} className={itemClassName}>
+                    <div className="item-header">
+                      <span className="item-name">{item.name}</span>
+                      <div className="item-controls">
+                        <div className="checkboxes">
+                          <label>
+                            <input
+                              type="checkbox"
+                              checked={item.suitable}
+                              onChange={(e) => updateChecklistItem(item.id, 'suitable', e.target.checked)}
+                            />
+                            Uygun
+                          </label>
+                          <label>
+                            <input
+                              type="checkbox"
+                              checked={item.notSuitable}
+                              onChange={(e) => updateChecklistItem(item.id, 'notSuitable', e.target.checked)}
+                            />
+                            Uygun Değil
+                          </label>
+                        </div>
+                        {!getDefaultChecklistForDepartment(
+                          currentRoom.departmentName || selectedDepartment?.name || ''
+                        ).some((defaultItem: string) => defaultItem === item.name) && (
+                          <button
+                            onClick={() => removeChecklistItem(item.id)}
+                            className="remove-item-btn"
+                          >
+                            🗑️
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    {item.notSuitable && (
+                      <textarea
+                        className="description-input"
+                        placeholder="Uygun olmama sebebini açıklayın..."
+                        value={item.description}
+                        onChange={(e) => updateChecklistItem(item.id, 'description', e.target.value)}
+                      />
+                    )}
+                  </div>
+                );
+              })}
+          </div>
+
+          <div className="section">
+            <h2>Fotoğraflar</h2>
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={handlePhotoSelection}
+              ref={fileInputRef}
+              style={{ display: 'none' }}
+            />
+            <button onClick={() => fileInputRef.current?.click()} className="add-photo-btn">
+              📷 Fotoğraf Ekle
+            </button>
+
+            <div className="photos-grid">
+              {currentRoom.photos.map(photo => (
+                <div key={photo.id} className="photo-item">
+                  <img 
+                    src={photo.url} 
+                    alt={photo.description} 
+                    onClick={() => handlePhotoClick(photo)}
+                    style={{ cursor: 'pointer' }}
+                  />
+                  <p>{photo.description}</p>
+                  <button onClick={() => deletePhoto(photo.id)} className="delete-photo">
+                    🗑️
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="section">
+            <h2>Genel Notlar</h2>
+            <textarea
+              className="general-notes"
+              placeholder="Bu oda hakkında genel notlarınızı yazın..."
+              value={currentRoom.generalNotes}
+              onChange={(e) => updateGeneralNotes(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <ModernModal
+          isOpen={showItemModal}
+          onClose={() => setShowItemModal(false)}
+          onConfirm={addChecklistItem}
+          title="Yeni Kontrol Maddesi"
+          placeholder="Kontrol edilecek öğenin adını girin"
+        />
+
+        <ModernModal
+          isOpen={showPhotoModal}
+          onClose={() => {
+            setShowPhotoModal(false);
+            setPendingPhoto(null);
+          }}
+          onConfirm={handlePhotoDescription}
+          title="Fotoğraf Açıklaması"
+          placeholder="Bu fotoğraf için açıklama girin"
+          inputType="textarea"
+        />
+
+        <ConfirmModal
+          isOpen={showConfirmModal}
+          onClose={() => {
+            setShowConfirmModal(false);
+            // Make exitWithoutSaving available globally for the modal
+            (window as any).exitWithoutSaving = exitWithoutSaving;
+          }}
+          onConfirm={saveAndExit}
+          title="Kaydedilmemiş Değişiklikler"
+          message="Kaydedilmemiş değişiklikleriniz var. Kaydetmek istiyor musunuz?"
+        />
+
+        <PhotoModal
+          isOpen={showPhotoViewModal}
+          onClose={() => {
+            setShowPhotoViewModal(false);
+            setSelectedPhoto(null);
+          }}
+          photo={selectedPhoto}
+        />
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="app">
+        <div className="header">
+          <h1>Hastane Oda Değerlendirme Sistemi</h1>
+        </div>
+        <div className="loading">
+          <p>Sistem yükleniyor...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="app">
+      <div className="header">
+        <div className="header-logo-section">
+          <img src="/hospital-logo.png" alt="MLP Care Medical Park" className="hospital-logo" />
+          <h1>İstinye Üniversitesi Topkapı Liv Hastanesi - Değerlendirme Sistemi</h1>
+        </div>
+        <div className="header-buttons">
+          <button onClick={() => setShowDepartmentModal(true)} className="create-department-btn">
+            + Yeni Departman
+          </button>
+          {selectedDepartment && (
+            <>
+              <button onClick={() => setShowRoomModal(true)} className="create-room-btn">
+                + Yeni Oda/Alan Ekle
+              </button>
+              {rooms.length > 0 && (
+                <button onClick={() => setShowGeneralReport(true)} className="general-report-btn">
+                  📋 Genel Rapor
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+
+      {departments.length > 0 && (
+        <div className="department-selector">
+          <h3>Departman Seçin:</h3>
+          <div className="department-tabs">
+            {departments.map(dept => (
+              <button
+                key={dept.id}
+                className={`department-tab ${selectedDepartment?.id === dept.id ? 'active' : ''}`}
+                onClick={() => setSelectedDepartment(dept)}
+                title={`Bu departman için ${getDefaultChecklistForDepartment(dept.name).length} kontrol maddesi kullanılacak`}
+              >
+                {dept.name}
+                <span className="checklist-count">
+                  ({getDefaultChecklistForDepartment(dept.name).length} madde)
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="rooms-list">
+        {!selectedDepartment ? (
+          <div className="empty-state">
+            <p>Başlamak için önce bir departman oluşturun.</p>
+          </div>
+        ) : rooms.length === 0 ? (
+          <div className="empty-state">
+            <p>{selectedDepartment.name} departmanında henüz oda/alan eklenmemiş.</p>
+            <p>Yeni bir oda/alan eklemek için yukarıdaki butona tıklayın.</p>
+          </div>
+        ) : (
+          rooms.map(room => {
+            const suitableItems = room.checklist.filter(item => item.suitable).length;
+            const unsuitableItems = room.checklist.filter(item => item.notSuitable).length;
+
+            return (
+              <div key={room.id} className="room-card" onClick={() => selectRoom(room)}>
+                <h3>{room.name}</h3>
+                <p>Uygun: {suitableItems} | Uygun Değil: {unsuitableItems}</p>
+                <p>{room.photos.length} fotoğraf</p>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      <ModernModal
+        isOpen={showDepartmentModal}
+        onClose={() => setShowDepartmentModal(false)}
+        onConfirm={createNewDepartment}
+        title="Yeni Departman Ekle"
+        placeholder="Departman adını girin (örn: İdari Müdürlük, Bilgi İşlem, İş Sağlığı ve Güvenliği)"
+      />
+
+      <ModernModal
+        isOpen={showRoomModal}
+        onClose={() => setShowRoomModal(false)}
+        onConfirm={createNewRoom}
+        title="Yeni Oda/Alan Ekle"
+        placeholder="Oda/alan adını girin (örn: Ameliyathane 1, Yoğun Bakım 3, Sunucu Odası)"
+      />
+    </div>
+  );
+}
+// This line fixes the logo path in the App.js file.
