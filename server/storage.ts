@@ -94,15 +94,72 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createReport(report: InsertReport & { userId: string }): Promise<Report> {
+    // Generate automatic report number if not provided or ensure uniqueness
+    let reportNumber = report.reportNumber;
+    if (!reportNumber || await this.isReportNumberExists(reportNumber)) {
+      reportNumber = await this.generateUniqueReportNumber();
+    }
+    
     const [newReport] = await db
       .insert(reports)
-      .values(report)
+      .values({
+        ...report,
+        reportNumber
+      })
       .returning();
     
     // Copy unresolved findings from the latest report
     await this.copyUnresolvedFindings(newReport.id, report.userId);
     
     return newReport;
+  }
+  
+  // Helper function to check if report number exists
+  async isReportNumberExists(reportNumber: string): Promise<boolean> {
+    const [existing] = await db
+      .select({ id: reports.id })
+      .from(reports)
+      .where(eq(reports.reportNumber, reportNumber))
+      .limit(1);
+    return !!existing;
+  }
+
+  // Generate unique report number in format YYYY-XXX
+  async generateUniqueReportNumber(): Promise<string> {
+    const year = new Date().getFullYear();
+    
+    // Get the latest report number for this year
+    const allReports = await db
+      .select({ reportNumber: reports.reportNumber })
+      .from(reports)
+      .orderBy(desc(reports.reportNumber));
+    
+    // Filter reports for current year
+    const latestReport = allReports.filter(report => 
+      report.reportNumber.startsWith(year.toString())
+    );
+    
+    let nextNumber = 1;
+    
+    if (latestReport.length > 0) {
+      const currentNumber = latestReport[0].reportNumber;
+      const parts = currentNumber.split('-');
+      if (parts.length === 2 && parts[0] === year.toString()) {
+        nextNumber = parseInt(parts[1]) + 1;
+      }
+    }
+    
+    // Ensure we have a 3-digit number (001, 002, etc.)
+    const formattedNumber = nextNumber.toString().padStart(3, '0');
+    const newReportNumber = `${year}-${formattedNumber}`;
+    
+    // Double-check uniqueness
+    if (await this.isReportNumberExists(newReportNumber)) {
+      // If by any chance it exists, try next number
+      return this.generateUniqueReportNumber();
+    }
+    
+    return newReportNumber;
   }
   
   async copyUnresolvedFindings(newReportId: string, userId: string) {
@@ -187,17 +244,11 @@ export class DatabaseStorage implements IStorage {
     const [newFinding] = await db
       .insert(findings)
       .values({
-        reportId: finding.reportId,
-        section: finding.section,
-        title: finding.title,
-        dangerLevel: finding.dangerLevel,
-        currentSituation: finding.currentSituation,
-        legalBasis: finding.legalBasis,
-        recommendation: finding.recommendation,
+        ...finding,
         images: finding.images || [],
         processSteps: finding.processSteps || [],
         isCompleted: finding.isCompleted || false
-      })
+      } as any)
       .returning();
     return newFinding;
   }

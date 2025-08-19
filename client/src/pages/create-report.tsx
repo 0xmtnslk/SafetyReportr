@@ -13,7 +13,7 @@ import { useLocation } from "wouter";
 export default function CreateReport() {
   const [, setLocation] = useLocation();
   const [reportData, setReportData] = useState({
-    reportNumber: "",
+    reportNumber: "Otomatik oluşturulacak",
     reportDate: "",
     reporter: "",
     projectLocation: "",
@@ -52,6 +52,7 @@ export default function CreateReport() {
     e.preventDefault();
     createReportMutation.mutate({
       ...reportData,
+      reportNumber: "", // Let backend generate automatic report number
       reportDate: reportData.reportDate, // Send as string, backend will handle conversion
       status: "draft",
     });
@@ -154,14 +155,12 @@ export default function CreateReport() {
                     <Input
                       id="reportNumber"
                       type="text"
-                      placeholder="2025-001"
                       value={reportData.reportNumber}
-                      onChange={(e) =>
-                        setReportData({ ...reportData, reportNumber: e.target.value })
-                      }
-                      required
+                      disabled
+                      className="bg-gray-100 text-gray-600"
                       data-testid="input-report-number"
                     />
+                    <p className="text-sm text-gray-500">Rapor numarası otomatik oluşturulacaktır</p>
                   </div>
                 </div>
 
