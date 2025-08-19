@@ -197,19 +197,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No file uploaded" });
       }
 
-      const filename = `${Date.now()}-${Math.random().toString(36).substring(7)}.webp`;
-      const outputPath = path.join('uploads', filename);
-
-      // Compress and convert to WebP
-      await sharp(req.file.path)
-        .resize(1200, 1200, { fit: 'inside', withoutEnlargement: true })
-        .webp({ quality: 80 })
-        .toFile(outputPath);
-
-      // Delete original file
+      // Create JPEG thumbnail optimized for PDF (1280px max, 75% quality)
+      const thumbnailBuffer = await sharp(req.file.path)
+        .resize(1280, null, { withoutEnlargement: true })
+        .jpeg({ quality: 75 })
+        .toBuffer();
+      
+      // Convert to base64 data URL for direct PDF embedding
+      const base64Image = `data:image/jpeg;base64,${thumbnailBuffer.toString('base64')}`;
+      
+      // Clean up original file
       fs.unlinkSync(req.file.path);
-
-      res.json({ filename, path: `/uploads/${filename}` });
+      
+      // Return base64 data URL instead of file path
+      res.json({ 
+        filename: `${Date.now()}-thumbnail.jpg`,
+        path: base64Image // This is now a data URL for direct PDF use
+      });
     } catch (error) {
       console.error("Image upload error:", error);
       res.status(500).json({ message: "Failed to upload image" });
