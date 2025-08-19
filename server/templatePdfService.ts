@@ -8,9 +8,12 @@ import { eq } from 'drizzle-orm';
 
 export class TemplatePdfService {
   private logoBase64: string = '';
+  private tahomaFont: string = '';
+  private tahomaBoldFont: string = '';
 
   constructor() {
     this.loadLogo();
+    this.loadFonts();
   }
 
   private loadLogo() {
@@ -22,6 +25,26 @@ export class TemplatePdfService {
       }
     } catch (error) {
       console.warn('Could not load logo:', error);
+    }
+  }
+
+  private loadFonts() {
+    try {
+      // Tahoma Regular font yükle
+      const tahomaPath = join(process.cwd(), 'assets/fonts/Tahoma.ttf');
+      if (existsSync(tahomaPath)) {
+        const tahomaBuffer = readFileSync(tahomaPath);
+        this.tahomaFont = tahomaBuffer.toString('base64');
+      }
+      
+      // Tahoma Bold font yükle
+      const tahomaBoldPath = join(process.cwd(), 'assets/fonts/TahomaBold.ttf');
+      if (existsSync(tahomaBoldPath)) {
+        const tahomaBoldBuffer = readFileSync(tahomaBoldPath);
+        this.tahomaBoldFont = tahomaBoldBuffer.toString('base64');
+      }
+    } catch (error) {
+      console.warn('Could not load Tahoma fonts:', error);
     }
   }
 
@@ -39,6 +62,10 @@ export class TemplatePdfService {
       unit: 'mm',
       format: template.config.pageSize || 'a4'
     });
+
+    // PDF'i initialize et - font problemini önlemek için
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(10);
 
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
@@ -153,36 +180,69 @@ export class TemplatePdfService {
 
   // Text component rendering
   private async renderTextComponent(pdf: jsPDF, component: TemplateComponent, data: any, x: number, y: number, styles: any, itemIndex?: number) {
-    let text = component.content as string;
-    
-    // Data binding ile text'i değiştir
-    if (component.dataBinding) {
-      const boundData = this.getDataFromPath(data, component.dataBinding);
-      text = boundData?.toString() || text;
-    }
-
-    // Template variables'ı değiştir ({{variable}} format)
-    text = this.replaceTemplateVariables(text, data, itemIndex);
-
-    // Style uygula
-    const fontSize = component.style.fontSize || 10;
-    const fontWeight = component.style.fontWeight || 'normal';
-    const color = component.style.color || '#000000';
-
-    pdf.setFontSize(fontSize);
-    pdf.setFont('helvetica', fontWeight);
-    pdf.setTextColor(color);
-
-    // Word wrap support
-    if (component.dimensions?.width) {
-      const lines = pdf.splitTextToSize(text, component.dimensions.width);
-      const lineHeight = fontSize * 0.4;
+    try {
+      let text = component.content as string;
       
-      lines.forEach((line: string, index: number) => {
-        pdf.text(line, x, y + (index * lineHeight));
-      });
-    } else {
-      pdf.text(text, x, y);
+      // Data binding ile text'i değiştir
+      if (component.dataBinding) {
+        const boundData = this.getDataFromPath(data, component.dataBinding);
+        text = boundData?.toString() || text;
+      }
+
+      // Template variables'ı değiştir ({{variable}} format)
+      text = this.replaceTemplateVariables(text, data, itemIndex);
+
+      // Boş text'i skip et
+      if (!text || text.trim() === '') {
+        return;
+      }
+
+      // Style uygula - Basitleştirilmiş
+      const fontSize = component.style?.fontSize || 10;
+      const fontWeight = component.style?.fontWeight === 'bold' ? 'bold' : 'normal';
+      
+      // Font ayarlarını dikkatli yapç
+      try {
+        pdf.setFontSize(fontSize);
+        pdf.setFont('helvetica', fontWeight);
+        if (component.style?.color) {
+          pdf.setTextColor(component.style.color);
+        }
+      } catch (fontError) {
+        // Font error durumunda default kullan
+        pdf.setFontSize(10);
+        pdf.setFont('helvetica', 'normal');
+        pdf.setTextColor('#000000');
+      }
+
+      // Word wrap support with proper line height
+      if (component.dimensions?.width && component.dimensions.width > 0) {
+        try {
+          const lines = pdf.splitTextToSize(text, component.dimensions.width);
+          const lineHeight = fontSize * 0.35;
+          
+          lines.forEach((line: string, index: number) => {
+            if (line && line.trim() !== '') {
+              pdf.text(line, x, y + (index * lineHeight));
+            }
+          });
+        } catch (splitError) {
+          // Split error durumunda basit text render
+          pdf.text(text, x, y);
+        }
+      } else {
+        pdf.text(text, x, y);
+      }
+    } catch (error) {
+      console.warn('Text component render error:', error);
+      // Error durumunda placeholder
+      try {
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(8);
+        pdf.text('[TEXT ERROR]', x, y);
+      } catch (fallbackError) {
+        // Even fallback failed, skip
+      }
     }
   }
 
@@ -267,41 +327,75 @@ export class TemplatePdfService {
 
   // Table component rendering
   private async renderTableComponent(pdf: jsPDF, component: TemplateComponent, data: any, x: number, y: number, styles: any) {
-    const tableConfig = component.content as any;
-    const tableData = this.getDataFromPath(data, component.dataBinding || '');
+    try {
+      const tableConfig = component.content as any;
+      const tableData = this.getDataFromPath(data, component.dataBinding || '');
 
-    if (!Array.isArray(tableData)) return;
+      if (!Array.isArray(tableData) || tableData.length === 0) return;
+      if (!tableConfig.columns || tableConfig.columns.length === 0) return;
 
-    const cellHeight = tableConfig.cellHeight || 20;
-    const cellWidth = (component.dimensions?.width || 100) / tableConfig.columns.length;
+      const cellHeight = tableConfig.cellHeight || 20;
+      const cellWidth = (component.dimensions?.width || 100) / tableConfig.columns.length;
 
-    // Headers
-    let currentY = y;
-    tableConfig.columns.forEach((column: any, colIndex: number) => {
-      const cellX = x + (colIndex * cellWidth);
+      // Headers
+      let currentY = y;
       
-      pdf.setFillColor(200, 200, 200);
-      pdf.rect(cellX, currentY, cellWidth, cellHeight, 'F');
-      pdf.setFontSize(10);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text(column.header, cellX + 2, currentY + 12);
-    });
-
-    currentY += cellHeight;
-
-    // Data rows
-    tableData.forEach((row: any) => {
+      try {
+        pdf.setFontSize(10);
+        pdf.setFont('helvetica', 'bold');
+      } catch (headerFontError) {
+        pdf.setFontSize(10);
+        pdf.setFont('helvetica', 'normal');
+      }
+      
       tableConfig.columns.forEach((column: any, colIndex: number) => {
         const cellX = x + (colIndex * cellWidth);
-        const cellValue = this.getDataFromPath(row, column.field) || '';
         
-        pdf.rect(cellX, currentY, cellWidth, cellHeight, 'S');
-        pdf.setFont('helvetica', 'normal');
-        pdf.text(cellValue.toString(), cellX + 2, currentY + 12);
+        try {
+          pdf.setFillColor(200, 200, 200);
+          pdf.rect(cellX, currentY, cellWidth, cellHeight, 'F');
+          pdf.text(column.header || '', cellX + 2, currentY + 12);
+        } catch (headerError) {
+          console.warn('Table header render error:', headerError);
+        }
       });
-      
+
       currentY += cellHeight;
-    });
+
+      // Data rows - sadece ilk 20 satırı render et
+      const maxRows = Math.min(tableData.length, 20);
+      
+      try {
+        pdf.setFont('helvetica', 'normal');
+      } catch (bodyFontError) {
+        // ignore
+      }
+      
+      for (let rowIndex = 0; rowIndex < maxRows; rowIndex++) {
+        const row = tableData[rowIndex];
+        
+        tableConfig.columns.forEach((column: any, colIndex: number) => {
+          const cellX = x + (colIndex * cellWidth);
+          
+          try {
+            const cellValue = this.getDataFromPath(row, column.field) || '';
+            pdf.rect(cellX, currentY, cellWidth, cellHeight, 'S');
+            pdf.text(cellValue.toString(), cellX + 2, currentY + 12);
+          } catch (cellError) {
+            console.warn('Table cell render error:', cellError);
+          }
+        });
+        
+        currentY += cellHeight;
+        
+        // Page break check
+        if (currentY > pdf.internal.pageSize.getHeight() - 30) {
+          break;
+        }
+      }
+    } catch (error) {
+      console.warn('Table component render error:', error);
+    }
   }
 
   // Helper functions
@@ -364,44 +458,29 @@ export class TemplatePdfService {
   }
 
   private async optimizeImage(imageUrl: string): Promise<string> {
-    return new Promise((resolve) => {
-      if (typeof window === 'undefined') {
-        resolve('');
-        return;
+    try {
+      // Server-side için resim optimizasyonu atla, sadece URL'i döndür
+      // Eğer base64 formatındaysa direkt döndür
+      if (imageUrl.startsWith('data:')) {
+        return imageUrl;
       }
-
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      const img = new Image();
-
-      img.onload = () => {
-        const maxSize = 400;
-        let { width, height } = img;
-
-        if (width > height) {
-          if (width > maxSize) {
-            height = (height * maxSize) / width;
-            width = maxSize;
-          }
-        } else {
-          if (height > maxSize) {
-            width = (width * maxSize) / height;
-            height = maxSize;
-          }
+      
+      // Local dosya yolu için
+      if (imageUrl.startsWith('/uploads/') || imageUrl.startsWith('./uploads/')) {
+        const imagePath = join(process.cwd(), imageUrl);
+        if (existsSync(imagePath)) {
+          const imageBuffer = readFileSync(imagePath);
+          const ext = imagePath.toLowerCase().includes('.png') ? 'png' : 'jpeg';
+          return `data:image/${ext};base64,${imageBuffer.toString('base64')}`;
         }
-
-        canvas.width = width;
-        canvas.height = height;
-        ctx!.drawImage(img, 0, 0, width, height);
-
-        const optimizedImageData = canvas.toDataURL('image/jpeg', 0.8);
-        resolve(optimizedImageData);
-      };
-
-      img.onerror = () => resolve('');
-      img.crossOrigin = 'anonymous';
-      img.src = imageUrl;
-    });
+      }
+      
+      // HTTP URL'ler için - şimdilik boş döndür
+      return '';
+    } catch (error) {
+      console.warn('Image optimization failed:', error);
+      return '';
+    }
   }
 
   private addPageFooter(pdf: jsPDF, pageNumber: number, template: PdfTemplate) {
@@ -409,6 +488,7 @@ export class TemplatePdfService {
     const pageWidth = pdf.internal.pageSize.getWidth();
     
     pdf.setFontSize(9);
+    // Footer için Helvetica kullan
     pdf.setFont('helvetica', 'normal');
     pdf.setTextColor(100, 100, 100);
     
