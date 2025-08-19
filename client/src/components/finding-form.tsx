@@ -42,28 +42,44 @@ export default function FindingForm({ reportId, section, initialData, onClose, o
         return response.json();
       }
     },
-    onSuccess: (result) => {
-      // If danger level is set to 'low', automatically move to completed section
-      if (formData.dangerLevel === 'low' && (section === 2 || section === 3) && !initialData?.id) {
-        // Create a copy in section 4 (completed findings)
-        apiRequest("POST", "/api/findings", {
-          reportId,
-          section: 4,
-          ...formData,
-          isCompleted: true,
-        }).then(() => {
+    onSuccess: async (result) => {
+      try {
+        // If danger level is set to 'low', automatically move to completed section
+        if (formData.dangerLevel === 'low' && (section === 2 || section === 3) && !initialData?.id) {
+          console.log('🟢 Düşük risk bulgusu tamamlanmış bölümüne kopyalanıyor...');
+          
+          // Create a copy in section 4 (completed findings)
+          await apiRequest("POST", "/api/findings", {
+            reportId,
+            section: 4,
+            ...formData,
+            isCompleted: true,
+          });
+          
+          console.log('✅ Düşük risk bulgusu başarıyla kopyalandı');
+          
           toast({
             title: "Başarılı",
             description: "Bulgu kaydedildi ve tamamlanmış bulgulara eklendi",
           });
-          onSave();
-        });
-      } else {
-        toast({
-          title: "Başarılı",
-          description: initialData?.id ? "Bulgu başarıyla güncellendi" : "Bulgu başarıyla kaydedildi",
-        });
+        } else {
+          toast({
+            title: "Başarılı",
+            description: initialData?.id ? "Bulgu başarıyla güncellendi" : "Bulgu başarıyla kaydedildi",
+          });
+        }
+        
         onSave();
+      } catch (error: any) {
+        console.error('❌ Otomatik kopyalama hatası:', error);
+        
+        toast({
+          title: "Kısmi Başarı",
+          description: "Bulgu kaydedildi ama tamamlanmış bölümüne kopyalanamadı",
+          variant: "destructive",
+        });
+        
+        onSave(); // Yine de sayfa kapansın
       }
     },
     onError: () => {
