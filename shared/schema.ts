@@ -52,6 +52,35 @@ export const offlineQueue = pgTable("offline_queue", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// PDF Template System
+export const pdfTemplates = pgTable("pdf_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull().unique(),
+  displayName: text("display_name").notNull(),
+  description: text("description"),
+  templateType: text("template_type").notNull(), // 'isg_report', 'technical_findings', 'inspection', etc.
+  version: text("version").notNull().default("1.0.0"),
+  isActive: boolean("is_active").default(true),
+  config: jsonb("config").$type<TemplateConfig>().notNull(),
+  sections: jsonb("sections").$type<TemplateSection[]>().notNull(),
+  styles: jsonb("styles").$type<TemplateStyles>().notNull(),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const pdfTemplateFields = pgTable("pdf_template_fields", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  templateId: varchar("template_id").references(() => pdfTemplates.id).notNull(),
+  fieldKey: text("field_key").notNull(), // 'reportNumber', 'findings.title', etc.
+  fieldLabel: text("field_label").notNull(), // 'Rapor Numarası', 'Bulgu Başlığı'
+  fieldType: text("field_type").notNull(), // 'text', 'date', 'image', 'table', 'list'
+  isRequired: boolean("is_required").default(false),
+  validation: jsonb("validation").$type<FieldValidation>(),
+  defaultValue: text("default_value"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
@@ -89,6 +118,28 @@ export const insertOfflineQueueSchema = createInsertSchema(offlineQueue).pick({
   data: true,
 });
 
+export const insertPdfTemplateSchema = createInsertSchema(pdfTemplates).pick({
+  name: true,
+  displayName: true,
+  description: true,
+  templateType: true,
+  version: true,
+  isActive: true,
+  config: true,
+  sections: true,
+  styles: true,
+});
+
+export const insertPdfTemplateFieldSchema = createInsertSchema(pdfTemplateFields).pick({
+  templateId: true,
+  fieldKey: true,
+  fieldLabel: true,
+  fieldType: true,
+  isRequired: true,
+  validation: true,
+  defaultValue: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -101,3 +152,67 @@ export type InsertFinding = z.infer<typeof insertFindingSchema>;
 
 export type OfflineQueueItem = typeof offlineQueue.$inferSelect;
 export type InsertOfflineQueueItem = z.infer<typeof insertOfflineQueueSchema>;
+
+export type PdfTemplate = typeof pdfTemplates.$inferSelect;
+export type InsertPdfTemplate = z.infer<typeof insertPdfTemplateSchema>;
+
+export type PdfTemplateField = typeof pdfTemplateFields.$inferSelect;
+export type InsertPdfTemplateField = z.infer<typeof insertPdfTemplateFieldSchema>;
+
+// Template Configuration Types
+export interface TemplateConfig {
+  pageSize: 'A4' | 'A3' | 'Letter';
+  orientation: 'portrait' | 'landscape';
+  margins: { top: number; right: number; bottom: number; left: number };
+  fonts: {
+    primary: string;
+    secondary?: string;
+    sizes: { [key: string]: number };
+  };
+  colors: { [key: string]: string };
+  logo?: {
+    url: string;
+    width: number;
+    height: number;
+    position: { x: number; y: number };
+  };
+}
+
+export interface TemplateSection {
+  id: string;
+  name: string;
+  type: 'header' | 'content' | 'table' | 'image' | 'footer' | 'custom';
+  position: { x: number; y: number };
+  dimensions: { width: number; height: number };
+  style: { [key: string]: any };
+  dataBinding: string; // JSON path to data field
+  components: TemplateComponent[];
+  isRepeatable?: boolean; // For arrays like findings
+  conditions?: { field: string; operator: string; value: any }[]; // Show/hide conditions
+}
+
+export interface TemplateComponent {
+  id: string;
+  type: 'text' | 'image' | 'table' | 'line' | 'rectangle' | 'chart';
+  content: string | { [key: string]: any };
+  position: { x: number; y: number };
+  dimensions?: { width: number; height: number };
+  style: { [key: string]: any };
+  dataBinding?: string;
+  conditions?: { field: string; operator: string; value: any }[]; // Show/hide conditions
+}
+
+export interface TemplateStyles {
+  fonts: { [key: string]: { family: string; size: number; weight?: string; color?: string } };
+  colors: { [key: string]: string };
+  spacing: { [key: string]: number };
+  borders: { [key: string]: { width: number; color: string; style: string } };
+}
+
+export interface FieldValidation {
+  required?: boolean;
+  minLength?: number;
+  maxLength?: number;
+  pattern?: string;
+  format?: 'email' | 'phone' | 'date' | 'url';
+}

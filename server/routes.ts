@@ -1,20 +1,30 @@
+import fs from "fs";
+import { z } from "zod";
 import type { Express } from "express";
+import { Request, Response, NextFunction } from "express";
 import express from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertReportSchema, insertFindingSchema, insertOfflineQueueSchema } from "@shared/schema";
 import { ReactPdfService } from "./pdfService";
+import { TemplatePdfService } from "./templatePdfService";
+import { TemplateManager } from "./templateManager";
 import jwt from "jsonwebtoken";
 import multer from "multer";
 import sharp from "sharp";
 import path from "path";
-import fs from "fs";
 
-const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
-const upload = multer({ dest: 'uploads/' });
+const JWT_SECRET = "dev-secret-key";
 
-// Middleware to verify JWT token
-const authenticateToken = async (req: any, res: any, next: any) => {
+// Multer setup for image uploads
+const storage_multer = multer.memoryStorage();
+const upload = multer({ 
+  storage: storage_multer,
+  limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
+});
+
+// Authentication middleware
+const authenticateToken = (req: Request, res: Response, next: NextFunction) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
@@ -24,13 +34,9 @@ const authenticateToken = async (req: any, res: any, next: any) => {
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as any;
-    const user = await storage.getUser(decoded.userId);
-    if (!user) {
-      return res.status(401).json({ message: 'Invalid token' });
-    }
-    req.user = user;
+    (req as any).user = decoded;
     next();
-  } catch (error) {
+  } catch (err) {
     return res.status(403).json({ message: 'Invalid token' });
   }
 };
@@ -41,227 +47,322 @@ export async function registerRoutes(app: Express): Promise<Server> {
     fs.mkdirSync('uploads');
   }
 
+  // Initialize services
+  const templateManager = new TemplateManager();
+  const templatePdfService = new TemplatePdfService();
+  
+  // Initialize default templates
+  try {
+    await templateManager.initializeDefaultTemplates();
+  } catch (error) {
+    console.error('Failed to initialize templates:', error);
+  }
+
   // Auth routes
   app.post("/api/auth/login", async (req, res) => {
     try {
       const { username, password } = req.body;
+      const user = await storage.authenticateUser(username, password);
       
-      if (!username || !password) {
-        return res.status(400).json({ message: "Username and password required" });
+      if (user) {
+        const token = jwt.sign(
+          { 
+            id: user.id, 
+            username: user.username,
+            fullName: user.fullName
+          },
+          JWT_SECRET,
+          { expiresIn: '24h' }
+        );
+        
+        res.json({ 
+          token, 
+          user: { 
+            id: user.id, 
+            username: user.username,
+            fullName: user.fullName
+          } 
+        });
+      } else {
+        res.status(401).json({ message: 'Geçersiz kullanıcı adı veya parola' });
       }
-
-      const user = await storage.validateUserCredentials(username, password);
-      if (!user) {
-        return res.status(401).json({ message: "Invalid credentials" });
-      }
-
-      const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
-      
-      res.json({
-        token,
-        user: {
-          id: user.id,
-          username: user.username,
-          fullName: user.fullName,
-        }
-      });
     } catch (error) {
       console.error("Login error:", error);
-      res.status(500).json({ message: "Internal server error" });
+      res.status(500).json({ message: "Giriş yapılırken hata oluştu" });
     }
   });
 
-  app.get("/api/auth/me", authenticateToken, async (req: any, res) => {
-    res.json({
-      id: req.user.id,
-      username: req.user.username,
-      fullName: req.user.fullName,
-    });
+  app.post("/api/auth/register", async (req, res) => {
+    try {
+      const { username, password, fullName } = req.body;
+      
+      const existingUser = await storage.getUserByUsername(username);
+      if (existingUser) {
+        return res.status(400).json({ message: 'Bu kullanıcı adı zaten kullanımda' });
+      }
+
+      const newUser = await storage.createUser({
+        username,
+        password,
+        fullName
+      });
+
+      const token = jwt.sign(
+        { 
+          id: newUser.id, 
+          username: newUser.username,
+          fullName: newUser.fullName
+        },
+        JWT_SECRET,
+        { expiresIn: '24h' }
+      );
+
+      res.status(201).json({ 
+        token, 
+        user: { 
+          id: newUser.id, 
+          username: newUser.username,
+          fullName: newUser.fullName
+        } 
+      });
+    } catch (error) {
+      console.error("Registration error:", error);
+      res.status(500).json({ message: "Kayıt olurken hata oluştu" });
+    }
   });
 
-  // Report routes
-  app.get("/api/reports", authenticateToken, async (req: any, res) => {
+  app.get("/api/auth/verify", authenticateToken, (req: any, res) => {
+    res.json({ user: req.user });
+  });
+
+  // Reports CRUD routes
+  app.get("/api/reports", authenticateToken, async (req, res) => {
     try {
-      const reports = await storage.getUserReports(req.user.id);
+      const reports = await storage.getAllReports();
       res.json(reports);
     } catch (error) {
       console.error("Get reports error:", error);
-      res.status(500).json({ message: "Failed to fetch reports" });
+      res.status(500).json({ message: "Raporlar alınırken hata oluştu" });
     }
   });
 
   app.get("/api/reports/:id", authenticateToken, async (req, res) => {
     try {
       const report = await storage.getReport(req.params.id);
-      if (!report) {
-        return res.status(404).json({ message: "Report not found" });
+      if (report) {
+        res.json(report);
+      } else {
+        res.status(404).json({ message: "Rapor bulunamadı" });
       }
-      res.json(report);
     } catch (error) {
       console.error("Get report error:", error);
-      res.status(500).json({ message: "Failed to fetch report" });
+      res.status(500).json({ message: "Rapor alınırken hata oluştu" });
     }
   });
 
   app.post("/api/reports", authenticateToken, async (req: any, res) => {
     try {
-      // Convert string date to Date object
-      const body = { ...req.body };
-      if (body.reportDate && typeof body.reportDate === 'string') {
-        body.reportDate = new Date(body.reportDate);
+      const validation = insertReportSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ message: "Geçersiz veri formatı", errors: validation.error.errors });
       }
-      
-      const validatedData = insertReportSchema.parse(body);
-      const report = await storage.createReport({ ...validatedData, userId: req.user.id });
+
+      const report = await storage.createReport({
+        ...validation.data,
+        userId: req.user.id
+      });
       res.status(201).json(report);
     } catch (error) {
       console.error("Create report error:", error);
-      res.status(500).json({ message: "Failed to create report" });
+      res.status(500).json({ message: "Rapor oluşturulurken hata oluştu" });
     }
   });
 
   app.put("/api/reports/:id", authenticateToken, async (req, res) => {
     try {
-      // Convert string date to Date object
-      const body = { ...req.body };
-      if (body.reportDate && typeof body.reportDate === 'string') {
-        body.reportDate = new Date(body.reportDate);
+      const validation = insertReportSchema.partial().safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ message: "Geçersiz veri formatı", errors: validation.error.errors });
       }
-      
-      const validatedData = insertReportSchema.partial().parse(body);
-      const report = await storage.updateReport(req.params.id, validatedData);
-      res.json(report);
+
+      const report = await storage.updateReport(req.params.id, validation.data);
+      if (report) {
+        res.json(report);
+      } else {
+        res.status(404).json({ message: "Rapor bulunamadı" });
+      }
     } catch (error) {
       console.error("Update report error:", error);
-      res.status(500).json({ message: "Failed to update report" });
+      res.status(500).json({ message: "Rapor güncellenirken hata oluştu" });
     }
   });
 
   app.delete("/api/reports/:id", authenticateToken, async (req, res) => {
     try {
-      await storage.deleteReport(req.params.id);
-      res.status(204).send();
+      const success = await storage.deleteReport(req.params.id);
+      if (success) {
+        res.json({ message: "Rapor silindi" });
+      } else {
+        res.status(404).json({ message: "Rapor bulunamadı" });
+      }
     } catch (error) {
       console.error("Delete report error:", error);
-      res.status(500).json({ message: "Failed to delete report" });
+      res.status(500).json({ message: "Rapor silinirken hata oluştu" });
     }
   });
 
-  // Finding routes
+  // Findings CRUD routes
   app.get("/api/reports/:reportId/findings", authenticateToken, async (req, res) => {
     try {
       const findings = await storage.getReportFindings(req.params.reportId);
       res.json(findings);
     } catch (error) {
       console.error("Get findings error:", error);
-      res.status(500).json({ message: "Failed to fetch findings" });
+      res.status(500).json({ message: "Bulgular alınırken hata oluştu" });
     }
   });
 
-  app.post("/api/findings", authenticateToken, async (req, res) => {
+  app.post("/api/reports/:reportId/findings", authenticateToken, async (req, res) => {
     try {
-      const validatedData = insertFindingSchema.parse(req.body);
-      const finding = await storage.createFinding(validatedData);
+      const validation = insertFindingSchema.safeParse({
+        ...req.body,
+        reportId: req.params.reportId
+      });
+      
+      if (!validation.success) {
+        return res.status(400).json({ message: "Geçersiz veri formatı", errors: validation.error.errors });
+      }
+
+      const finding = await storage.createFinding(validation.data);
       res.status(201).json(finding);
     } catch (error) {
       console.error("Create finding error:", error);
-      res.status(500).json({ message: "Failed to create finding" });
+      res.status(500).json({ message: "Bulgu oluşturulurken hata oluştu" });
     }
   });
 
   app.put("/api/findings/:id", authenticateToken, async (req, res) => {
     try {
-      const validatedData = insertFindingSchema.partial().parse(req.body);
-      const finding = await storage.updateFinding(req.params.id, validatedData);
-      res.json(finding);
+      const validation = insertFindingSchema.partial().safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ message: "Geçersiz veri formatı", errors: validation.error.errors });
+      }
+
+      const finding = await storage.updateFinding(req.params.id, validation.data);
+      if (finding) {
+        res.json(finding);
+      } else {
+        res.status(404).json({ message: "Bulgu bulunamadı" });
+      }
     } catch (error) {
       console.error("Update finding error:", error);
-      res.status(500).json({ message: "Failed to update finding" });
+      res.status(500).json({ message: "Bulgu güncellenirken hata oluştu" });
     }
   });
 
   app.delete("/api/findings/:id", authenticateToken, async (req, res) => {
     try {
-      await storage.deleteFinding(req.params.id);
-      res.status(204).send();
+      const success = await storage.deleteFinding(req.params.id);
+      if (success) {
+        res.json({ message: "Bulgu silindi" });
+      } else {
+        res.status(404).json({ message: "Bulgu bulunamadı" });
+      }
     } catch (error) {
       console.error("Delete finding error:", error);
-      res.status(500).json({ message: "Failed to delete finding" });
+      res.status(500).json({ message: "Bulgu silinirken hata oluştu" });
     }
   });
 
-  // Image upload route
-  app.post("/api/upload-image", authenticateToken, upload.single('image'), async (req, res) => {
+  // File upload endpoint with image compression
+  app.post("/api/upload", authenticateToken, upload.single('file'), async (req, res) => {
     try {
       if (!req.file) {
-        return res.status(400).json({ message: "No file uploaded" });
+        return res.status(400).json({ message: 'Dosya bulunamadı' });
       }
 
-      // Create JPEG thumbnail optimized for PDF (1280px max, 75% quality)
-      const thumbnailBuffer = await sharp(req.file.path)
-        .resize(1280, null, { withoutEnlargement: true })
-        .jpeg({ quality: 75 })
-        .toBuffer();
-      
-      // Convert to base64 data URL for direct PDF embedding
-      const base64Image = `data:image/jpeg;base64,${thumbnailBuffer.toString('base64')}`;
-      
-      // Clean up original file
-      fs.unlinkSync(req.file.path);
-      
-      // Return base64 data URL instead of file path
+      const originalExtension = path.extname(req.file.originalname);
+      const filename = `${Date.now()}_${Math.random().toString(36).substring(2)}${originalExtension}`;
+      const filepath = path.join('uploads', filename);
+
+      // For image files, compress and resize
+      if (req.file.mimetype.startsWith('image/')) {
+        let processedBuffer = req.file.buffer;
+        
+        // Compress and resize image using Sharp
+        processedBuffer = await sharp(req.file.buffer)
+          .resize(800, 600, { 
+            fit: 'inside', 
+            withoutEnlargement: true 
+          })
+          .jpeg({ 
+            quality: 80,
+            progressive: true
+          })
+          .toBuffer();
+
+        fs.writeFileSync(filepath, processedBuffer);
+      } else {
+        fs.writeFileSync(filepath, req.file.buffer);
+      }
+
       res.json({ 
-        filename: `${Date.now()}-thumbnail.jpg`,
-        path: base64Image // This is now a data URL for direct PDF use
+        message: 'Dosya başarıyla yüklendi', 
+        filename: `/${filepath}` 
       });
+
     } catch (error) {
-      console.error("Image upload error:", error);
-      res.status(500).json({ message: "Failed to upload image" });
+      console.error("File upload error:", error);
+      res.status(500).json({ message: "Dosya yüklenirken hata oluştu" });
     }
   });
 
-  // Serve uploaded images
-  app.use('/uploads', express.static('uploads'));
-
-  // Statistics route
-  app.get("/api/stats", authenticateToken, async (req: any, res) => {
+  app.get("/api/stats", authenticateToken, async (req, res) => {
     try {
-      const stats = await storage.getReportStats(req.user.id);
+      const stats = await storage.getStats();
       res.json(stats);
     } catch (error) {
-      console.error("Get stats error:", error);
-      res.status(500).json({ message: "Failed to fetch statistics" });
+      console.error("Stats error:", error);
+      res.status(500).json({ message: "İstatistikler alınırken hata oluştu" });
     }
   });
 
-  // Offline sync routes
-  app.post("/api/offline-sync", authenticateToken, async (req: any, res) => {
+  // Offline queue management
+  app.post("/api/offline-queue", authenticateToken, async (req, res) => {
     try {
-      const validatedData = insertOfflineQueueSchema.parse(req.body);
-      const item = await storage.addOfflineQueueItem({ ...validatedData, userId: req.user.id });
-      res.status(201).json(item);
+      const validation = insertOfflineQueueSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ message: "Geçersiz veri formatı", errors: validation.error.errors });
+      }
+
+      const queueItem = await storage.addToOfflineQueue(validation.data);
+      res.status(201).json(queueItem);
     } catch (error) {
-      console.error("Offline sync error:", error);
-      res.status(500).json({ message: "Failed to add offline item" });
+      console.error("Add to offline queue error:", error);
+      res.status(500).json({ message: "Offline queue'ya eklenirken hata oluştu" });
     }
   });
 
-  app.get("/api/offline-sync/pending", authenticateToken, async (req: any, res) => {
+  app.get("/api/offline-queue", authenticateToken, async (req, res) => {
     try {
-      const items = await storage.getUnprocessedOfflineItems(req.user.id);
-      res.json(items);
+      const queueItems = await storage.getOfflineQueue();
+      res.json(queueItems);
     } catch (error) {
-      console.error("Get pending sync items error:", error);
-      res.status(500).json({ message: "Failed to fetch pending items" });
+      console.error("Get offline queue error:", error);
+      res.status(500).json({ message: "Offline queue alınırken hata oluştu" });
     }
   });
 
-  app.put("/api/offline-sync/:id/processed", authenticateToken, async (req, res) => {
+  app.delete("/api/offline-queue/:id", authenticateToken, async (req, res) => {
     try {
-      await storage.markOfflineItemProcessed(req.params.id);
-      res.status(204).send();
+      const success = await storage.markOfflineItemProcessed(req.params.id);
+      if (success) {
+        res.json({ message: "Queue item processed" });
+      } else {
+        res.status(404).json({ message: "Queue item not found" });
+      }
     } catch (error) {
-      console.error("Mark processed error:", error);
+      console.error("Mark offline item processed error:", error);
       res.status(500).json({ message: "Failed to mark item as processed" });
     }
   });
@@ -333,6 +434,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("PDF generation error:", error);
       res.status(500).json({ message: "PDF oluşturulurken hata oluştu" });
+    }
+  });
+
+  // Template-based PDF Generation endpoint
+  app.get("/api/reports/:id/template-pdf/:templateName?", authenticateToken, async (req: any, res) => {
+    try {
+      const reportId = req.params.id;
+      const templateName = req.params.templateName || 'isg_inspection_report';
+      
+      const report = await storage.getReport(reportId);
+      if (!report) {
+        return res.status(404).json({ message: "Report not found" });
+      }
+
+      const findings = await storage.getReportFindings(reportId);
+      
+      // Prepare data for template
+      const templateData = {
+        id: report.id,
+        reportNumber: report.reportNumber,
+        reportDate: report.reportDate,
+        projectLocation: report.projectLocation,
+        reporter: report.reporter,
+        managementSummary: report.managementSummary,
+        generalEvaluation: report.generalEvaluation,
+        findings: findings.map((finding: any) => ({
+          ...finding,
+          location: finding.location || 'Belirtilmemiş',
+          processSteps: finding.processSteps || []
+        })),
+        reportInfo: [
+          { label: 'Rapor Numarası:', value: report.reportNumber },
+          { label: 'Rapor Tarihi:', value: new Date(report.reportDate).toLocaleDateString('tr-TR') },
+          { label: 'Proje Lokasyonu:', value: report.projectLocation },
+          { label: 'İSG Uzmanı:', value: report.reporter },
+          { label: 'Toplam Bulgu:', value: findings.length.toString() }
+        ]
+      };
+
+      const template = await templateManager.getTemplateByName(templateName);
+      if (!template) {
+        return res.status(404).json({ message: `Template not found: ${templateName}` });
+      }
+
+      const pdfBuffer = await templatePdfService.generatePdfFromTemplate(template.id, templateData);
+      
+      res.set({
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `inline; filename="${report.reportNumber || 'report'}-${templateName}.pdf"`,
+        'Content-Length': pdfBuffer.length
+      });
+
+      res.send(Buffer.from(pdfBuffer));
+      
+    } catch (error) {
+      console.error("Template PDF generation error:", error);
+      res.status(500).json({ message: "Şablondan PDF oluşturulurken hata oluştu" });
+    }
+  });
+
+  // Template Management Routes
+  app.get("/api/templates", authenticateToken, async (req: any, res) => {
+    try {
+      const templates = await templateManager.getActiveTemplates();
+      res.json(templates);
+    } catch (error) {
+      console.error("Get templates error:", error);
+      res.status(500).json({ message: "Şablonlar getirilemedi" });
+    }
+  });
+
+  app.get("/api/templates/:id", authenticateToken, async (req: any, res) => {
+    try {
+      const template = await templateManager.getTemplate(req.params.id);
+      if (!template) {
+        return res.status(404).json({ message: "Şablon bulunamadı" });
+      }
+      res.json(template);
+    } catch (error) {
+      console.error("Get template error:", error);
+      res.status(500).json({ message: "Şablon getirilemedi" });
     }
   });
 

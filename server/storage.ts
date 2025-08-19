@@ -8,29 +8,38 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  authenticateUser(username: string, password: string): Promise<User | null>;
   validateUserCredentials(username: string, password: string): Promise<User | null>;
 
   // Report operations
   getReport(id: string): Promise<Report | undefined>;
+  getAllReports(): Promise<Report[]>;
   getUserReports(userId: string): Promise<Report[]>;
   createReport(report: InsertReport & { userId: string }): Promise<Report>;
   updateReport(id: string, report: Partial<InsertReport>): Promise<Report>;
-  deleteReport(id: string): Promise<void>;
+  deleteReport(id: string): Promise<boolean>;
 
   // Finding operations
   getFinding(id: string): Promise<Finding | undefined>;
   getReportFindings(reportId: string): Promise<Finding[]>;
   createFinding(finding: InsertFinding): Promise<Finding>;
   updateFinding(id: string, finding: Partial<InsertFinding>): Promise<Finding>;
-  deleteFinding(id: string): Promise<void>;
+  deleteFinding(id: string): Promise<boolean>;
 
   // Offline sync operations
   addOfflineQueueItem(item: InsertOfflineQueueItem & { userId: string }): Promise<OfflineQueueItem>;
+  addToOfflineQueue(item: InsertOfflineQueueItem): Promise<OfflineQueueItem>;
   getUnprocessedOfflineItems(userId: string): Promise<OfflineQueueItem[]>;
-  markOfflineItemProcessed(id: string): Promise<void>;
+  getOfflineQueue(): Promise<OfflineQueueItem[]>;
+  markOfflineItemProcessed(id: string): Promise<boolean>;
 
   // Statistics
   getReportStats(userId: string): Promise<{
+    totalReports: number;
+    highRiskFindings: number;
+    completedReports: number;
+  }>;
+  getStats(): Promise<{
     totalReports: number;
     highRiskFindings: number;
     completedReports: number;
@@ -63,6 +72,14 @@ export class DatabaseStorage implements IStorage {
     
     const isValid = await bcrypt.compare(password, user.password);
     return isValid ? user : null;
+  }
+
+  async authenticateUser(username: string, password: string): Promise<User | null> {
+    return this.validateUserCredentials(username, password);
+  }
+
+  async getAllReports(): Promise<Report[]> {
+    return await db.select().from(reports).orderBy(desc(reports.createdAt));
   }
 
   async getReport(id: string): Promise<Report | undefined> {
@@ -126,7 +143,18 @@ export class DatabaseStorage implements IStorage {
         isCompleted: false,
       }));
       
-      await db.insert(findings).values(findingsToInsert);
+      const insertData = findingsToInsert.map(f => ({
+        reportId: f.reportId,
+        section: f.section,
+        title: f.title,
+        dangerLevel: f.dangerLevel,
+        currentSituation: f.currentSituation,
+        legalBasis: f.legalBasis,
+        recommendation: f.recommendation,
+        processSteps: f.processSteps || [],
+        isCompleted: f.isCompleted
+      }));
+      await db.insert(findings).values(insertData);
     }
   }
 
@@ -139,8 +167,9 @@ export class DatabaseStorage implements IStorage {
     return updatedReport;
   }
 
-  async deleteReport(id: string): Promise<void> {
-    await db.delete(reports).where(eq(reports.id, id));
+  async deleteReport(id: string): Promise<boolean> {
+    const result = await db.delete(reports).where(eq(reports.id, id));
+    return (result.rowCount || 0) > 0;
   }
 
   async getFinding(id: string): Promise<Finding | undefined> {
@@ -172,16 +201,17 @@ export class DatabaseStorage implements IStorage {
       .set({ 
         ...finding, 
         updatedAt: new Date(),
-        images: finding.images,
-        processSteps: finding.processSteps
+        images: finding.images ? [...finding.images] : undefined,
+        processSteps: finding.processSteps ? [...finding.processSteps] : undefined
       })
       .where(eq(findings.id, id))
       .returning();
     return updatedFinding;
   }
 
-  async deleteFinding(id: string): Promise<void> {
-    await db.delete(findings).where(eq(findings.id, id));
+  async deleteFinding(id: string): Promise<boolean> {
+    const result = await db.delete(findings).where(eq(findings.id, id));
+    return (result.rowCount || 0) > 0;
   }
 
   async addOfflineQueueItem(item: InsertOfflineQueueItem & { userId: string }): Promise<OfflineQueueItem> {
@@ -198,10 +228,27 @@ export class DatabaseStorage implements IStorage {
       .orderBy(offlineQueue.createdAt);
   }
 
-  async markOfflineItemProcessed(id: string): Promise<void> {
-    await db.update(offlineQueue)
+  async addToOfflineQueue(item: InsertOfflineQueueItem): Promise<OfflineQueueItem> {
+    const itemWithUser = {
+      ...item,
+      userId: item.userId || 'unknown-user'
+    };
+    const [newItem] = await db
+      .insert(offlineQueue)
+      .values(itemWithUser)
+      .returning();
+    return newItem;
+  }
+
+  async getOfflineQueue(): Promise<OfflineQueueItem[]> {
+    return await db.select().from(offlineQueue).orderBy(desc(offlineQueue.createdAt));
+  }
+
+  async markOfflineItemProcessed(id: string): Promise<boolean> {
+    const result = await db.update(offlineQueue)
       .set({ processed: true })
       .where(eq(offlineQueue.id, id));
+    return (result.rowCount || 0) > 0;
   }
 
   async getReportStats(userId: string): Promise<{
@@ -215,6 +262,28 @@ export class DatabaseStorage implements IStorage {
     
     let highRiskFindings = 0;
     for (const report of userReports) {
+      const reportFindings = await this.getReportFindings(report.id);
+      highRiskFindings += reportFindings.filter(f => f.dangerLevel === 'high').length;
+    }
+
+    return {
+      totalReports,
+      highRiskFindings,
+      completedReports,
+    };
+  }
+
+  async getStats(): Promise<{
+    totalReports: number;
+    highRiskFindings: number;
+    completedReports: number;
+  }> {
+    const allReports = await db.select().from(reports);
+    const totalReports = allReports.length;
+    const completedReports = allReports.filter(r => r.status === 'completed').length;
+    
+    let highRiskFindings = 0;
+    for (const report of allReports) {
       const reportFindings = await this.getReportFindings(report.id);
       highRiskFindings += reportFindings.filter(f => f.dangerLevel === 'high').length;
     }

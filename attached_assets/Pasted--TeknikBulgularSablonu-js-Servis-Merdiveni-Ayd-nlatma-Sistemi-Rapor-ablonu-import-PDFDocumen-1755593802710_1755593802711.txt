@@ -1,0 +1,546 @@
+// TeknikBulgularSablonu.js - Servis Merdiveni Aydınlatma Sistemi Rapor Şablonu
+import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import fontkit from '@pdf-lib/fontkit';
+
+class TeknikBulgularSablonu {
+    constructor() {
+        this.pageWidth = 595.28; // A4 genişlik
+        this.pageHeight = 841.89; // A4 yükseklik
+        this.margin = 40;
+        this.colors = {
+            header: rgb(0.4, 0.4, 0.4),
+            redHeader: rgb(0.8, 0.1, 0.1),
+            border: rgb(0.6, 0.6, 0.6),
+            text: rgb(0, 0, 0),
+            lightGray: rgb(0.95, 0.95, 0.95)
+        };
+    }
+
+    // Ana rapor oluşturma fonksiyonu
+    async createTechnicalReport(reportData) {
+        const pdfDoc = await PDFDocument.create();
+        pdfDoc.registerFontkit(fontkit);
+
+        // Türkçe font yükleme
+        const fontBytes = await fetch('/fonts/Roboto-Regular.ttf').then(res => res.arrayBuffer());
+        const font = await pdfDoc.embedFont(fontBytes);
+        const boldFontBytes = await fetch('/fonts/Roboto-Bold.ttf').then(res => res.arrayBuffer());
+        const boldFont = await pdfDoc.embedFont(boldFontBytes);
+
+        // Sayfa oluştur
+        const page = pdfDoc.addPage([this.pageWidth, this.pageHeight]);
+
+        // Şablon bileşenlerini çiz
+        await this.drawHeader(page, reportData, font, boldFont);
+        await this.drawMainContent(page, reportData, font, boldFont);
+        await this.drawProcessTable(page, reportData, font, boldFont);
+
+        return await pdfDoc.save();
+    }
+
+    // Üst başlık bölümü
+    async drawHeader(page, reportData, font, boldFont) {
+        const headerHeight = 60;
+        const startY = this.pageHeight - this.margin - 20;
+
+        // Ana başlık
+        page.drawText(`${reportData.itemNumber}. ${reportData.systemName}`, {
+            x: this.margin,
+            y: startY,
+            size: 14,
+            font: boldFont,
+            color: this.colors.text
+        });
+
+        // Başlık tablosu
+        const tableData = [
+            ['Yer-Konum:', reportData.location || 'Servis Merdivenleri', 'Tespit Tarihi:', reportData.inspectionDate || '01.08.2025'],
+            ['Öncelik:', reportData.priority || '', '', '']
+        ];
+
+        let currentY = startY - 30;
+        const cellHeight = 25;
+        const col1Width = 80;
+        const col2Width = 200;
+        const col3Width = 100;
+        const col4Width = 115;
+
+        for (const row of tableData) {
+            // Hücre çerçeveleri
+            page.drawRectangle({
+                x: this.margin,
+                y: currentY,
+                width: col1Width,
+                height: cellHeight,
+                borderColor: this.colors.border,
+                borderWidth: 1,
+                color: this.colors.lightGray
+            });
+
+            page.drawRectangle({
+                x: this.margin + col1Width,
+                y: currentY,
+                width: col2Width,
+                height: cellHeight,
+                borderColor: this.colors.border,
+                borderWidth: 1
+            });
+
+            page.drawRectangle({
+                x: this.margin + col1Width + col2Width,
+                y: currentY,
+                width: col3Width,
+                height: cellHeight,
+                borderColor: this.colors.border,
+                borderWidth: 1,
+                color: this.colors.lightGray
+            });
+
+            page.drawRectangle({
+                x: this.margin + col1Width + col2Width + col3Width,
+                y: currentY,
+                width: col4Width,
+                height: cellHeight,
+                borderColor: this.colors.border,
+                borderWidth: 1
+            });
+
+            // Metin içerikleri
+            page.drawText(row[0], {
+                x: this.margin + 5,
+                y: currentY + 8,
+                size: 10,
+                font: boldFont,
+                color: this.colors.text
+            });
+
+            page.drawText(row[1], {
+                x: this.margin + col1Width + 5,
+                y: currentY + 8,
+                size: 10,
+                font: font,
+                color: this.colors.text
+            });
+
+            if (row[2]) {
+                page.drawText(row[2], {
+                    x: this.margin + col1Width + col2Width + 5,
+                    y: currentY + 8,
+                    size: 10,
+                    font: boldFont,
+                    color: this.colors.text
+                });
+            }
+
+            if (row[3]) {
+                page.drawText(row[3], {
+                    x: this.margin + col1Width + col2Width + col3Width + 5,
+                    y: currentY + 8,
+                    size: 10,
+                    font: font,
+                    color: this.colors.text
+                });
+            }
+
+            currentY -= cellHeight;
+        }
+
+        return currentY;
+    }
+
+    // Ana içerik bölümü
+    async drawMainContent(page, reportData, font, boldFont) {
+        const contentStartY = 650;
+        const leftColumnWidth = 280;
+        const rightColumnWidth = 235;
+        const columnGap = 20;
+
+        // Sol kolon - Görsel alanı
+        page.drawRectangle({
+            x: this.margin,
+            y: contentStartY - 280,
+            width: leftColumnWidth,
+            height: 280,
+            borderColor: this.colors.border,
+            borderWidth: 1,
+            color: this.colors.lightGray
+        });
+
+        // Görsel varsa ekle
+        if (reportData.mainImage) {
+            await this.insertImage(page, reportData.mainImage, {
+                x: this.margin + 10,
+                y: contentStartY - 270,
+                width: leftColumnWidth - 20,
+                height: 260
+            });
+        }
+
+        // Görsel açıklama kutusu
+        if (reportData.imageDescription) {
+            page.drawRectangle({
+                x: this.margin + 50,
+                y: contentStartY - 200,
+                width: 180,
+                height: 60,
+                borderColor: this.colors.redHeader,
+                borderWidth: 2,
+                color: rgb(1, 1, 1)
+            });
+
+            const descLines = this.wrapText(reportData.imageDescription, 160, 9);
+            let descY = contentStartY - 170;
+            for (const line of descLines) {
+                page.drawText(line, {
+                    x: this.margin + 60,
+                    y: descY,
+                    size: 9,
+                    font: font,
+                    color: this.colors.redHeader
+                });
+                descY -= 12;
+            }
+        }
+
+        // Sağ kolon - Bulgular
+        const rightColumnX = this.margin + leftColumnWidth + columnGap;
+        let currentY = contentStartY;
+
+        // Mevcut Durum
+        if (reportData.currentSituation) {
+            page.drawText('Mevcut Durum:', {
+                x: rightColumnX,
+                y: currentY,
+                size: 11,
+                font: boldFont,
+                color: this.colors.text
+            });
+
+            const situationLines = this.wrapText(reportData.currentSituation, rightColumnWidth - 10, 10);
+            currentY -= 20;
+            for (const line of situationLines) {
+                page.drawText(line, {
+                    x: rightColumnX,
+                    y: currentY,
+                    size: 10,
+                    font: font,
+                    color: this.colors.text
+                });
+                currentY -= 14;
+            }
+            currentY -= 10;
+        }
+
+        // Dayanaklar
+        if (reportData.regulations) {
+            page.drawText('Dayanaklar:', {
+                x: rightColumnX,
+                y: currentY,
+                size: 11,
+                font: boldFont,
+                color: this.colors.text
+            });
+
+            const regLines = this.wrapText(reportData.regulations, rightColumnWidth - 10, 10);
+            currentY -= 20;
+            for (const line of regLines) {
+                page.drawText(line, {
+                    x: rightColumnX,
+                    y: currentY,
+                    size: 10,
+                    font: font,
+                    color: this.colors.text
+                });
+                currentY -= 14;
+            }
+            currentY -= 10;
+        }
+
+        // İGU Görüşü
+        if (reportData.iguOpinion) {
+            page.drawText('İGU Görüşü:', {
+                x: rightColumnX,
+                y: currentY,
+                size: 11,
+                font: boldFont,
+                color: this.colors.text
+            });
+
+            const opinionLines = this.wrapText(reportData.iguOpinion, rightColumnWidth - 10, 10);
+            currentY -= 20;
+            for (const line of opinionLines) {
+                page.drawText(line, {
+                    x: rightColumnX,
+                    y: currentY,
+                    size: 10,
+                    font: font,
+                    color: this.colors.text
+                });
+                currentY -= 14;
+            }
+        }
+
+        // Sonrası bölümü
+        const afterSectionY = 340;
+        page.drawText('Sonrası', {
+            x: this.margin,
+            y: afterSectionY,
+            size: 11,
+            font: boldFont,
+            color: this.colors.text
+        });
+
+        // Sonrası görsel alanı
+        page.drawRectangle({
+            x: this.margin,
+            y: afterSectionY - 120,
+            width: leftColumnWidth,
+            height: 100,
+            borderColor: this.colors.border,
+            borderWidth: 1,
+            color: this.colors.lightGray
+        });
+
+        if (reportData.afterImage) {
+            await this.insertImage(page, reportData.afterImage, {
+                x: this.margin + 10,
+                y: afterSectionY - 110,
+                width: leftColumnWidth - 20,
+                height: 80
+            });
+        }
+
+        return afterSectionY - 130;
+    }
+
+    // Süreç takip tablosu
+    async drawProcessTable(page, reportData, font, boldFont) {
+        const tableStartY = 200;
+        
+        // Kırmızı başlık
+        page.drawRectangle({
+            x: this.margin,
+            y: tableStartY,
+            width: this.pageWidth - (2 * this.margin),
+            height: 25,
+            color: this.colors.redHeader
+        });
+
+        page.drawText('Teklifte Sürekli Yönetim', {
+            x: this.margin + 10,
+            y: tableStartY + 8,
+            size: 12,
+            font: boldFont,
+            color: rgb(1, 1, 1)
+        });
+
+        // Tablo başlıkları
+        const headerY = tableStartY - 25;
+        const dateColWidth = 100;
+        const descColWidth = this.pageWidth - (2 * this.margin) - dateColWidth;
+
+        page.drawRectangle({
+            x: this.margin,
+            y: headerY,
+            width: dateColWidth,
+            height: 25,
+            borderColor: this.colors.border,
+            borderWidth: 1,
+            color: this.colors.lightGray
+        });
+
+        page.drawRectangle({
+            x: this.margin + dateColWidth,
+            y: headerY,
+            width: descColWidth,
+            height: 25,
+            borderColor: this.colors.border,
+            borderWidth: 1,
+            color: this.colors.lightGray
+        });
+
+        page.drawText('Tarih', {
+            x: this.margin + 10,
+            y: headerY + 8,
+            size: 11,
+            font: boldFont,
+            color: this.colors.text
+        });
+
+        page.drawText('Açıklama', {
+            x: this.margin + dateColWidth + 10,
+            y: headerY + 8,
+            size: 11,
+            font: boldFont,
+            color: this.colors.text
+        });
+
+        // Tablo satırları
+        let currentRowY = headerY - 25;
+        const processEntries = reportData.processEntries || [
+            { date: '01.08.2025', description: 'Mevcut durum devam ediyor.' }
+        ];
+
+        // En az 8 satır göster
+        const minRows = 8;
+        const totalRows = Math.max(processEntries.length, minRows);
+
+        for (let i = 0; i < totalRows; i++) {
+            const entry = processEntries[i] || { date: '', description: '' };
+            
+            page.drawRectangle({
+                x: this.margin,
+                y: currentRowY,
+                width: dateColWidth,
+                height: 25,
+                borderColor: this.colors.border,
+                borderWidth: 1
+            });
+
+            page.drawRectangle({
+                x: this.margin + dateColWidth,
+                y: currentRowY,
+                width: descColWidth,
+                height: 25,
+                borderColor: this.colors.border,
+                borderWidth: 1
+            });
+
+            if (entry.date) {
+                page.drawText(entry.date, {
+                    x: this.margin + 5,
+                    y: currentRowY + 8,
+                    size: 10,
+                    font: font,
+                    color: this.colors.text
+                });
+            }
+
+            if (entry.description) {
+                const descLines = this.wrapText(entry.description, descColWidth - 20, 10);
+                page.drawText(descLines[0] || '', {
+                    x: this.margin + dateColWidth + 5,
+                    y: currentRowY + 8,
+                    size: 10,
+                    font: font,
+                    color: this.colors.text
+                });
+            }
+
+            currentRowY -= 25;
+        }
+    }
+
+    // Görsel ekleme fonksiyonu
+    async insertImage(page, imageUrl, config) {
+        try {
+            const imageBytes = await fetch(imageUrl).then(res => res.arrayBuffer());
+            
+            let image;
+            if (imageUrl.toLowerCase().endsWith('.png')) {
+                image = await page.doc.embedPng(imageBytes);
+            } else {
+                image = await page.doc.embedJpg(imageBytes);
+            }
+
+            const { width, height } = image.scale(1);
+            const aspectRatio = width / height;
+            
+            let drawWidth = config.width;
+            let drawHeight = config.height;
+            
+            // Aspect ratio'yu koru
+            if (drawWidth / drawHeight > aspectRatio) {
+                drawWidth = drawHeight * aspectRatio;
+            } else {
+                drawHeight = drawWidth / aspectRatio;
+            }
+
+            page.drawImage(image, {
+                x: config.x + (config.width - drawWidth) / 2,
+                y: config.y + (config.height - drawHeight) / 2,
+                width: drawWidth,
+                height: drawHeight
+            });
+        } catch (error) {
+            console.error('Görsel yükleme hatası:', error);
+            // Hata durumunda placeholder çiz
+            page.drawRectangle({
+                x: config.x,
+                y: config.y,
+                width: config.width,
+                height: config.height,
+                borderColor: this.colors.border,
+                borderWidth: 2,
+                color: this.colors.lightGray
+            });
+            
+            page.drawText('Görsel Yüklenemedi', {
+                x: config.x + config.width / 2 - 50,
+                y: config.y + config.height / 2,
+                size: 10,
+                font: await page.doc.embedFont(StandardFonts.Helvetica),
+                color: this.colors.text
+            });
+        }
+    }
+
+    // Metin sarma fonksiyonu
+    wrapText(text, maxWidth, fontSize) {
+        if (!text) return [''];
+        
+        const words = text.split(' ');
+        const lines = [];
+        let currentLine = '';
+        const charWidth = fontSize * 0.6; // Yaklaşık karakter genişliği
+
+        for (const word of words) {
+            const testLine = currentLine + (currentLine ? ' ' : '') + word;
+            const testWidth = testLine.length * charWidth;
+
+            if (testWidth > maxWidth && currentLine) {
+                lines.push(currentLine);
+                currentLine = word;
+            } else {
+                currentLine = testLine;
+            }
+        }
+
+        if (currentLine) {
+            lines.push(currentLine);
+        }
+
+        return lines.length > 0 ? lines : [''];
+    }
+}
+
+// Kullanım örneği
+export const createTechnicalFindingsReport = async (reportData) => {
+    const template = new TeknikBulgularSablonu();
+    
+    // Örnek veri yapısı
+    const sampleData = {
+        itemNumber: "21",
+        systemName: "Servis Merdiveni Aydınlatma Sistemi",
+        location: "Servis Merdivenleri",
+        inspectionDate: "01.08.2025",
+        priority: "Orta",
+        mainImage: "https://example.com/merdiven-foto.jpg",
+        imageDescription: "Aydınlatma başarısız elektrik bağlantısı",
+        currentSituation: "Hâlihazır servis merdivenlerinde yer alan aydınlatma sis alanı elektrik bağlantıları ve led ürünleri, dış müdahaleye açık konumdadır.",
+        regulations: "Elektrik Tesisleri Yönetmeliği, İşyeri Bina ve eklentilerinde alınacak Sağlık ve Güvenlik Önlemleri Yönetmeliği",
+        iguOpinion: "Mevcut bulunan merdivenli alanda bulunan kablolar ve led trafoları muhafaza kapağı ile kapatılarak. Teknik bakım için müdahale kapağı bırakılmalıdır.",
+        afterImage: "https://example.com/sonrasi-foto.jpg",
+        processEntries: [
+            { date: "01.08.2025", description: "Mevcut durum devam ediyor." },
+            { date: "", description: "" }
+        ]
+    };
+    
+    // Gelen veriyi sample data ile birleştir
+    const finalData = { ...sampleData, ...reportData };
+    
+    return await template.createTechnicalReport(finalData);
+};
+
+export default TeknikBulgularSablonu;
