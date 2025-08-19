@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { renderToBuffer } from '@react-pdf/renderer';
 import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer';
@@ -599,7 +598,7 @@ export class ReactPdfService {
       };
 
       const pdfBuffer = await renderToBuffer(
-        React.createElement(ReportDocument, { reportData: processedData })
+        <ReportDocument reportData={processedData} />
       );
       
       console.log('PDF generated successfully, size:', pdfBuffer.length);

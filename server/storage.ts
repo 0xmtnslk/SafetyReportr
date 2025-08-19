@@ -159,7 +159,7 @@ export class DatabaseStorage implements IStorage {
       .insert(findings)
       .values({
         ...finding,
-        images: finding.images || [],
+        images: finding.images,
         processSteps: finding.processSteps || []
       })
       .returning();
@@ -172,8 +172,8 @@ export class DatabaseStorage implements IStorage {
       .set({ 
         ...finding, 
         updatedAt: new Date(),
-        images: finding.images || undefined,
-        processSteps: finding.processSteps || undefined
+        images: finding.images,
+        processSteps: finding.processSteps
       })
       .where(eq(findings.id, id))
       .returning();

@@ -266,12 +266,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/reports/:id/pdf", authenticateToken, async (req: any, res) => {
     try {
       const reportId = req.params.id;
-      const report = await storage.getReport(reportId, req.user.id);
+      const report = await storage.getReport(reportId);
       if (!report) {
         return res.status(404).json({ message: "Report not found" });
       }
 
-      const findings = await storage.getReportFindings(reportId, req.user.id);
+      const findings = await storage.getReportFindings(reportId);
       
       const reportData = {
         id: report.id,
@@ -279,8 +279,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         reportDate: report.reportDate ? new Date(report.reportDate).toLocaleDateString('tr-TR') : new Date().toLocaleDateString('tr-TR'),
         projectLocation: report.projectLocation || 'İstinye Üniversitesi Topkapı Liv Hastanesi',
         reporter: report.reporter || 'Metin Salık',
-        managementSummary: report.managementSummary,
-        generalEvaluation: report.generalEvaluation,
+        managementSummary: report.managementSummary || undefined,
+        generalEvaluation: report.generalEvaluation || undefined,
         findings: findings.map((finding: any) => ({
           id: finding.id,
           section: finding.section || 3,
