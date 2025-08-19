@@ -163,17 +163,26 @@ export class DatabaseStorage implements IStorage {
   }
   
   async copyUnresolvedFindings(newReportId: string, userId: string) {
-    // Get the latest completed report (excluding the current one)
-    const [latestReport] = await db
+    console.log(`🔄 Yeni rapor için çözülmemiş bulgular kopyalanıyor: ${newReportId}`);
+    
+    // Kullanıcının önceki raporlarını al (yeni oluşturulan hariç)
+    const userReports = await db
       .select()
       .from(reports)
       .where(eq(reports.userId, userId))
-      .orderBy(desc(reports.createdAt))
-      .limit(2); // Get 2 to exclude the current one
+      .orderBy(desc(reports.createdAt));
     
-    if (!latestReport || latestReport.id === newReportId) return;
+    // En son raporu bul (yeni oluşturulan rapor değil)
+    const latestReport = userReports.find(report => report.id !== newReportId);
     
-    // Get high and medium risk findings from the latest report
+    if (!latestReport) {
+      console.log('ℹ️  Önceki rapor bulunamadı, bulgu kopyalama atlanıyor');
+      return;
+    }
+    
+    console.log(`📋 Önceki rapor bulundu: ${latestReport.reportNumber}`);
+    
+    // Önceki rapordan YÜKSEK ve ORTA risk seviyesindeki, TÜMAMLANMAMıŞ bulgular
     const unresolvedFindings = await db
       .select()
       .from(findings)
@@ -185,33 +194,35 @@ export class DatabaseStorage implements IStorage {
         )
       );
     
-    // Copy these findings to the new report
+    console.log(`🎯 ${unresolvedFindings.length} adet çözülmemiş yüksek/orta risk bulgusu bulundu`);
+    
     if (unresolvedFindings.length > 0) {
-      const findingsToInsert = unresolvedFindings.map(finding => ({
-        reportId: newReportId,
-        section: finding.section,
-        title: finding.title,
-        dangerLevel: finding.dangerLevel,
-        currentSituation: finding.currentSituation,
-        legalBasis: finding.legalBasis,
-        recommendation: finding.recommendation,
-        images: finding.images,
-        processSteps: [], // Start with empty process steps for new report
-        isCompleted: false,
-      }));
+      const todayDate = new Date().toISOString().split('T')[0];
       
-      const insertData = findingsToInsert.map(f => ({
-        reportId: f.reportId,
-        section: f.section,
-        title: f.title,
-        dangerLevel: f.dangerLevel,
-        currentSituation: f.currentSituation,
-        legalBasis: f.legalBasis,
-        recommendation: f.recommendation,
-        processSteps: f.processSteps || [],
-        isCompleted: f.isCompleted
-      }));
-      await db.insert(findings).values(insertData);
+      const findingsToInsert = unresolvedFindings.map(finding => {
+        // Önceki süreç adımlarını kopyala ve geçiş notu ekle
+        const existingSteps = (finding.processSteps as Array<{date: string, description: string}>) || [];
+        const transitionStep = {
+          date: todayDate,
+          description: `📄 Bu bulgu ${latestReport.reportNumber} raporundan devralındı - Durum kontrolü ve güncelleme gerekli`
+        };
+        
+        return {
+          reportId: newReportId,
+          section: finding.section,
+          title: finding.title,
+          dangerLevel: finding.dangerLevel,
+          currentSituation: finding.currentSituation,
+          legalBasis: finding.legalBasis,
+          recommendation: finding.recommendation,
+          images: finding.images || [],
+          processSteps: [...existingSteps, transitionStep],
+          isCompleted: false
+        };
+      });
+      
+      await db.insert(findings).values(findingsToInsert as any);
+      console.log(`✅ ${findingsToInsert.length} bulgu başarıyla yeni rapora kopyalandı`);
     }
   }
 
