@@ -285,20 +285,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
         reporter: report.reporter || 'Metin Salık',
         managementSummary: report.managementSummary || undefined,
         generalEvaluation: report.generalEvaluation || undefined,
-        findings: findings.map((finding: any) => ({
-          id: finding.id,
-          section: finding.section || 3,
-          title: finding.title,
-          description: finding.currentSituation || finding.description,
-          currentSituation: finding.currentSituation,
-          dangerLevel: finding.dangerLevel,
-          recommendation: finding.recommendation,
-          legalBasis: finding.legalBasis,
-          images: finding.images || [],
-          location: finding.location || finding.title,
-          processSteps: finding.processSteps || [],
-          isCompleted: finding.status === 'completed'
-        }))
+        findings: findings.map((finding: any) => {
+          // Convert old /uploads/ images to base64
+          let processedImages = finding.images || [];
+          if (Array.isArray(processedImages)) {
+            processedImages = processedImages.map((img: string) => {
+              if (img && img.startsWith('/uploads/')) {
+                try {
+                  const fullPath = path.join(process.cwd(), img);
+                  if (fs.existsSync(fullPath)) {
+                    const buffer = fs.readFileSync(fullPath);
+                    const ext = path.extname(img).toLowerCase();
+                    const mimeType = ext === '.webp' ? 'image/jpeg' : ext === '.png' ? 'image/png' : 'image/jpeg';
+                    return `data:${mimeType};base64,${buffer.toString('base64')}`;
+                  }
+                } catch (e) {
+                  console.error('Image conversion error:', e);
+                }
+              }
+              return img; // Return as-is if already base64 or invalid
+            }).filter(Boolean);
+          }
+          
+          return {
+            id: finding.id,
+            section: finding.section || 3,
+            title: finding.title,
+            description: finding.currentSituation || finding.description,
+            currentSituation: finding.currentSituation,
+            dangerLevel: finding.dangerLevel,
+            recommendation: finding.recommendation,
+            legalBasis: finding.legalBasis,
+            images: processedImages,
+            location: finding.location || finding.title,
+            processSteps: finding.processSteps || [],
+            isCompleted: finding.status === 'completed'
+          };
+        })
       };
 
       const pdfService = new ReactPdfService();
