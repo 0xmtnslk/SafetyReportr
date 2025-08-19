@@ -36,9 +36,12 @@ interface ProcessStep {
 
 export class ReactPdfService {
   private logoBase64: string = '';
+  private tahomaFont: string = '';
+  private tahomaBoldFont: string = '';
 
   constructor() {
     this.loadLogo();
+    this.loadTahomaFonts();
   }
 
   private loadLogo() {
@@ -52,12 +55,56 @@ export class ReactPdfService {
     }
   }
 
+  private loadTahomaFonts() {
+    try {
+      // Load Tahoma Regular
+      const tahomaPath = join(process.cwd(), 'assets/fonts/Tahoma.ttf');
+      const tahomaBuffer = readFileSync(tahomaPath);
+      this.tahomaFont = tahomaBuffer.toString('base64');
+      
+      // Load Tahoma Bold
+      const tahomaBoldPath = join(process.cwd(), 'assets/fonts/TahomaBold.ttf');
+      const tahomaBoldBuffer = readFileSync(tahomaBoldPath);
+      this.tahomaBoldFont = tahomaBoldBuffer.toString('base64');
+    } catch (error) {
+      console.warn('Could not load Tahoma fonts:', error);
+      this.tahomaFont = '';
+      this.tahomaBoldFont = '';
+    }
+  }
+
+  // Setup Tahoma fonts in PDF
+  private setupFonts(pdf: jsPDF) {
+    try {
+      if (this.tahomaFont) {
+        pdf.addFileToVFS('Tahoma.ttf', this.tahomaFont);
+        pdf.addFont('Tahoma.ttf', 'Tahoma', 'normal');
+      }
+      if (this.tahomaBoldFont) {
+        pdf.addFileToVFS('TahomaBold.ttf', this.tahomaBoldFont);
+        pdf.addFont('TahomaBold.ttf', 'Tahoma', 'bold');
+      }
+    } catch (error) {
+      console.warn('Font setup failed, using default fonts:', error);
+    }
+  }
+
   // Helper function to add text with proper Turkish encoding and word wrap
   private addTextWithWrap(pdf: jsPDF, text: string, x: number, y: number, fontSize: number = 10, fontStyle: string = 'normal', maxWidth: number = 170): number {
     pdf.setFontSize(fontSize);
-    pdf.setFont('helvetica', fontStyle);
     
-    // Keep Turkish characters as-is - jsPDF can handle them with proper encoding
+    // Use Tahoma if available, otherwise fallback to Helvetica
+    try {
+      if (this.tahomaFont && (fontStyle === 'normal' || fontStyle === 'bold')) {
+        pdf.setFont('Tahoma', fontStyle);
+      } else {
+        pdf.setFont('helvetica', fontStyle);
+      }
+    } catch (fontError) {
+      pdf.setFont('helvetica', fontStyle);
+    }
+    
+    // Keep Turkish characters as-is - both fonts support Turkish
     const processedText = text || '';
     const lines = pdf.splitTextToSize(processedText, maxWidth);
     const lineHeight = fontSize * 0.35;
@@ -146,6 +193,10 @@ export class ReactPdfService {
     console.log('PDF generating for report:', reportData.reportNumber);
 
     const pdf = new jsPDF('p', 'mm', 'a4');
+    
+    // Setup Tahoma fonts for Turkish character support
+    this.setupFonts(pdf);
+    
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
     const margin = 15;

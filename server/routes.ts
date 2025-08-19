@@ -7,8 +7,9 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertReportSchema, insertFindingSchema, insertOfflineQueueSchema } from "@shared/schema";
 import { ReactPdfService } from "./pdfService";
-import { TemplatePdfService } from "./templatePdfService";
-import { TemplateManager } from "./templateManager";
+// Template sistemi geçici olarak devre dışı
+// import { TemplatePdfService } from "./templatePdfService";
+// import { TemplateManager } from "./templateManager";
 import jwt from "jsonwebtoken";
 import multer from "multer";
 import sharp from "sharp";
@@ -47,16 +48,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     fs.mkdirSync('uploads');
   }
 
-  // Initialize services
-  const templateManager = new TemplateManager();
-  const templatePdfService = new TemplatePdfService();
-  
-  // Initialize default templates
-  try {
-    await templateManager.initializeDefaultTemplates();
-  } catch (error) {
-    console.error('Failed to initialize templates:', error);
-  }
+  // Template sistemi geçici olarak devre dışı
+  // const templateManager = new TemplateManager();
+  // const templatePdfService = new TemplatePdfService();
 
   // Auth routes
   app.post("/api/auth/login", async (req, res) => {
@@ -437,86 +431,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Template-based PDF Generation endpoint
-  app.get("/api/reports/:id/template-pdf/:templateName?", authenticateToken, async (req: any, res) => {
-    try {
-      const reportId = req.params.id;
-      const templateName = req.params.templateName || 'isg_inspection_report';
-      
-      const report = await storage.getReport(reportId);
-      if (!report) {
-        return res.status(404).json({ message: "Report not found" });
-      }
-
-      const findings = await storage.getReportFindings(reportId);
-      
-      // Prepare data for template
-      const templateData = {
-        id: report.id,
-        reportNumber: report.reportNumber,
-        reportDate: report.reportDate,
-        projectLocation: report.projectLocation,
-        reporter: report.reporter,
-        managementSummary: report.managementSummary,
-        generalEvaluation: report.generalEvaluation,
-        findings: findings.map((finding: any) => ({
-          ...finding,
-          location: finding.location || 'Belirtilmemiş',
-          processSteps: finding.processSteps || []
-        })),
-        reportInfo: [
-          { label: 'Rapor Numarası:', value: report.reportNumber },
-          { label: 'Rapor Tarihi:', value: new Date(report.reportDate).toLocaleDateString('tr-TR') },
-          { label: 'Proje Lokasyonu:', value: report.projectLocation },
-          { label: 'İSG Uzmanı:', value: report.reporter },
-          { label: 'Toplam Bulgu:', value: findings.length.toString() }
-        ]
-      };
-
-      const template = await templateManager.getTemplateByName(templateName);
-      if (!template) {
-        return res.status(404).json({ message: `Template not found: ${templateName}` });
-      }
-
-      const pdfBuffer = await templatePdfService.generatePdfFromTemplate(template.id, templateData);
-      
-      res.set({
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': `inline; filename="${report.reportNumber || 'report'}-${templateName}.pdf"`,
-        'Content-Length': pdfBuffer.length
-      });
-
-      res.send(Buffer.from(pdfBuffer));
-      
-    } catch (error) {
-      console.error("Template PDF generation error:", error);
-      res.status(500).json({ message: "Şablondan PDF oluşturulurken hata oluştu" });
-    }
-  });
-
-  // Template Management Routes
-  app.get("/api/templates", authenticateToken, async (req: any, res) => {
-    try {
-      const templates = await templateManager.getActiveTemplates();
-      res.json(templates);
-    } catch (error) {
-      console.error("Get templates error:", error);
-      res.status(500).json({ message: "Şablonlar getirilemedi" });
-    }
-  });
-
-  app.get("/api/templates/:id", authenticateToken, async (req: any, res) => {
-    try {
-      const template = await templateManager.getTemplate(req.params.id);
-      if (!template) {
-        return res.status(404).json({ message: "Şablon bulunamadı" });
-      }
-      res.json(template);
-    } catch (error) {
-      console.error("Get template error:", error);
-      res.status(500).json({ message: "Şablon getirilemedi" });
-    }
-  });
+  // Template sistem kapalı - sadece mevcut ReactPDF sistemi kullanılıyor
 
   const httpServer = createServer(app);
   return httpServer;
