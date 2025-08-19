@@ -1,4 +1,6 @@
 import { jsPDF } from 'jspdf';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 
 interface ReportData {
   id: string;
@@ -33,36 +35,38 @@ interface ProcessStep {
 }
 
 export class ReactPdfService {
-  // Helper function to handle Turkish characters properly in PDF
-  private handleTurkishText(text: string): string {
-    if (!text) return '';
-    return text
-      .replace(/ğ/g, 'g')
-      .replace(/Ğ/g, 'G')
-      .replace(/ü/g, 'u')
-      .replace(/Ü/g, 'U')
-      .replace(/ş/g, 's')
-      .replace(/Ş/g, 'S')
-      .replace(/ı/g, 'i')
-      .replace(/İ/g, 'I')
-      .replace(/ö/g, 'o')
-      .replace(/Ö/g, 'O')
-      .replace(/ç/g, 'c')
-      .replace(/Ç/g, 'C');
+  private logoBase64: string = '';
+
+  constructor() {
+    // Load logo and convert to base64
+    this.loadLogo();
   }
 
-  // Helper function to add text with word wrap
+  private loadLogo() {
+    try {
+      const logoPath = join(process.cwd(), 'client/src/assets/mlp-logo.png');
+      const logoBuffer = readFileSync(logoPath);
+      this.logoBase64 = `data:image/png;base64,${logoBuffer.toString('base64')}`;
+    } catch (error) {
+      console.warn('Could not load logo:', error);
+      this.logoBase64 = '';
+    }
+  }
+
+  // Helper function to add text with word wrap and Turkish character support
   private addTextWithWrap(pdf: jsPDF, text: string, x: number, y: number, fontSize: number = 10, fontStyle: string = 'normal', maxWidth: number = 170): number {
     pdf.setFontSize(fontSize);
     pdf.setFont('helvetica', fontStyle);
-    const lines = pdf.splitTextToSize(this.handleTurkishText(text), maxWidth);
+    
+    // Use original Turkish text - DO NOT convert characters
+    const lines = pdf.splitTextToSize(text, maxWidth);
     const lineHeight = fontSize * 0.35;
 
     lines.forEach((line: string, index: number) => {
       pdf.text(line, x, y + (index * lineHeight));
     });
 
-    return y + (lines.length * lineHeight) + 3; // Return new Y position
+    return y + (lines.length * lineHeight) + 3;
   }
 
   // Helper function to check if new page is needed
@@ -75,9 +79,32 @@ export class ReactPdfService {
     return currentY;
   }
 
+  // Add page numbers
+  private addPageNumber(pdf: jsPDF, pageNumber: number) {
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    
+    pdf.setFontSize(9);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(100, 100, 100);
+    
+    // Footer line
+    pdf.setDrawColor(200, 200, 200);
+    pdf.line(15, pageHeight - 20, pageWidth - 15, pageHeight - 20);
+    
+    // Page info
+    pdf.text('MLPCARE Medical Park Hospital - İSG Raporu', 15, pageHeight - 10);
+    pdf.text(`Sayfa ${pageNumber}`, pageWidth - 35, pageHeight - 10);
+  }
+
   // Optimize and convert image to base64
   private async optimizeImage(imageUrl: string): Promise<string> {
     return new Promise((resolve) => {
+      if (typeof window === 'undefined') {
+        resolve('');
+        return;
+      }
+
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       const img = new Image();
@@ -86,7 +113,6 @@ export class ReactPdfService {
         const maxSize = 400;
         let { width, height } = img;
 
-        // Resize if too large
         if (width > height) {
           if (width > maxSize) {
             height = (height * maxSize) / width;
@@ -108,9 +134,10 @@ export class ReactPdfService {
       };
 
       img.onerror = () => {
-        resolve(''); // Return empty string on error
+        resolve('');
       };
 
+      img.crossOrigin = 'anonymous';
       img.src = imageUrl;
     });
   }
@@ -124,25 +151,35 @@ export class ReactPdfService {
     const margin = 15;
     const contentWidth = pageWidth - (margin * 2);
     let currentY = margin;
+    let pageNumber = 1;
 
     // COVER PAGE
     // Header with logo background
-    pdf.setFillColor(37, 99, 235); // Blue background
+    pdf.setFillColor(37, 99, 235);
     pdf.rect(0, 0, pageWidth, 45, 'F');
 
-    // Company logo text
+    // Add actual logo if available
+    if (this.logoBase64) {
+      try {
+        pdf.addImage(this.logoBase64, 'PNG', margin, 8, 30, 30);
+      } catch (error) {
+        console.warn('Could not add logo to PDF:', error);
+      }
+    }
+
+    // Company name
     pdf.setTextColor(255, 255, 255);
     pdf.setFontSize(20);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('MLPCARE', margin, 25);
+    pdf.text('MLPCARE', margin + (this.logoBase64 ? 35 : 0), 25);
 
-    // Title
+    // Title with REAL Turkish characters
     pdf.setTextColor(37, 99, 235);
     pdf.setFontSize(24);
     pdf.setFont('helvetica', 'bold');
     currentY = 70;
-    currentY = this.addTextWithWrap(pdf, 'IS SAGLIGI VE GUVENLIGI', margin, currentY, 24, 'bold', contentWidth);
-    currentY = this.addTextWithWrap(pdf, 'SAHA GOZLEM RAPORU', margin, currentY, 24, 'bold', contentWidth);
+    currentY = this.addTextWithWrap(pdf, 'İŞ SAĞLIĞI VE GÜVENLİĞİ', margin, currentY, 24, 'bold', contentWidth);
+    currentY = this.addTextWithWrap(pdf, 'SAHA GÖZLEM RAPORU', margin, currentY, 24, 'bold', contentWidth);
 
     // Project location
     pdf.setTextColor(100, 100, 100);
@@ -153,10 +190,10 @@ export class ReactPdfService {
     // Report info table
     currentY += 20;
     const tableData = [
-      ['Rapor Numarasi:', reportData.reportNumber],
+      ['Rapor Numarası:', reportData.reportNumber],
       ['Rapor Tarihi:', typeof reportData.reportDate === 'string' ? reportData.reportDate : new Date(reportData.reportDate).toLocaleDateString('tr-TR')],
       ['Proje Lokasyonu:', reportData.projectLocation],
-      ['ISG Uzmani:', reportData.reporter],
+      ['İSG Uzmanı:', reportData.reporter],
       ['Toplam Bulgu:', (reportData.findings?.length || 0).toString()]
     ];
 
@@ -169,12 +206,12 @@ export class ReactPdfService {
       // Label
       pdf.setFont('helvetica', 'bold');
       pdf.setTextColor(37, 99, 235);
-      pdf.text(this.handleTurkishText(label), margin, currentY);
+      pdf.text(label, margin, currentY);
       
       // Value
       pdf.setFont('helvetica', 'normal');
       pdf.setTextColor(0, 0, 0);
-      pdf.text(this.handleTurkishText(value), margin + 60, currentY);
+      pdf.text(value, margin + 60, currentY);
       
       currentY += 8;
     });
@@ -183,9 +220,11 @@ export class ReactPdfService {
     currentY += 20;
     pdf.setFontSize(9);
     pdf.setTextColor(100, 100, 100);
-    currentY = this.addTextWithWrap(pdf, 'Bu rapor Is Sagligi ve Guvenligi Kanunu kapsaminda hazirlanmistir.', margin, currentY, 9, 'normal', contentWidth);
+    currentY = this.addTextWithWrap(pdf, 'Bu rapor İş Sağlığı ve Güvenliği Kanunu kapsamında hazırlanmıştır.', margin, currentY, 9, 'normal', contentWidth);
 
-    // PAGE 2 - YÖNETICI ÖZETI
+    this.addPageNumber(pdf, pageNumber++);
+
+    // PAGE 2 - YÖNETİCİ ÖZETİ
     pdf.addPage();
     currentY = margin;
 
@@ -195,8 +234,15 @@ export class ReactPdfService {
     pdf.setTextColor(255, 255, 255);
     pdf.setFontSize(14);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('MLPCARE', margin, 15);
-    pdf.text(this.handleTurkishText('YONETICI OZETI'), margin, 25);
+    if (this.logoBase64) {
+      try {
+        pdf.addImage(this.logoBase64, 'PNG', margin, 5, 25, 25);
+      } catch (error) {
+        console.warn('Could not add logo:', error);
+      }
+    }
+    pdf.text('MLPCARE', margin + (this.logoBase64 ? 30 : 0), 15);
+    pdf.text('YÖNETİCİ ÖZETİ', margin + (this.logoBase64 ? 30 : 0), 25);
 
     currentY = 50;
 
@@ -206,21 +252,23 @@ export class ReactPdfService {
     pdf.setTextColor(255, 255, 255);
     pdf.setFontSize(12);
     pdf.setFont('helvetica', 'bold');
-    pdf.text(this.handleTurkishText('YONETICI OZETI'), margin + 5, currentY + 8);
+    pdf.text('YÖNETİCİ ÖZETİ', margin + 5, currentY + 8);
 
     currentY += 20;
 
     // Content
     pdf.setFillColor(248, 250, 252);
-    const contentHeight = 40;
+    const contentHeight = Math.max(40, Math.min(100, (reportData.managementSummary?.length || 0) / 8));
     pdf.rect(margin, currentY, contentWidth, contentHeight, 'F');
     
     pdf.setTextColor(0, 0, 0);
     pdf.setFontSize(10);
     pdf.setFont('helvetica', 'normal');
     
-    const summary = reportData.managementSummary || 'Yonetici ozeti henuz eklenmemistir.';
+    const summary = reportData.managementSummary || 'Yönetici özeti henüz eklenmemiştir.';
     currentY = this.addTextWithWrap(pdf, summary, margin + 5, currentY + 8, 10, 'normal', contentWidth - 10);
+
+    this.addPageNumber(pdf, pageNumber++);
 
     // PAGE 3 - TASARIM HATALARI
     pdf.addPage();
@@ -232,8 +280,15 @@ export class ReactPdfService {
     pdf.setTextColor(255, 255, 255);
     pdf.setFontSize(14);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('MLPCARE', margin, 15);
-    pdf.text(this.handleTurkishText('TASARIM/IMALAT/MONTAJ HATALARI'), margin, 25);
+    if (this.logoBase64) {
+      try {
+        pdf.addImage(this.logoBase64, 'PNG', margin, 5, 25, 25);
+      } catch (error) {
+        console.warn('Could not add logo:', error);
+      }
+    }
+    pdf.text('MLPCARE', margin + (this.logoBase64 ? 30 : 0), 15);
+    pdf.text('TASARIM/İMALAT/MONTAJ HATALARI', margin + (this.logoBase64 ? 30 : 0), 25);
 
     currentY = 50;
 
@@ -243,7 +298,7 @@ export class ReactPdfService {
     pdf.setTextColor(255, 255, 255);
     pdf.setFontSize(12);
     pdf.setFont('helvetica', 'bold');
-    pdf.text(this.handleTurkishText('TASARIM/IMALAT/MONTAJ HATALARI'), margin + 5, currentY + 8);
+    pdf.text('TASARIM/İMALAT/MONTAJ HATALARI', margin + 5, currentY + 8);
 
     currentY += 20;
 
@@ -254,10 +309,12 @@ export class ReactPdfService {
       pdf.rect(margin, currentY, contentWidth, 20, 'F');
       pdf.setTextColor(0, 0, 0);
       pdf.setFontSize(10);
-      pdf.text(this.handleTurkishText('Bu bolumde herhangi bir bulgu tespit edilmemistir.'), margin + 5, currentY + 12);
+      pdf.text('Bu bölümde herhangi bir bulgu tespit edilmemiştir.', margin + 5, currentY + 12);
     } else {
       currentY = await this.addFindings(pdf, designErrors, currentY, margin, contentWidth, pageHeight);
     }
+
+    this.addPageNumber(pdf, pageNumber++);
 
     // PAGE 4 - İŞ SAĞLIĞI VE GÜVENLİĞİ BULGULARI
     pdf.addPage();
@@ -269,8 +326,15 @@ export class ReactPdfService {
     pdf.setTextColor(255, 255, 255);
     pdf.setFontSize(14);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('MLPCARE', margin, 15);
-    pdf.text(this.handleTurkishText('IS SAGLIGI VE GUVENLIGI BULGULARI'), margin, 25);
+    if (this.logoBase64) {
+      try {
+        pdf.addImage(this.logoBase64, 'PNG', margin, 5, 25, 25);
+      } catch (error) {
+        console.warn('Could not add logo:', error);
+      }
+    }
+    pdf.text('MLPCARE', margin + (this.logoBase64 ? 30 : 0), 15);
+    pdf.text('İŞ SAĞLIĞI VE GÜVENLİĞİ BULGULARI', margin + (this.logoBase64 ? 30 : 0), 25);
 
     currentY = 50;
 
@@ -280,7 +344,7 @@ export class ReactPdfService {
     pdf.setTextColor(255, 255, 255);
     pdf.setFontSize(12);
     pdf.setFont('helvetica', 'bold');
-    pdf.text(this.handleTurkishText('IS SAGLIGI VE GUVENLIGI BULGULARI'), margin + 5, currentY + 8);
+    pdf.text('İŞ SAĞLIĞI VE GÜVENLİĞİ BULGULARI', margin + 5, currentY + 8);
 
     currentY += 20;
 
@@ -291,10 +355,12 @@ export class ReactPdfService {
       pdf.rect(margin, currentY, contentWidth, 20, 'F');
       pdf.setTextColor(0, 0, 0);
       pdf.setFontSize(10);
-      pdf.text(this.handleTurkishText('Bu bolumde herhangi bir bulgu tespit edilmemistir.'), margin + 5, currentY + 12);
+      pdf.text('Bu bölümde herhangi bir bulgu tespit edilmemiştir.', margin + 5, currentY + 12);
     } else {
       currentY = await this.addFindings(pdf, safetyFindings, currentY, margin, contentWidth, pageHeight);
     }
+
+    this.addPageNumber(pdf, pageNumber++);
 
     // PAGE 5 - TAMAMLANMIŞ BULGULAR
     pdf.addPage();
@@ -306,8 +372,15 @@ export class ReactPdfService {
     pdf.setTextColor(255, 255, 255);
     pdf.setFontSize(14);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('MLPCARE', margin, 15);
-    pdf.text(this.handleTurkishText('TAMAMLANMIS BULGULAR'), margin, 25);
+    if (this.logoBase64) {
+      try {
+        pdf.addImage(this.logoBase64, 'PNG', margin, 5, 25, 25);
+      } catch (error) {
+        console.warn('Could not add logo:', error);
+      }
+    }
+    pdf.text('MLPCARE', margin + (this.logoBase64 ? 30 : 0), 15);
+    pdf.text('TAMAMLANMIŞ BULGULAR', margin + (this.logoBase64 ? 30 : 0), 25);
 
     currentY = 50;
 
@@ -317,7 +390,7 @@ export class ReactPdfService {
     pdf.setTextColor(255, 255, 255);
     pdf.setFontSize(12);
     pdf.setFont('helvetica', 'bold');
-    pdf.text(this.handleTurkishText('TAMAMLANMIS BULGULAR'), margin + 5, currentY + 8);
+    pdf.text('TAMAMLANMIŞ BULGULAR', margin + 5, currentY + 8);
 
     currentY += 20;
 
@@ -328,10 +401,12 @@ export class ReactPdfService {
       pdf.rect(margin, currentY, contentWidth, 20, 'F');
       pdf.setTextColor(0, 0, 0);
       pdf.setFontSize(10);
-      pdf.text(this.handleTurkishText('Henuz tamamlanan bulgu bulunmamaktadir.'), margin + 5, currentY + 12);
+      pdf.text('Henüz tamamlanan bulgu bulunmamaktadır.', margin + 5, currentY + 12);
     } else {
       currentY = await this.addFindings(pdf, completedFindings, currentY, margin, contentWidth, pageHeight);
     }
+
+    this.addPageNumber(pdf, pageNumber++);
 
     // PAGE 6 - GENEL DEĞERLENDİRME
     pdf.addPage();
@@ -343,8 +418,15 @@ export class ReactPdfService {
     pdf.setTextColor(255, 255, 255);
     pdf.setFontSize(14);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('MLPCARE', margin, 15);
-    pdf.text(this.handleTurkishText('GENEL DEGERLENDIRME'), margin, 25);
+    if (this.logoBase64) {
+      try {
+        pdf.addImage(this.logoBase64, 'PNG', margin, 5, 25, 25);
+      } catch (error) {
+        console.warn('Could not add logo:', error);
+      }
+    }
+    pdf.text('MLPCARE', margin + (this.logoBase64 ? 30 : 0), 15);
+    pdf.text('GENEL DEĞERLENDİRME', margin + (this.logoBase64 ? 30 : 0), 25);
 
     currentY = 50;
 
@@ -354,21 +436,23 @@ export class ReactPdfService {
     pdf.setTextColor(255, 255, 255);
     pdf.setFontSize(12);
     pdf.setFont('helvetica', 'bold');
-    pdf.text(this.handleTurkishText('GENEL DEGERLENDIRME'), margin + 5, currentY + 8);
+    pdf.text('GENEL DEĞERLENDİRME', margin + 5, currentY + 8);
 
     currentY += 20;
 
     // Content
     pdf.setFillColor(248, 250, 252);
-    const evalContentHeight = 100;
+    const evalContentHeight = Math.max(100, Math.min(150, (reportData.generalEvaluation?.length || 0) / 8));
     pdf.rect(margin, currentY, contentWidth, evalContentHeight, 'F');
     
     pdf.setTextColor(0, 0, 0);
     pdf.setFontSize(10);
     pdf.setFont('helvetica', 'normal');
     
-    const evaluation = reportData.generalEvaluation || 'Genel degerlendirme henuz eklenmemistir.';
+    const evaluation = reportData.generalEvaluation || 'Genel değerlendirme henüz eklenmemiştir.';
     currentY = this.addTextWithWrap(pdf, evaluation, margin + 5, currentY + 8, 10, 'normal', contentWidth - 10);
+
+    this.addPageNumber(pdf, pageNumber++);
 
     console.log('PDF generated successfully');
     return new Uint8Array(pdf.output('arraybuffer'));
@@ -380,7 +464,7 @@ export class ReactPdfService {
     for (let i = 0; i < findings.length; i++) {
       const finding = findings[i];
       
-      currentY = this.checkNewPage(pdf, currentY, 50, margin);
+      currentY = this.checkNewPage(pdf, currentY, 80, margin);
 
       // Finding box
       pdf.setFillColor(243, 244, 246);
@@ -390,13 +474,13 @@ export class ReactPdfService {
       pdf.setTextColor(17, 24, 39);
       pdf.setFontSize(12);
       pdf.setFont('helvetica', 'bold');
-      pdf.text(this.handleTurkishText(`BULGU ${i + 1}: ${finding.title}`), margin + 5, currentY + 8);
+      pdf.text(`BULGU ${i + 1}: ${finding.title}`, margin + 5, currentY + 8);
 
       // Risk level and location
       pdf.setFontSize(9);
       pdf.setFont('helvetica', 'normal');
       pdf.setTextColor(107, 114, 128);
-      pdf.text(this.handleTurkishText(`Konum: ${finding.location || 'Belirtilmemis'}`), margin + 5, currentY + 20);
+      pdf.text(`Konum: ${finding.location || 'Belirtilmemiş'}`, margin + 5, currentY + 20);
 
       // Risk badge
       const riskText = this.getRiskText(finding.dangerLevel);
@@ -407,7 +491,7 @@ export class ReactPdfService {
       pdf.setTextColor(255, 255, 255);
       pdf.setFontSize(8);
       pdf.setFont('helvetica', 'bold');
-      pdf.text(this.handleTurkishText(riskText), margin + contentWidth - 37, currentY + 20);
+      pdf.text(riskText, margin + contentWidth - 37, currentY + 20);
 
       currentY += 30;
 
@@ -415,7 +499,7 @@ export class ReactPdfService {
       pdf.setTextColor(0, 0, 0);
       pdf.setFontSize(10);
       pdf.setFont('helvetica', 'bold');
-      pdf.text(this.handleTurkishText('Mevcut Durum:'), margin + 5, currentY);
+      pdf.text('Mevcut Durum:', margin + 5, currentY);
       currentY += 5;
       
       pdf.setFont('helvetica', 'normal');
@@ -426,7 +510,7 @@ export class ReactPdfService {
         currentY += 5;
         pdf.setFont('helvetica', 'bold');
         pdf.setFontSize(10);
-        pdf.text(this.handleTurkishText('Hukuki Dayanak:'), margin + 5, currentY);
+        pdf.text('Hukuki Dayanak:', margin + 5, currentY);
         currentY += 5;
         
         pdf.setFont('helvetica', 'normal');
@@ -438,7 +522,7 @@ export class ReactPdfService {
         currentY += 5;
         pdf.setFont('helvetica', 'bold');
         pdf.setFontSize(10);
-        pdf.text(this.handleTurkishText('Oneri/Cozum:'), margin + 5, currentY);
+        pdf.text('Öneri/Çözüm:', margin + 5, currentY);
         currentY += 5;
         
         pdf.setFont('helvetica', 'normal');
@@ -446,18 +530,34 @@ export class ReactPdfService {
         currentY = this.addTextWithWrap(pdf, finding.recommendation, margin + 5, currentY, 9, 'normal', contentWidth - 10);
       }
 
-      // Images section
+      // Process timeline if available
+      if (finding.processSteps && finding.processSteps.length > 0) {
+        currentY += 10;
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(10);
+        pdf.text('Süreç Skalası:', margin + 5, currentY);
+        currentY += 5;
+        
+        finding.processSteps.forEach(step => {
+          pdf.setFont('helvetica', 'normal');
+          pdf.setFontSize(8);
+          pdf.text(`• ${step.date}: ${step.description}`, margin + 10, currentY);
+          currentY += 4;
+        });
+      }
+
+      // Images section with ACTUAL display
       if (finding.images && finding.images.length > 0) {
         currentY += 10;
-        currentY = this.checkNewPage(pdf, currentY, 60, margin);
+        currentY = this.checkNewPage(pdf, currentY, 80, margin);
         
         pdf.setFont('helvetica', 'bold');
         pdf.setFontSize(10);
-        pdf.text(this.handleTurkishText('Fotograflar:'), margin + 5, currentY);
+        pdf.text('Fotoğraflar:', margin + 5, currentY);
         currentY += 10;
 
-        // Display first image (if browser environment)
-        if (typeof window !== 'undefined' && finding.images[0]) {
+        // Display first image
+        if (finding.images[0]) {
           try {
             const optimizedImage = await this.optimizeImage(finding.images[0]);
             if (optimizedImage) {
@@ -475,7 +575,7 @@ export class ReactPdfService {
         
         pdf.setFont('helvetica', 'normal');
         pdf.setFontSize(9);
-        pdf.text(this.handleTurkishText(`${finding.images.length} adet fotograf eklenmistir.`), margin + 5, currentY);
+        pdf.text(`${finding.images.length} adet fotoğraf eklenmiştir.`, margin + 5, currentY);
         currentY += 10;
       }
 
@@ -487,10 +587,10 @@ export class ReactPdfService {
 
   private getRiskText(level: string): string {
     switch (level) {
-      case 'high': return 'YUKSEK RISK';
-      case 'medium': return 'ORTA RISK';
-      case 'low': return 'DUSUK RISK';
-      default: return 'ORTA RISK';
+      case 'high': return 'YÜKSEK RİSK';
+      case 'medium': return 'ORTA RİSK';
+      case 'low': return 'DÜŞÜK RİSK';
+      default: return 'ORTA RİSK';
     }
   }
 
