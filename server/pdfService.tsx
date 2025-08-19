@@ -1,8 +1,5 @@
 import React from 'react';
-import { renderToBuffer, Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer';
-
-// MLP Logo - proper base64 encoding  
-const LOGO_BASE64 = "data:image/png;base64,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";
+import { renderToBuffer, Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
 
 interface ReportData {
   id: string;
@@ -46,7 +43,7 @@ const styles = StyleSheet.create({
     lineHeight: 1.4
   },
   
-  // Header with logo
+  // Header without logo for now - just text
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -57,9 +54,13 @@ const styles = StyleSheet.create({
     borderBottomColor: '#2563eb',
     borderBottomStyle: 'solid'
   },
-  logo: {
-    width: 130,
-    height: 43
+  headerLogo: {
+    backgroundColor: '#2563eb',
+    color: '#FFFFFF',
+    padding: 10,
+    fontSize: 14,
+    fontWeight: 'bold',
+    fontFamily: 'Helvetica-Bold'
   },
   headerTitle: {
     fontSize: 16,
@@ -77,9 +78,15 @@ const styles = StyleSheet.create({
     padding: 50
   },
   coverLogo: {
-    width: 200,
-    height: 66,
-    marginBottom: 50
+    backgroundColor: '#2563eb',
+    color: '#FFFFFF',
+    padding: 20,
+    fontSize: 24,
+    fontWeight: 'bold',
+    fontFamily: 'Helvetica-Bold',
+    marginBottom: 50,
+    textAlign: 'center',
+    width: 200
   },
   coverTitle: {
     fontSize: 28,
@@ -230,17 +237,6 @@ const styles = StyleSheet.create({
     textAlign: 'justify'
   },
   
-  // Images
-  findingImage: {
-    width: 160,
-    height: 110,
-    marginTop: 8,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderStyle: 'solid'
-  },
-  
   // Footer
   footer: {
     position: 'absolute',
@@ -259,10 +255,10 @@ const styles = StyleSheet.create({
   }
 });
 
-// Header component with logo
+// Header component - text only for now
 const Header = ({ title }: { title: string }) => (
   <View style={styles.header}>
-    <Image style={styles.logo} src={LOGO_BASE64} />
+    <Text style={styles.headerLogo}>MLPCARE</Text>
     <Text style={styles.headerTitle}>{title}</Text>
   </View>
 );
@@ -275,10 +271,10 @@ const Footer = ({ pageNumber }: { pageNumber: number }) => (
   </View>
 );
 
-// Cover page
+// Cover page - no images
 const CoverPage = ({ reportData }: { reportData: ReportData }) => (
   <Page size="A4" style={styles.coverPage}>
-    <Image style={styles.coverLogo} src={LOGO_BASE64} />
+    <Text style={styles.coverLogo}>MLPCARE</Text>
     
     <Text style={styles.coverTitle}>İŞ SAĞLIĞI VE GÜVENLİĞİ</Text>
     <Text style={styles.coverTitle}>SAHA GÖZLEM RAPORU</Text>
@@ -408,7 +404,7 @@ const GeneralEvaluationPage = ({ reportData }: { reportData: ReportData }) => (
   </Page>
 );
 
-// Finding component
+// Finding component - no images for now
 const FindingComponent = ({ finding, findingNumber }: { finding: Finding; findingNumber: number }) => {
   const getRiskStyle = (level: string) => {
     switch (level) {
@@ -459,12 +455,9 @@ const FindingComponent = ({ finding, findingNumber }: { finding: Finding; findin
         {finding.images && finding.images.length > 0 && (
           <>
             <Text style={styles.fieldLabel}>Fotoğraflar:</Text>
-            {finding.images.slice(0, 3).map((imageUrl, index) => {
-              if (imageUrl && imageUrl.startsWith('data:image/')) {
-                return <Image key={index} style={styles.findingImage} src={imageUrl} />;
-              }
-              return null;
-            })}
+            <Text style={styles.fieldText}>
+              {finding.images.length} adet fotoğraf eklenmiştir.
+            </Text>
           </>
         )}
       </View>
