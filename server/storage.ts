@@ -236,8 +236,33 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteReport(id: string): Promise<boolean> {
+    // Önce raporun durumunu kontrol et - sadece taslak ve devam eden raporlar silinebilir
+    const [report] = await db.select().from(reports).where(eq(reports.id, id));
+    
+    if (!report) {
+      console.log(`❌ Silinmeye çalışılan rapor bulunamadı: ${id}`);
+      return false;
+    }
+    
+    if (report.status === 'completed') {
+      console.log(`🚫 Tamamlanmış rapor silinemez: ${report.reportNumber} (${report.status})`);
+      throw new Error('Tamamlanmış raporlar silinemez');
+    }
+    
+    console.log(`🗑️ Rapor siliniyor: ${report.reportNumber} (Durum: ${report.status})`);
+    
+    // Önce rapor bulgularını sil
+    await db.delete(findings).where(eq(findings.reportId, id));
+    
+    // Sonra raporu sil
     const result = await db.delete(reports).where(eq(reports.id, id));
-    return (result.rowCount || 0) > 0;
+    
+    const success = (result.rowCount || 0) > 0;
+    if (success) {
+      console.log(`✅ Rapor başarıyla silindi: ${report.reportNumber}`);
+    }
+    
+    return success;
   }
 
   async getFinding(id: string): Promise<Finding | undefined> {

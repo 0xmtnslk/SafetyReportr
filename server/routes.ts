@@ -269,7 +269,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // File upload endpoint with image compression
-  app.post("/api/upload", authenticateToken, upload.single('file'), async (req, res) => {
+  // Fotoğraf yükleme endpoint'i (frontend ile uyumlu)
+  app.post("/api/upload-image", authenticateToken, upload.single('image'), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: 'Dosya bulunamadı' });
@@ -301,8 +302,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       res.json({ 
-        message: 'Dosya başarıyla yüklendi', 
-        filename: `/${filepath}` 
+        message: 'Fotoğraf başarıyla yüklendi', 
+        path: `/${filepath}` 
       });
 
     } catch (error) {

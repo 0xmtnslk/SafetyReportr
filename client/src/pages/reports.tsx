@@ -6,7 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Download, Plus, FileText, Edit, Eye } from "lucide-react";
+import { queryClient } from "@/lib/queryClient";
+import { Download, Plus, FileText, Edit, Eye, Trash2 } from "lucide-react";
 import { useLocation } from "wouter";
 import PDFPreview from "@/components/pdf-preview";
 
@@ -14,6 +15,46 @@ import PDFPreview from "@/components/pdf-preview";
 export default function Reports() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+
+  const handleDeleteReport = async (reportId: string, reportNumber: string, status: string) => {
+    if (status === 'completed') {
+      toast({
+        title: "Uyarı",
+        description: "Tamamlanmış raporlar silinemez",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (confirm(`${reportNumber} raporu silinecek. Emin misiniz?`)) {
+      try {
+        const response = await fetch(`/api/reports/${reportId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          },
+        });
+        
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.message || 'Silme işlemi başarısız');
+        }
+        
+        await queryClient.invalidateQueries({ queryKey: ['/api/reports'] });
+        
+        toast({
+          title: "Başarılı",
+          description: `${reportNumber} raporu silindi`,
+        });
+      } catch (error: any) {
+        toast({
+          title: "Hata",
+          description: error.message || "Rapor silinirken hata oluştu",
+          variant: "destructive",
+        });
+      }
+    }
+  };
   const [filters, setFilters] = useState({
     status: "all",
     riskLevel: "all",
@@ -286,6 +327,21 @@ export default function Reports() {
                         <Eye size={12} className="mr-1" />
                         Önizle
                       </Button>
+                      {(report.status === 'draft' || report.status === 'in_progress') && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteReport(report.id, report.reportNumber, report.status);
+                          }}
+                          data-testid={`button-delete-${report.id}`}
+                          className="text-xs px-3 py-1 text-red-600 hover:text-red-800 hover:border-red-300"
+                        >
+                          <Trash2 size={12} className="mr-1" />
+                          Sil
+                        </Button>
+                      )}
                       <Button
                         size="sm"
                         variant="outline"
@@ -312,7 +368,6 @@ export default function Reports() {
         <PDFPreview
           reportData={selectedReportForPDF}
           findings={reportFindings}
-          onClose={() => setSelectedReportForPDF(null)}
         />
       )}
     </div>
