@@ -37,36 +37,36 @@ const styles = StyleSheet.create({
   page: {
     flexDirection: 'column',
     backgroundColor: '#FFFFFF',
-    padding: 30,
-    fontFamily: 'Helvetica',
-    fontSize: 11,
-    lineHeight: 1.4
+    padding: 25,
+    fontFamily: 'Times-Roman',
+    fontSize: 10,
+    lineHeight: 1.3
   },
   
-  // Header without logo for now - just text
+  // Header 
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
-    paddingBottom: 15,
-    borderBottomWidth: 2,
+    marginBottom: 15,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
     borderBottomColor: '#2563eb',
     borderBottomStyle: 'solid'
   },
   headerLogo: {
     backgroundColor: '#2563eb',
     color: '#FFFFFF',
-    padding: 10,
-    fontSize: 14,
+    padding: 8,
+    fontSize: 12,
     fontWeight: 'bold',
-    fontFamily: 'Helvetica-Bold'
+    fontFamily: 'Times-Bold'
   },
   headerTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
     color: '#2563eb',
-    fontFamily: 'Helvetica-Bold'
+    fontFamily: 'Times-Bold'
   },
   
   // Cover page
@@ -75,108 +75,110 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     height: '100%',
-    padding: 50
+    padding: 40
   },
   coverLogo: {
     backgroundColor: '#2563eb',
     color: '#FFFFFF',
-    padding: 20,
-    fontSize: 24,
+    padding: 15,
+    fontSize: 20,
     fontWeight: 'bold',
-    fontFamily: 'Helvetica-Bold',
-    marginBottom: 50,
+    fontFamily: 'Times-Bold',
+    marginBottom: 30,
     textAlign: 'center',
-    width: 200
+    width: 180
   },
   coverTitle: {
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: 'bold',
     color: '#2563eb',
     textAlign: 'center',
-    marginBottom: 15,
-    fontFamily: 'Helvetica-Bold'
+    marginBottom: 10,
+    fontFamily: 'Times-Bold'
   },
   coverSubtitle: {
-    fontSize: 20,
+    fontSize: 16,
     color: '#475569',
     textAlign: 'center',
-    marginBottom: 50
+    marginBottom: 30,
+    fontFamily: 'Times-Roman'
   },
   
-  // Info table on cover
+  // Info table
   infoTable: {
     width: '100%',
-    maxWidth: 450,
-    marginTop: 40
+    maxWidth: 400,
+    marginTop: 30
   },
   infoRow: {
     flexDirection: 'row',
-    marginBottom: 18,
-    paddingBottom: 10,
+    marginBottom: 12,
+    paddingBottom: 6,
     borderBottomWidth: 1,
     borderBottomColor: '#e2e8f0',
     borderBottomStyle: 'solid'
   },
   infoLabel: {
-    width: '40%',
-    fontSize: 13,
+    width: '45%',
+    fontSize: 11,
     fontWeight: 'bold',
     color: '#2563eb',
-    fontFamily: 'Helvetica-Bold'
+    fontFamily: 'Times-Bold'
   },
   infoValue: {
-    width: '60%',
-    fontSize: 13,
-    color: '#374151'
+    width: '55%',
+    fontSize: 11,
+    color: '#374151',
+    fontFamily: 'Times-Roman'
   },
   
   // Sections
   sectionTitle: {
     backgroundColor: '#2563eb',
     color: '#FFFFFF',
-    padding: 15,
-    fontSize: 14,
+    padding: 12,
+    fontSize: 12,
     fontWeight: 'bold',
-    marginBottom: 20,
-    fontFamily: 'Helvetica-Bold',
+    marginBottom: 15,
+    fontFamily: 'Times-Bold',
     textAlign: 'center'
   },
   sectionContent: {
-    padding: 20,
+    padding: 15,
     backgroundColor: '#f8fafc',
     borderWidth: 1,
     borderColor: '#e2e8f0',
     borderStyle: 'solid',
-    marginBottom: 25
+    marginBottom: 20
   },
   sectionText: {
-    fontSize: 11,
-    lineHeight: 1.5,
+    fontSize: 10,
+    lineHeight: 1.4,
     color: '#374151',
-    textAlign: 'justify'
+    textAlign: 'left',
+    fontFamily: 'Times-Roman'
   },
   
   // Findings
   finding: {
-    marginBottom: 25,
+    marginBottom: 20,
     borderWidth: 1,
     borderColor: '#d1d5db',
-    borderStyle: 'solid',
-    borderRadius: 5
+    borderStyle: 'solid'
   },
   findingHeader: {
     backgroundColor: '#f3f4f6',
-    padding: 15,
+    padding: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#d1d5db',
     borderBottomStyle: 'solid'
   },
   findingTitle: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: 'bold',
     color: '#111827',
-    marginBottom: 8,
-    fontFamily: 'Helvetica-Bold'
+    marginBottom: 6,
+    fontFamily: 'Times-Bold'
   },
   findingMeta: {
     flexDirection: 'row',
@@ -184,78 +186,77 @@ const styles = StyleSheet.create({
     alignItems: 'center'
   },
   findingLocation: {
-    fontSize: 10,
-    color: '#6b7280'
+    fontSize: 9,
+    color: '#6b7280',
+    fontFamily: 'Times-Roman'
   },
   
   // Risk badges
   riskHigh: {
     backgroundColor: '#dc2626',
     color: '#FFFFFF',
-    padding: 5,
-    fontSize: 9,
+    padding: 4,
+    fontSize: 8,
     fontWeight: 'bold',
-    fontFamily: 'Helvetica-Bold',
-    borderRadius: 3
+    fontFamily: 'Times-Bold'
   },
   riskMedium: {
     backgroundColor: '#ea580c',
     color: '#FFFFFF',
-    padding: 5,
-    fontSize: 9,
+    padding: 4,
+    fontSize: 8,
     fontWeight: 'bold',
-    fontFamily: 'Helvetica-Bold',
-    borderRadius: 3
+    fontFamily: 'Times-Bold'
   },
   riskLow: {
     backgroundColor: '#16a34a',
     color: '#FFFFFF',
-    padding: 5,
-    fontSize: 9,
+    padding: 4,
+    fontSize: 8,
     fontWeight: 'bold',
-    fontFamily: 'Helvetica-Bold',
-    borderRadius: 3
+    fontFamily: 'Times-Bold'
   },
   
   // Finding content
   findingContent: {
-    padding: 15
+    padding: 12
   },
   fieldLabel: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: 'bold',
     color: '#2563eb',
-    marginBottom: 6,
-    marginTop: 12,
-    fontFamily: 'Helvetica-Bold'
+    marginBottom: 4,
+    marginTop: 8,
+    fontFamily: 'Times-Bold'
   },
   fieldText: {
-    fontSize: 10,
-    lineHeight: 1.5,
+    fontSize: 9,
+    lineHeight: 1.3,
     color: '#374151',
-    marginBottom: 10,
-    textAlign: 'justify'
+    marginBottom: 8,
+    fontFamily: 'Times-Roman'
   },
   
   // Footer
   footer: {
     position: 'absolute',
-    bottom: 20,
-    left: 30,
-    right: 30,
+    bottom: 15,
+    left: 25,
+    right: 25,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    fontSize: 9,
+    fontSize: 8,
     color: '#6b7280',
     borderTopWidth: 1,
     borderTopColor: '#e5e7eb',
     borderTopStyle: 'solid',
-    paddingTop: 12
+    paddingTop: 8,
+    fontFamily: 'Times-Roman'
   }
 });
 
-// Header component - text only for now
+// Header component
 const Header = ({ title }: { title: string }) => (
   <View style={styles.header}>
     <Text style={styles.headerLogo}>MLPCARE</Text>
@@ -271,7 +272,7 @@ const Footer = ({ pageNumber }: { pageNumber: number }) => (
   </View>
 );
 
-// Cover page - no images
+// Cover page
 const CoverPage = ({ reportData }: { reportData: ReportData }) => (
   <Page size="A4" style={styles.coverPage}>
     <Text style={styles.coverLogo}>MLPCARE</Text>
@@ -307,7 +308,7 @@ const CoverPage = ({ reportData }: { reportData: ReportData }) => (
       </View>
     </View>
     
-    <Text style={{ fontSize: 10, color: '#6b7280', textAlign: 'center', marginTop: 30 }}>
+    <Text style={{ fontSize: 9, color: '#6b7280', textAlign: 'center', marginTop: 25, fontFamily: 'Times-Roman' }}>
       Bu rapor İş Sağlığı ve Güvenliği Kanunu kapsamında hazırlanmıştır.
     </Text>
   </Page>
@@ -404,7 +405,7 @@ const GeneralEvaluationPage = ({ reportData }: { reportData: ReportData }) => (
   </Page>
 );
 
-// Finding component - no images for now
+// Finding component
 const FindingComponent = ({ finding, findingNumber }: { finding: Finding; findingNumber: number }) => {
   const getRiskStyle = (level: string) => {
     switch (level) {
@@ -427,16 +428,24 @@ const FindingComponent = ({ finding, findingNumber }: { finding: Finding; findin
   return (
     <View style={styles.finding} wrap={false}>
       <View style={styles.findingHeader}>
-        <Text style={styles.findingTitle}>BULGU {findingNumber}: {finding.title}</Text>
+        <Text style={styles.findingTitle}>
+          BULGU {findingNumber}: {finding.title}
+        </Text>
         <View style={styles.findingMeta}>
-          <Text style={styles.findingLocation}>Konum: {finding.location || 'Belirtilmemiş'}</Text>
-          <Text style={getRiskStyle(finding.dangerLevel)}>{getRiskText(finding.dangerLevel)}</Text>
+          <Text style={styles.findingLocation}>
+            Konum: {finding.location || 'Belirtilmemiş'}
+          </Text>
+          <Text style={getRiskStyle(finding.dangerLevel)}>
+            {getRiskText(finding.dangerLevel)}
+          </Text>
         </View>
       </View>
       
       <View style={styles.findingContent}>
         <Text style={styles.fieldLabel}>Mevcut Durum:</Text>
-        <Text style={styles.fieldText}>{finding.currentSituation || finding.description}</Text>
+        <Text style={styles.fieldText}>
+          {finding.currentSituation || finding.description}
+        </Text>
         
         {finding.legalBasis && (
           <>
@@ -481,9 +490,14 @@ export class ReactPdfService {
   async generatePDF(reportData: ReportData): Promise<Uint8Array> {
     console.log('PDF generating for report:', reportData.reportNumber);
     
-    const pdfBuffer = await renderToBuffer(<ReportDocument reportData={reportData} />);
-    console.log('PDF generated successfully, size:', pdfBuffer.length);
-    
-    return pdfBuffer instanceof Uint8Array ? pdfBuffer : new Uint8Array(pdfBuffer);
+    try {
+      const pdfBuffer = await renderToBuffer(<ReportDocument reportData={reportData} />);
+      console.log('PDF generated successfully, size:', pdfBuffer.length);
+      
+      return pdfBuffer instanceof Uint8Array ? pdfBuffer : new Uint8Array(pdfBuffer);
+    } catch (error) {
+      console.error('PDF generation error:', error);
+      throw new Error(`PDF generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 }
