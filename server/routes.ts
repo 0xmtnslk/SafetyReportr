@@ -269,46 +269,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // File upload endpoint with image compression
-  // Fotoğraf yükleme endpoint'i (frontend ile uyumlu)
+  // Fotoğraf yükleme endpoint'i (jpeg, png, webp formatları destekler)
   app.post("/api/upload-image", authenticateToken, upload.single('image'), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: 'Dosya bulunamadı' });
       }
 
-      const originalExtension = path.extname(req.file.originalname);
-      const filename = `${Date.now()}_${Math.random().toString(36).substring(2)}${originalExtension}`;
-      const filepath = path.join('uploads', filename);
-
-      // For image files, compress and resize
-      if (req.file.mimetype.startsWith('image/')) {
-        let processedBuffer = req.file.buffer;
-        
-        // Compress and resize image using Sharp
-        processedBuffer = await sharp(req.file.buffer)
-          .resize(800, 600, { 
-            fit: 'inside', 
-            withoutEnlargement: true 
-          })
-          .jpeg({ 
-            quality: 80,
-            progressive: true
-          })
-          .toBuffer();
-
-        fs.writeFileSync(filepath, processedBuffer);
-      } else {
-        fs.writeFileSync(filepath, req.file.buffer);
+      // Desteklenen formatları kontrol et
+      const supportedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
+      if (!supportedTypes.includes(req.file.mimetype)) {
+        return res.status(400).json({ 
+          message: 'Desteklenmeyen dosya formatı. Sadece JPEG, PNG ve WebP formatları kabul edilir.' 
+        });
       }
+
+      console.log(`📸 Fotoğraf yükleniyor: ${req.file.originalname} (${req.file.mimetype})`);
+      
+      // Dosya uzantısını orijinal formatına göre ayarla
+      let outputExtension = '.jpg'; // varsayılan
+      let sharpProcessor = sharp(req.file.buffer)
+        .resize(1200, 900, { 
+          fit: 'inside', 
+          withoutEnlargement: true 
+        });
+      
+      // Format'a göre işlem ve uzantı belirleme
+      switch (req.file.mimetype) {
+        case 'image/png':
+          outputExtension = '.png';
+          sharpProcessor = sharpProcessor.png({ quality: 90, progressive: true });
+          break;
+        case 'image/webp':
+          outputExtension = '.webp';
+          sharpProcessor = sharpProcessor.webp({ quality: 85 });
+          break;
+        default: // jpeg
+          outputExtension = '.jpg';
+          sharpProcessor = sharpProcessor.jpeg({ quality: 85, progressive: true });
+      }
+      
+      const filename = `${Date.now()}_${Math.random().toString(36).substring(2)}${outputExtension}`;
+      const filepath = path.join('uploads', filename);
+      
+      // uploads klasörünü oluştur (yoksa)
+      const uploadsDir = path.dirname(filepath);
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+      }
+
+      // Fotoğrafı işle ve kaydet
+      const processedBuffer = await sharpProcessor.toBuffer();
+      fs.writeFileSync(filepath, processedBuffer);
+      
+      const imagePath = `/${filepath}`;
+      console.log(`✅ Fotoğraf kaydedildi: ${imagePath}`);
 
       res.json({ 
         message: 'Fotoğraf başarıyla yüklendi', 
-        path: `/${filepath}` 
+        path: imagePath,
+        filename: filename,
+        originalName: req.file.originalname,
+        size: processedBuffer.length
       });
 
     } catch (error) {
-      console.error("File upload error:", error);
-      res.status(500).json({ message: "Dosya yüklenirken hata oluştu" });
+      console.error("📸 Fotoğraf yükleme hatası:", error);
+      res.status(500).json({ 
+        message: "Fotoğraf yüklenirken hata oluştu", 
+        error: (error as any).message 
+      });
     }
   });
 

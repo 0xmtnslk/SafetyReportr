@@ -20,9 +20,34 @@ export default function ImageUpload({ onImageUploaded, images, onRemoveImage }: 
     if (!files || files.length === 0) return;
 
     setIsUploading(true);
+    let uploadedCount = 0;
+    
     try {
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
+        
+        // Dosya format kontrolü
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+        if (!allowedTypes.includes(file.type)) {
+          toast({
+            title: "Format Hatası",
+            description: `${file.name}: Sadece JPEG, PNG ve WebP formatları desteklenir`,
+            variant: "destructive",
+          });
+          continue;
+        }
+        
+        // Dosya boyut kontrolü (max 10MB)
+        if (file.size > 10 * 1024 * 1024) {
+          toast({
+            title: "Boyut Hatası",
+            description: `${file.name}: Maksimum dosya boyutu 10MB'dir`,
+            variant: "destructive",
+          });
+          continue;
+        }
+        
+        console.log(`📸 Yükleniyor: ${file.name} (${file.type}, ${(file.size / 1024 / 1024).toFixed(2)}MB)`);
         
         // Compress image
         const compressedFile = await compressImage(file);
@@ -41,21 +66,28 @@ export default function ImageUpload({ onImageUploaded, images, onRemoveImage }: 
         });
 
         if (!response.ok) {
-          throw new Error('Upload failed');
+          const error = await response.json();
+          throw new Error(error.message || `${file.name} yüklenemedi`);
         }
 
         const result = await response.json();
+        console.log(`✅ Başarıyla yüklendi:`, result);
+        
         onImageUploaded(result.path);
+        uploadedCount++;
       }
 
+      if (uploadedCount > 0) {
+        toast({
+          title: "Başarılı",
+          description: `${uploadedCount} fotoğraf başarıyla yüklendi`,
+        });
+      }
+    } catch (error: any) {
+      console.error('📸 Yükleme hatası:', error);
       toast({
-        title: "Başarılı",
-        description: "Fotoğraflar başarıyla yüklendi",
-      });
-    } catch (error) {
-      toast({
-        title: "Hata",
-        description: "Fotoğraf yüklenirken bir hata oluştu",
+        title: "Yükleme Hatası",
+        description: error.message || "Fotoğraf yüklenirken bir hata oluştu",
         variant: "destructive",
       });
     } finally {
