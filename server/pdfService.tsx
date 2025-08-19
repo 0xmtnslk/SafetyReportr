@@ -73,36 +73,28 @@ export class ReactPdfService {
     }
   }
 
-  // Setup Tahoma fonts in PDF
-  private setupFonts(pdf: jsPDF) {
-    try {
-      if (this.tahomaFont) {
-        pdf.addFileToVFS('Tahoma.ttf', this.tahomaFont);
-        pdf.addFont('Tahoma.ttf', 'Tahoma', 'normal');
-      }
-      if (this.tahomaBoldFont) {
-        pdf.addFileToVFS('TahomaBold.ttf', this.tahomaBoldFont);
-        pdf.addFont('TahomaBold.ttf', 'Tahoma', 'bold');
-      }
-    } catch (error) {
-      console.warn('Font setup failed, using default fonts:', error);
-    }
-  }
+  // Font setup geçici olarak kapatıldı
+  // private setupFonts(pdf: jsPDF) {
+  //   try {
+  //     if (this.tahomaFont) {
+  //       pdf.addFileToVFS('Tahoma.ttf', this.tahomaFont);
+  //       pdf.addFont('Tahoma.ttf', 'Tahoma', 'normal');
+  //     }
+  //     if (this.tahomaBoldFont) {
+  //       pdf.addFileToVFS('TahomaBold.ttf', this.tahomaBoldFont);
+  //       pdf.addFont('TahomaBold.ttf', 'Tahoma', 'bold');
+  //     }
+  //   } catch (error) {
+  //     console.warn('Font setup failed, using default fonts:', error);
+  //   }
+  // }
 
   // Helper function to add text with proper Turkish encoding and word wrap
   private addTextWithWrap(pdf: jsPDF, text: string, x: number, y: number, fontSize: number = 10, fontStyle: string = 'normal', maxWidth: number = 170): number {
     pdf.setFontSize(fontSize);
     
-    // Use Tahoma if available, otherwise fallback to Helvetica
-    try {
-      if (this.tahomaFont && (fontStyle === 'normal' || fontStyle === 'bold')) {
-        pdf.setFont('Tahoma', fontStyle);
-      } else {
-        pdf.setFont('helvetica', fontStyle);
-      }
-    } catch (fontError) {
-      pdf.setFont('helvetica', fontStyle);
-    }
+    // Use Helvetica for Turkish character support
+    pdf.setFont('helvetica', fontStyle);
     
     // Keep Turkish characters as-is - both fonts support Turkish
     const processedText = text || '';
@@ -194,8 +186,8 @@ export class ReactPdfService {
 
     const pdf = new jsPDF('p', 'mm', 'a4');
     
-    // Setup Tahoma fonts for Turkish character support
-    this.setupFonts(pdf);
+    // Tahoma font desteği geçici kapalı - Helvetica kullanıyor
+    // this.setupFonts(pdf);
     
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
