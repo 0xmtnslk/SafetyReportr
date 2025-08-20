@@ -52,8 +52,8 @@ async function createAdminUser() {
   }
 }
 
-// Run if called directly
-if (import.meta.url === `file://${process.argv[1]}`) {
+// Run if called directly (ES Module compatible)
+if (process.argv[1] && process.argv[1].endsWith('seed-admin.ts')) {
   createAdminUser().then(() => {
     console.log("🎉 Database seeding completed!");
     process.exit(0);
