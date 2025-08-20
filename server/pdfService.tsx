@@ -127,6 +127,9 @@ export class ReactPdfService {
     pdf.setFontSize(16);
     pdf.setFont('Roboto', 'bold');
     pdf.text('İstinye Üniversitesi Topkapı Liv Hastanesi', margin + (this.logoBase64 ? 30 : 0), 27);
+    
+    // CRITICAL: Reset to BLACK immediately after white text
+    pdf.setTextColor(0, 0, 0);
   }
 
   // NEW: Enhanced footer with Turkish characters
@@ -235,6 +238,9 @@ export class ReactPdfService {
     pdf.setFontSize(12);
     pdf.setFont('Roboto', 'bold');
     pdf.text('YÖNETİCİ ÖZETİ', margin + 5, currentY + 8);
+    
+    // CRITICAL: Reset to BLACK immediately after white text
+    pdf.setTextColor(0, 0, 0);
 
     currentY += 20;
 
@@ -322,6 +328,9 @@ export class ReactPdfService {
     pdf.setFontSize(12);
     pdf.setFont('Roboto', 'bold');
     pdf.text('GENEL DEĞERLENDİRME', margin + 5, currentY + 8);
+    
+    // CRITICAL: Reset to BLACK immediately after white text
+    pdf.setTextColor(0, 0, 0);
 
     currentY += 20;
 
@@ -396,6 +405,9 @@ export class ReactPdfService {
       pdf.setFontSize(12);
       pdf.setFont('Roboto', 'bold');
       pdf.text(sectionTitle, margin + 5, currentY + 8);
+      
+      // CRITICAL: Reset to BLACK immediately after white text
+      pdf.setTextColor(0, 0, 0);
 
       currentY += 15; // Reduced from 20
       
@@ -441,6 +453,9 @@ export class ReactPdfService {
       const riskText = finding.dangerLevel === 'high' ? 'YÜKSEK' : 
                       finding.dangerLevel === 'medium' ? 'ORTA' : 'DÜŞÜK';
       pdf.text(riskText, margin + 30, currentY + 5, { align: 'center' });
+      
+      // CRITICAL: Reset to BLACK immediately after white text
+      pdf.setTextColor(0, 0, 0);
 
       currentY += 10; // Reduced spacing
 
