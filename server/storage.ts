@@ -48,11 +48,22 @@ export interface IStorage {
   getReportStats(userId: string): Promise<{
     totalReports: number;
     highRiskFindings: number;
+    mediumRiskFindings: number;
+    completedFindings: number;
+    completedReports: number;
+  }>;
+  getLocationStats(location: string): Promise<{
+    totalReports: number;
+    highRiskFindings: number;
+    mediumRiskFindings: number;
+    completedFindings: number;
     completedReports: number;
   }>;
   getStats(): Promise<{
     totalReports: number;
     highRiskFindings: number;
+    mediumRiskFindings: number;
+    completedFindings: number;
     completedReports: number;
   }>;
 }
@@ -178,7 +189,7 @@ export class DatabaseStorage implements IStorage {
 
   async getReportsByLocation(location: string): Promise<Report[]> {
     return await db.select().from(reports)
-      .where(eq(reports.location, location))
+      .where(eq(reports.projectLocation, location))
       .orderBy(desc(reports.createdAt));
   }
 
@@ -459,6 +470,37 @@ export class DatabaseStorage implements IStorage {
     let completedFindings = 0;
     
     for (const report of userReports) {
+      const reportFindings = await this.getReportFindings(report.id);
+      highRiskFindings += reportFindings.filter(f => f.dangerLevel === 'high').length;
+      mediumRiskFindings += reportFindings.filter(f => f.dangerLevel === 'medium').length;
+      completedFindings += reportFindings.filter(f => f.section === 4 || (f.isCompleted && f.dangerLevel === 'low')).length;
+    }
+
+    return {
+      totalReports,
+      highRiskFindings,
+      mediumRiskFindings,
+      completedFindings,
+      completedReports,
+    };
+  }
+
+  async getLocationStats(location: string): Promise<{
+    totalReports: number;
+    highRiskFindings: number;
+    mediumRiskFindings: number;
+    completedFindings: number;
+    completedReports: number;
+  }> {
+    const locationReports = await this.getReportsByLocation(location);
+    const totalReports = locationReports.length;
+    const completedReports = locationReports.filter(r => r.status === 'completed').length;
+    
+    let highRiskFindings = 0;
+    let mediumRiskFindings = 0;
+    let completedFindings = 0;
+    
+    for (const report of locationReports) {
       const reportFindings = await this.getReportFindings(report.id);
       highRiskFindings += reportFindings.filter(f => f.dangerLevel === 'high').length;
       mediumRiskFindings += reportFindings.filter(f => f.dangerLevel === 'medium').length;

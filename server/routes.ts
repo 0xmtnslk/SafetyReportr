@@ -638,7 +638,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/stats", authenticateToken, checkPasswordChangeRequired, async (req, res) => {
     try {
-      const stats = await storage.getStats();
+      const currentUser = (req as any).user;
+      let stats: any;
+
+      // Admin users get global stats, regular users get location-based stats
+      if (currentUser.role === 'admin') {
+        stats = await storage.getStats();
+      } else {
+        stats = await storage.getLocationStats(currentUser.location);
+      }
+
       res.json(stats);
     } catch (error) {
       console.error("Stats error:", error);
