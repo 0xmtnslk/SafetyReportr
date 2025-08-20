@@ -62,16 +62,16 @@ export default function Dashboard() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="stats-grid grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-4">
             <div className="flex items-center">
               <div className="bg-blue-500 bg-opacity-10 p-3 rounded-xl">
-                <TrendingUp className="text-blue-500 text-xl" size={24} />
+                <TrendingUp className="text-blue-500 text-xl" size={20} />
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Toplam Rapor</p>
-                <p className="text-2xl font-bold text-gray-900" data-testid="stat-total-reports">
+              <div className="ml-3">
+                <p className="text-xs font-medium text-gray-600">Toplam Rapor</p>
+                <p className="text-xl font-bold text-gray-900" data-testid="stat-total-reports">
                   {(stats as any)?.totalReports || 0}
                 </p>
               </div>
@@ -80,14 +80,14 @@ export default function Dashboard() {
         </Card>
 
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-4">
             <div className="flex items-center">
               <div className="bg-red-500 bg-opacity-10 p-3 rounded-xl">
-                <Shield className="text-red-500 text-xl" size={24} />
+                <Shield className="text-red-500 text-xl" size={20} />
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Yüksek Risk Bulguları</p>
-                <p className="text-2xl font-bold text-gray-900" data-testid="stat-high-risk">
+              <div className="ml-3">
+                <p className="text-xs font-medium text-gray-600">Yüksek Risk Bulguları</p>
+                <p className="text-xl font-bold text-gray-900" data-testid="stat-high-risk">
                   {(stats as any)?.highRiskFindings || 0}
                 </p>
               </div>
@@ -96,14 +96,30 @@ export default function Dashboard() {
         </Card>
 
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-4">
+            <div className="flex items-center">
+              <div className="bg-yellow-500 bg-opacity-10 p-3 rounded-xl">
+                <AlertTriangle className="text-yellow-500 text-xl" size={20} />
+              </div>
+              <div className="ml-3">
+                <p className="text-xs font-medium text-gray-600">Orta Risk Bulguları</p>
+                <p className="text-xl font-bold text-gray-900" data-testid="stat-medium-risk">
+                  {(stats as any)?.mediumRiskFindings || 0}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-4">
             <div className="flex items-center">
               <div className="bg-green-500 bg-opacity-10 p-3 rounded-xl">
-                <Target className="text-green-500 text-xl" size={24} />
+                <Target className="text-green-500 text-xl" size={20} />
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Tamamlanan Bulgular</p>
-                <p className="text-2xl font-bold text-gray-900" data-testid="stat-completed">
+              <div className="ml-3">
+                <p className="text-xs font-medium text-gray-600">Tamamlanan Bulgular</p>
+                <p className="text-xl font-bold text-gray-900" data-testid="stat-completed">
                   {(stats as any)?.completedFindings || 0}
                 </p>
               </div>
@@ -127,59 +143,58 @@ export default function Dashboard() {
               recentReportsData.map((report: any) => (
                 <div
                   key={report.id}
-                  className="flex items-center justify-between p-4 hover:bg-gray-50 rounded-xl transition-colors cursor-pointer"
+                  className="flex flex-col sm:flex-row sm:items-center justify-between p-4 hover:bg-gray-50 rounded-xl transition-colors cursor-pointer gap-3"
                   data-testid={`report-item-${report.id}`}
                   onClick={() => setLocation(`/view-report/${report.id}`)}
                 >
-                  <div className="flex items-center">
-                    <div className="w-10 h-10 bg-primary bg-opacity-10 rounded-xl flex items-center justify-center mr-3">
-                      <FileText className="text-primary" size={20} />
+                  <div className="flex items-center flex-1 min-w-0">
+                    <div className="w-10 h-10 bg-primary bg-opacity-10 rounded-xl flex items-center justify-center mr-3 flex-shrink-0">
+                      <FileText className="text-primary" size={18} />
                     </div>
-                    <div>
-                      <p className="font-medium text-gray-900">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-gray-900 truncate">
                         Rapor #{report.reportNumber}
                       </p>
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm text-gray-500 truncate">
                         {new Date(report.reportDate).toLocaleDateString("tr-TR")} - {report.reporter}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-2 sm:justify-end flex-shrink-0">
                     <div className="flex items-center gap-2">
                       {report.status === "completed" ? (
-                        <div className="flex items-center gap-2">
-                          <div className="flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-success bg-opacity-10 text-success">
-                            <CheckCircle2 size={14} />
-                            Tamamlandı
-                          </div>
-                          <div className="w-24 bg-success h-4 rounded-full flex items-center justify-center">
-                            <span className="text-[10px] font-medium text-white">
+                        <div className="flex flex-col gap-2">
+                          <div className="relative w-32 bg-success h-6 rounded-full flex items-center justify-center">
+                            <CheckCircle2 size={14} className="mr-1" />
+                            <span className="text-xs font-medium text-white">
                               Tamamlandı
                             </span>
                           </div>
+                          <div className="text-xs text-gray-500 text-center">
+                            %100 tamamlandı
+                          </div>
                         </div>
                       ) : (
-                        <div className="flex flex-col gap-1">
-                          <div className="flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-warning bg-opacity-10 text-warning">
-                            <Clock size={14} />
-                            Devam Ediyor
-                          </div>
-                          <div className="relative w-24 bg-gray-200 rounded-full h-4">
+                        <div className="flex flex-col gap-2">
+                          <div className="relative w-32 bg-gray-200 rounded-full h-6">
                             <div 
-                              className="bg-warning h-4 rounded-full transition-all duration-300 flex items-center justify-center" 
+                              className="bg-warning h-6 rounded-full transition-all duration-300 flex items-center justify-center" 
                               style={{ width: `${calculateProgress(report)}%` }}
                             >
-                              <span className="text-[10px] font-medium text-white whitespace-nowrap px-1">
-                                {calculateProgress(report) === 100 ? 'Hazır' : `${Math.round(calculateProgress(report))}%`}
+                              <span className="text-xs font-medium text-white whitespace-nowrap px-2">
+                                {calculateProgress(report) === 100 ? 'Hazır' : 'Devam Ediyor'}
                               </span>
                             </div>
                             {calculateProgress(report) < 100 && (
                               <div className="absolute inset-0 flex items-center justify-center">
-                                <span className="text-[10px] font-medium text-gray-600">
+                                <span className="text-xs font-medium text-gray-600">
                                   Devam Ediyor
                                 </span>
                               </div>
                             )}
+                          </div>
+                          <div className="text-xs text-gray-500 text-center">
+                            {Math.round(calculateProgress(report))}% tamamlandı
                           </div>
                         </div>
                       )}
