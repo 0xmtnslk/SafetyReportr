@@ -113,7 +113,16 @@ export default function Reports() {
   };
 
   const filteredReports = Array.isArray(reports) ? reports.filter((report: any) => {
-    if (filters.status !== "all" && report.status !== filters.status) return false;
+    // Status filtering - draft ve in_progress'i "in_progress" olarak grupla
+    if (filters.status !== "all") {
+      if (filters.status === "in_progress" && report.status !== "in_progress" && report.status !== "draft") {
+        return false;
+      } else if (filters.status === "completed" && report.status !== "completed") {
+        return false;
+      } else if (filters.status === "draft" && report.status !== "draft") {
+        return false;
+      }
+    }
     if (filters.startDate && new Date(report.reportDate) < new Date(filters.startDate)) return false;
     if (filters.endDate && new Date(report.reportDate) > new Date(filters.endDate)) return false;
     return true;
@@ -137,7 +146,7 @@ export default function Reports() {
       case "in_progress":
         return "Devam Ediyor";
       case "draft":
-        return "Devam Ediyor";
+        return "Devam Ediyor"; // Draft'lar da "Devam Ediyor" olarak gösterilir
       default:
         return "Devam Ediyor";
     }

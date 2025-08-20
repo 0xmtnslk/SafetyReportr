@@ -145,8 +145,8 @@ export default function ViewReport({ id }: ViewReportProps) {
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
-        <div className="flex items-center mb-4 sm:mb-0">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+        <div className="flex items-center">
           <Button
             variant="outline"
             size="sm"
@@ -158,37 +158,43 @@ export default function ViewReport({ id }: ViewReportProps) {
             Geri
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
               Rapor #{(report as any).reportNumber}
             </h1>
-            <p className="text-gray-600">
+            <p className="text-sm sm:text-base text-gray-600">
               {new Date((report as any).reportDate).toLocaleDateString("tr-TR")}
             </p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
           {(report as any).status !== 'completed' && (
             <Button
               variant="outline"
+              size="sm"
               onClick={() => setLocation(`/edit-report/${(report as any).id}`)}
               data-testid="button-edit-report"
+              className="w-full sm:w-auto"
             >
               <Edit size={16} className="mr-2" />
               Düzenle
             </Button>
           )}
           <Button
+            size="sm"
             onClick={handleExportPDF}
             data-testid="button-export-pdf"
+            className="w-full sm:w-auto"
           >
             <Download size={16} className="mr-2" />
             PDF İndir
           </Button>
-          <PDFPreview
-            reportData={report}
-            findings={findings as any[]}
-            isLoading={reportLoading || findingsLoading}
-          />
+          <div className="w-full sm:w-auto">
+            <PDFPreview
+              reportData={report}
+              findings={findings as any[]}
+              isLoading={reportLoading || findingsLoading}
+            />
+          </div>
         </div>
       </div>
 

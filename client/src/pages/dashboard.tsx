@@ -179,19 +179,12 @@ export default function Dashboard() {
                           <div className="relative w-32 bg-gray-200 rounded-full h-6">
                             <div 
                               className="bg-warning h-6 rounded-full transition-all duration-300 flex items-center justify-center" 
-                              style={{ width: `${calculateProgress(report)}%` }}
+                              style={{ width: `${Math.max(calculateProgress(report), 25)}%` }}
                             >
                               <span className="text-xs font-medium text-white whitespace-nowrap px-2">
                                 {calculateProgress(report) === 100 ? 'Hazır' : 'Devam Ediyor'}
                               </span>
                             </div>
-                            {calculateProgress(report) < 100 && (
-                              <div className="absolute inset-0 flex items-center justify-center">
-                                <span className="text-xs font-medium text-gray-600">
-                                  Devam Ediyor
-                                </span>
-                              </div>
-                            )}
                           </div>
                           <div className="text-xs text-gray-500 text-center">
                             {Math.round(calculateProgress(report))}% tamamlandı
