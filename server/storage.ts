@@ -1,7 +1,8 @@
 import { reports, findings, users, offlineQueue, type User, type InsertUser, type Report, type InsertReport, type Finding, type InsertFinding, type OfflineQueueItem, type InsertOfflineQueueItem } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, inArray, sql } from "drizzle-orm";
+import { eq, desc, and, inArray, sql, gt } from "drizzle-orm";
 import bcrypt from "bcrypt";
+import crypto from "crypto";
 
 export interface IStorage {
   // User operations
@@ -10,10 +11,20 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   authenticateUser(username: string, password: string): Promise<User | null>;
   validateUserCredentials(username: string, password: string): Promise<User | null>;
+  
+  // User management (Admin operations)
+  getAllUsers(): Promise<User[]>;
+  updateUser(id: string, user: Partial<InsertUser>): Promise<User>;
+  deleteUser(id: string): Promise<boolean>;
+  changePassword(id: string, newPassword: string): Promise<boolean>;
+  setResetToken(id: string, token: string, expiry: Date): Promise<boolean>;
+  getUserByResetToken(token: string): Promise<User | undefined>;
+  setFirstLoginComplete(id: string): Promise<boolean>;
 
   // Report operations
   getReport(id: string): Promise<Report | undefined>;
   getAllReports(): Promise<Report[]>;
+  getReportsByLocation(location: string): Promise<Report[]>;
   getUserReports(userId: string): Promise<Report[]>;
   createReport(report: InsertReport & { userId: string }): Promise<Report>;
   updateReport(id: string, report: Partial<InsertReport>): Promise<Report>;
@@ -66,6 +77,78 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
+  // User Management Functions
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users).orderBy(desc(users.createdAt));
+  }
+
+  async updateUser(id: string, updateUser: Partial<InsertUser>): Promise<User> {
+    const updateData = { ...updateUser };
+    
+    // Hash password if it's being updated
+    if (updateData.password) {
+      updateData.password = await bcrypt.hash(updateData.password, 10);
+    }
+    
+    const [user] = await db
+      .update(users)
+      .set(updateData)
+      .where(eq(users.id, id))
+      .returning();
+    return user;
+  }
+
+  async deleteUser(id: string): Promise<boolean> {
+    const result = await db.delete(users).where(eq(users.id, id));
+    return result.rowCount > 0;
+  }
+
+  async changePassword(id: string, newPassword: string): Promise<boolean> {
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const result = await db
+      .update(users)
+      .set({ 
+        password: hashedPassword,
+        firstLogin: false,
+        updatedAt: sql`CURRENT_TIMESTAMP`
+      })
+      .where(eq(users.id, id));
+    return result.rowCount > 0;
+  }
+
+  async setResetToken(id: string, token: string, expiry: Date): Promise<boolean> {
+    const result = await db
+      .update(users)
+      .set({ 
+        resetToken: token,
+        resetTokenExpiry: expiry,
+        updatedAt: sql`CURRENT_TIMESTAMP`
+      })
+      .where(eq(users.id, id));
+    return result.rowCount > 0;
+  }
+
+  async getUserByResetToken(token: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(
+      and(
+        eq(users.resetToken, token),
+        gt(users.resetTokenExpiry, new Date())
+      )
+    );
+    return user;
+  }
+
+  async setFirstLoginComplete(id: string): Promise<boolean> {
+    const result = await db
+      .update(users)
+      .set({ 
+        firstLogin: false,
+        updatedAt: sql`CURRENT_TIMESTAMP`
+      })
+      .where(eq(users.id, id));
+    return result.rowCount > 0;
+  }
+
   async validateUserCredentials(username: string, password: string): Promise<User | null> {
     const user = await this.getUserByUsername(username);
     if (!user) return null;
@@ -90,6 +173,12 @@ export class DatabaseStorage implements IStorage {
   async getUserReports(userId: string): Promise<Report[]> {
     return await db.select().from(reports)
       .where(eq(reports.userId, userId))
+      .orderBy(desc(reports.createdAt));
+  }
+
+  async getReportsByLocation(location: string): Promise<Report[]> {
+    return await db.select().from(reports)
+      .where(eq(reports.location, location))
       .orderBy(desc(reports.createdAt));
   }
 

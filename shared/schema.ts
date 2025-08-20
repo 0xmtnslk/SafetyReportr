@@ -8,7 +8,14 @@ export const users = pgTable("users", {
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
   fullName: text("full_name").notNull(),
+  role: text("role").notNull().default("user"), // "admin" | "user"
+  location: text("location"), // Hospital/Project location for user access
+  firstLogin: boolean("first_login").default(true), // Force password change on first login
+  resetToken: text("reset_token"), // Password reset token
+  resetTokenExpiry: timestamp("reset_token_expiry"), // Token expiration
+  isActive: boolean("is_active").default(true), // Admin can deactivate users
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const reports = pgTable("reports", {
@@ -86,6 +93,38 @@ export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
   fullName: true,
+  role: true,
+  location: true,
+  isActive: true,
+});
+
+// Admin user creation schema (with auto-generated password option)
+export const adminCreateUserSchema = insertUserSchema.extend({
+  password: z.string().optional(), // Password will be auto-generated if not provided
+});
+
+// Password change schema
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1),
+  newPassword: z.string().min(6, "Password must be at least 6 characters"),
+  confirmPassword: z.string().min(6),
+}).refine(data => data.newPassword === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
+});
+
+// Password reset schemas
+export const resetPasswordRequestSchema = z.object({
+  username: z.string().min(1, "Username is required"),
+});
+
+export const resetPasswordSchema = z.object({
+  token: z.string().min(1, "Reset token is required"),
+  newPassword: z.string().min(6, "Password must be at least 6 characters"),
+  confirmPassword: z.string().min(6),
+}).refine(data => data.newPassword === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
 });
 
 export const insertReportSchema = createInsertSchema(reports).pick({
@@ -148,6 +187,10 @@ export const insertPdfTemplateFieldSchema = createInsertSchema(pdfTemplateFields
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
+export type AdminCreateUser = z.infer<typeof adminCreateUserSchema>;
+export type ChangePassword = z.infer<typeof changePasswordSchema>;
+export type ResetPasswordRequest = z.infer<typeof resetPasswordRequestSchema>;
+export type ResetPassword = z.infer<typeof resetPasswordSchema>;
 
 export type Report = typeof reports.$inferSelect;
 export type InsertReport = z.infer<typeof insertReportSchema>;

@@ -5,7 +5,15 @@ import { Request, Response, NextFunction } from "express";
 import express from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertReportSchema, insertFindingSchema, insertOfflineQueueSchema } from "@shared/schema";
+import { 
+  insertReportSchema, 
+  insertFindingSchema, 
+  insertOfflineQueueSchema,
+  adminCreateUserSchema,
+  changePasswordSchema,
+  resetPasswordRequestSchema,
+  resetPasswordSchema
+} from "@shared/schema";
 import { ReactPdfService } from "./pdfService";
 // Template sistemi geçici olarak devre dışı
 // import { TemplatePdfService } from "./templatePdfService";
@@ -14,6 +22,7 @@ import jwt from "jsonwebtoken";
 import multer from "multer";
 import sharp from "sharp";
 import path from "path";
+import crypto from "crypto";
 
 const JWT_SECRET = "dev-secret-key";
 
@@ -42,6 +51,69 @@ const authenticateToken = (req: Request, res: Response, next: NextFunction) => {
   }
 };
 
+// Role-based access control middleware
+const requireAdmin = (req: Request, res: Response, next: NextFunction) => {
+  const user = (req as any).user;
+  if (!user || user.role !== 'admin') {
+    return res.status(403).json({ message: 'Admin erişimi gerekli' });
+  }
+  next();
+};
+
+// Middleware to check if password change is required (first login)
+const checkPasswordChangeRequired = async (req: any, res: Response, next: NextFunction) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: 'Kimlik doğrulama gerekli' });
+    }
+
+    // Allow password change endpoint even on first login
+    if (req.path === '/api/auth/change-password' || req.path.startsWith('/api/auth/reset-password')) {
+      return next();
+    }
+
+    // Get fresh user data to check firstLogin status
+    const currentUser = await storage.getUser(req.user.id);
+    if (!currentUser) {
+      return res.status(401).json({ message: 'Kullanıcı bulunamadı' });
+    }
+
+    if (currentUser.firstLogin) {
+      return res.status(428).json({ 
+        message: 'İlk giriş şifre değiştirme zorunludur',
+        requirePasswordChange: true
+      });
+    }
+
+    next();
+  } catch (error) {
+    console.error("Check password change required error:", error);
+    res.status(500).json({ message: "Kullanıcı durumu kontrol edilirken hata oluştu" });
+  }
+};
+
+const requireRole = (role: string) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const user = (req as any).user;
+    if (!user || user.role !== role) {
+      return res.status(403).json({ message: `${role} yetkisi gerekli` });
+    }
+    next();
+  };
+};
+
+// Location-based filtering middleware
+const addLocationFilter = (req: Request, res: Response, next: NextFunction) => {
+  const user = (req as any).user;
+  
+  // Admin sees everything, users only see their location
+  if (user && user.role !== 'admin' && user.location) {
+    (req as any).locationFilter = user.location;
+  }
+  
+  next();
+};
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Ensure uploads directory exists
   if (!fs.existsSync('uploads')) {
@@ -59,11 +131,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.authenticateUser(username, password);
       
       if (user) {
+        // Check if user is active
+        if (!user.isActive) {
+          return res.status(403).json({ message: 'Hesabınız devre dışı bırakılmış' });
+        }
+
         const token = jwt.sign(
           { 
             id: user.id, 
             username: user.username,
-            fullName: user.fullName
+            fullName: user.fullName,
+            role: user.role,
+            location: user.location
           },
           JWT_SECRET,
           { expiresIn: '24h' }
@@ -74,7 +153,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           user: { 
             id: user.id, 
             username: user.username,
-            fullName: user.fullName
+            fullName: user.fullName,
+            role: user.role,
+            location: user.location,
+            firstLogin: user.firstLogin
           } 
         });
       } else {
@@ -129,10 +211,216 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ user: req.user });
   });
 
-  // Reports CRUD routes
-  app.get("/api/reports", authenticateToken, async (req, res) => {
+  // Utility function to generate random password
+  const generateRandomPassword = (length: number = 8): string => {
+    const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
+    let password = "";
+    for (let i = 0; i < length; i++) {
+      password += charset.charAt(Math.floor(Math.random() * charset.length));
+    }
+    return password;
+  };
+
+  // ADMIN USER MANAGEMENT ROUTES
+  
+  // Get all users (Admin only)
+  app.get("/api/admin/users", authenticateToken, requireAdmin, async (req, res) => {
     try {
-      const reports = await storage.getAllReports();
+      const users = await storage.getAllUsers();
+      // Don't send passwords in response
+      const usersWithoutPasswords = users.map(user => {
+        const { password, resetToken, resetTokenExpiry, ...userWithoutPassword } = user;
+        return userWithoutPassword;
+      });
+      res.json(usersWithoutPasswords);
+    } catch (error) {
+      console.error("Get users error:", error);
+      res.status(500).json({ message: "Kullanıcılar getirilirken hata oluştu" });
+    }
+  });
+
+  // Create new user (Admin only)
+  app.post("/api/admin/users", authenticateToken, requireAdmin, async (req, res) => {
+    try {
+      const userData = adminCreateUserSchema.parse(req.body);
+      
+      // Check if user already exists
+      const existingUser = await storage.getUserByUsername(userData.username);
+      if (existingUser) {
+        return res.status(400).json({ message: 'Bu kullanıcı adı zaten kullanımda' });
+      }
+
+      // Generate password if not provided
+      const password = userData.password || generateRandomPassword(10);
+      
+      const newUser = await storage.createUser({
+        ...userData,
+        password
+      });
+
+      // Don't send password in response, but include it in success message for admin
+      const { password: _, resetToken, resetTokenExpiry, ...userResponse } = newUser;
+      
+      res.status(201).json({ 
+        user: userResponse,
+        generatedPassword: userData.password ? undefined : password,
+        message: `Kullanıcı başarıyla oluşturuldu${!userData.password ? `. Geçici şifre: ${password}` : ''}`
+      });
+    } catch (error) {
+      console.error("Create user error:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Geçersiz veri formatı", errors: error.errors });
+      }
+      res.status(500).json({ message: "Kullanıcı oluşturulurken hata oluştu" });
+    }
+  });
+
+  // Update user (Admin only)
+  app.put("/api/admin/users/:id", authenticateToken, requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updateData = req.body;
+
+      // Validate user exists
+      const existingUser = await storage.getUser(id);
+      if (!existingUser) {
+        return res.status(404).json({ message: 'Kullanıcı bulunamadı' });
+      }
+
+      // Check username uniqueness if username is being updated
+      if (updateData.username && updateData.username !== existingUser.username) {
+        const userWithUsername = await storage.getUserByUsername(updateData.username);
+        if (userWithUsername) {
+          return res.status(400).json({ message: 'Bu kullanıcı adı zaten kullanımda' });
+        }
+      }
+
+      const updatedUser = await storage.updateUser(id, updateData);
+      const { password, resetToken, resetTokenExpiry, ...userResponse } = updatedUser;
+      
+      res.json(userResponse);
+    } catch (error) {
+      console.error("Update user error:", error);
+      res.status(500).json({ message: "Kullanıcı güncellenirken hata oluştu" });
+    }
+  });
+
+  // Delete user (Admin only)
+  app.delete("/api/admin/users/:id", authenticateToken, requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const currentUser = (req as any).user;
+
+      // Prevent admin from deleting themselves
+      if (id === currentUser.id) {
+        return res.status(400).json({ message: 'Kendi hesabınızı silemezsiniz' });
+      }
+
+      const success = await storage.deleteUser(id);
+      if (success) {
+        res.json({ message: 'Kullanıcı başarıyla silindi' });
+      } else {
+        res.status(404).json({ message: 'Kullanıcı bulunamadı' });
+      }
+    } catch (error) {
+      console.error("Delete user error:", error);
+      res.status(500).json({ message: "Kullanıcı silinirken hata oluştu" });
+    }
+  });
+
+  // PASSWORD MANAGEMENT ROUTES
+
+  // Change password (All users)
+  app.post("/api/auth/change-password", authenticateToken, async (req, res) => {
+    try {
+      const passwordData = changePasswordSchema.parse(req.body);
+      const currentUser = (req as any).user;
+
+      // Verify current password
+      const user = await storage.validateUserCredentials(currentUser.username, passwordData.currentPassword);
+      if (!user) {
+        return res.status(400).json({ message: 'Mevcut şifre yanlış' });
+      }
+
+      // Change password and mark first login as complete
+      await storage.changePassword(currentUser.id, passwordData.newPassword);
+      
+      res.json({ message: 'Şifre başarıyla değiştirildi' });
+    } catch (error) {
+      console.error("Change password error:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Geçersiz veri formatı", errors: error.errors });
+      }
+      res.status(500).json({ message: "Şifre değiştirilirken hata oluştu" });
+    }
+  });
+
+  // Request password reset
+  app.post("/api/auth/reset-password-request", async (req, res) => {
+    try {
+      const { username } = resetPasswordRequestSchema.parse(req.body);
+      
+      const user = await storage.getUserByUsername(username);
+      if (!user) {
+        // Don't reveal if user exists or not for security
+        return res.json({ message: 'Eğer bu kullanıcı adı sistemde kayıtlıysa, şifre sıfırlama bağlantısı gönderilecektir' });
+      }
+
+      // Generate reset token
+      const resetToken = crypto.randomBytes(32).toString('hex');
+      const resetExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+      await storage.setResetToken(user.id, resetToken, resetExpiry);
+
+      // In a real app, you would send this via email
+      // For demo purposes, we'll return it in response (NOT recommended in production)
+      res.json({ 
+        message: 'Şifre sıfırlama bağlantısı oluşturuldu',
+        resetToken: resetToken // REMOVE THIS IN PRODUCTION
+      });
+    } catch (error) {
+      console.error("Reset password request error:", error);
+      res.status(500).json({ message: "Şifre sıfırlama isteği oluşturulurken hata oluştu" });
+    }
+  });
+
+  // Reset password with token
+  app.post("/api/auth/reset-password", async (req, res) => {
+    try {
+      const resetData = resetPasswordSchema.parse(req.body);
+      
+      const user = await storage.getUserByResetToken(resetData.token);
+      if (!user) {
+        return res.status(400).json({ message: 'Geçersiz veya süresi dolmuş sıfırlama bağlantısı' });
+      }
+
+      // Change password and clear reset token
+      await storage.changePassword(user.id, resetData.newPassword);
+      await storage.setResetToken(user.id, null, null);
+      
+      res.json({ message: 'Şifre başarıyla sıfırlandı' });
+    } catch (error) {
+      console.error("Reset password error:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Geçersiz veri formatı", errors: error.errors });
+      }
+      res.status(500).json({ message: "Şifre sıfırlanırken hata oluştu" });
+    }
+  });
+
+  // Reports CRUD routes
+  app.get("/api/reports", authenticateToken, checkPasswordChangeRequired, async (req, res) => {
+    try {
+      const currentUser = (req as any).user;
+      let reports: any[];
+
+      // Admin users can see all reports, regular users only see their location's reports
+      if (currentUser.role === 'admin') {
+        reports = await storage.getAllReports();
+      } else {
+        reports = await storage.getReportsByLocation(currentUser.location);
+      }
+
       res.json(reports);
     } catch (error) {
       console.error("Get reports error:", error);
@@ -140,7 +428,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/reports/:id", authenticateToken, async (req, res) => {
+  app.get("/api/reports/:id", authenticateToken, checkPasswordChangeRequired, async (req, res) => {
     try {
       const report = await storage.getReport(req.params.id);
       if (report) {
@@ -154,7 +442,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/reports", authenticateToken, async (req: any, res) => {
+  app.post("/api/reports", authenticateToken, checkPasswordChangeRequired, async (req: any, res) => {
     try {
       const validation = insertReportSchema.safeParse(req.body);
       if (!validation.success) {
@@ -172,7 +460,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/reports/:id", authenticateToken, async (req, res) => {
+  app.put("/api/reports/:id", authenticateToken, checkPasswordChangeRequired, async (req, res) => {
     try {
       const validation = insertReportSchema.partial().safeParse(req.body);
       if (!validation.success) {
@@ -191,7 +479,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/reports/:id", authenticateToken, async (req, res) => {
+  app.delete("/api/reports/:id", authenticateToken, checkPasswordChangeRequired, async (req, res) => {
     try {
       const success = await storage.deleteReport(req.params.id);
       if (success) {
@@ -206,7 +494,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Findings CRUD routes
-  app.get("/api/reports/:reportId/findings", authenticateToken, async (req, res) => {
+  app.get("/api/reports/:reportId/findings", authenticateToken, checkPasswordChangeRequired, async (req, res) => {
     try {
       const findings = await storage.getReportFindings(req.params.reportId);
       res.json(findings);
@@ -216,7 +504,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/reports/:reportId/findings", authenticateToken, async (req, res) => {
+  app.post("/api/reports/:reportId/findings", authenticateToken, checkPasswordChangeRequired, async (req, res) => {
     try {
       const validation = insertFindingSchema.safeParse({
         ...req.body,
@@ -235,7 +523,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/findings/:id", authenticateToken, async (req, res) => {
+  app.put("/api/findings/:id", authenticateToken, checkPasswordChangeRequired, async (req, res) => {
     try {
       const validation = insertFindingSchema.partial().safeParse(req.body);
       if (!validation.success) {
@@ -254,7 +542,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/findings/:id", authenticateToken, async (req, res) => {
+  app.delete("/api/findings/:id", authenticateToken, checkPasswordChangeRequired, async (req, res) => {
     try {
       const success = await storage.deleteFinding(req.params.id);
       if (success) {
@@ -342,7 +630,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/stats", authenticateToken, async (req, res) => {
+  app.get("/api/stats", authenticateToken, checkPasswordChangeRequired, async (req, res) => {
     try {
       const stats = await storage.getStats();
       res.json(stats);
@@ -353,7 +641,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Offline queue management
-  app.post("/api/offline-queue", authenticateToken, async (req, res) => {
+  app.post("/api/offline-queue", authenticateToken, checkPasswordChangeRequired, async (req, res) => {
     try {
       const validation = insertOfflineQueueSchema.safeParse(req.body);
       if (!validation.success) {
@@ -368,7 +656,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/offline-queue", authenticateToken, async (req, res) => {
+  app.get("/api/offline-queue", authenticateToken, checkPasswordChangeRequired, async (req, res) => {
     try {
       const queueItems = await storage.getOfflineQueue();
       res.json(queueItems);
@@ -378,7 +666,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/offline-queue/:id", authenticateToken, async (req, res) => {
+  app.delete("/api/offline-queue/:id", authenticateToken, checkPasswordChangeRequired, async (req, res) => {
     try {
       const success = await storage.markOfflineItemProcessed(req.params.id);
       if (success) {
@@ -393,7 +681,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // PDF Generation endpoint
-  app.get("/api/reports/:id/pdf", authenticateToken, async (req: any, res) => {
+  app.get("/api/reports/:id/pdf", authenticateToken, checkPasswordChangeRequired, async (req: any, res) => {
     try {
       const reportId = req.params.id;
       const report = await storage.getReport(reportId);

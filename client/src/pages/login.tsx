@@ -18,21 +18,51 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      const response = await apiRequest("POST", "/api/auth/login", {
-        username,
-        password,
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username,
+          password,
+        }),
       });
 
       const data = await response.json();
+
+      if (!response.ok) {
+        // Handle first login (password change required)
+        if (response.status === 428 && data.requirePasswordChange) {
+          toast({
+            title: "Şifre Değiştirme Gerekli",
+            description: data.message || "İlk giriş şifre değiştirme zorunludur",
+            variant: "default",
+          });
+          return;
+        }
+        
+        throw new Error(data.message || "Giriş başarısız");
+      }
+
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
       
+      // Check if first login
+      if (data.user.firstLogin) {
+        toast({
+          title: "Hoş Geldiniz",
+          description: "İlk girişiniz, lütfen şifrenizi değiştirin",
+          variant: "default",
+        });
+      }
+      
       // Reload to trigger auth state update
       window.location.reload();
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Giriş Hatası",
-        description: "Kullanıcı adı veya şifre hatalı",
+        description: error.message || "Kullanıcı adı veya şifre hatalı",
         variant: "destructive",
       });
     } finally {

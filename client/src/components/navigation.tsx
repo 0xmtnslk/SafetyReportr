@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { HardHat, Home, Plus, FileText, LogOut } from "lucide-react";
+import { HardHat, Home, Plus, FileText, LogOut, Shield } from "lucide-react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -12,6 +12,7 @@ export default function Navigation() {
     { path: "/", label: "Ana Sayfa", icon: Home },
     { path: "/create-report", label: "Yeni Rapor", icon: Plus },
     { path: "/reports", label: "Raporlar", icon: FileText },
+    ...(user?.role === 'admin' ? [{ path: "/admin", label: "Admin Panel", icon: Shield }] : []),
   ];
 
   return (

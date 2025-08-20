@@ -4,6 +4,9 @@ interface User {
   id: string;
   username: string;
   fullName: string;
+  role: 'admin' | 'user';
+  location: string;
+  firstLogin: boolean;
 }
 
 export function useAuth() {

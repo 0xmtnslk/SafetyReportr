@@ -10,6 +10,8 @@ import CreateReport from "@/pages/create-report";
 import Reports from "@/pages/reports";
 import EditReport from "@/pages/edit-report";
 import ViewReport from "@/pages/view-report";
+import AdminPanel from "@/pages/admin-panel";
+import ChangePassword from "@/pages/change-password";
 import Navigation from "@/components/navigation";
 import OfflineIndicator from "@/components/offline-indicator";
 import { useOfflineSync } from "./hooks/useOfflineSync";
@@ -29,9 +31,15 @@ function Router() {
     return <Login />;
   }
 
+  // Redirect to change password if it's first login
+  if (user.firstLogin && !window.location.pathname.includes('/change-password')) {
+    return <ChangePassword />;
+  }
+
   return (
     <div className="min-h-screen bg-background">
-      <Navigation />
+      {/* Hide navigation on change password page for first login */}
+      {!user.firstLogin && <Navigation />}
       <OfflineIndicator />
       <Switch>
         <Route path="/" component={Dashboard} />
@@ -41,6 +49,8 @@ function Router() {
         <Route path="/view-report/:id">
           {(params) => <ViewReport id={params.id} />}
         </Route>
+        <Route path="/admin" component={AdminPanel} />
+        <Route path="/change-password" component={ChangePassword} />
         <Route component={() => <div>404 - Page Not Found</div>} />
       </Switch>
     </div>
