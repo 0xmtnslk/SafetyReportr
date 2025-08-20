@@ -1,6 +1,7 @@
 import { jsPDF } from 'jspdf';
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import { addCustomFonts } from './fonts/addCustomFont';
 
 interface ReportData {
   id: string;
@@ -39,6 +40,8 @@ export class ReactPdfService {
 
   constructor() {
     this.loadLogo();
+    // Initialize custom fonts for jsPDF
+    addCustomFonts();
   }
 
   private loadLogo() {
@@ -52,25 +55,8 @@ export class ReactPdfService {
     }
   }
 
-  // FIXED: Enhanced Turkish text support with jsPDF compatible encoding
-  private turkishSafeText(text: string): string {
-    if (!text) return '';
-    
-    // jsPDF compatible Turkish character mapping
-    return text
-      .replace(/İ/g, 'I')   // İ -> I (temporary solution)
-      .replace(/ı/g, 'i')   // ı -> i 
-      .replace(/Ğ/g, 'G')   // Ğ -> G
-      .replace(/ğ/g, 'g')   // ğ -> g
-      .replace(/Ş/g, 'S')   // Ş -> S
-      .replace(/ş/g, 's')   // ş -> s
-      .replace(/Ü/g, 'U')   // Ü -> U
-      .replace(/ü/g, 'u')   // ü -> u
-      .replace(/Ö/g, 'O')   // Ö -> O
-      .replace(/ö/g, 'o')   // ö -> o
-      .replace(/Ç/g, 'C')   // Ç -> C
-      .replace(/ç/g, 'c');  // ç -> c
-  }
+  // REMOVED: No need for character replacement with Roboto font!
+  // Roboto font properly supports Turkish characters: İ, ı, Ğ, ğ, Ş, ş, Ü, ü, Ö, ö, Ç, ç
 
   // IMPROVED: Dynamic text wrapper that returns actual height used
   private addTextWithWrap(
@@ -85,11 +71,10 @@ export class ReactPdfService {
     if (!text) return y;
     
     pdf.setFontSize(fontSize);
-    pdf.setFont('helvetica', fontStyle);
+    pdf.setFont('Roboto', fontStyle);
     
-    // Process text for Turkish character compatibility
-    const processedText = this.turkishSafeText(text);
-    const lines = pdf.splitTextToSize(processedText, maxWidth);
+    // Use original text with Turkish characters - Roboto supports them!
+    const lines = pdf.splitTextToSize(text, maxWidth);
     
     const lineHeight = fontSize * 0.6; // Better line spacing
 
@@ -108,8 +93,8 @@ export class ReactPdfService {
     if (!text) return 0;
     
     pdf.setFontSize(fontSize);
-    const processedText = this.turkishSafeText(text);
-    const lines = pdf.splitTextToSize(processedText, maxWidth);
+    // Use original text - Roboto supports Turkish characters
+    const lines = pdf.splitTextToSize(text, maxWidth);
     const lineHeight = fontSize * 0.6;
     
     return lines.length * lineHeight;
@@ -136,8 +121,8 @@ export class ReactPdfService {
     // Hospital name with proper Turkish encoding
     pdf.setTextColor(255, 255, 255);
     pdf.setFontSize(16);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text(this.turkishSafeText('İstinye Üniversitesi Topkapı Liv Hastanesi'), margin + (this.logoBase64 ? 30 : 0), 27);
+    pdf.setFont('Roboto', 'bold');
+    pdf.text('İstinye Üniversitesi Topkapı Liv Hastanesi', margin + (this.logoBase64 ? 30 : 0), 27);
   }
 
   // NEW: Enhanced footer with Turkish characters
@@ -146,16 +131,16 @@ export class ReactPdfService {
     const pageWidth = pdf.internal.pageSize.getWidth();
     
     pdf.setFontSize(10);
-    pdf.setFont('helvetica', 'normal');
+    pdf.setFont('Roboto', 'normal');
     pdf.setTextColor(100, 100, 100);
     
     // Footer line
     pdf.setDrawColor(220, 220, 220);
     pdf.line(15, pageHeight - 25, pageWidth - 15, pageHeight - 25);
     
-    // Hospital name and report type with original Turkish characters
-    const footerText = this.turkishSafeText('İstinye Üniversitesi Topkapı Liv Hastanesi İSG Raporu');
-    const pageText = this.turkishSafeText(`Sayfa ${pageNumber}/${totalPages}`);
+    // Hospital name and report type with Turkish characters
+    const footerText = 'İstinye Üniversitesi Topkapı Liv Hastanesi İSG Raporu';
+    const pageText = `Sayfa ${pageNumber}/${totalPages}`;
     
     pdf.text(footerText, 15, pageHeight - 15);
     pdf.text(pageText, pageWidth - 50, pageHeight - 15);
@@ -189,8 +174,8 @@ export class ReactPdfService {
       filters: ['ASCIIHexEncode']
     });
     
-    // Enhanced Turkish character setup
-    pdf.setFont('helvetica');
+    // Enhanced Turkish character setup with Roboto font
+    pdf.setFont('Roboto');
     pdf.setR2L(false);
     pdf.setLanguage('tr');
     
@@ -206,28 +191,28 @@ export class ReactPdfService {
     // COVER PAGE CONTENT
     pdf.setTextColor(0, 0, 0);
     pdf.setFontSize(24);
-    pdf.setFont('helvetica', 'bold');
+    pdf.setFont('Roboto', 'bold');
     
     currentY += 30;
-    pdf.text(this.turkishSafeText('İSG DENETİM RAPORU'), pageWidth / 2, currentY, { align: 'center' });
+    pdf.text('İSG DENETİM RAPORU', pageWidth / 2, currentY, { align: 'center' });
     
     currentY += 20;
     pdf.setFontSize(16);
-    pdf.setFont('helvetica', 'normal');
+    pdf.setFont('Roboto', 'normal');
     
-    pdf.text(this.turkishSafeText(`Rapor No: ${reportData.reportNumber}`), pageWidth / 2, currentY, { align: 'center' });
+    pdf.text(`Rapor No: ${reportData.reportNumber}`, pageWidth / 2, currentY, { align: 'center' });
     
     currentY += 15;
-    pdf.text(this.turkishSafeText(`Proje Lokasyonu: ${reportData.projectLocation}`), pageWidth / 2, currentY, { align: 'center' });
+    pdf.text(`Proje Lokasyonu: ${reportData.projectLocation}`, pageWidth / 2, currentY, { align: 'center' });
     
     currentY += 15;
     const reportDateStr = reportData.reportDate instanceof Date ? 
       reportData.reportDate.toLocaleDateString('tr-TR') : 
       new Date(reportData.reportDate).toLocaleDateString('tr-TR');
-    pdf.text(this.turkishSafeText(`Rapor Tarihi: ${reportDateStr}`), pageWidth / 2, currentY, { align: 'center' });
+    pdf.text(`Rapor Tarihi: ${reportDateStr}`, pageWidth / 2, currentY, { align: 'center' });
     
     currentY += 15;
-    pdf.text(this.turkishSafeText(`Rapor Eden: ${reportData.reporter}`), pageWidth / 2, currentY, { align: 'center' });
+    pdf.text(`Rapor Eden: ${reportData.reporter}`, pageWidth / 2, currentY, { align: 'center' });
 
     // Add footer to first page
     this.addPageFooter(pdf, 1, 1);
@@ -244,8 +229,8 @@ export class ReactPdfService {
     pdf.rect(margin, currentY, contentWidth, 12, 'F');
     pdf.setTextColor(255, 255, 255);
     pdf.setFontSize(12);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text(this.turkishSafeText('YÖNETİCİ ÖZETİ'), margin + 5, currentY + 8);
+    pdf.setFont('Roboto', 'bold');
+    pdf.text('YÖNETİCİ ÖZETİ', margin + 5, currentY + 8);
 
     currentY += 20;
 
@@ -255,7 +240,7 @@ export class ReactPdfService {
     pdf.rect(margin, currentY, contentWidth, summaryBoxHeight, 'F');
     
     pdf.setTextColor(0, 0, 0);
-    const summary = reportData.managementSummary || this.turkishSafeText('Yönetici özeti henüz eklenmemiştir.');
+    const summary = reportData.managementSummary || 'Yönetici özeti henüz eklenmemiştir.';
     
     // Use text wrapping for summary
     this.addTextWithWrap(
@@ -283,7 +268,7 @@ export class ReactPdfService {
     if (findingsBySections[1].length > 0) {
       await this.addSectionContent(
         pdf, 
-        this.turkishSafeText('BOLUM 1 - TASARIM/IMALAT/MONTAJ HATALARI'), 
+        'BÖLÜM 1 - TASARIM/İMALAT/MONTAJ HATALARI', 
         findingsBySections[1], 
         70, 
         margin, 
@@ -297,7 +282,7 @@ export class ReactPdfService {
     if (findingsBySections[2].length > 0) {
       await this.addSectionContent(
         pdf, 
-        this.turkishSafeText('BOLUM 2 - IS SAGLIGI VE GUVENLIGI BULGULARI'), 
+        'BÖLÜM 2 - İŞ SAĞLIĞI VE GÜVENLİĞİ BULGULARI', 
         findingsBySections[2], 
         70, 
         margin, 
@@ -311,7 +296,7 @@ export class ReactPdfService {
     if (findingsBySections[3].length > 0) {
       await this.addSectionContent(
         pdf, 
-        this.turkishSafeText('BOLUM 3 - TAMAMLANMIS BULGULAR'), 
+        'BÖLÜM 3 - TAMAMLANMIŞ BULGULAR', 
         findingsBySections[3], 
         70, 
         margin, 
@@ -331,8 +316,8 @@ export class ReactPdfService {
     pdf.rect(margin, currentY, contentWidth, 12, 'F');
     pdf.setTextColor(255, 255, 255);
     pdf.setFontSize(12);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text(this.turkishSafeText('GENEL DEĞERLENDİRME'), margin + 5, currentY + 8);
+    pdf.setFont('Roboto', 'bold');
+    pdf.text('GENEL DEĞERLENDİRME', margin + 5, currentY + 8);
 
     currentY += 20;
 
@@ -342,7 +327,7 @@ export class ReactPdfService {
     pdf.rect(margin, currentY, contentWidth, evalBoxHeight, 'F');
     
     pdf.setTextColor(0, 0, 0);
-    const evaluation = reportData.generalEvaluation || this.turkishSafeText('Genel değerlendirme henüz eklenmemiştir.');
+    const evaluation = reportData.generalEvaluation || 'Genel değerlendirme henüz eklenmemiştir.';
     
     // Use text wrapping for evaluation
     this.addTextWithWrap(
@@ -371,9 +356,9 @@ export class ReactPdfService {
       pdf.rect(pageWidth - 70, pageHeight - 20, 60, 10, 'F');
       
       pdf.setFontSize(10);
-      pdf.setFont('helvetica', 'normal');
+      pdf.setFont('Roboto', 'normal');
       pdf.setTextColor(100, 100, 100);
-      const pageText = this.turkishSafeText(`Sayfa ${i}/${totalPages}`);
+      const pageText = `Sayfa ${i}/${totalPages}`;
       pdf.text(pageText, pageWidth - 50, pageHeight - 15);
     }
     
@@ -405,23 +390,23 @@ export class ReactPdfService {
       pdf.rect(margin, currentY, contentWidth, 12, 'F');
       pdf.setTextColor(255, 255, 255);
       pdf.setFontSize(12);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text(this.turkishSafeText(sectionTitle), margin + 5, currentY + 8);
+      pdf.setFont('Roboto', 'bold');
+      pdf.text(sectionTitle, margin + 5, currentY + 8);
 
       currentY += 20;
       
       // SPECIAL: For section 3 (Completed findings), show original section
       if (sectionNumber === 3 && finding.section && finding.section !== 3) {
         const originalSectionName = finding.section === 1 ? 
-          'Tasarim/Imalat/Montaj Hatalari' : 
-          'Is Sagligi ve Guvenligi Bulgulari';
+          'Tasarım/İmalat/Montaj Hataları' : 
+          'İş Sağlığı ve Güvenliği Bulguları';
         
         pdf.setFillColor(220, 220, 220);
         pdf.rect(margin, currentY, contentWidth, 8, 'F');
         pdf.setTextColor(80, 80, 80);
         pdf.setFontSize(9);
-        pdf.setFont('helvetica', 'italic');
-        pdf.text(this.turkishSafeText(`Orijinal Bolum: ${originalSectionName}`), margin + 5, currentY + 6);
+        pdf.setFont('Roboto', 'italic');
+        pdf.text(`Orijinal Bölüm: ${originalSectionName}`, margin + 5, currentY + 6);
         currentY += 15;
       }
 
@@ -430,8 +415,8 @@ export class ReactPdfService {
       pdf.rect(margin, currentY, contentWidth, 10, 'F');
       pdf.setTextColor(0, 0, 0);
       pdf.setFontSize(11);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text(this.turkishSafeText(finding.title), margin + 5, currentY + 7);
+      pdf.setFont('Roboto', 'bold');
+      pdf.text(finding.title, margin + 5, currentY + 7);
 
       currentY += 15;
 
@@ -447,11 +432,11 @@ export class ReactPdfService {
       pdf.rect(margin, currentY, 60, 8, 'F');
       pdf.setTextColor(255, 255, 255);
       pdf.setFontSize(9);
-      pdf.setFont('helvetica', 'bold');
+      pdf.setFont('Roboto', 'bold');
       
-      const riskText = finding.dangerLevel === 'high' ? 'YUKSEK' : 
-                      finding.dangerLevel === 'medium' ? 'ORTA' : 'DUSUK';
-      pdf.text(this.turkishSafeText(riskText), margin + 30, currentY + 5, { align: 'center' });
+      const riskText = finding.dangerLevel === 'high' ? 'YÜKSEK' : 
+                      finding.dangerLevel === 'medium' ? 'ORTA' : 'DÜŞÜK';
+      pdf.text(riskText, margin + 30, currentY + 5, { align: 'center' });
 
       currentY += 15;
 
@@ -465,11 +450,11 @@ export class ReactPdfService {
       pdf.setFillColor(250, 250, 250);
       pdf.rect(margin, currentY, fieldWidth, descHeight, 'F');
       pdf.setTextColor(0, 0, 0);
-      pdf.setFont('helvetica', 'bold');
+      pdf.setFont('Roboto', 'bold');
       pdf.setFontSize(10);
-      pdf.text(this.turkishSafeText('Aciklama:'), margin + 5, currentY + 8);
-      pdf.setFont('helvetica', 'normal');
-      this.addTextWithWrap(pdf, this.turkishSafeText(finding.description), margin + 5, currentY + 15, 10, 'normal', fieldWidth - 10);
+      pdf.text('Açıklama:', margin + 5, currentY + 8);
+      pdf.setFont('Roboto', 'normal');
+      this.addTextWithWrap(pdf, finding.description, margin + 5, currentY + 15, 10, 'normal', fieldWidth - 10);
       currentY += descHeight + 5;
 
       // Two-column layout for other fields (if space permits)
@@ -482,10 +467,10 @@ export class ReactPdfService {
         const situationHeight = this.calculateTextHeight(pdf, finding.currentSituation, 10, halfWidth - 10) + labelHeight + boxPadding;
         pdf.setFillColor(250, 250, 250);
         pdf.rect(margin, leftColumnY, halfWidth, situationHeight, 'F');
-        pdf.setFont('helvetica', 'bold');
-        pdf.text(this.turkishSafeText('Mevcut Durum:'), margin + 5, leftColumnY + 8);
-        pdf.setFont('helvetica', 'normal');
-        this.addTextWithWrap(pdf, this.turkishSafeText(finding.currentSituation), margin + 5, leftColumnY + 15, 10, 'normal', halfWidth - 10);
+        pdf.setFont('Roboto', 'bold');
+        pdf.text('Mevcut Durum:', margin + 5, leftColumnY + 8);
+        pdf.setFont('Roboto', 'normal');
+        this.addTextWithWrap(pdf, finding.currentSituation, margin + 5, leftColumnY + 15, 10, 'normal', halfWidth - 10);
         leftColumnY += situationHeight + 5;
       }
 
@@ -494,10 +479,10 @@ export class ReactPdfService {
         const recHeight = this.calculateTextHeight(pdf, finding.recommendation, 10, halfWidth - 10) + labelHeight + boxPadding;
         pdf.setFillColor(250, 250, 250);
         pdf.rect(margin + halfWidth + 5, rightColumnY, halfWidth, recHeight, 'F');
-        pdf.setFont('helvetica', 'bold');
-        pdf.text(this.turkishSafeText('Oneri:'), margin + halfWidth + 10, rightColumnY + 8);
-        pdf.setFont('helvetica', 'normal');
-        this.addTextWithWrap(pdf, this.turkishSafeText(finding.recommendation), margin + halfWidth + 10, rightColumnY + 15, 10, 'normal', halfWidth - 10);
+        pdf.setFont('Roboto', 'bold');
+        pdf.text('Öneri:', margin + halfWidth + 10, rightColumnY + 8);
+        pdf.setFont('Roboto', 'normal');
+        this.addTextWithWrap(pdf, finding.recommendation, margin + halfWidth + 10, rightColumnY + 15, 10, 'normal', halfWidth - 10);
         rightColumnY += recHeight + 5;
       }
       
@@ -509,10 +494,10 @@ export class ReactPdfService {
         const legalHeight = this.calculateTextHeight(pdf, finding.legalBasis, 10, fieldWidth - 10) + labelHeight + boxPadding;
         pdf.setFillColor(250, 250, 250);
         pdf.rect(margin, currentY, fieldWidth, legalHeight, 'F');
-        pdf.setFont('helvetica', 'bold');
-        pdf.text(this.turkishSafeText('Yasal Dayanak:'), margin + 5, currentY + 8);
-        pdf.setFont('helvetica', 'normal');
-        this.addTextWithWrap(pdf, this.turkishSafeText(finding.legalBasis), margin + 5, currentY + 15, 10, 'normal', fieldWidth - 10);
+        pdf.setFont('Roboto', 'bold');
+        pdf.text('Yasal Dayanak:', margin + 5, currentY + 8);
+        pdf.setFont('Roboto', 'normal');
+        this.addTextWithWrap(pdf, finding.legalBasis, margin + 5, currentY + 15, 10, 'normal', fieldWidth - 10);
         currentY += legalHeight + 5;
       }
 
@@ -521,10 +506,10 @@ export class ReactPdfService {
         const locationHeight = 20;
         pdf.setFillColor(250, 250, 250);
         pdf.rect(margin, currentY, fieldWidth, locationHeight, 'F');
-        pdf.setFont('helvetica', 'bold');
-        pdf.text(this.turkishSafeText('Konum:'), margin + 5, currentY + 8);
-        pdf.setFont('helvetica', 'normal');
-        pdf.text(this.turkishSafeText(finding.location), margin + 5, currentY + 15);
+        pdf.setFont('Roboto', 'bold');
+        pdf.text('Konum:', margin + 5, currentY + 8);
+        pdf.setFont('Roboto', 'normal');
+        pdf.text(finding.location, margin + 5, currentY + 15);
         currentY += locationHeight + 5;
       }
 
