@@ -43,44 +43,17 @@ export default function FindingForm({ reportId, section, initialData, onClose, o
       }
     },
     onSuccess: async (result) => {
-      try {
-        // If danger level is set to 'low', automatically move to completed section
-        if (formData.dangerLevel === 'low' && (section === 2 || section === 3) && !initialData?.id) {
-          console.log('🟢 Düşük risk bulgusu tamamlanmış bölümüne kopyalanıyor...');
-          
-          // Create a copy in section 4 (completed findings)
-          await apiRequest("POST", `/api/reports/${reportId}/findings`, {
-            reportId,
-            section: 4,
-            ...formData,
-            isCompleted: true,
-          });
-          
-          console.log('✅ Düşük risk bulgusu başarıyla kopyalandı');
-          
-          toast({
-            title: "Başarılı",
-            description: "Bulgu kaydedildi ve tamamlanmış bulgulara eklendi",
-          });
-        } else {
-          toast({
-            title: "Başarılı",
-            description: initialData?.id ? "Bulgu başarıyla güncellendi" : "Bulgu başarıyla kaydedildi",
-          });
-        }
-        
-        onSave();
-      } catch (error: any) {
-        console.error('❌ Otomatik kopyalama hatası:', error);
-        
-        toast({
-          title: "Kısmi Başarı",
-          description: "Bulgu kaydedildi ama tamamlanmış bölümüne kopyalanamadı",
-          variant: "destructive",
-        });
-        
-        onSave(); // Yine de sayfa kapansın
-      }
+      // Sadece başarı mesajı göster, otomatik kopyalama handleSubmit'te zaten yapıldı
+      const isLowRiskAutoCompleted = formData.dangerLevel === 'low' && (section === 2 || section === 3);
+      
+      toast({
+        title: "Başarılı",
+        description: isLowRiskAutoCompleted 
+          ? "Bulgu kaydedildi ve tamamlanmış bulgulara taşındı"
+          : initialData?.id ? "Bulgu başarıyla güncellendi" : "Bulgu başarıyla kaydedildi",
+      });
+      
+      onSave();
     },
     onError: () => {
       toast({

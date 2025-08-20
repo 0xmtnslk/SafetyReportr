@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
-import { FileText, Download, Edit, ArrowLeft, Calendar, MapPin, User, AlertTriangle } from "lucide-react";
+import { FileText, Download, Edit, ArrowLeft, Calendar, MapPin, User, AlertTriangle, ZoomIn } from "lucide-react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 
@@ -15,6 +17,7 @@ interface ViewReportProps {
 
 export default function ViewReport({ id }: ViewReportProps) {
   const [, setLocation] = useLocation();
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const { toast } = useToast();
 
   const { data: report, isLoading: reportLoading } = useQuery({
@@ -59,7 +62,7 @@ export default function ViewReport({ id }: ViewReportProps) {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `ISG_Raporu_${report.reportNumber || new Date().toISOString().split('T')[0]}.pdf`;
+      a.download = `ISG_Raporu_${(report as any).reportNumber || new Date().toISOString().split('T')[0]}.pdf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -181,7 +184,7 @@ export default function ViewReport({ id }: ViewReportProps) {
           </Button>
           <PDFPreview
             reportData={report}
-            findings={findings}
+            findings={findings as any[]}
             isLoading={reportLoading || findingsLoading}
           />
         </div>
@@ -290,12 +293,17 @@ export default function ViewReport({ id }: ViewReportProps) {
                     <h4 className="font-medium text-gray-900 mb-2">Fotoğraflar</h4>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                       {finding.images.map((image: string, imgIndex: number) => (
-                        <img
-                          key={imgIndex}
-                          src={image}
-                          alt={`${finding.title} - ${imgIndex + 1}`}
-                          className="w-full h-24 object-cover rounded border"
-                        />
+                        <div key={imgIndex} className="relative group cursor-pointer">
+                          <img
+                            src={image}
+                            alt={`${finding.title} - ${imgIndex + 1}`}
+                            className="w-full h-24 object-cover rounded border hover:opacity-80 transition-opacity"
+                            onClick={() => setPreviewImage(image)}
+                          />
+                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded flex items-center justify-center">
+                            <ZoomIn size={20} className="text-white" />
+                          </div>
+                        </div>
                       ))}
                     </div>
                   </div>
@@ -339,6 +347,24 @@ export default function ViewReport({ id }: ViewReportProps) {
           </CardContent>
         </Card>
       )}
+
+      {/* Full Size Image Preview Modal */}
+      <Dialog open={!!previewImage} onOpenChange={() => setPreviewImage(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] p-2">
+          <DialogHeader>
+            <DialogTitle>Fotoğraf Ön İzlemesi</DialogTitle>
+          </DialogHeader>
+          {previewImage && (
+            <div className="flex justify-center items-center max-h-[80vh] overflow-auto">
+              <img
+                src={previewImage}
+                alt="Tam Boyut Önizleme"
+                className="max-w-full max-h-full object-contain rounded-lg"
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
