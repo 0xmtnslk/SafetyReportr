@@ -271,10 +271,12 @@ sudo ufw allow 'Nginx Full'
 apt install certbot python3-certbot-nginx -y
 
 # SSL sertifikası al (domain'inizi yazın)
-# certbot --nginx -d your-domain.com
+certbot --nginx -d medicalisg.com -d www.medicalisg.com
 
 # Otomatik yenileme test et
-# certbot renew --dry-run
+certbot renew --dry-run
+
+echo "✅ SSL sertifikası kurulumu tamamlandı ve otomatik yenileme testi yapıldı"
 
 echo "ℹ️  SSL kurulumu için domain gerekli - manuel olarak yapılabilir"
 ```
