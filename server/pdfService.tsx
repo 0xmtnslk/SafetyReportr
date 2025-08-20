@@ -206,23 +206,9 @@ export class ReactPdfService {
     pdf.text(`Proje Lokasyonu: ${reportData.projectLocation}`, pageWidth / 2, currentY, { align: 'center' });
     
     currentY += 15;
-    // Fix date parsing issue
-    let reportDateStr = 'Tarih belirtilmemiş';
-    if (reportData.reportDate) {
-      try {
-        if (reportData.reportDate instanceof Date && !isNaN(reportData.reportDate.getTime())) {
-          reportDateStr = reportData.reportDate.toLocaleDateString('tr-TR');
-        } else if (typeof reportData.reportDate === 'string' && reportData.reportDate.trim()) {
-          const parsedDate = new Date(reportData.reportDate);
-          if (!isNaN(parsedDate.getTime())) {
-            reportDateStr = parsedDate.toLocaleDateString('tr-TR');
-          }
-        }
-      } catch (error) {
-        console.warn('Date parsing error:', error);
-        reportDateStr = 'Tarih formatı hatalı';
-      }
-    }
+    // Use current date for report generation
+    const currentDate = new Date();
+    const reportDateStr = currentDate.toLocaleDateString('tr-TR');
     pdf.text(`Rapor Tarihi: ${reportDateStr}`, pageWidth / 2, currentY, { align: 'center' });
     
     currentY += 15;
@@ -454,32 +440,20 @@ export class ReactPdfService {
 
       currentY += 15;
 
-      // COMPACT LAYOUT - Reduced spacing for better fit
-      const boxPadding = 6; // Reduced from 8
-      const labelHeight = 10; // Reduced from 12  
+      // COMPACT LAYOUT - No Description section (removed per user request)
+      const boxPadding = 6;
+      const labelHeight = 10;
       const fieldWidth = contentWidth;
-      const spacing = 3; // Reduced from 5
-      
-      // Description box (always present) - compact
-      const descHeight = Math.min(this.calculateTextHeight(pdf, finding.description, 10, fieldWidth - 16) + labelHeight + boxPadding, 40);
-      pdf.setFillColor(250, 250, 250);
-      pdf.rect(margin, currentY, fieldWidth, descHeight, 'F');
-      pdf.setTextColor(0, 0, 0);
-      pdf.setFont('Roboto', 'bold');
-      pdf.setFontSize(10);
-      pdf.text('Açıklama:', margin + 5, currentY + 6);
-      pdf.setFont('Roboto', 'normal');
-      this.addTextWithWrap(pdf, finding.description, margin + 5, currentY + 12, 9, 'normal', fieldWidth - 10);
-      currentY += descHeight + spacing;
+      const spacing = 3;
 
-      // Compact two-column layout  
+      // Two-column layout: Current situation & Recommendation side by side  
       const halfWidth = (fieldWidth - 5) / 2;
       let maxHeight = 0;
       
       // Current situation & Recommendation side by side (if both exist)
       if (finding.currentSituation && finding.recommendation) {
-        const situationHeight = Math.min(this.calculateTextHeight(pdf, finding.currentSituation, 9, halfWidth - 10) + labelHeight + boxPadding, 35);
-        const recHeight = Math.min(this.calculateTextHeight(pdf, finding.recommendation, 9, halfWidth - 10) + labelHeight + boxPadding, 35);
+        const situationHeight = Math.min(this.calculateTextHeight(pdf, finding.currentSituation, 9, halfWidth - 10) + labelHeight + boxPadding, 40);
+        const recHeight = Math.min(this.calculateTextHeight(pdf, finding.recommendation, 9, halfWidth - 10) + labelHeight + boxPadding, 40);
         maxHeight = Math.max(situationHeight, recHeight);
         
         // Left: Current situation
@@ -489,7 +463,7 @@ export class ReactPdfService {
         pdf.setFontSize(9);
         pdf.text('Mevcut Durum:', margin + 5, currentY + 6);
         pdf.setFont('Roboto', 'normal');
-        this.addTextWithWrap(pdf, finding.currentSituation, margin + 5, currentY + 12, 8, 'normal', halfWidth - 10);
+        this.addTextWithWrap(pdf, finding.currentSituation, margin + 5, currentY + 12, 9, 'normal', halfWidth - 10);
         
         // Right: Recommendation
         pdf.setFillColor(250, 250, 250);
@@ -497,127 +471,134 @@ export class ReactPdfService {
         pdf.setFont('Roboto', 'bold');
         pdf.text('Öneri:', margin + halfWidth + 10, currentY + 6);
         pdf.setFont('Roboto', 'normal');
-        this.addTextWithWrap(pdf, finding.recommendation, margin + halfWidth + 10, currentY + 12, 8, 'normal', halfWidth - 10);
+        this.addTextWithWrap(pdf, finding.recommendation, margin + halfWidth + 10, currentY + 12, 9, 'normal', halfWidth - 10);
         
         currentY += maxHeight + spacing;
       } else {
-        // Single field if only one exists
+        // Single field if only one exists (full width)
         if (finding.currentSituation) {
-          const situationHeight = Math.min(this.calculateTextHeight(pdf, finding.currentSituation, 9, fieldWidth - 16) + labelHeight + boxPadding, 30);
+          const situationHeight = Math.min(this.calculateTextHeight(pdf, finding.currentSituation, 9, fieldWidth - 16) + labelHeight + boxPadding, 35);
           pdf.setFillColor(250, 250, 250);
           pdf.rect(margin, currentY, fieldWidth, situationHeight, 'F');
           pdf.setFont('Roboto', 'bold');
           pdf.setFontSize(9);
           pdf.text('Mevcut Durum:', margin + 5, currentY + 6);
           pdf.setFont('Roboto', 'normal');
-          this.addTextWithWrap(pdf, finding.currentSituation, margin + 5, currentY + 12, 8, 'normal', fieldWidth - 10);
+          this.addTextWithWrap(pdf, finding.currentSituation, margin + 5, currentY + 12, 9, 'normal', fieldWidth - 10);
           currentY += situationHeight + spacing;
         }
         
         if (finding.recommendation) {
-          const recHeight = Math.min(this.calculateTextHeight(pdf, finding.recommendation, 9, fieldWidth - 16) + labelHeight + boxPadding, 30);
+          const recHeight = Math.min(this.calculateTextHeight(pdf, finding.recommendation, 9, fieldWidth - 16) + labelHeight + boxPadding, 35);
           pdf.setFillColor(250, 250, 250);
           pdf.rect(margin, currentY, fieldWidth, recHeight, 'F');
           pdf.setFont('Roboto', 'bold');
           pdf.setFontSize(9);
           pdf.text('Öneri:', margin + 5, currentY + 6);
           pdf.setFont('Roboto', 'normal');
-          this.addTextWithWrap(pdf, finding.recommendation, margin + 5, currentY + 12, 8, 'normal', fieldWidth - 10);
+          this.addTextWithWrap(pdf, finding.recommendation, margin + 5, currentY + 12, 9, 'normal', fieldWidth - 10);
           currentY += recHeight + spacing;
         }
       }
 
-      // Legal basis & Location side by side (if both exist)
-      if (finding.legalBasis && finding.location) {
-        const legalHeight = Math.min(this.calculateTextHeight(pdf, finding.legalBasis, 8, halfWidth - 10) + labelHeight + boxPadding, 30);
-        const locationHeight = 18; // Fixed small height
-        maxHeight = Math.max(legalHeight, locationHeight);
-        
-        // Left: Legal basis
+      // Legal basis only (Location removed per user request)
+      if (finding.legalBasis) {
+        const legalHeight = Math.min(this.calculateTextHeight(pdf, finding.legalBasis, 9, fieldWidth - 16) + labelHeight + boxPadding, 30);
         pdf.setFillColor(250, 250, 250);
-        pdf.rect(margin, currentY, halfWidth, legalHeight, 'F');
+        pdf.rect(margin, currentY, fieldWidth, legalHeight, 'F');
         pdf.setFont('Roboto', 'bold');
-        pdf.setFontSize(8);
+        pdf.setFontSize(9);
         pdf.text('Yasal Dayanak:', margin + 5, currentY + 6);
         pdf.setFont('Roboto', 'normal');
-        this.addTextWithWrap(pdf, finding.legalBasis, margin + 5, currentY + 12, 7, 'normal', halfWidth - 10);
-        
-        // Right: Location
+        this.addTextWithWrap(pdf, finding.legalBasis, margin + 5, currentY + 12, 8, 'normal', fieldWidth - 10);
+        currentY += legalHeight + spacing;
+      }
+      
+      // Process steps (NEW - requested by user)
+      if (finding.processSteps && finding.processSteps.length > 0) {
+        const processHeight = Math.min((finding.processSteps.length * 12) + labelHeight + boxPadding, 50);
         pdf.setFillColor(250, 250, 250);
-        pdf.rect(margin + halfWidth + 5, currentY, halfWidth, locationHeight, 'F');
+        pdf.rect(margin, currentY, fieldWidth, processHeight, 'F');
         pdf.setFont('Roboto', 'bold');
-        pdf.setFontSize(8);
-        pdf.text('Konum:', margin + halfWidth + 10, currentY + 6);
+        pdf.setFontSize(9);
+        pdf.text('Süreç Adımları:', margin + 5, currentY + 6);
         pdf.setFont('Roboto', 'normal');
-        pdf.text(finding.location, margin + halfWidth + 10, currentY + 12);
         
-        currentY += maxHeight + spacing;
-      } else {
-        // Single fields if only one exists
-        if (finding.legalBasis) {
-          const legalHeight = Math.min(this.calculateTextHeight(pdf, finding.legalBasis, 8, fieldWidth - 16) + labelHeight + boxPadding, 25);
-          pdf.setFillColor(250, 250, 250);
-          pdf.rect(margin, currentY, fieldWidth, legalHeight, 'F');
-          pdf.setFont('Roboto', 'bold');
+        let stepY = currentY + 12;
+        finding.processSteps.forEach((step, index) => {
+          const stepDate = new Date(step.date).toLocaleDateString('tr-TR');
           pdf.setFontSize(8);
-          pdf.text('Yasal Dayanak:', margin + 5, currentY + 6);
-          pdf.setFont('Roboto', 'normal');
-          this.addTextWithWrap(pdf, finding.legalBasis, margin + 5, currentY + 12, 7, 'normal', fieldWidth - 10);
-          currentY += legalHeight + spacing;
-        }
+          pdf.text(`${index + 1}. ${stepDate}: ${step.description}`, margin + 5, stepY);
+          stepY += 10;
+        });
         
-        if (finding.location) {
-          const locationHeight = 16;
-          pdf.setFillColor(250, 250, 250);
-          pdf.rect(margin, currentY, fieldWidth, locationHeight, 'F');
-          pdf.setFont('Roboto', 'bold');
-          pdf.setFontSize(8);
-          pdf.text('Konum:', margin + 5, currentY + 6);
-          pdf.setFont('Roboto', 'normal');
-          pdf.text(finding.location, margin + 5, currentY + 12);
-          currentY += locationHeight + spacing;
-        }
+        currentY += processHeight + spacing;
       }
 
-      // OPTIMIZED Images - Keep on same page with compact sizing
+      // FIXED Images - Always show images, better space management
       if (finding.images && finding.images.length > 0) {
-        const imageWidth = 70; // Smaller images
-        const imageHeight = 50;
-        const imageSpacing = 8;
+        const imageWidth = 80; // Slightly larger
+        const imageHeight = 55;
+        const imageSpacing = 10;
         const maxImages = 2;
         const imagesCount = Math.min(finding.images.length, maxImages);
         
-        // Calculate total height needed for images
-        const totalImageHeight = imageHeight + 10; // Small buffer
-        
-        // Smart positioning - keep images with content if possible
+        // Calculate required space
+        const totalImageHeight = imageHeight + 15; // Buffer for images
         const spaceLeft = pageHeight - 60 - currentY; // Account for footer
-        const willFitOnPage = spaceLeft >= totalImageHeight;
         
-        if (willFitOnPage || currentY < 150) { // If early in page, definitely keep together
-          // Images side by side (if 2), or single centered
-          const totalWidth = (imagesCount * imageWidth) + ((imagesCount - 1) * imageSpacing);
-          const startX = margin + (fieldWidth - totalWidth) / 2; // Center images
+        // If not enough space, continue anyway but check space more carefully
+        if (spaceLeft < totalImageHeight && currentY > 150) {
+          // Add a new page for images if we're too far down
+          pdf.addPage();
+          this.addPageHeader(pdf);
+          currentY = 70;
           
-          for (let i = 0; i < imagesCount; i++) {
-            const xOffset = startX + (i * (imageWidth + imageSpacing));
-            const yOffset = currentY;
-            
-            try {
-              const optimizedImage = await this.optimizeImage(finding.images[i]);
-              if (optimizedImage) {
-                pdf.addImage(optimizedImage, 'JPEG', xOffset, yOffset, imageWidth, imageHeight);
-              }
-            } catch (error) {
-              console.warn('Could not add image to PDF:', error);
-            }
-          }
+          // Add section title again
+          pdf.setFillColor(37, 99, 235);
+          pdf.rect(margin, currentY, contentWidth, 12, 'F');
+          pdf.setTextColor(255, 255, 255);
+          pdf.setFontSize(12);
+          pdf.setFont('Roboto', 'bold');
+          pdf.text(sectionTitle, margin + 5, currentY + 8);
+          currentY += 20;
           
-          currentY += totalImageHeight;
-        } else {
-          // If very little space left, move to next finding (images will be skipped)
-          console.log('Skipping images due to insufficient space - keeping content compact');
+          // Finding title again
+          pdf.setFillColor(240, 240, 240);
+          pdf.rect(margin, currentY, contentWidth, 10, 'F');
+          pdf.setTextColor(0, 0, 0);
+          pdf.setFontSize(10);
+          pdf.setFont('Roboto', 'bold');
+          pdf.text(`${finding.title} (Fotoğraflar)`, margin + 5, currentY + 7);
+          currentY += 15;
         }
+        
+        // Add images title
+        pdf.setFont('Roboto', 'bold');
+        pdf.setFontSize(9);
+        pdf.setTextColor(0, 0, 0);
+        pdf.text('Fotoğraflar:', margin, currentY);
+        currentY += 12;
+        
+        // Images layout - side by side if 2, centered if 1
+        const totalWidth = (imagesCount * imageWidth) + ((imagesCount - 1) * imageSpacing);
+        const startX = margin + (fieldWidth - totalWidth) / 2;
+        
+        for (let i = 0; i < imagesCount; i++) {
+          const xOffset = startX + (i * (imageWidth + imageSpacing));
+          const yOffset = currentY;
+          
+          try {
+            const optimizedImage = await this.optimizeImage(finding.images[i]);
+            if (optimizedImage) {
+              pdf.addImage(optimizedImage, 'JPEG', xOffset, yOffset, imageWidth, imageHeight);
+            }
+          } catch (error) {
+            console.warn('Could not add image to PDF:', error);
+          }
+        }
+        
+        currentY += imageHeight + 10;
       }
     }
 
