@@ -204,10 +204,10 @@ Production ortamında 80/443 portlarından erişim için:
 apt install nginx -y
 
 # Site konfigürasyonu oluştur
-cat > /etc/nginx/sites-available/isg-reports << 'EOF'
+cat > /etc/nginx/sites-available/medicalisg << 'EOF'
 server {
     listen 80;
-    server_name _;  # Tüm domain'ler için
+    server_name medicalisg.com www.medicalisg.com;  # Sadece medicalisg.com ve www.medicalisg.com için
     
     # Security headers
     add_header X-Frame-Options "SAMEORIGIN" always;
@@ -224,7 +224,7 @@ server {
     gzip_types text/plain text/css text/xml text/javascript application/x-javascript application/xml+rss;
     
     location / {
-        proxy_pass http://localhost:5000;
+        proxy_pass http://91.99.184.43:5000;  # IP adresi ve port
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -238,7 +238,7 @@ server {
     
     # Static files caching
     location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg)$ {
-        proxy_pass http://localhost:5000;
+        proxy_pass http://91.99.184.43:5000;
         expires 1y;
         add_header Cache-Control "public, immutable";
     }
@@ -249,7 +249,7 @@ EOF
 rm -f /etc/nginx/sites-enabled/default
 
 # Yeni site'ı etkinleştir
-ln -sf /etc/nginx/sites-available/isg-reports /etc/nginx/sites-enabled/
+ln -sf /etc/nginx/sites-available/medicalisg /etc/nginx/sites-enabled/
 
 # Nginx konfigürasyonunu test et
 nginx -t
