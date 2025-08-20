@@ -97,8 +97,8 @@ PORT=5000
 
 # Default Admin User (İlk kurulum sonrası değiştirin)
 ADMIN_USERNAME=admin
-ADMIN_PASSWORD=admin19172349in
-ADMIN_FULLNAME=Sistem Yoneticisi
+ADMIN_PASSWORD=admin123
+ADMIN_FULLNAME=Sistem Yöneticisi
 ADMIN_LOCATION=Yönetim
 
 # Session Configuration (Güçlü kriptografik anahtar)
