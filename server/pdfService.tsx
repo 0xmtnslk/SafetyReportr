@@ -312,7 +312,7 @@ export class ReactPdfService {
     this.addPageHeader(pdf, 'TASARIM/İMALAT/MONTAJ HATALARI');
     currentY = 50;
 
-    const designErrors = reportData.findings?.filter(f => f.section === 1) || [];
+    const designErrors = reportData.findings?.filter(f => f.section === 2) || [];
     currentY = await this.addSectionContent(pdf, 'TASARIM/İMALAT/MONTAJ HATALARI', designErrors, currentY, margin, contentWidth, pageHeight);
     this.addPageNumber(pdf, pageNumber++);
 
@@ -322,7 +322,7 @@ export class ReactPdfService {
     this.addPageHeader(pdf, 'İŞ SAĞLIĞI VE GÜVENLİĞİ BULGULARI');
     currentY = 50;
 
-    const safetyFindings = reportData.findings?.filter(f => f.section === 2 || f.section === 3) || [];
+    const safetyFindings = reportData.findings?.filter(f => f.section === 3) || [];
     currentY = await this.addSectionContent(pdf, 'İŞ SAĞLIĞI VE GÜVENLİĞİ BULGULARI', safetyFindings, currentY, margin, contentWidth, pageHeight);
     this.addPageNumber(pdf, pageNumber++);
 
@@ -332,7 +332,7 @@ export class ReactPdfService {
     this.addPageHeader(pdf, 'TAMAMLANMIŞ BULGULAR');
     currentY = 50;
 
-    const completedFindings = reportData.findings?.filter(f => f.isCompleted || f.status === 'completed') || [];
+    const completedFindings = reportData.findings?.filter(f => f.section === 4) || [];
     currentY = await this.addSectionContent(pdf, 'TAMAMLANMIŞ BULGULAR', completedFindings, currentY, margin, contentWidth, pageHeight);
     this.addPageNumber(pdf, pageNumber++);
 
