@@ -102,11 +102,11 @@ export default function ViewReport({ id }: ViewReportProps) {
 
   const getSectionName = (section: number) => {
     switch (section) {
-      case 1: return 'Tasarım/İmalat Hataları';
-      case 2: return 'İSG Tespitleri';
-      case 3: return 'Tamamlanan Tespitler';
-      case 4: return 'Genel Değerlendirme';
-      case 5: return 'Yönetici Özeti';
+      case 1: return 'Yönetici Özeti';
+      case 2: return 'Tasarım/İmalat/Montaj Hataları';
+      case 3: return 'İSG Tespitleri';
+      case 4: return 'Tamamlanmış Bulgular';
+      case 5: return 'Genel Değerlendirme';
       default: return `Bölüm ${section}`;
     }
   };
