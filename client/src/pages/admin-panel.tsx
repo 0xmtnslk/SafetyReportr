@@ -73,7 +73,7 @@ export default function AdminPanel() {
   // Create user mutation
   const createUserMutation = useMutation({
     mutationFn: (userData: CreateUserForm) => 
-      apiRequest('/api/admin/users', 'POST', userData),
+      apiRequest('POST', '/api/admin/users', userData),
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
       setIsCreateDialogOpen(false);
@@ -95,7 +95,7 @@ export default function AdminPanel() {
   // Update user mutation
   const updateUserMutation = useMutation({
     mutationFn: ({ id, userData }: { id: string; userData: EditUserForm }) => 
-      apiRequest(`/api/admin/users/${id}`, 'PUT', userData),
+      apiRequest('PUT', `/api/admin/users/${id}`, userData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
       setIsEditDialogOpen(false);
@@ -118,7 +118,7 @@ export default function AdminPanel() {
   // Delete user mutation
   const deleteUserMutation = useMutation({
     mutationFn: (userId: string) => 
-      apiRequest(`/api/admin/users/${userId}`, 'DELETE'),
+      apiRequest('DELETE', `/api/admin/users/${userId}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
       toast({
