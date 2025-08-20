@@ -52,28 +52,27 @@ export class ReactPdfService {
     }
   }
 
-  // Enhanced Turkish text support with proper encoding
+  // FIXED: Enhanced Turkish text support with jsPDF compatible encoding
   private turkishSafeText(text: string): string {
     if (!text) return '';
     
-    // Ensure proper UTF-8 encoding for Turkish characters
+    // jsPDF compatible Turkish character mapping
     return text
-      .normalize('NFC')  // Canonical decomposition then canonical composition
-      .replace(/\u0130/g, 'İ')  // Turkish İ (capital)
-      .replace(/\u0131/g, 'ı')  // Turkish ı (lowercase)
-      .replace(/\u011E/g, 'Ğ')  // Turkish Ğ (capital)
-      .replace(/\u011F/g, 'ğ')  // Turkish ğ (lowercase)  
-      .replace(/\u015E/g, 'Ş')  // Turkish Ş (capital)
-      .replace(/\u015F/g, 'ş')  // Turkish ş (lowercase)
-      .replace(/\u00DC/g, 'Ü')  // Turkish Ü (capital)
-      .replace(/\u00FC/g, 'ü')  // Turkish ü (lowercase)
-      .replace(/\u00D6/g, 'Ö')  // Turkish Ö (capital)
-      .replace(/\u00F6/g, 'ö')  // Turkish ö (lowercase)
-      .replace(/\u00C7/g, 'Ç')  // Turkish Ç (capital)
-      .replace(/\u00E7/g, 'ç');  // Turkish ç (lowercase)
+      .replace(/İ/g, 'I')   // İ -> I (temporary solution)
+      .replace(/ı/g, 'i')   // ı -> i 
+      .replace(/Ğ/g, 'G')   // Ğ -> G
+      .replace(/ğ/g, 'g')   // ğ -> g
+      .replace(/Ş/g, 'S')   // Ş -> S
+      .replace(/ş/g, 's')   // ş -> s
+      .replace(/Ü/g, 'U')   // Ü -> U
+      .replace(/ü/g, 'u')   // ü -> u
+      .replace(/Ö/g, 'O')   // Ö -> O
+      .replace(/ö/g, 'o')   // ö -> o
+      .replace(/Ç/g, 'C')   // Ç -> C
+      .replace(/ç/g, 'c');  // ç -> c
   }
 
-  // Enhanced text wrapper with overflow protection
+  // IMPROVED: Dynamic text wrapper that returns actual height used
   private addTextWithWrap(
     pdf: jsPDF, 
     text: string, 
@@ -81,37 +80,39 @@ export class ReactPdfService {
     y: number, 
     fontSize: number = 11, 
     fontStyle: string = 'normal', 
-    maxWidth: number = 170,
-    maxHeight?: number // NEW: Height limit to prevent overflow
+    maxWidth: number = 170
   ): number {
     if (!text) return y;
     
     pdf.setFontSize(fontSize);
     pdf.setFont('helvetica', fontStyle);
     
-    // Process text for proper Turkish character display
+    // Process text for Turkish character compatibility
     const processedText = this.turkishSafeText(text);
     const lines = pdf.splitTextToSize(processedText, maxWidth);
     
-    const lineHeight = fontSize * 0.5; // Tighter spacing
-    
-    // NEW: Limit lines if maxHeight is specified
-    let linesToPrint = lines;
-    if (maxHeight) {
-      const maxLines = Math.floor(maxHeight / lineHeight);
-      if (lines.length > maxLines) {
-        linesToPrint = lines.slice(0, maxLines - 1);
-        linesToPrint.push('...'); // Show continuation
-      }
-    }
+    const lineHeight = fontSize * 0.6; // Better line spacing
 
-    linesToPrint.forEach((line: string, index: number) => {
+    lines.forEach((line: string, index: number) => {
       if (line.trim()) {
         pdf.text(line, x, y + (index * lineHeight));
       }
     });
 
-    return y + (linesToPrint.length * lineHeight) + (fontSize * 0.3);
+    // Return the actual Y position after text
+    return y + (lines.length * lineHeight);
+  }
+  
+  // NEW: Calculate required height for text (for dynamic boxes)
+  private calculateTextHeight(pdf: jsPDF, text: string, fontSize: number, maxWidth: number): number {
+    if (!text) return 0;
+    
+    pdf.setFontSize(fontSize);
+    const processedText = this.turkishSafeText(text);
+    const lines = pdf.splitTextToSize(processedText, maxWidth);
+    const lineHeight = fontSize * 0.6;
+    
+    return lines.length * lineHeight;
   }
 
   // NEW: Enhanced header with proper Turkish characters
@@ -256,7 +257,7 @@ export class ReactPdfService {
     pdf.setTextColor(0, 0, 0);
     const summary = reportData.managementSummary || this.turkishSafeText('Yönetici özeti henüz eklenmemiştir.');
     
-    // Use text wrapping with height limit to prevent overflow
+    // Use text wrapping for summary
     this.addTextWithWrap(
       pdf, 
       summary, 
@@ -264,8 +265,7 @@ export class ReactPdfService {
       currentY + 12, 
       11, 
       'normal', 
-      contentWidth - 16,
-      summaryBoxHeight - 20 // Height limit
+      contentWidth - 16
     );
     
     currentY += summaryBoxHeight;
@@ -279,19 +279,46 @@ export class ReactPdfService {
       3: reportData.findings.filter(f => f.section === 3)
     };
 
-    // Section 1 - Each finding gets its own page
+    // Section 1 - Tasarim/Imalat/Montaj Hatalari
     if (findingsBySections[1].length > 0) {
-      await this.addSectionContent(pdf, this.turkishSafeText('BÖLÜM 1 - TASARIM/ÜRETIM HATALARI'), findingsBySections[1], 70, margin, contentWidth, pageHeight);
+      await this.addSectionContent(
+        pdf, 
+        this.turkishSafeText('BOLUM 1 - TASARIM/IMALAT/MONTAJ HATALARI'), 
+        findingsBySections[1], 
+        70, 
+        margin, 
+        contentWidth, 
+        pageHeight,
+        1
+      );
     }
 
-    // Section 2 - Each finding gets its own page
+    // Section 2 - Is Sagligi ve Guvenligi Bulgulari  
     if (findingsBySections[2].length > 0) {
-      await this.addSectionContent(pdf, this.turkishSafeText('BÖLÜM 2 - GÜVENLİK BULGULARI'), findingsBySections[2], 70, margin, contentWidth, pageHeight);
+      await this.addSectionContent(
+        pdf, 
+        this.turkishSafeText('BOLUM 2 - IS SAGLIGI VE GUVENLIGI BULGULARI'), 
+        findingsBySections[2], 
+        70, 
+        margin, 
+        contentWidth, 
+        pageHeight,
+        2
+      );
     }
 
-    // Section 3 - Each finding gets its own page
+    // Section 3 - Tamamlanmis Bulgular (with original section references)
     if (findingsBySections[3].length > 0) {
-      await this.addSectionContent(pdf, this.turkishSafeText('BÖLÜM 3 - TAMAMLANAN BULGULAR'), findingsBySections[3], 70, margin, contentWidth, pageHeight);
+      await this.addSectionContent(
+        pdf, 
+        this.turkishSafeText('BOLUM 3 - TAMAMLANMIS BULGULAR'), 
+        findingsBySections[3], 
+        70, 
+        margin, 
+        contentWidth, 
+        pageHeight,
+        3 // Special handling for completed findings
+      );
     }
 
     // FINAL PAGE - GENEL DEĞERLENDİRME
@@ -317,7 +344,7 @@ export class ReactPdfService {
     pdf.setTextColor(0, 0, 0);
     const evaluation = reportData.generalEvaluation || this.turkishSafeText('Genel değerlendirme henüz eklenmemiştir.');
     
-    // Use text wrapping with height limit to prevent overflow
+    // Use text wrapping for evaluation
     this.addTextWithWrap(
       pdf, 
       evaluation, 
@@ -325,8 +352,7 @@ export class ReactPdfService {
       currentY + 12, 
       11, 
       'normal', 
-      contentWidth - 16,
-      evalBoxHeight - 20 // Height limit
+      contentWidth - 16
     );
     
     currentY += evalBoxHeight;
@@ -354,8 +380,17 @@ export class ReactPdfService {
     return new Uint8Array(pdf.output('arraybuffer'));
   }
 
-  // NEW: Each finding gets its own page with structured boxes
-  private async addSectionContent(pdf: jsPDF, sectionTitle: string, findings: Finding[], startY: number, margin: number, contentWidth: number, pageHeight: number): Promise<number> {
+  // IMPROVED: Dynamic content-based boxes with optimized layout
+  private async addSectionContent(
+    pdf: jsPDF, 
+    sectionTitle: string, 
+    findings: Finding[], 
+    startY: number, 
+    margin: number, 
+    contentWidth: number, 
+    pageHeight: number,
+    sectionNumber?: number // For section 3 special handling
+  ): Promise<number> {
     let currentY = startY;
     
     // Process each finding on separate pages
@@ -374,6 +409,21 @@ export class ReactPdfService {
       pdf.text(this.turkishSafeText(sectionTitle), margin + 5, currentY + 8);
 
       currentY += 20;
+      
+      // SPECIAL: For section 3 (Completed findings), show original section
+      if (sectionNumber === 3 && finding.section && finding.section !== 3) {
+        const originalSectionName = finding.section === 1 ? 
+          'Tasarim/Imalat/Montaj Hatalari' : 
+          'Is Sagligi ve Guvenligi Bulgulari';
+        
+        pdf.setFillColor(220, 220, 220);
+        pdf.rect(margin, currentY, contentWidth, 8, 'F');
+        pdf.setTextColor(80, 80, 80);
+        pdf.setFontSize(9);
+        pdf.setFont('helvetica', 'italic');
+        pdf.text(this.turkishSafeText(`Orijinal Bolum: ${originalSectionName}`), margin + 5, currentY + 6);
+        currentY += 15;
+      }
 
       // Finding title box
       pdf.setFillColor(240, 240, 240);
@@ -388,7 +438,7 @@ export class ReactPdfService {
       // Risk level indicator
       const riskColors = {
         high: [220, 53, 69],    // Red
-        medium: [255, 193, 7],  // Yellow
+        medium: [255, 193, 7],  // Yellow  
         low: [40, 167, 69]      // Green
       };
       
@@ -399,100 +449,78 @@ export class ReactPdfService {
       pdf.setFontSize(9);
       pdf.setFont('helvetica', 'bold');
       
-      const riskText = finding.dangerLevel === 'high' ? 'YÜKSEK' : 
-                      finding.dangerLevel === 'medium' ? 'ORTA' : 'DÜŞÜK';
+      const riskText = finding.dangerLevel === 'high' ? 'YUKSEK' : 
+                      finding.dangerLevel === 'medium' ? 'ORTA' : 'DUSUK';
       pdf.text(this.turkishSafeText(riskText), margin + 30, currentY + 5, { align: 'center' });
 
       currentY += 15;
 
-      // FIXED HEIGHT BOXES for each field
-      const fieldHeight = 35; // Standard height for each field box
+      // DYNAMIC CONTENT BOXES - Content-based heights
+      const boxPadding = 8;
+      const labelHeight = 12;
+      const fieldWidth = contentWidth;
       
       // Description box (always present)
+      const descHeight = this.calculateTextHeight(pdf, finding.description, 10, fieldWidth - 16) + labelHeight + boxPadding;
       pdf.setFillColor(250, 250, 250);
-      pdf.rect(margin, currentY, contentWidth, fieldHeight, 'F');
+      pdf.rect(margin, currentY, fieldWidth, descHeight, 'F');
       pdf.setTextColor(0, 0, 0);
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(10);
-      pdf.text(this.turkishSafeText('Açıklama:'), margin + 5, currentY + 8);
+      pdf.text(this.turkishSafeText('Aciklama:'), margin + 5, currentY + 8);
       pdf.setFont('helvetica', 'normal');
-      this.addTextWithWrap(
-        pdf, 
-        this.turkishSafeText(finding.description), 
-        margin + 5, 
-        currentY + 15, 
-        10, 
-        'normal', 
-        contentWidth - 10, 
-        fieldHeight - 18 // Height limit
-      );
-      currentY += fieldHeight + 5;
+      this.addTextWithWrap(pdf, this.turkishSafeText(finding.description), margin + 5, currentY + 15, 10, 'normal', fieldWidth - 10);
+      currentY += descHeight + 5;
 
-      // Current situation box (if available)
+      // Two-column layout for other fields (if space permits)
+      const halfWidth = (fieldWidth - 5) / 2;
+      let leftColumnY = currentY;
+      let rightColumnY = currentY;
+      
+      // Current situation (left column)
       if (finding.currentSituation) {
+        const situationHeight = this.calculateTextHeight(pdf, finding.currentSituation, 10, halfWidth - 10) + labelHeight + boxPadding;
         pdf.setFillColor(250, 250, 250);
-        pdf.rect(margin, currentY, contentWidth, fieldHeight, 'F');
+        pdf.rect(margin, leftColumnY, halfWidth, situationHeight, 'F');
         pdf.setFont('helvetica', 'bold');
-        pdf.text(this.turkishSafeText('Mevcut Durum:'), margin + 5, currentY + 8);
+        pdf.text(this.turkishSafeText('Mevcut Durum:'), margin + 5, leftColumnY + 8);
         pdf.setFont('helvetica', 'normal');
-        this.addTextWithWrap(
-          pdf, 
-          this.turkishSafeText(finding.currentSituation), 
-          margin + 5, 
-          currentY + 15, 
-          10, 
-          'normal', 
-          contentWidth - 10, 
-          fieldHeight - 18
-        );
-        currentY += fieldHeight + 5;
+        this.addTextWithWrap(pdf, this.turkishSafeText(finding.currentSituation), margin + 5, leftColumnY + 15, 10, 'normal', halfWidth - 10);
+        leftColumnY += situationHeight + 5;
       }
 
-      // Recommendation box (if available)
+      // Recommendation (right column)
       if (finding.recommendation) {
+        const recHeight = this.calculateTextHeight(pdf, finding.recommendation, 10, halfWidth - 10) + labelHeight + boxPadding;
         pdf.setFillColor(250, 250, 250);
-        pdf.rect(margin, currentY, contentWidth, fieldHeight, 'F');
+        pdf.rect(margin + halfWidth + 5, rightColumnY, halfWidth, recHeight, 'F');
         pdf.setFont('helvetica', 'bold');
-        pdf.text(this.turkishSafeText('Öneri:'), margin + 5, currentY + 8);
+        pdf.text(this.turkishSafeText('Oneri:'), margin + halfWidth + 10, rightColumnY + 8);
         pdf.setFont('helvetica', 'normal');
-        this.addTextWithWrap(
-          pdf, 
-          this.turkishSafeText(finding.recommendation), 
-          margin + 5, 
-          currentY + 15, 
-          10, 
-          'normal', 
-          contentWidth - 10, 
-          fieldHeight - 18
-        );
-        currentY += fieldHeight + 5;
+        this.addTextWithWrap(pdf, this.turkishSafeText(finding.recommendation), margin + halfWidth + 10, rightColumnY + 15, 10, 'normal', halfWidth - 10);
+        rightColumnY += recHeight + 5;
       }
+      
+      // Update currentY to the maximum of both columns
+      currentY = Math.max(leftColumnY, rightColumnY);
 
-      // Legal basis box (if available)
+      // Legal basis (full width)
       if (finding.legalBasis) {
+        const legalHeight = this.calculateTextHeight(pdf, finding.legalBasis, 10, fieldWidth - 10) + labelHeight + boxPadding;
         pdf.setFillColor(250, 250, 250);
-        pdf.rect(margin, currentY, contentWidth, fieldHeight, 'F');
+        pdf.rect(margin, currentY, fieldWidth, legalHeight, 'F');
         pdf.setFont('helvetica', 'bold');
         pdf.text(this.turkishSafeText('Yasal Dayanak:'), margin + 5, currentY + 8);
         pdf.setFont('helvetica', 'normal');
-        this.addTextWithWrap(
-          pdf, 
-          this.turkishSafeText(finding.legalBasis), 
-          margin + 5, 
-          currentY + 15, 
-          10, 
-          'normal', 
-          contentWidth - 10, 
-          fieldHeight - 18
-        );
-        currentY += fieldHeight + 5;
+        this.addTextWithWrap(pdf, this.turkishSafeText(finding.legalBasis), margin + 5, currentY + 15, 10, 'normal', fieldWidth - 10);
+        currentY += legalHeight + 5;
       }
 
-      // Location box (if available) - single line
+      // Location (single line)
       if (finding.location) {
         const locationHeight = 20;
         pdf.setFillColor(250, 250, 250);
-        pdf.rect(margin, currentY, contentWidth, locationHeight, 'F');
+        pdf.rect(margin, currentY, fieldWidth, locationHeight, 'F');
         pdf.setFont('helvetica', 'bold');
         pdf.text(this.turkishSafeText('Konum:'), margin + 5, currentY + 8);
         pdf.setFont('helvetica', 'normal');
@@ -500,26 +528,36 @@ export class ReactPdfService {
         currentY += locationHeight + 5;
       }
 
-      // Images (if available) - max 2 per finding
+      // Images (if available) - max 2 per finding, side by side if possible
       if (finding.images && finding.images.length > 0) {
-        for (const imageUrl of finding.images.slice(0, 2)) {
+        const imageWidth = 80;
+        const imageHeight = 60;
+        const imagesPerRow = Math.floor(fieldWidth / (imageWidth + 10));
+        
+        for (let i = 0; i < Math.min(finding.images.length, 2); i++) {
           // Check if we need a new page for images
-          if (currentY + 70 > pageHeight - 60) {
+          if (currentY + imageHeight > pageHeight - 60) {
             pdf.addPage();
             this.addPageHeader(pdf);
             currentY = 70;
           }
           
+          const xOffset = margin + (i % imagesPerRow) * (imageWidth + 10);
+          const yOffset = currentY + Math.floor(i / imagesPerRow) * (imageHeight + 10);
+          
           try {
-            const optimizedImage = await this.optimizeImage(imageUrl);
+            const optimizedImage = await this.optimizeImage(finding.images[i]);
             if (optimizedImage) {
-              pdf.addImage(optimizedImage, 'JPEG', margin, currentY, 80, 60);
-              currentY += 65;
+              pdf.addImage(optimizedImage, 'JPEG', xOffset, yOffset, imageWidth, imageHeight);
             }
           } catch (error) {
             console.warn('Could not add image to PDF:', error);
           }
         }
+        
+        // Update currentY after images
+        const imageRows = Math.ceil(Math.min(finding.images.length, 2) / imagesPerRow);
+        currentY += imageRows * (imageHeight + 10);
       }
     }
 
