@@ -167,14 +167,16 @@ export default function ViewReport({ id }: ViewReportProps) {
           </div>
         </div>
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={() => setLocation(`/edit-report/${(report as any).id}`)}
-            data-testid="button-edit-report"
-          >
-            <Edit size={16} className="mr-2" />
-            Düzenle
-          </Button>
+          {(report as any).status !== 'completed' && (
+            <Button
+              variant="outline"
+              onClick={() => setLocation(`/edit-report/${(report as any).id}`)}
+              data-testid="button-edit-report"
+            >
+              <Edit size={16} className="mr-2" />
+              Düzenle
+            </Button>
+          )}
           <Button
             onClick={handleExportPDF}
             data-testid="button-export-pdf"

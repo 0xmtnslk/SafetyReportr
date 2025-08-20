@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Plus, FileText, AlertTriangle, CheckCircle, Save, Edit, Trash2 } from "lucide-react";
+import { ArrowLeft, Plus, FileText, AlertTriangle, CheckCircle, Save, Edit, Trash2, CheckCircle2, Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -77,6 +77,34 @@ export default function EditReport() {
       toast({
         title: "Hata",
         description: "Rapor güncellenirken bir hata oluştu",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Complete report mutation
+  const completeReportMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("PUT", `/api/reports/${id}`, {
+        ...reportData,
+        status: 'completed'
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/reports/${id}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/reports"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      toast({
+        title: "Başarılı",
+        description: "Rapor başarıyla tamamlandı ve yayınlandı!",
+      });
+      setLocation(`/view-report/${id}`);
+    },
+    onError: () => {
+      toast({
+        title: "Hata",
+        description: "Rapor tamamlanırken bir hata oluştu",
         variant: "destructive",
       });
     },
@@ -154,6 +182,41 @@ export default function EditReport() {
       low: sectionFindings.filter((f: any) => f.dangerLevel === 'low').length,
     };
   };
+
+  // Check if report can be completed
+  const canCompleteReport = () => {
+    return reportData.reportNumber && 
+           reportData.reportDate && 
+           reportData.reporter && 
+           reportData.projectLocation &&
+           reportData.managementSummary &&
+           reportData.generalEvaluation;
+  };
+
+  // Prevent editing if report is completed
+  const isReportCompleted = report?.status === 'completed';
+  
+  if (isReportCompleted) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="text-center py-12">
+          <CheckCircle2 className="mx-auto h-16 w-16 text-success mb-4" />
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Rapor Tamamlanmış</h2>
+          <p className="text-gray-600 mb-6">Bu rapor tamamlanmış ve yayınlanmıştır. Düzenleme yapılamaz.</p>
+          <div className="flex gap-4 justify-center">
+            <Button onClick={() => setLocation('/reports')} variant="outline">
+              <ArrowLeft size={16} className="mr-2" />
+              Raporlara Dön
+            </Button>
+            <Button onClick={() => setLocation(`/view-report/${id}`)}>
+              <FileText size={16} className="mr-2" />
+              Raporu Görüntüle
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return <div className="p-6">Yükleniyor...</div>;
@@ -384,6 +447,70 @@ export default function EditReport() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Complete Report Section */}
+        {canCompleteReport() && (
+          <Card className="mt-6 border-success bg-success/5">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-success mb-2">
+                    <CheckCircle className="inline mr-2" size={20} />
+                    Rapor Tamamlanmaya Hazır
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    Tüm bölümler doldurulmuş. Raporu tamamlayıp yayınlayabilirsiniz.
+                  </p>
+                </div>
+                <Button
+                  onClick={() => completeReportMutation.mutate()}
+                  disabled={completeReportMutation.isPending}
+                  className="bg-success hover:bg-success/90 text-white"
+                  data-testid="button-complete-report"
+                >
+                  {completeReportMutation.isPending ? (
+                    <>
+                      <Save size={16} className="mr-2 animate-spin" />
+                      Tamamlanıyor...
+                    </>
+                  ) : (
+                    <>
+                      <Send size={16} className="mr-2" />
+                      Raporu Tamamla ve Yayınla
+                    </>
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Progress Warning */}
+        {!canCompleteReport() && (
+          <Card className="mt-6 border-warning bg-warning/5">
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <AlertTriangle className="text-warning mr-2" size={20} />
+                <div>
+                  <h3 className="text-lg font-semibold text-warning mb-1">
+                    Eksik Bilgiler Var
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    Raporu tamamlamak için tüm bölümleri doldurun:
+                  </p>
+                  <ul className="text-sm text-gray-600 mt-2 list-disc list-inside">
+                    {!reportData.managementSummary && <li>Yönetici Özeti</li>}
+                    {!reportData.generalEvaluation && <li>Genel Değerlendirme</li>}
+                    {!reportData.reportNumber && <li>Rapor Numarası</li>}
+                    {!reportData.reportDate && <li>Rapor Tarihi</li>}
+                    {!reportData.reporter && <li>Raporlayan</li>}
+                    {!reportData.projectLocation && <li>Proje Lokasyonu</li>}
+                  </ul>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     );
   }

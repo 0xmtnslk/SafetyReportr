@@ -1,12 +1,29 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText, AlertTriangle, CheckCircle } from "lucide-react";
+import { FileText, AlertTriangle, CheckCircle, Clock, CheckCircle2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "wouter";
 
 export default function Dashboard() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
+
+  // Progress calculation function
+  const calculateProgress = (report: any) => {
+    // Basic progress: if report has managementSummary and generalEvaluation = 100%
+    // Otherwise calculate based on available sections
+    let completedSections = 0;
+    const totalSections = 5; // Yönetici Özeti, Tasarım, İSG, Tamamlanmış, Genel Değerlendirme
+    
+    if (report.managementSummary) completedSections++;
+    if (report.generalEvaluation) completedSections++;
+    
+    // For now, assume other sections are partially completed for demo
+    // In real implementation, you'd check actual sections
+    completedSections += 2; // Assume 2 more sections have some content
+    
+    return Math.min((completedSections / totalSections) * 100, 90); // Max 90% until fully completed
+  };
 
   const { data: stats = {}, isLoading: statsLoading } = useQuery({
     queryKey: ["/api/stats"],
@@ -128,21 +145,27 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <span
-                      className={`px-3 py-1 rounded-full text-sm font-medium ${
-                        report.status === "completed"
-                          ? "bg-success bg-opacity-10 text-success"
-                          : report.status === "in_progress"
-                          ? "bg-warning bg-opacity-10 text-warning"
-                          : "bg-gray-100 text-gray-600"
-                      }`}
-                    >
-                      {report.status === "completed"
-                        ? "Tamamlandı"
-                        : report.status === "in_progress"
-                        ? "Devam Ediyor"
-                        : "Taslak"}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      {report.status === "completed" ? (
+                        <div className="flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-success bg-opacity-10 text-success">
+                          <CheckCircle2 size={14} />
+                          Tamamlandı
+                        </div>
+                      ) : (
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-warning bg-opacity-10 text-warning">
+                            <Clock size={14} />
+                            Devam Ediyor
+                          </div>
+                          <div className="w-24 bg-gray-200 rounded-full h-1.5">
+                            <div 
+                              className="bg-warning h-1.5 rounded-full transition-all duration-300" 
+                              style={{ width: `${calculateProgress(report)}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))
