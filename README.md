@@ -16,7 +16,8 @@ Sisteminizde aşağıdakilerin kurulu olması gerekiyor:
 ### 🔧 Adım 1: Sistem Güncellemesi
 
 ```bash
-sudo apt update && sudo apt upgrade -y
+sudo apt update && apt upgrade -y
+sudo apt install curl wget git nano htop -y
 ```
 
 ### 🐘 Adım 2: PostgreSQL Kurulumu
@@ -32,8 +33,9 @@ sudo systemctl enable postgresql
 # Database ve kullanıcı oluştur
 sudo -u postgres psql << EOF
 CREATE DATABASE isg_reports;
-CREATE USER isg_user WITH ENCRYPTED PASSWORD 'secure_password_2024';
+CREATE USER isg_user WITH ENCRYPTED PASSWORD 'IsgSecure2024';
 GRANT ALL PRIVILEGES ON DATABASE isg_reports TO isg_user;
+ALTER DATABASE isg_reports OWNER TO isg_user;
 ALTER USER isg_user CREATEDB;
 \q
 EOF
@@ -48,78 +50,78 @@ curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 # Node.js ve npm kur
 sudo apt install nodejs -y
 
+# PM2 global kurulum (process management için)
+npm install -g pm2
+
 # Sürümleri kontrol et
 node --version  # v20.x.x olmalı
 npm --version   # 10.x.x olmalı
+pm2 --version
 ```
 
 ### 👤 Adım 4: Sistem Kullanıcısı Oluştur
 
 ```bash
 # İSG Reports için özel kullanıcı
-sudo adduser --system --group --home /opt/isg-reports --shell /bin/bash isg
-
-# Kullanıcı dizinini oluştur
-sudo mkdir -p /opt/isg-reports
-sudo chown isg:isg /opt/isg-reports
-```
-
-### 📂 Adım 5: Kod İndirme ve Kurulum
-
-```bash
-# İSG kullanıcısına geç
-sudo su - isg
+mkdir -p /opt/isg-reports
+cd /opt/isg-reports
 
 # GitHub'dan projeyi indir
-cd /opt/isg-reports
-git clone https://github.com/yourusername/isg-reports.git .
+git clone https://github.com/0xmtnslk/SafetyReportr.git .
 
-# Ownership düzelt (root'a geri dön)
-exit
-sudo chown -R isg:isg /opt/isg-reports
-```
+# Log dizini oluştur
+mkdir -p /var/log/isg-reports
 
-### ⚙️ Adım 6: Environment Configuration
+# Backup dizini oluştur
+mkdir -p /opt/backups
+
+
+### ⚙️ Adım 5: Environment Configuration
 
 ```bash
-# İSG kullanıcısı olarak devam et
-sudo su - isg
-cd /opt/isg-reports
-
 # Environment dosyasını oluştur
-cp .env.example .env
+cd /opt/isg-reports
+cp .env.example .env 2>/dev/null || touch .env
 
-# Environment değişkenlerini düzenle
-nano .env
-```
-
-**`.env` dosyasını şu şekilde düzenleyin:**
-```env
+# Environment dosyasını düzenle
+cat > .env << 'EOF'
 # Database Configuration
-DATABASE_URL=postgresql://isg_user:secure_password_2024@localhost:5432/isg_reports
+DATABASE_URL=postgresql://isg_user:IsgSecure2024@localhost:5432/isg_reports
 
-# JWT Secret (Güçlü bir rastgele anahtar oluşturun)
-JWT_SECRET=super-secure-jwt-secret-key-change-this-in-production-2024
+# JWT Secret (Güçlü kriptografik anahtar)
+JWT_SECRET=1cH1QqQ6GA64XVQpS_uFgxUZCu3XN-cAImNg0B0xDeB7WEi2xrtbqHtWGCt6DIfy-0d9-yeEYElvyMp6hSyF7g
 
 # Server Configuration
 NODE_ENV=production
 PORT=5000
 
-# Default Admin User
+# Default Admin User (İlk kurulum sonrası değiştirin)
 ADMIN_USERNAME=admin
-ADMIN_PASSWORD=admin123
+ADMIN_PASSWORD=ql$zzLZSD*t3NR%b
 ADMIN_FULLNAME=Sistem Yöneticisi
 ADMIN_LOCATION=Yönetim
 
-# Session Configuration
-SESSION_SECRET=super-secure-session-secret-change-this-in-production-2024
+# Session Configuration (Güçlü kriptografik anahtar)
+SESSION_SECRET=WGVH-_zLE_yeeqlRrUzI5LBZeHUr8HAMneI55eySa7IGVGsGujabBlnjzgjWdP3M6mSpHs2Gf7UjpksS09pkSg
+EOF
+
+# Dosya izinlerini güvenli hale getir
+chmod 600 .env
+
 ```
 
-### 📦 Adım 7: Dependencies ve Build
+### 📦 Adım 6: Dependencies ve Build
 
 ```bash
-# Dependencies kur (development dependencies dahil)
+cd /opt/isg-reports
+
+# Dependencies kur
 npm install
+
+# Package.json'a gerekli scriptleri ekle (eğer yoksa)
+npm pkg set scripts.seed:admin="tsx scripts/seed-admin.ts"
+npm pkg set scripts.start:production="npm run start"
+npm pkg set scripts.production:setup="npm run db:push --force && npm run seed:admin && npm run build"
 
 # Database schema'yı kur
 npm run db:push --force
@@ -131,79 +133,95 @@ npm run seed:admin
 npm run build
 ```
 
-**IMPORTANT:** Package.json'a aşağıdaki scriptleri manuel olarak ekleyin:
-
-```json
-{
-  "scripts": {
-    "seed:admin": "tsx scripts/seed-admin.ts",
-    "start:production": "npm run start",
-    "deploy": "chmod +x scripts/deploy.sh && ./scripts/deploy.sh",
-    "production:setup": "npm run db:push --force && npm run seed:admin && npm run build"
-  }
-}
-```
-
-### 🔄 Adım 8: Systemd Service Kurulumu
+### 🔄 Adım 7: Systemd Service Kurulumu
 
 ```bash
-# Root kullanıcısına geri dön
-exit
+cd /opt/isg-reports
 
-# Service dosyasını kopyala
-sudo cp /opt/isg-reports/systemd/isg-reports.service /etc/systemd/system/
+# PM2 ecosystem dosyası oluştur
+cat > ecosystem.config.cjs << 'EOF'
+module.exports = {
+  apps: [{
+    name: 'isg-reports',
+    script: 'npm',
+    args: 'run start:production',
+    cwd: '/opt/isg-reports',
+    instances: 1,
+    autorestart: true,
+    watch: false,
+    max_memory_restart: '1G',
+    env: {
+      NODE_ENV: 'production',
+      PORT: 5000
+    },
+    error_file: '/var/log/isg-reports/error.log',
+    out_file: '/var/log/isg-reports/out.log',
+    log_file: '/var/log/isg-reports/combined.log',
+    time: true
+  }]
+};
+EOF
 
-# Service dosyasını düzenle (gerekirse)
-sudo nano /etc/systemd/system/isg-reports.service
+# PM2 ile uygulamayı başlat
+pm2 start ecosystem.config.cjs
 
-# Systemd'yi yenile ve servisi etkinleştir
-sudo systemctl daemon-reload
-sudo systemctl enable isg-reports
+# PM2'yi sistem başlangıcında otomatik başlat
+pm2 startup
+pm2 save
 
-# Servisi başlat
-sudo systemctl start isg-reports
-
-# Servis durumunu kontrol et
-sudo systemctl status isg-reports
+echo "✅ PM2 servis kurulumu tamamlandı"
 ```
 
 ### 🔥 Adım 9: Firewall Konfigürasyonu
 
 ```bash
 # UFW'yi etkinleştir
-sudo ufw enable
+ufw --force enable
 
 # SSH erişimini koru
-sudo ufw allow ssh
+ufw allow ssh
 
 # Uygulama portunu aç
-sudo ufw allow 5000
+ufw allow 5000
+
+# HTTP/HTTPS portlarını aç (Nginx için)
+ufw allow 80
+ufw allow 443
 
 # PostgreSQL portunu sadece localhost'tan aç
-sudo ufw allow from 127.0.0.1 to any port 5432
+ufw allow from 127.0.0.1 to any port 5432
 
 # Firewall durumunu kontrol et
-sudo ufw status
+ufw status
 ```
 
-### 🌐 Adım 10: Nginx Reverse Proxy (Opsiyonel)
+### 🌐 Adım 9: Nginx Reverse Proxy (Opsiyonel)
 
 Production ortamında 80/443 portlarından erişim için:
 
 ```bash
 # Nginx kur
-sudo apt install nginx -y
+apt install nginx -y
 
-# Site konfigürasyonu
-sudo nano /etc/nginx/sites-available/isg-reports
-
-# Konfigürasyon içeriği:
-```
-
-```nginx
+# Site konfigürasyonu oluştur
+cat > /etc/nginx/sites-available/isg-reports << 'EOF'
 server {
     listen 80;
-    server_name your-domain.com;  # Kendi domain'inizi yazın
+    server_name _;  # Tüm domain'ler için
+    
+    # Security headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "no-referrer-when-downgrade" always;
+    add_header Content-Security-Policy "default-src 'self' http: https: data: blob: 'unsafe-inline'" always;
+    
+    # Gzip compression
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 1024;
+    gzip_proxied expired no-cache no-store private auth;
+    gzip_types text/plain text/css text/xml text/javascript application/x-javascript application/xml+rss;
     
     location / {
         proxy_pass http://localhost:5000;
@@ -215,74 +233,125 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_cache_bypass $http_upgrade;
+        proxy_read_timeout 86400;
+    }
+    
+    # Static files caching
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg)$ {
+        proxy_pass http://localhost:5000;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
     }
 }
-```
+EOF
 
-```bash
-# Site'ı etkinleştir
-sudo ln -s /etc/nginx/sites-available/isg-reports /etc/nginx/sites-enabled/
+# Default site'ı devre dışı bırak
+rm -f /etc/nginx/sites-enabled/default
 
-# Nginx'i test et ve başlat
-sudo nginx -t
-sudo systemctl restart nginx
-sudo systemctl enable nginx
+# Yeni site'ı etkinleştir
+ln -sf /etc/nginx/sites-available/isg-reports /etc/nginx/sites-enabled/
+
+# Nginx konfigürasyonunu test et
+nginx -t
+
+# Nginx'i başlat
+systemctl restart nginx
+systemctl enable nginx
+
+echo "✅ Nginx kurulumu tamamlandı"
 
 # Nginx için firewall kuralı
 sudo ufw allow 'Nginx Full'
 ```
 
-### 🔒 Adım 11: SSL Sertifikası (Let's Encrypt)
+### 🔒 Adım 10: SSL Sertifikası (Let's Encrypt)
 
 ```bash
-# Certbot kur
-sudo apt install certbot python3-certbot-nginx -y
+# Certbot kur (domain'iniz varsa)
+apt install certbot python3-certbot-nginx -y
 
-# SSL sertifikası al
-sudo certbot --nginx -d your-domain.com
+# SSL sertifikası al (domain'inizi yazın)
+# certbot --nginx -d your-domain.com
 
 # Otomatik yenileme test et
-sudo certbot renew --dry-run
+# certbot renew --dry-run
+
+echo "ℹ️  SSL kurulumu için domain gerekli - manuel olarak yapılabilir"
 ```
-
-### ✅ Adım 12: Kurulum Doğrulama
-
+### ✅ Adım 11: Monitoring ve Backup Kurulumu
 ```bash
-# Servis durumu
-sudo systemctl status isg-reports
-
-# Logları kontrol et
-sudo journalctl -u isg-reports -f
-
-# Port dinleme kontrolü
-sudo netstat -tlnp | grep :5000
-
-# HTTP erişim testi
-curl http://localhost:5000
-
-# Nginx varsa
-curl http://your-domain.com
-```
-
-### 📊 Adım 13: Monitoring ve Maintenance
-
-```bash
-# Log rotation için
-sudo nano /etc/logrotate.d/isg-reports
-```
-
-```bash
+# Log rotation konfigürasyonu
+cat > /etc/logrotate.d/isg-reports << 'EOF'
 /var/log/isg-reports/*.log {
     daily
     rotate 30
     compress
     delaycompress
     missingok
-    create 0644 isg isg
+    create 0644 root root
     postrotate
-        systemctl reload isg-reports
+        pm2 reload isg-reports
     endscript
 }
+EOF
+
+# Günlük database backup cron job
+(crontab -l 2>/dev/null; echo "0 2 * * * sudo -u postgres pg_dump isg_reports > /opt/backups/isg_reports_\$(date +\\%Y\\%m\\%d).sql") | crontab -
+
+# Eski backup'ları temizle (30 gün)
+(crontab -l 2>/dev/null; echo "0 3 * * * find /opt/backups -name 'isg_reports_*.sql' -mtime +30 -delete") | crontab -
+
+echo "✅ Monitoring ve backup kurulumu tamamlandı"
+```
+
+### ✅ Adım 12: Kurulum Doğrulama
+
+```bash
+echo "🔍 Sistem durumu kontrol ediliyor..."
+
+# PM2 durumu
+pm2 status
+
+# Nginx durumu
+systemctl status nginx --no-pager
+
+# PostgreSQL durumu
+systemctl status postgresql --no-pager
+
+# Port dinleme kontrolü
+netstat -tlnp | grep :5000
+netstat -tlnp | grep :80
+
+# HTTP erişim testi
+sleep 5
+curl -I http://localhost:5000 2>/dev/null | head -1
+curl -I http://localhost 2>/dev/null | head -1
+
+echo ""
+echo "✅ Kurulum tamamlandı!"
+echo ""
+echo "🔑 Giriş Bilgileri:"
+echo "URL: http://$(hostname -I | awk '{print $1}')"
+echo "Kullanıcı Adı: admin"
+echo "Şifre: ql\$zzLZSD*t3NR%b"
+echo ""
+echo "⚠️  UYARI: İlk girişten sonra mutlaka admin şifresini değiştirin!"
+```
+
+### 📊 Adım 13: Önemli Komutlar ve Dosya Yolları
+
+```bash
+# PM2 komutları
+pm2 status                    # Durum kontrolü
+pm2 logs isg-reports         # Logları görüntüle
+pm2 restart isg-reports      # Yeniden başlat
+pm2 stop isg-reports         # Durdur
+pm2 start isg-reports        # Başlat
+
+# Nginx komutları
+systemctl status nginx       # Durum kontrolü
+systemctl restart nginx      # Yeniden başlat
+nginx -t                     # Konfigürasyon test
 ```
 
 ## 🔑 İlk Giriş Bilgileri
@@ -306,8 +375,6 @@ Kurulum tamamlandıktan sonra aşağıdaki bilgilerle giriş yapabilirsiniz:
 ## 🔄 Güncelleme Prosedürü
 
 ```bash
-# İSG kullanıcısına geç
-sudo su - isg
 cd /opt/isg-reports
 
 # Güncellemeleri çek
@@ -319,22 +386,20 @@ npm install
 # Build yap
 npm run build
 
-# Root kullanıcısına geç
-exit
+# PM2 ile yeniden başlat
+pm2 restart isg-reports
 
-# Servisi yeniden başlat
-sudo systemctl restart isg-reports
+echo "✅ Güncelleme tamamlandı"
 ```
 
 ## 🆘 Sorun Giderme
 
 ### Servis başlamıyor
 ```bash
-# Detaylı logları kontrol et
-sudo journalctl -u isg-reports -n 50
+# PM2 logları kontrol et
+pm2 logs isg-reports
 
 # Manuel başlatma testi
-sudo su - isg
 cd /opt/isg-reports
 npm run start:production
 ```
@@ -342,17 +407,24 @@ npm run start:production
 ### Database bağlantı hatası
 ```bash
 # PostgreSQL durumu
-sudo systemctl status postgresql
+systemctl status postgresql
 
 # Database erişim testi
 sudo -u postgres psql -c "SELECT version();"
+
+# Bağlantı testi
+sudo -u postgres psql -d isg_reports -c "SELECT current_database();"
 ```
 
 ### Port kullanımda hatası
 ```bash
 # Port kim kullanıyor
-sudo netstat -tlnp | grep :5000
-sudo lsof -i :5000
+netstat -tlnp | grep :5000
+lsof -i :5000
+
+# PM2 processlerini temizle
+pm2 delete all
+pm2 start ecosystem.config.js
 ```
 
 ## 📞 Destek
