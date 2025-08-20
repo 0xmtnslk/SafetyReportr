@@ -74,8 +74,17 @@ export class ReactPdfService {
       .replace(/\u00E7/g, 'ç');  // Turkish ç (lowercase)
   }
 
-  // Enhanced text wrapper with Turkish support
-  private addTextWithWrap(pdf: jsPDF, text: string, x: number, y: number, fontSize: number = 11, fontStyle: string = 'normal', maxWidth: number = 170): number {
+  // Enhanced text wrapper with overflow protection
+  private addTextWithWrap(
+    pdf: jsPDF, 
+    text: string, 
+    x: number, 
+    y: number, 
+    fontSize: number = 11, 
+    fontStyle: string = 'normal', 
+    maxWidth: number = 170,
+    maxHeight?: number // NEW: Height limit to prevent overflow
+  ): number {
     if (!text) return y;
     
     pdf.setFontSize(fontSize);
@@ -85,15 +94,25 @@ export class ReactPdfService {
     const processedText = this.turkishSafeText(text);
     const lines = pdf.splitTextToSize(processedText, maxWidth);
     
-    const lineHeight = fontSize * 0.6; // Better spacing
+    const lineHeight = fontSize * 0.5; // Tighter spacing
+    
+    // NEW: Limit lines if maxHeight is specified
+    let linesToPrint = lines;
+    if (maxHeight) {
+      const maxLines = Math.floor(maxHeight / lineHeight);
+      if (lines.length > maxLines) {
+        linesToPrint = lines.slice(0, maxLines - 1);
+        linesToPrint.push('...'); // Show continuation
+      }
+    }
 
-    lines.forEach((line: string, index: number) => {
+    linesToPrint.forEach((line: string, index: number) => {
       if (line.trim()) {
         pdf.text(line, x, y + (index * lineHeight));
       }
     });
 
-    return y + (lines.length * lineHeight) + (fontSize * 0.4);
+    return y + (linesToPrint.length * lineHeight) + (fontSize * 0.3);
   }
 
   // NEW: Enhanced header with proper Turkish characters
@@ -232,14 +251,27 @@ export class ReactPdfService {
 
     currentY += 20;
 
-    // Content background
+    // Content background - FIXED HEIGHT
+    const summaryBoxHeight = 120; // Fixed height box
     pdf.setFillColor(248, 250, 252);
-    const summaryHeight = Math.max(80, Math.min(160, (reportData.managementSummary?.length || 0) / 8));
-    pdf.rect(margin, currentY, contentWidth, summaryHeight, 'F');
+    pdf.rect(margin, currentY, contentWidth, summaryBoxHeight, 'F');
     
     pdf.setTextColor(0, 0, 0);
     const summary = reportData.managementSummary || this.turkishSafeText('Yönetici özeti henüz eklenmemiştir.');
-    currentY = this.addTextWithWrap(pdf, (summary), margin + 8, currentY + 12, 11, 'normal', contentWidth - 16);
+    
+    // Use text wrapping with height limit to prevent overflow
+    this.addTextWithWrap(
+      pdf, 
+      summary, 
+      margin + 8, 
+      currentY + 12, 
+      11, 
+      'normal', 
+      contentWidth - 16,
+      summaryBoxHeight - 20 // Height limit
+    );
+    
+    currentY += summaryBoxHeight;
 
     this.addPageFooter(pdf, pageNumber++, 1);
 
@@ -289,14 +321,27 @@ export class ReactPdfService {
 
     currentY += 20;
 
-    // Content
+    // Content - FIXED HEIGHT
+    const evalBoxHeight = 150; // Fixed height box
     pdf.setFillColor(248, 250, 252);
-    const evalContentHeight = Math.max(120, Math.min(180, (reportData.generalEvaluation?.length || 0) / 6));
-    pdf.rect(margin, currentY, contentWidth, evalContentHeight, 'F');
+    pdf.rect(margin, currentY, contentWidth, evalBoxHeight, 'F');
     
     pdf.setTextColor(0, 0, 0);
     const evaluation = reportData.generalEvaluation || this.turkishSafeText('Genel değerlendirme henüz eklenmemiştir.');
-    currentY = this.addTextWithWrap(pdf, (evaluation), margin + 8, currentY + 12, 11, 'normal', contentWidth - 16);
+    
+    // Use text wrapping with height limit to prevent overflow
+    this.addTextWithWrap(
+      pdf, 
+      evaluation, 
+      margin + 8, 
+      currentY + 12, 
+      11, 
+      'normal', 
+      contentWidth - 16,
+      evalBoxHeight - 20 // Height limit
+    );
+    
+    currentY += evalBoxHeight;
 
     this.addPageFooter(pdf, pageNumber++, 1);
 

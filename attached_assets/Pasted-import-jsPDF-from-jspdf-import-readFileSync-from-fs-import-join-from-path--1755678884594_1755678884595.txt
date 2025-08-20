@@ -1,0 +1,456 @@
+import { jsPDF } from 'jspdf';
+import { readFileSync } from 'fs';
+import { join } from 'path';
+
+// Türkçe karakterler için özel font ekleyelim
+import './fonts/Roboto-Regular-normal'; // Bu dosyayı eklemeniz gerekecek
+
+interface ReportData {
+  id: string;
+  reportNumber: string;
+  reportDate: string | Date;
+  projectLocation: string;
+  reporter: string;
+  managementSummary?: string;
+  generalEvaluation?: string;
+  findings: Finding[];
+}
+
+interface Finding {
+  id: string;
+  section: number;
+  title: string;
+  description: string;
+  currentSituation?: string;
+  dangerLevel: 'high' | 'medium' | 'low';
+  recommendation?: string;
+  legalBasis?: string;
+  images?: string[];
+  location?: string;
+  processSteps?: ProcessStep[];
+  isCompleted?: boolean;
+  status?: string;
+}
+
+interface ProcessStep {
+  date: string;
+  description: string;
+}
+
+export class ReactPdfService {
+  private logoBase64: string = '';
+
+  constructor() {
+    this.loadLogo();
+  }
+
+  private loadLogo() {
+    try {
+      const logoPath = join(process.cwd(), 'client/src/assets/mlp-logo.png');
+      const logoBuffer = readFileSync(logoPath);
+      this.logoBase64 = `data:image/png;base64,${logoBuffer.toString('base64')}`;
+    } catch (error) {
+      console.warn('Could not load logo:', error);
+      this.logoBase64 = '';
+    }
+  }
+
+  // Metin sarmalama fonksiyonu - DÜZELTME: Box içinde kalması için
+  private addTextWithWrap(
+    pdf: jsPDF, 
+    text: string, 
+    x: number, 
+    y: number, 
+    fontSize: number = 11, 
+    fontStyle: string = 'normal', 
+    maxWidth: number = 170,
+    maxHeight?: number // Yeni parametre: maksimum yükseklik
+  ): number {
+    if (!text) return y;
+    
+    pdf.setFontSize(fontSize);
+    pdf.setFont('Roboto', fontStyle); // Türkçe destekli font
+    
+    const lines = pdf.splitTextToSize(text, maxWidth);
+    const lineHeight = fontSize * 0.5;
+    
+    // Maksimum yükseklik kontrolü
+    let linesToPrint = lines;
+    if (maxHeight) {
+      const maxLines = Math.floor(maxHeight / lineHeight);
+      if (lines.length > maxLines) {
+        linesToPrint = lines.slice(0, maxLines - 1);
+        linesToPrint.push('...'); // Devamı olduğunu göster
+      }
+    }
+
+    linesToPrint.forEach((line: string, index: number) => {
+      if (line.trim()) {
+        pdf.text(line, x, y + (index * lineHeight));
+      }
+    });
+
+    return y + (linesToPrint.length * lineHeight) + (fontSize * 0.3);
+  }
+
+  // Sayfa başlığı
+  private addPageHeader(pdf: jsPDF) {
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const margin = 15;
+    
+    // Mavi arka plan
+    pdf.setFillColor(37, 99, 235);
+    pdf.rect(0, 0, pageWidth, 45, 'F');
+    
+    // Logo
+    if (this.logoBase64) {
+      try {
+        pdf.addImage(this.logoBase64, 'PNG', margin, 10, 25, 25);
+      } catch (error) {
+        console.warn('Could not add logo:', error);
+      }
+    }
+    
+    // Hastane adı
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(16);
+    pdf.setFont('Roboto', 'bold');
+    pdf.text('İstinye Üniversitesi Topkapı Liv Hastanesi', margin + (this.logoBase64 ? 30 : 0), 27);
+  }
+
+  // Sayfa altlığı
+  private addPageFooter(pdf: jsPDF, pageNumber: number, totalPages: number) {
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    
+    pdf.setFontSize(10);
+    pdf.setFont('Roboto', 'normal');
+    pdf.setTextColor(100, 100, 100);
+    
+    // Alt çizgi
+    pdf.setDrawColor(220, 220, 220);
+    pdf.line(15, pageHeight - 25, pageWidth - 15, pageHeight - 25);
+    
+    // Metin
+    pdf.text('İstinye Üniversitesi Topkapı Liv Hastanesi İSG Raporu', 15, pageHeight - 15);
+    pdf.text(`Sayfa ${pageNumber}/${totalPages}`, pageWidth - 50, pageHeight - 15);
+  }
+
+  async generatePDF(reportData: ReportData): Promise<Uint8Array> {
+    console.log('PDF generating for report:', reportData.reportNumber);
+
+    const pdf = new jsPDF({
+      orientation: 'p',
+      unit: 'mm', 
+      format: 'a4'
+    });
+    
+    // Türkçe font ayarı
+    pdf.setFont('Roboto');
+    
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const margin = 15;
+    const contentWidth = pageWidth - (margin * 2);
+    let currentY = 60;
+    let totalPages = 1;
+
+    // KAPAK SAYFASI
+    this.addPageHeader(pdf);
+    
+    pdf.setTextColor(0, 0, 0);
+    pdf.setFontSize(24);
+    pdf.setFont('Roboto', 'bold');
+    
+    currentY += 30;
+    pdf.text('İSG DENETİM RAPORU', pageWidth / 2, currentY, { align: 'center' });
+    
+    currentY += 20;
+    pdf.setFontSize(16);
+    pdf.setFont('Roboto', 'normal');
+    
+    pdf.text(`Rapor No: ${reportData.reportNumber}`, pageWidth / 2, currentY, { align: 'center' });
+    
+    currentY += 15;
+    pdf.text(`Proje Lokasyonu: ${reportData.projectLocation}`, pageWidth / 2, currentY, { align: 'center' });
+    
+    currentY += 15;
+    const reportDateStr = reportData.reportDate instanceof Date ? 
+      reportData.reportDate.toLocaleDateString('tr-TR') : 
+      new Date(reportData.reportDate).toLocaleDateString('tr-TR');
+    pdf.text(`Rapor Tarihi: ${reportDateStr}`, pageWidth / 2, currentY, { align: 'center' });
+    
+    currentY += 15;
+    pdf.text(`Rapor Eden: ${reportData.reporter}`, pageWidth / 2, currentY, { align: 'center' });
+
+    // YÖNETİCİ ÖZETİ
+    pdf.addPage();
+    totalPages++;
+    this.addPageHeader(pdf);
+    currentY = 70;
+
+    // Başlık
+    pdf.setFillColor(37, 99, 235);
+    pdf.rect(margin, currentY, contentWidth, 12, 'F');
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(12);
+    pdf.setFont('Roboto', 'bold');
+    pdf.text('YÖNETİCİ ÖZETİ', margin + 5, currentY + 8);
+
+    currentY += 20;
+
+    // İçerik kutusu - sabit yükseklik
+    const summaryBoxHeight = 120; // Sabit yükseklik
+    pdf.setFillColor(248, 250, 252);
+    pdf.rect(margin, currentY, contentWidth, summaryBoxHeight, 'F');
+    
+    pdf.setTextColor(0, 0, 0);
+    const summary = reportData.managementSummary || 'Yönetici özeti henüz eklenmemiştir.';
+    
+    // Metin kutunun içinde kalacak şekilde sarmalama
+    this.addTextWithWrap(
+      pdf, 
+      summary, 
+      margin + 8, 
+      currentY + 12, 
+      11, 
+      'normal', 
+      contentWidth - 16,
+      summaryBoxHeight - 20 // Kutu yüksekliği sınırı
+    );
+
+    // BULGULAR - HER BİRİ AYRI SAYFADA
+    const findingsBySections = {
+      1: reportData.findings.filter(f => f.section === 1),
+      2: reportData.findings.filter(f => f.section === 2), 
+      3: reportData.findings.filter(f => f.section === 3)
+    };
+
+    const sectionTitles = {
+      1: 'BÖLÜM 1 - TASARIM/ÜRETİM HATALARI',
+      2: 'BÖLÜM 2 - GÜVENLİK BULGULARI',
+      3: 'BÖLÜM 3 - TAMAMLANAN BULGULAR'
+    };
+
+    // Her bölüm için
+    for (const [sectionNum, findings] of Object.entries(findingsBySections)) {
+      if (findings.length === 0) continue;
+      
+      // Her bulgu için ayrı sayfa
+      for (const finding of findings) {
+        pdf.addPage();
+        totalPages++;
+        this.addPageHeader(pdf);
+        currentY = 70;
+
+        // Bölüm başlığı
+        pdf.setFillColor(37, 99, 235);
+        pdf.rect(margin, currentY, contentWidth, 12, 'F');
+        pdf.setTextColor(255, 255, 255);
+        pdf.setFontSize(12);
+        pdf.setFont('Roboto', 'bold');
+        pdf.text(sectionTitles[Number(sectionNum)], margin + 5, currentY + 8);
+
+        currentY += 20;
+
+        // Bulgu başlığı
+        pdf.setFillColor(240, 240, 240);
+        pdf.rect(margin, currentY, contentWidth, 10, 'F');
+        pdf.setTextColor(0, 0, 0);
+        pdf.setFontSize(11);
+        pdf.setFont('Roboto', 'bold');
+        pdf.text(finding.title, margin + 5, currentY + 7);
+
+        currentY += 15;
+
+        // Risk seviyesi göstergesi
+        const riskColors = {
+          high: [220, 53, 69],
+          medium: [255, 193, 7],
+          low: [40, 167, 69]
+        };
+        
+        const [r, g, b] = riskColors[finding.dangerLevel];
+        pdf.setFillColor(r, g, b);
+        pdf.rect(margin, currentY, 60, 8, 'F');
+        pdf.setTextColor(255, 255, 255);
+        pdf.setFontSize(9);
+        pdf.setFont('Roboto', 'bold');
+        
+        const riskText = finding.dangerLevel === 'high' ? 'YÜKSEK' : 
+                        finding.dangerLevel === 'medium' ? 'ORTA' : 'DÜŞÜK';
+        pdf.text(riskText, margin + 30, currentY + 5, { align: 'center' });
+
+        currentY += 15;
+
+        // Bulgu detayları - her biri kutu içinde
+        pdf.setTextColor(0, 0, 0);
+        pdf.setFont('Roboto', 'normal');
+        
+        // Her alan için ayrı kutu
+        const fieldHeight = 35; // Her alan için sabit yükseklik
+        
+        // Açıklama kutusu
+        if (finding.description) {
+          pdf.setFillColor(250, 250, 250);
+          pdf.rect(margin, currentY, contentWidth, fieldHeight, 'F');
+          pdf.setFont('Roboto', 'bold');
+          pdf.text('Açıklama:', margin + 5, currentY + 5);
+          pdf.setFont('Roboto', 'normal');
+          this.addTextWithWrap(pdf, finding.description, margin + 5, currentY + 10, 10, 'normal', contentWidth - 10, fieldHeight - 12);
+          currentY += fieldHeight + 5;
+        }
+
+        // Mevcut durum kutusu
+        if (finding.currentSituation) {
+          pdf.setFillColor(250, 250, 250);
+          pdf.rect(margin, currentY, contentWidth, fieldHeight, 'F');
+          pdf.setFont('Roboto', 'bold');
+          pdf.text('Mevcut Durum:', margin + 5, currentY + 5);
+          pdf.setFont('Roboto', 'normal');
+          this.addTextWithWrap(pdf, finding.currentSituation, margin + 5, currentY + 10, 10, 'normal', contentWidth - 10, fieldHeight - 12);
+          currentY += fieldHeight + 5;
+        }
+
+        // Öneri kutusu
+        if (finding.recommendation) {
+          pdf.setFillColor(250, 250, 250);
+          pdf.rect(margin, currentY, contentWidth, fieldHeight, 'F');
+          pdf.setFont('Roboto', 'bold');
+          pdf.text('Öneri:', margin + 5, currentY + 5);
+          pdf.setFont('Roboto', 'normal');
+          this.addTextWithWrap(pdf, finding.recommendation, margin + 5, currentY + 10, 10, 'normal', contentWidth - 10, fieldHeight - 12);
+          currentY += fieldHeight + 5;
+        }
+
+        // Yasal dayanak kutusu
+        if (finding.legalBasis) {
+          pdf.setFillColor(250, 250, 250);
+          pdf.rect(margin, currentY, contentWidth, fieldHeight, 'F');
+          pdf.setFont('Roboto', 'bold');
+          pdf.text('Yasal Dayanak:', margin + 5, currentY + 5);
+          pdf.setFont('Roboto', 'normal');
+          this.addTextWithWrap(pdf, finding.legalBasis, margin + 5, currentY + 10, 10, 'normal', contentWidth - 10, fieldHeight - 12);
+          currentY += fieldHeight + 5;
+        }
+
+        // Konum kutusu
+        if (finding.location) {
+          pdf.setFillColor(250, 250, 250);
+          pdf.rect(margin, currentY, contentWidth, 20, 'F');
+          pdf.setFont('Roboto', 'bold');
+          pdf.text('Konum:', margin + 5, currentY + 5);
+          pdf.setFont('Roboto', 'normal');
+          pdf.text(finding.location, margin + 5, currentY + 12);
+          currentY += 25;
+        }
+
+        // Görseller (varsa)
+        if (finding.images && finding.images.length > 0) {
+          for (const imageUrl of finding.images.slice(0, 2)) {
+            if (currentY + 70 > pageHeight - 60) {
+              pdf.addPage();
+              totalPages++;
+              this.addPageHeader(pdf);
+              currentY = 70;
+            }
+            
+            try {
+              const optimizedImage = await this.optimizeImage(imageUrl);
+              if (optimizedImage) {
+                pdf.addImage(optimizedImage, 'JPEG', margin, currentY, 80, 60);
+                currentY += 65;
+              }
+            } catch (error) {
+              console.warn('Could not add image to PDF:', error);
+            }
+          }
+        }
+      }
+    }
+
+    // GENEL DEĞERLENDİRME
+    pdf.addPage();
+    totalPages++;
+    this.addPageHeader(pdf);
+    currentY = 70;
+
+    // Başlık
+    pdf.setFillColor(37, 99, 235);
+    pdf.rect(margin, currentY, contentWidth, 12, 'F');
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(12);
+    pdf.setFont('Roboto', 'bold');
+    pdf.text('GENEL DEĞERLENDİRME', margin + 5, currentY + 8);
+
+    currentY += 20;
+
+    // İçerik kutusu - sabit yükseklik
+    const evalBoxHeight = 150;
+    pdf.setFillColor(248, 250, 252);
+    pdf.rect(margin, currentY, contentWidth, evalBoxHeight, 'F');
+    
+    pdf.setTextColor(0, 0, 0);
+    const evaluation = reportData.generalEvaluation || 'Genel değerlendirme henüz eklenmemiştir.';
+    
+    this.addTextWithWrap(
+      pdf, 
+      evaluation, 
+      margin + 8, 
+      currentY + 12, 
+      11, 
+      'normal', 
+      contentWidth - 16,
+      evalBoxHeight - 20
+    );
+
+    // Sayfa numaralarını güncelle
+    for (let i = 1; i <= pdf.getNumberOfPages(); i++) {
+      pdf.setPage(i);
+      this.addPageFooter(pdf, i, pdf.getNumberOfPages());
+    }
+    
+    console.log('PDF generated successfully');
+    return new Uint8Array(pdf.output('arraybuffer'));
+  }
+
+  // Görsel optimizasyonu
+  private async optimizeImage(imageUrl: string): Promise<string> {
+    try {
+      const sharp = await import('sharp');
+      const fs = await import('fs');
+      const path = await import('path');
+      
+      let imagePath = imageUrl;
+      
+      if (imageUrl.startsWith('data:')) {
+        const base64Data = imageUrl.split(',')[1];
+        const buffer = Buffer.from(base64Data, 'base64');
+        
+        const optimized = await sharp.default(buffer)
+          .resize(400, 400, { fit: 'inside', withoutEnlargement: true })
+          .jpeg({ quality: 80 })
+          .toBuffer();
+        
+        return `data:image/jpeg;base64,${optimized.toString('base64')}`;
+      } else if (imageUrl.startsWith('/uploads/') || imageUrl.startsWith('uploads/')) {
+        imagePath = path.join(process.cwd(), imageUrl);
+      }
+      
+      if (!fs.existsSync(imagePath)) {
+        console.warn('Image file not found:', imagePath);
+        return '';
+      }
+      
+      const optimized = await sharp.default(imagePath)
+        .resize(400, 400, { fit: 'inside', withoutEnlargement: true })
+        .jpeg({ quality: 80 })
+        .toBuffer();
+      
+      return `data:image/jpeg;base64,${optimized.toString('base64')}`;
+    } catch (error) {
+      console.warn('Could not optimize image:', error);
+      return '';
+    }
+  }
+}
