@@ -32,7 +32,7 @@ export default function ChangePassword() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
 
   const form = useForm<ChangePasswordForm>({
     resolver: zodResolver(changePasswordSchema),
@@ -70,6 +70,11 @@ export default function ChangePassword() {
       setIsSuccess(true);
       form.reset();
       
+      // Kullanıcı bilgilerini güncelle (firstLogin: false yap)
+      if (user?.firstLogin) {
+        updateUser({ firstLogin: false });
+      }
+      
       toast({
         title: "Başarılı",
         description: result.message || "Şifre başarıyla değiştirildi",
@@ -79,7 +84,7 @@ export default function ChangePassword() {
       if (user?.firstLogin) {
         setTimeout(() => {
           window.location.href = '/';
-        }, 2000);
+        }, 1500);
       }
       
     } catch (error: any) {
