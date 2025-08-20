@@ -125,7 +125,7 @@ export class ReactPdfService {
   }
 
   // Add page numbers with proper Turkish text
-  private addPageNumber(pdf: jsPDF, pageNumber: number) {
+  private addPageNumber(pdf: jsPDF, pageNumber: number, totalPages: number) {
     const pageHeight = pdf.internal.pageSize.getHeight();
     const pageWidth = pdf.internal.pageSize.getWidth();
     
@@ -137,11 +137,11 @@ export class ReactPdfService {
     pdf.setDrawColor(200, 200, 200);
     pdf.line(15, pageHeight - 22, pageWidth - 15, pageHeight - 22);
     
-    // Page info with Turkish characters
-    const footerText = this.encodeTurkishText('MLPCARE Medical Park Hospital - İSG Raporu');
-    const pageText = this.encodeTurkishText(`Sayfa ${pageNumber}`);
+    // Hospital name and report type
+    const footerText = this.encodeTurkishText('İstinye Üniversitesi Topkapı Liv Hastanesi İSG Raporu');
+    const pageText = this.encodeTurkishText(`Sayfa ${pageNumber}/${totalPages}`);
     pdf.text(footerText, 15, pageHeight - 12);
-    pdf.text(pageText, pageWidth - 40, pageHeight - 12);
+    pdf.text(pageText, pageWidth - 45, pageHeight - 12);
   }
 
   // Optimize and convert image to base64 using Sharp (server-side)
@@ -207,6 +207,9 @@ export class ReactPdfService {
     const contentWidth = pageWidth - (margin * 2);
     let currentY = margin;
     let pageNumber = 1;
+    
+    // Calculate total pages estimate (will be updated at the end)
+    const totalPages = 6; // Base pages: Cover, Summary, 3 sections, General eval
 
     // COVER PAGE
     // Header with logo background
@@ -277,7 +280,7 @@ export class ReactPdfService {
     pdf.setTextColor(100, 100, 100);
     currentY = this.addTextWithWrap(pdf, 'Bu rapor İş Sağlığı ve Güvenliği Kanunu kapsamında hazırlanmıştır.', margin, currentY, 10, 'normal', contentWidth);
 
-    this.addPageNumber(pdf, pageNumber++);
+    this.addPageNumber(pdf, pageNumber++, totalPages);
 
     // PAGE 2 - YÖNETİCİ ÖZETİ
     pdf.addPage();
@@ -323,7 +326,7 @@ export class ReactPdfService {
     const summary = reportData.managementSummary || 'Yönetici özeti henüz eklenmemiştir.';
     currentY = this.addTextWithWrap(pdf, summary, margin + 8, currentY + 12, 11, 'normal', contentWidth - 16);
 
-    this.addPageNumber(pdf, pageNumber++);
+    this.addPageNumber(pdf, pageNumber++, totalPages);
 
     // PAGE 3 - TASARIM HATALARI
     pdf.addPage();
@@ -333,7 +336,7 @@ export class ReactPdfService {
 
     const designErrors = reportData.findings?.filter(f => f.section === 2) || [];
     currentY = await this.addSectionContent(pdf, 'TASARIM/İMALAT/MONTAJ HATALARI', designErrors, currentY, margin, contentWidth, pageHeight);
-    this.addPageNumber(pdf, pageNumber++);
+    this.addPageNumber(pdf, pageNumber++, totalPages);
 
     // PAGE 4 - İŞ SAĞLIĞI VE GÜVENLİĞİ BULGULARI
     pdf.addPage();
@@ -343,7 +346,7 @@ export class ReactPdfService {
 
     const safetyFindings = reportData.findings?.filter(f => f.section === 3) || [];
     currentY = await this.addSectionContent(pdf, 'İŞ SAĞLIĞI VE GÜVENLİĞİ BULGULARI', safetyFindings, currentY, margin, contentWidth, pageHeight);
-    this.addPageNumber(pdf, pageNumber++);
+    this.addPageNumber(pdf, pageNumber++, totalPages);
 
     // PAGE 5 - TAMAMLANMIŞ BULGULAR
     pdf.addPage();
@@ -353,7 +356,7 @@ export class ReactPdfService {
 
     const completedFindings = reportData.findings?.filter(f => f.section === 4) || [];
     currentY = await this.addSectionContent(pdf, 'TAMAMLANMIŞ BULGULAR', completedFindings, currentY, margin, contentWidth, pageHeight);
-    this.addPageNumber(pdf, pageNumber++);
+    this.addPageNumber(pdf, pageNumber++, totalPages);
 
     // PAGE 6 - GENEL DEĞERLENDİRME
     pdf.addPage();
@@ -383,8 +386,29 @@ export class ReactPdfService {
     const evaluation = reportData.generalEvaluation || 'Genel değerlendirme henüz eklenmemiştir.';
     currentY = this.addTextWithWrap(pdf, evaluation, margin + 8, currentY + 12, 11, 'normal', contentWidth - 16);
 
-    this.addPageNumber(pdf, pageNumber++);
+    this.addPageNumber(pdf, pageNumber++, totalPages);
 
+    // Update total pages count correctly
+    const actualTotalPages = pdf.internal.getNumberOfPages();
+    
+    // Go back and update all page numbers with correct total
+    for (let i = 1; i <= actualTotalPages; i++) {
+      pdf.setPage(i);
+      
+      // Clear previous page number area
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      pdf.setFillColor(255, 255, 255);
+      pdf.rect(pageWidth - 60, pageHeight - 18, 50, 8, 'F');
+      
+      // Re-add page number with correct total
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setTextColor(100, 100, 100);
+      const pageText = this.encodeTurkishText(`Sayfa ${i}/${actualTotalPages}`);
+      pdf.text(pageText, pageWidth - 45, pageHeight - 12);
+    }
+    
     console.log('PDF generated successfully');
     return new Uint8Array(pdf.output('arraybuffer'));
   }
@@ -393,22 +417,24 @@ export class ReactPdfService {
     const pageWidth = pdf.internal.pageSize.getWidth();
     const margin = 15;
     
+    // Header background with logo color
     pdf.setFillColor(37, 99, 235);
-    pdf.rect(0, 0, pageWidth, 35, 'F');
-    pdf.setTextColor(255, 255, 255);
-    pdf.setFontSize(14);
-    pdf.setFont('helvetica', 'bold');
+    pdf.rect(0, 0, pageWidth, 40, 'F');
     
+    // Logo
     if (this.logoBase64) {
       try {
-        pdf.addImage(this.logoBase64, 'PNG', margin, 5, 25, 25);
+        pdf.addImage(this.logoBase64, 'PNG', margin, 8, 24, 24);
       } catch (error) {
         console.warn('Could not add logo:', error);
       }
     }
     
-    pdf.text('MLPCARE', margin + (this.logoBase64 ? 30 : 0), 15);
-    pdf.text(this.encodeTurkishText(title), margin + (this.logoBase64 ? 30 : 0), 25);
+    // Hospital name as main title
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(16);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text(this.encodeTurkishText('İstinye Üniversitesi Topkapı Liv Hastanesi'), margin + (this.logoBase64 ? 30 : 0), 20);
   }
 
   private async addSectionContent(pdf: jsPDF, sectionTitle: string, findings: Finding[], startY: number, margin: number, contentWidth: number, pageHeight: number): Promise<number> {
