@@ -58,23 +58,8 @@ export class ReactPdfService {
   // REMOVED: No need for character replacement with Roboto font!
   // Roboto font properly supports Turkish characters: İ, ı, Ğ, ğ, Ş, ş, Ü, ü, Ö, ö, Ç, ç
 
-  // WHITE TEXT FOR HEADERS ONLY
-  private addHeaderText(
-    pdf: jsPDF, 
-    text: string, 
-    x: number, 
-    y: number, 
-    fontSize: number = 12, 
-    fontStyle: string = 'bold'
-  ): void {
-    pdf.setTextColor(255, 255, 255); // WHITE for headers
-    pdf.setFontSize(fontSize);
-    pdf.setFont('Roboto', fontStyle);
-    pdf.text(text, x, y);
-  }
-
-  // BLACK TEXT FOR ALL CONTENT - NO EXCEPTIONS
-  private addContentText(
+  // SIMPLE TEXT WRAPPER - ALWAYS BLACK TEXT
+  private addTextWithWrap(
     pdf: jsPDF, 
     text: string, 
     x: number, 
@@ -85,24 +70,22 @@ export class ReactPdfService {
   ): number {
     if (!text) return y;
     
-    // ALWAYS BLACK - NEVER CHANGES
+    // ALWAYS FORCE BLACK TEXT - NO EXCEPTIONS
     pdf.setTextColor(0, 0, 0);
     pdf.setFontSize(fontSize);
     pdf.setFont('Roboto', fontStyle);
     
-    // Use original text with Turkish characters
     const lines = pdf.splitTextToSize(text, maxWidth);
     const lineHeight = fontSize * 0.6;
 
     lines.forEach((line: string, index: number) => {
       if (line.trim()) {
-        // GUARANTEE BLACK for each line
+        // FORCE BLACK for each line
         pdf.setTextColor(0, 0, 0);
         pdf.text(line, x, y + (index * lineHeight));
       }
     });
 
-    // Return the actual Y position after text
     return y + (lines.length * lineHeight);
   }
   
@@ -136,8 +119,12 @@ export class ReactPdfService {
       }
     }
     
-    // Hospital name - USE HEADER FUNCTION
-    this.addHeaderText(pdf, 'İstinye Üniversitesi Topkapı Liv Hastanesi', margin + (this.logoBase64 ? 30 : 0), 27, 16, 'bold');
+    // Hospital name with proper Turkish encoding
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(16);
+    pdf.setFont('Roboto', 'bold');
+    pdf.text('İstinye Üniversitesi Topkapı Liv Hastanesi', margin + (this.logoBase64 ? 30 : 0), 27);
+    pdf.setTextColor(0, 0, 0); // Reset to black
   }
 
   // NEW: Enhanced footer with Turkish characters
@@ -242,7 +229,11 @@ export class ReactPdfService {
     // Section title
     pdf.setFillColor(37, 99, 235);
     pdf.rect(margin, currentY, contentWidth, 12, 'F');
-    this.addHeaderText(pdf, 'YÖNETİCİ ÖZETİ', margin + 5, currentY + 8);
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(12);
+    pdf.setFont('Roboto', 'bold');
+    pdf.text('YÖNETİCİ ÖZETİ', margin + 5, currentY + 8);
+    pdf.setTextColor(0, 0, 0); // Reset to black
 
     currentY += 20;
 
@@ -254,8 +245,8 @@ export class ReactPdfService {
     pdf.setTextColor(0, 0, 0);
     const summary = reportData.managementSummary || 'Yönetici özeti henüz eklenmemiştir.';
     
-    // Use CONTENT text (guaranteed black)
-    this.addContentText(
+    // Use text wrapping for summary
+    this.addTextWithWrap(
       pdf, 
       summary, 
       margin + 8, 
@@ -326,7 +317,11 @@ export class ReactPdfService {
     // Section title
     pdf.setFillColor(37, 99, 235);
     pdf.rect(margin, currentY, contentWidth, 12, 'F');
-    this.addHeaderText(pdf, 'GENEL DEĞERLENDİRME', margin + 5, currentY + 8);
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(12);
+    pdf.setFont('Roboto', 'bold');
+    pdf.text('GENEL DEĞERLENDİRME', margin + 5, currentY + 8);
+    pdf.setTextColor(0, 0, 0); // Reset to black
 
     currentY += 20;
 
@@ -338,8 +333,8 @@ export class ReactPdfService {
     pdf.setTextColor(0, 0, 0);
     const evaluation = reportData.generalEvaluation || 'Genel değerlendirme henüz eklenmemiştir.';
     
-    // Use CONTENT text (guaranteed black)
-    this.addContentText(
+    // Use text wrapping for evaluation
+    this.addTextWithWrap(
       pdf, 
       evaluation, 
       margin + 8, 
@@ -397,7 +392,11 @@ export class ReactPdfService {
       // Section title (repeated on each page) - minimal spacing
       pdf.setFillColor(37, 99, 235);
       pdf.rect(margin, currentY, contentWidth, 12, 'F');
-      this.addHeaderText(pdf, sectionTitle, margin + 5, currentY + 8);
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(12);
+      pdf.setFont('Roboto', 'bold');
+      pdf.text(sectionTitle, margin + 5, currentY + 8);
+      pdf.setTextColor(0, 0, 0); // Reset to black
 
       currentY += 15; // Reduced from 20
       
@@ -438,7 +437,11 @@ export class ReactPdfService {
       pdf.rect(margin, currentY, 60, 8, 'F');
       const riskText = finding.dangerLevel === 'high' ? 'YÜKSEK' : 
                       finding.dangerLevel === 'medium' ? 'ORTA' : 'DÜŞÜK';
-      this.addHeaderText(pdf, riskText, margin + 30, currentY + 5, 9, 'bold');
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(9);
+      pdf.setFont('Roboto', 'bold');
+      pdf.text(riskText, margin + 30, currentY + 5, { align: 'center' });
+      pdf.setTextColor(0, 0, 0); // Reset to black
 
       currentY += 10; // Reduced spacing
 
@@ -470,8 +473,8 @@ export class ReactPdfService {
         pdf.setFont('Roboto', 'bold');
         pdf.setFontSize(9);
         pdf.text('Mevcut Durum:', margin + 5, currentY + 5);
-        // Black content - guaranteed
-        this.addContentText(pdf, finding.currentSituation, margin + 5, currentY + 10, 8, 'normal', halfWidth - 10);
+        // Content with black text
+        this.addTextWithWrap(pdf, finding.currentSituation, margin + 5, currentY + 10, 8, 'normal', halfWidth - 10);
         
         // Right: Recommendation - DARKER BACKGROUND
         pdf.setFillColor(240, 240, 240);
@@ -480,8 +483,8 @@ export class ReactPdfService {
         pdf.setTextColor(0, 0, 0);
         pdf.setFont('Roboto', 'bold');
         pdf.text('Öneri:', margin + halfWidth + 10, currentY + 5);
-        // Black content - guaranteed
-        this.addContentText(pdf, finding.recommendation, margin + halfWidth + 10, currentY + 10, 8, 'normal', halfWidth - 10);
+        // Content with black text
+        this.addTextWithWrap(pdf, finding.recommendation, margin + halfWidth + 10, currentY + 10, 8, 'normal', halfWidth - 10);
         
         currentY += maxHeight + spacing;
       } else {
@@ -495,8 +498,8 @@ export class ReactPdfService {
           pdf.setFont('Roboto', 'bold');
           pdf.setFontSize(9);
           pdf.text('Mevcut Durum:', margin + 5, currentY + 5);
-          // Black content - guaranteed
-          this.addContentText(pdf, finding.currentSituation, margin + 5, currentY + 10, 8, 'normal', fieldWidth - 10);
+          // Content with black text
+          this.addTextWithWrap(pdf, finding.currentSituation, margin + 5, currentY + 10, 8, 'normal', fieldWidth - 10);
           currentY += situationHeight + spacing;
         }
         
@@ -509,8 +512,8 @@ export class ReactPdfService {
           pdf.setFont('Roboto', 'bold');
           pdf.setFontSize(9);
           pdf.text('Öneri:', margin + 5, currentY + 5);
-          // Black content - guaranteed
-          this.addContentText(pdf, finding.recommendation, margin + 5, currentY + 10, 8, 'normal', fieldWidth - 10);
+          // Content with black text
+          this.addTextWithWrap(pdf, finding.recommendation, margin + 5, currentY + 10, 8, 'normal', fieldWidth - 10);
           currentY += recHeight + spacing;
         }
       }
@@ -525,8 +528,8 @@ export class ReactPdfService {
         pdf.setFont('Roboto', 'bold');
         pdf.setFontSize(9);
         pdf.text('Yasal Dayanak:', margin + 5, currentY + 5);
-        // Black content - guaranteed
-        this.addContentText(pdf, finding.legalBasis, margin + 5, currentY + 10, 8, 'normal', fieldWidth - 10);
+        // Content with black text
+        this.addTextWithWrap(pdf, finding.legalBasis, margin + 5, currentY + 10, 8, 'normal', fieldWidth - 10);
         currentY += legalHeight + spacing;
       }
       
@@ -544,9 +547,11 @@ export class ReactPdfService {
         let stepY = currentY + 10;
         finding.processSteps.forEach((step, index) => {
           const stepDate = new Date(step.date).toLocaleDateString('tr-TR');
-          const stepText = `${index + 1}. ${stepDate}: ${step.description}`;
-          // Use content function for guaranteed black text
-          this.addContentText(pdf, stepText, margin + 5, stepY, 7, 'normal', fieldWidth - 10);
+          // Direct text with black color guarantee
+          pdf.setTextColor(0, 0, 0);
+          pdf.setFontSize(7);
+          pdf.setFont('Roboto', 'normal');
+          pdf.text(`${index + 1}. ${stepDate}: ${step.description}`, margin + 5, stepY);
           stepY += 8;
         });
         
