@@ -1,6 +1,6 @@
 import { reports, findings, users, offlineQueue, type User, type InsertUser, type Report, type InsertReport, type Finding, type InsertFinding, type OfflineQueueItem, type InsertOfflineQueueItem } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, inArray, sql, gt } from "drizzle-orm";
+import { eq, desc, and, inArray, sql, gt, or } from "drizzle-orm";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
 
@@ -26,6 +26,7 @@ export interface IStorage {
   getAllReports(): Promise<Report[]>;
   getReportsByLocation(location: string): Promise<Report[]>;
   getUserReports(userId: string): Promise<Report[]>;
+  getUserAccessibleReports(userId: string, userLocation: string): Promise<Report[]>;
   createReport(report: InsertReport & { userId: string }): Promise<Report>;
   updateReport(id: string, report: Partial<InsertReport>): Promise<Report>;
   deleteReport(id: string): Promise<boolean>;
@@ -53,6 +54,13 @@ export interface IStorage {
     completedReports: number;
   }>;
   getLocationStats(location: string): Promise<{
+    totalReports: number;
+    highRiskFindings: number;
+    mediumRiskFindings: number;
+    completedFindings: number;
+    completedReports: number;
+  }>;
+  getUserLocationStats(userId: string, userLocation: string): Promise<{
     totalReports: number;
     highRiskFindings: number;
     mediumRiskFindings: number;
@@ -111,7 +119,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteUser(id: string): Promise<boolean> {
     const result = await db.delete(users).where(eq(users.id, id));
-    return result.rowCount > 0;
+    return (result.rowCount || 0) > 0;
   }
 
   async changePassword(id: string, newPassword: string): Promise<boolean> {
@@ -124,7 +132,7 @@ export class DatabaseStorage implements IStorage {
         updatedAt: sql`CURRENT_TIMESTAMP`
       })
       .where(eq(users.id, id));
-    return result.rowCount > 0;
+    return (result.rowCount || 0) > 0;
   }
 
   async setResetToken(id: string, token: string, expiry: Date): Promise<boolean> {
@@ -136,7 +144,7 @@ export class DatabaseStorage implements IStorage {
         updatedAt: sql`CURRENT_TIMESTAMP`
       })
       .where(eq(users.id, id));
-    return result.rowCount > 0;
+    return (result.rowCount || 0) > 0;
   }
 
   async getUserByResetToken(token: string): Promise<User | undefined> {
@@ -157,7 +165,7 @@ export class DatabaseStorage implements IStorage {
         updatedAt: sql`CURRENT_TIMESTAMP`
       })
       .where(eq(users.id, id));
-    return result.rowCount > 0;
+    return (result.rowCount || 0) > 0;
   }
 
   async validateUserCredentials(username: string, password: string): Promise<User | null> {
@@ -190,6 +198,15 @@ export class DatabaseStorage implements IStorage {
   async getReportsByLocation(location: string): Promise<Report[]> {
     return await db.select().from(reports)
       .where(eq(reports.projectLocation, location))
+      .orderBy(desc(reports.createdAt));
+  }
+
+  async getUserAccessibleReports(userId: string, userLocation: string): Promise<Report[]> {
+    return await db.select().from(reports)
+      .where(or(
+        eq(reports.userId, userId),
+        eq(reports.projectLocation, userLocation)
+      ))
       .orderBy(desc(reports.createdAt));
   }
 
@@ -501,6 +518,37 @@ export class DatabaseStorage implements IStorage {
     let completedFindings = 0;
     
     for (const report of locationReports) {
+      const reportFindings = await this.getReportFindings(report.id);
+      highRiskFindings += reportFindings.filter(f => f.dangerLevel === 'high').length;
+      mediumRiskFindings += reportFindings.filter(f => f.dangerLevel === 'medium').length;
+      completedFindings += reportFindings.filter(f => f.section === 4 || (f.isCompleted && f.dangerLevel === 'low')).length;
+    }
+
+    return {
+      totalReports,
+      highRiskFindings,
+      mediumRiskFindings,
+      completedFindings,
+      completedReports,
+    };
+  }
+
+  async getUserLocationStats(userId: string, userLocation: string): Promise<{
+    totalReports: number;
+    highRiskFindings: number;
+    mediumRiskFindings: number;
+    completedFindings: number;
+    completedReports: number;
+  }> {
+    const accessibleReports = await this.getUserAccessibleReports(userId, userLocation);
+    const totalReports = accessibleReports.length;
+    const completedReports = accessibleReports.filter(r => r.status === 'completed').length;
+    
+    let highRiskFindings = 0;
+    let mediumRiskFindings = 0;
+    let completedFindings = 0;
+    
+    for (const report of accessibleReports) {
       const reportFindings = await this.getReportFindings(report.id);
       highRiskFindings += reportFindings.filter(f => f.dangerLevel === 'high').length;
       mediumRiskFindings += reportFindings.filter(f => f.dangerLevel === 'medium').length;

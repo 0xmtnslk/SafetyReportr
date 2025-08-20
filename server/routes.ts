@@ -420,11 +420,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const currentUser = (req as any).user;
       let reports: any[];
 
-      // Admin users can see all reports, regular users only see their location's reports
+      // Admin users can see all reports, regular users see their own reports + location reports  
       if (currentUser.role === 'admin') {
         reports = await storage.getAllReports();
       } else {
-        reports = await storage.getReportsByLocation(currentUser.location);
+        reports = await storage.getUserAccessibleReports(currentUser.id, currentUser.location);
       }
 
       res.json(reports);
@@ -641,11 +641,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const currentUser = (req as any).user;
       let stats: any;
 
-      // Admin users get global stats, regular users get location-based stats
+      // Admin users get global stats, regular users get their own + location stats  
       if (currentUser.role === 'admin') {
         stats = await storage.getStats();
       } else {
-        stats = await storage.getLocationStats(currentUser.location);
+        stats = await storage.getUserLocationStats(currentUser.id, currentUser.location);
       }
 
       res.json(stats);
