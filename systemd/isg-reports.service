@@ -1,0 +1,37 @@
+[Unit]
+Description=ISG Report System - Turkish Occupational Health & Safety Reports
+Documentation=https://github.com/yourusername/isg-reports
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=isg
+Group=isg
+WorkingDirectory=/opt/isg-reports
+ExecStart=/usr/bin/npm run start:production
+Restart=always
+RestartSec=10
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=isg-reports
+
+# Environment
+Environment=NODE_ENV=production
+EnvironmentFile=/opt/isg-reports/.env
+
+# Security
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/opt/isg-reports
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+
+# Resource limits
+LimitNOFILE=65536
+LimitNPROC=32768
+
+[Install]
+WantedBy=multi-user.target
