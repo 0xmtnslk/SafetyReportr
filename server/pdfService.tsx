@@ -52,24 +52,24 @@ export class ReactPdfService {
     }
   }
 
-  // NEW: Robust Turkish character support using Unicode escape sequences
+  // Simple Turkish character replacement for PDF compatibility
   private fixTurkishText(text: string): string {
     if (!text) return '';
     
-    // Convert to proper Unicode and then to jsPDF compatible format
+    // Replace Turkish characters with PDF-safe alternatives
     return text
-      .replace(/İ/g, '\u0130')  // Turkish İ
-      .replace(/ı/g, '\u0131')  // Turkish ı 
-      .replace(/Ğ/g, '\u011E')  // Turkish Ğ
-      .replace(/ğ/g, '\u011F')  // Turkish ğ
-      .replace(/Ş/g, '\u015E')  // Turkish Ş
-      .replace(/ş/g, '\u015F')  // Turkish ş
-      .replace(/Ü/g, '\u00DC')  // Turkish Ü
-      .replace(/ü/g, '\u00FC')  // Turkish ü
-      .replace(/Ö/g, '\u00D6')  // Turkish Ö
-      .replace(/ö/g, '\u00F6')  // Turkish ö
-      .replace(/Ç/g, '\u00C7')  // Turkish Ç
-      .replace(/ç/g, '\u00E7');  // Turkish ç
+      .replace(/İ/g, 'I')   // İ -> I
+      .replace(/ı/g, 'i')   // ı -> i
+      .replace(/Ğ/g, 'G')   // Ğ -> G  
+      .replace(/ğ/g, 'g')   // ğ -> g
+      .replace(/Ş/g, 'S')   // Ş -> S
+      .replace(/ş/g, 's')   // ş -> s
+      .replace(/Ü/g, 'U')   // Ü -> U
+      .replace(/ü/g, 'u')   // ü -> u
+      .replace(/Ö/g, 'O')   // Ö -> O
+      .replace(/ö/g, 'o')   // ö -> o
+      .replace(/Ç/g, 'C')   // Ç -> C
+      .replace(/ç/g, 'c');  // ç -> c
   }
 
   // Enhanced text wrapper with Turkish support
@@ -192,7 +192,10 @@ export class ReactPdfService {
     pdf.text(projectLocation, pageWidth / 2, currentY, { align: 'center' });
     
     currentY += 15;
-    const reportDate = this.fixTurkishText(`Rapor Tarihi: ${new Date(reportData.reportDate).toLocaleDateString('tr-TR')}`);
+    const reportDateStr = reportData.reportDate instanceof Date ? 
+      reportData.reportDate.toLocaleDateString('tr-TR') : 
+      new Date(reportData.reportDate).toLocaleDateString('tr-TR');
+    const reportDate = this.fixTurkishText(`Rapor Tarihi: ${reportDateStr}`);
     pdf.text(reportDate, pageWidth / 2, currentY, { align: 'center' });
     
     currentY += 15;
@@ -201,6 +204,91 @@ export class ReactPdfService {
 
     // Add footer to first page
     this.addPageFooter(pdf, 1, 1);
+
+    let pageNumber = 2;
+
+    // PAGE 2 - YÖNETICI ÖZETİ
+    pdf.addPage();
+    this.addPageHeader(pdf);
+    currentY = 70;
+
+    // Section title
+    pdf.setFillColor(37, 99, 235);
+    pdf.rect(margin, currentY, contentWidth, 12, 'F');
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(12);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text(this.fixTurkishText('YÖNETICI ÖZETİ'), margin + 5, currentY + 8);
+
+    currentY += 20;
+
+    // Content background
+    pdf.setFillColor(248, 250, 252);
+    const summaryHeight = Math.max(80, Math.min(160, (reportData.managementSummary?.length || 0) / 8));
+    pdf.rect(margin, currentY, contentWidth, summaryHeight, 'F');
+    
+    pdf.setTextColor(0, 0, 0);
+    const summary = reportData.managementSummary || this.fixTurkishText('Yönetici özeti henüz eklenmemiştir.');
+    currentY = this.addTextWithWrap(pdf, this.fixTurkishText(summary), margin + 8, currentY + 12, 11, 'normal', contentWidth - 16);
+
+    this.addPageFooter(pdf, pageNumber++, 1);
+
+    // PAGE 3 - BULGULAR (by sections)
+    const findingsBySections = {
+      1: reportData.findings.filter(f => f.section === 1),
+      2: reportData.findings.filter(f => f.section === 2), 
+      3: reportData.findings.filter(f => f.section === 3)
+    };
+
+    // Section 1
+    if (findingsBySections[1].length > 0) {
+      pdf.addPage();
+      this.addPageHeader(pdf);
+      currentY = await this.addSectionContent(pdf, this.fixTurkishText('BÖLÜM 1 - TASARIM/ÜRETIM HATALARI'), findingsBySections[1], 70, margin, contentWidth, pageHeight);
+      this.addPageFooter(pdf, pageNumber++, 1);
+    }
+
+    // Section 2  
+    if (findingsBySections[2].length > 0) {
+      pdf.addPage();
+      this.addPageHeader(pdf);
+      currentY = await this.addSectionContent(pdf, this.fixTurkishText('BÖLÜM 2 - GÜVENLİK BULGULARI'), findingsBySections[2], 70, margin, contentWidth, pageHeight);
+      this.addPageFooter(pdf, pageNumber++, 1);
+    }
+
+    // Section 3
+    if (findingsBySections[3].length > 0) {
+      pdf.addPage();
+      this.addPageHeader(pdf);
+      currentY = await this.addSectionContent(pdf, this.fixTurkishText('BÖLÜM 3 - TAMAMLANAN BULGULAR'), findingsBySections[3], 70, margin, contentWidth, pageHeight);
+      this.addPageFooter(pdf, pageNumber++, 1);
+    }
+
+    // FINAL PAGE - GENEL DEĞERLENDİRME
+    pdf.addPage();
+    this.addPageHeader(pdf);
+    currentY = 70;
+
+    // Section title
+    pdf.setFillColor(37, 99, 235);
+    pdf.rect(margin, currentY, contentWidth, 12, 'F');
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(12);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text(this.fixTurkishText('GENEL DEĞERLENDİRME'), margin + 5, currentY + 8);
+
+    currentY += 20;
+
+    // Content
+    pdf.setFillColor(248, 250, 252);
+    const evalContentHeight = Math.max(120, Math.min(180, (reportData.generalEvaluation?.length || 0) / 6));
+    pdf.rect(margin, currentY, contentWidth, evalContentHeight, 'F');
+    
+    pdf.setTextColor(0, 0, 0);
+    const evaluation = reportData.generalEvaluation || this.fixTurkishText('Genel değerlendirme henüz eklenmemiştir.');
+    currentY = this.addTextWithWrap(pdf, this.fixTurkishText(evaluation), margin + 8, currentY + 12, 11, 'normal', contentWidth - 16);
+
+    this.addPageFooter(pdf, pageNumber++, 1);
 
     console.log('PDF generated successfully');
     
@@ -221,6 +309,107 @@ export class ReactPdfService {
     }
     
     return new Uint8Array(pdf.output('arraybuffer'));
+  }
+
+  private async addSectionContent(pdf: jsPDF, sectionTitle: string, findings: Finding[], startY: number, margin: number, contentWidth: number, pageHeight: number): Promise<number> {
+    let currentY = startY;
+
+    // Section title
+    pdf.setFillColor(37, 99, 235);
+    pdf.rect(margin, currentY, contentWidth, 12, 'F');
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(12);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text(sectionTitle, margin + 5, currentY + 8);
+
+    currentY += 20;
+
+    // Process each finding
+    for (const finding of findings) {
+      currentY = this.checkNewPage(pdf, currentY, 60, margin);
+
+      // Finding title
+      pdf.setFillColor(240, 240, 240);
+      pdf.rect(margin, currentY, contentWidth, 10, 'F');
+      pdf.setTextColor(0, 0, 0);
+      pdf.setFontSize(11);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(this.fixTurkishText(finding.title), margin + 5, currentY + 7);
+
+      currentY += 15;
+
+      // Risk level indicator
+      const riskColors = {
+        high: [220, 53, 69],    // Red
+        medium: [255, 193, 7],  // Yellow
+        low: [40, 167, 69]      // Green
+      };
+      
+      const [r, g, b] = riskColors[finding.dangerLevel];
+      pdf.setFillColor(r, g, b);
+      pdf.rect(margin, currentY, 60, 8, 'F');
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(9);
+      pdf.setFont('helvetica', 'bold');
+      
+      const riskText = finding.dangerLevel === 'high' ? 'YUKSEK' : 
+                      finding.dangerLevel === 'medium' ? 'ORTA' : 'DUSUK';
+      pdf.text(this.fixTurkishText(riskText), margin + 30, currentY + 5, { align: 'center' });
+
+      currentY += 15;
+
+      // Description
+      pdf.setTextColor(0, 0, 0);
+      pdf.setFont('helvetica', 'normal');
+      currentY = this.addTextWithWrap(pdf, this.fixTurkishText(`Aciklama: ${finding.description}`), margin, currentY, 10, 'normal', contentWidth);
+      
+      currentY += 5;
+
+      // Current situation (if available)
+      if (finding.currentSituation) {
+        currentY = this.addTextWithWrap(pdf, this.fixTurkishText(`Mevcut Durum: ${finding.currentSituation}`), margin, currentY, 10, 'normal', contentWidth);
+        currentY += 5;
+      }
+
+      // Recommendation (if available)
+      if (finding.recommendation) {
+        currentY = this.addTextWithWrap(pdf, this.fixTurkishText(`Oneri: ${finding.recommendation}`), margin, currentY, 10, 'normal', contentWidth);
+        currentY += 5;
+      }
+
+      // Legal basis (if available)
+      if (finding.legalBasis) {
+        currentY = this.addTextWithWrap(pdf, this.fixTurkishText(`Yasal Dayanak: ${finding.legalBasis}`), margin, currentY, 10, 'normal', contentWidth);
+        currentY += 5;
+      }
+
+      // Location (if available)
+      if (finding.location) {
+        currentY = this.addTextWithWrap(pdf, this.fixTurkishText(`Konum: ${finding.location}`), margin, currentY, 10, 'normal', contentWidth);
+        currentY += 5;
+      }
+
+      // Add images if available
+      if (finding.images && finding.images.length > 0) {
+        for (const imageUrl of finding.images.slice(0, 2)) { // Max 2 images per finding
+          currentY = this.checkNewPage(pdf, currentY, 70, margin);
+          
+          try {
+            const optimizedImage = await this.optimizeImage(imageUrl);
+            if (optimizedImage) {
+              pdf.addImage(optimizedImage, 'JPEG', margin, currentY, 80, 60);
+              currentY += 65;
+            }
+          } catch (error) {
+            console.warn('Could not add image to PDF:', error);
+          }
+        }
+      }
+
+      currentY += 10; // Space between findings
+    }
+
+    return currentY;
   }
 
   // Optimize and convert image to base64 using Sharp (server-side)
