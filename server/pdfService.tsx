@@ -58,7 +58,7 @@ export class ReactPdfService {
   // REMOVED: No need for character replacement with Roboto font!
   // Roboto font properly supports Turkish characters: İ, ı, Ğ, ğ, Ş, ş, Ü, ü, Ö, ö, Ç, ç
 
-  // SIMPLE TEXT WRAPPER - ALWAYS BLACK TEXT
+  // AGGRESSIVE BLACK TEXT ENFORCER - Force all text to be black
   private addTextWithWrap(
     pdf: jsPDF, 
     text: string, 
@@ -70,22 +70,25 @@ export class ReactPdfService {
   ): number {
     if (!text) return y;
     
-    // ALWAYS FORCE BLACK TEXT - NO EXCEPTIONS
-    pdf.setTextColor(0, 0, 0);
+    // FORCE RESET everything to ensure visibility
     pdf.setFontSize(fontSize);
     pdf.setFont('Roboto', fontStyle);
     
+    // Use original text with Turkish characters - Roboto supports them!
     const lines = pdf.splitTextToSize(text, maxWidth);
-    const lineHeight = fontSize * 0.6;
+    
+    const lineHeight = fontSize * 0.6; // Better line spacing
 
     lines.forEach((line: string, index: number) => {
       if (line.trim()) {
-        // FORCE BLACK for each line
+        // FORCE BLACK COLOR for each individual line
         pdf.setTextColor(0, 0, 0);
+        pdf.setFont('Roboto', fontStyle); // Reset font too
         pdf.text(line, x, y + (index * lineHeight));
       }
     });
 
+    // Return the actual Y position after text
     return y + (lines.length * lineHeight);
   }
   
@@ -124,7 +127,9 @@ export class ReactPdfService {
     pdf.setFontSize(16);
     pdf.setFont('Roboto', 'bold');
     pdf.text('İstinye Üniversitesi Topkapı Liv Hastanesi', margin + (this.logoBase64 ? 30 : 0), 27);
-    pdf.setTextColor(0, 0, 0); // Reset to black
+    
+    // CRITICAL: Reset to BLACK immediately after white text
+    pdf.setTextColor(0, 0, 0);
   }
 
   // NEW: Enhanced footer with Turkish characters
@@ -233,7 +238,9 @@ export class ReactPdfService {
     pdf.setFontSize(12);
     pdf.setFont('Roboto', 'bold');
     pdf.text('YÖNETİCİ ÖZETİ', margin + 5, currentY + 8);
-    pdf.setTextColor(0, 0, 0); // Reset to black
+    
+    // CRITICAL: Reset to BLACK immediately after white text
+    pdf.setTextColor(0, 0, 0);
 
     currentY += 20;
 
@@ -321,7 +328,9 @@ export class ReactPdfService {
     pdf.setFontSize(12);
     pdf.setFont('Roboto', 'bold');
     pdf.text('GENEL DEĞERLENDİRME', margin + 5, currentY + 8);
-    pdf.setTextColor(0, 0, 0); // Reset to black
+    
+    // CRITICAL: Reset to BLACK immediately after white text
+    pdf.setTextColor(0, 0, 0);
 
     currentY += 20;
 
@@ -396,7 +405,9 @@ export class ReactPdfService {
       pdf.setFontSize(12);
       pdf.setFont('Roboto', 'bold');
       pdf.text(sectionTitle, margin + 5, currentY + 8);
-      pdf.setTextColor(0, 0, 0); // Reset to black
+      
+      // CRITICAL: Reset to BLACK immediately after white text
+      pdf.setTextColor(0, 0, 0);
 
       currentY += 15; // Reduced from 20
       
@@ -435,13 +446,16 @@ export class ReactPdfService {
       const [r, g, b] = riskColors[finding.dangerLevel];
       pdf.setFillColor(r, g, b);
       pdf.rect(margin, currentY, 60, 8, 'F');
-      const riskText = finding.dangerLevel === 'high' ? 'YÜKSEK' : 
-                      finding.dangerLevel === 'medium' ? 'ORTA' : 'DÜŞÜK';
       pdf.setTextColor(255, 255, 255);
       pdf.setFontSize(9);
       pdf.setFont('Roboto', 'bold');
+      
+      const riskText = finding.dangerLevel === 'high' ? 'YÜKSEK' : 
+                      finding.dangerLevel === 'medium' ? 'ORTA' : 'DÜŞÜK';
       pdf.text(riskText, margin + 30, currentY + 5, { align: 'center' });
-      pdf.setTextColor(0, 0, 0); // Reset to black
+      
+      // CRITICAL: Reset to BLACK immediately after white text
+      pdf.setTextColor(0, 0, 0);
 
       currentY += 10; // Reduced spacing
 
@@ -461,59 +475,67 @@ export class ReactPdfService {
       
       // Current situation & Recommendation side by side (only if BOTH exist and have data)
       if (hasSituation && hasRecommendation) {
-        const situationHeight = Math.min(this.calculateTextHeight(pdf, finding.currentSituation || '', 9, halfWidth - 10) + labelHeight + boxPadding, 35);
-        const recHeight = Math.min(this.calculateTextHeight(pdf, finding.recommendation || '', 9, halfWidth - 10) + labelHeight + boxPadding, 35);
+        const situationHeight = Math.min(this.calculateTextHeight(pdf, finding.currentSituation, 9, halfWidth - 10) + labelHeight + boxPadding, 35);
+        const recHeight = Math.min(this.calculateTextHeight(pdf, finding.recommendation, 9, halfWidth - 10) + labelHeight + boxPadding, 35);
         maxHeight = Math.max(situationHeight, recHeight);
         
         // Left: Current situation - DARKER BACKGROUND
-        pdf.setFillColor(240, 240, 240);
+        pdf.setFillColor(240, 240, 240); // Darker gray
         pdf.rect(margin, currentY, halfWidth, situationHeight, 'F');
-        // Black label
-        pdf.setTextColor(0, 0, 0);
+        pdf.setTextColor(0, 0, 0); // BLACK TEXT
         pdf.setFont('Roboto', 'bold');
         pdf.setFontSize(9);
         pdf.text('Mevcut Durum:', margin + 5, currentY + 5);
-        // Content with black text
-        this.addTextWithWrap(pdf, finding.currentSituation || '', margin + 5, currentY + 10, 8, 'normal', halfWidth - 10);
+        // FORCE BLACK TEXT - Double ensure
+        pdf.setTextColor(0, 0, 0);
+        pdf.setFont('Roboto', 'normal');
+        pdf.setFontSize(8); // Set font size too
+        this.addTextWithWrap(pdf, finding.currentSituation, margin + 5, currentY + 10, 8, 'normal', halfWidth - 10);
         
         // Right: Recommendation - DARKER BACKGROUND
-        pdf.setFillColor(240, 240, 240);
+        pdf.setFillColor(240, 240, 240); // Darker gray
         pdf.rect(margin + halfWidth + 5, currentY, halfWidth, recHeight, 'F');
-        // Black label
-        pdf.setTextColor(0, 0, 0);
+        pdf.setTextColor(0, 0, 0); // BLACK TEXT
         pdf.setFont('Roboto', 'bold');
         pdf.text('Öneri:', margin + halfWidth + 10, currentY + 5);
-        // Content with black text
-        this.addTextWithWrap(pdf, finding.recommendation || '', margin + halfWidth + 10, currentY + 10, 8, 'normal', halfWidth - 10);
+        // FORCE BLACK TEXT - Double ensure
+        pdf.setTextColor(0, 0, 0);
+        pdf.setFont('Roboto', 'normal');
+        pdf.setFontSize(8); // Set font size too
+        this.addTextWithWrap(pdf, finding.recommendation, margin + halfWidth + 10, currentY + 10, 8, 'normal', halfWidth - 10);
         
         currentY += maxHeight + spacing;
       } else {
         // Single field if only one exists (full width) - ONLY if it has data
         if (hasSituation) {
-          const situationHeight = Math.min(this.calculateTextHeight(pdf, finding.currentSituation || '', 9, fieldWidth - 12) + labelHeight + boxPadding, 30);
-          pdf.setFillColor(240, 240, 240);
+          const situationHeight = Math.min(this.calculateTextHeight(pdf, finding.currentSituation, 9, fieldWidth - 12) + labelHeight + boxPadding, 30);
+          pdf.setFillColor(240, 240, 240); // Darker gray
           pdf.rect(margin, currentY, fieldWidth, situationHeight, 'F');
-          // Black label
-          pdf.setTextColor(0, 0, 0);
+          pdf.setTextColor(0, 0, 0); // BLACK TEXT
           pdf.setFont('Roboto', 'bold');
           pdf.setFontSize(9);
           pdf.text('Mevcut Durum:', margin + 5, currentY + 5);
-          // Content with black text
-          this.addTextWithWrap(pdf, finding.currentSituation || '', margin + 5, currentY + 10, 8, 'normal', fieldWidth - 10);
+          // FORCE BLACK TEXT - Double ensure
+          pdf.setTextColor(0, 0, 0);
+          pdf.setFont('Roboto', 'normal');
+          pdf.setFontSize(8); // Set font size too
+          this.addTextWithWrap(pdf, finding.currentSituation, margin + 5, currentY + 10, 8, 'normal', fieldWidth - 10);
           currentY += situationHeight + spacing;
         }
         
         if (hasRecommendation) {
-          const recHeight = Math.min(this.calculateTextHeight(pdf, finding.recommendation || '', 9, fieldWidth - 12) + labelHeight + boxPadding, 30);
-          pdf.setFillColor(240, 240, 240);
+          const recHeight = Math.min(this.calculateTextHeight(pdf, finding.recommendation, 9, fieldWidth - 12) + labelHeight + boxPadding, 30);
+          pdf.setFillColor(240, 240, 240); // Darker gray
           pdf.rect(margin, currentY, fieldWidth, recHeight, 'F');
-          // Black label
-          pdf.setTextColor(0, 0, 0);
+          pdf.setTextColor(0, 0, 0); // BLACK TEXT
           pdf.setFont('Roboto', 'bold');
           pdf.setFontSize(9);
           pdf.text('Öneri:', margin + 5, currentY + 5);
-          // Content with black text
-          this.addTextWithWrap(pdf, finding.recommendation || '', margin + 5, currentY + 10, 8, 'normal', fieldWidth - 10);
+          // FORCE BLACK TEXT - Double ensure
+          pdf.setTextColor(0, 0, 0);
+          pdf.setFont('Roboto', 'normal');
+          pdf.setFontSize(8); // Set font size too
+          this.addTextWithWrap(pdf, finding.recommendation, margin + 5, currentY + 10, 8, 'normal', fieldWidth - 10);
           currentY += recHeight + spacing;
         }
       }
@@ -521,38 +543,41 @@ export class ReactPdfService {
       // Legal basis only (ONLY if it has data)
       if (finding.legalBasis && finding.legalBasis.trim()) {
         const legalHeight = Math.min(this.calculateTextHeight(pdf, finding.legalBasis, 8, fieldWidth - 12) + labelHeight + boxPadding, 25);
-        pdf.setFillColor(240, 240, 240);
+        pdf.setFillColor(240, 240, 240); // Darker gray
         pdf.rect(margin, currentY, fieldWidth, legalHeight, 'F');
-        // Black label
-        pdf.setTextColor(0, 0, 0);
+        pdf.setTextColor(0, 0, 0); // BLACK TEXT
         pdf.setFont('Roboto', 'bold');
         pdf.setFontSize(9);
         pdf.text('Yasal Dayanak:', margin + 5, currentY + 5);
-        // Content with black text
-        this.addTextWithWrap(pdf, finding.legalBasis || '', margin + 5, currentY + 10, 8, 'normal', fieldWidth - 10);
+        // FORCE BLACK TEXT - Double ensure
+        pdf.setTextColor(0, 0, 0);
+        pdf.setFont('Roboto', 'normal');
+        pdf.setFontSize(8); // Set font size too
+        this.addTextWithWrap(pdf, finding.legalBasis, margin + 5, currentY + 10, 8, 'normal', fieldWidth - 10);
         currentY += legalHeight + spacing;
       }
       
       // Process steps (ONLY if they exist and have data)
       if (finding.processSteps && finding.processSteps.length > 0) {
         const processHeight = Math.min((finding.processSteps.length * 10) + labelHeight + boxPadding, 40);
-        pdf.setFillColor(240, 240, 240);
+        pdf.setFillColor(240, 240, 240); // Darker gray
         pdf.rect(margin, currentY, fieldWidth, processHeight, 'F');
-        // Black label
-        pdf.setTextColor(0, 0, 0);
+        pdf.setTextColor(0, 0, 0); // BLACK TEXT
         pdf.setFont('Roboto', 'bold');
         pdf.setFontSize(9);
         pdf.text('Süreç Adımları:', margin + 5, currentY + 5);
+        pdf.setTextColor(0, 0, 0); // BLACK TEXT for content
+        pdf.setFont('Roboto', 'normal');
         
         let stepY = currentY + 10;
         finding.processSteps.forEach((step, index) => {
           const stepDate = new Date(step.date).toLocaleDateString('tr-TR');
-          // Direct text with black color guarantee
-          pdf.setTextColor(0, 0, 0);
-          pdf.setFontSize(7);
+          // FORCE BLACK TEXT AND FONT for each step - aggressive reset
+          pdf.setTextColor(0, 0, 0); 
           pdf.setFont('Roboto', 'normal');
+          pdf.setFontSize(7);
           pdf.text(`${index + 1}. ${stepDate}: ${step.description}`, margin + 5, stepY);
-          stepY += 8;
+          stepY += 8; // Reduced spacing
         });
         
         currentY += processHeight + spacing;
