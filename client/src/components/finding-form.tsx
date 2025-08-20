@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { X, Save, Check, Plus } from "lucide-react";
+import { X, Save, Check, Plus, AlertTriangle, AlertCircle, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -108,25 +108,25 @@ export default function FindingForm({ reportId, section, initialData, onClose, o
       value: "high",
       label: "Yüksek",
       color: "danger-high text-white",
-      icon: "fas fa-exclamation-triangle",
+      icon: AlertTriangle,
     },
     {
       value: "medium",
       label: "Orta",
       color: "danger-medium text-white",
-      icon: "fas fa-exclamation-circle",
+      icon: AlertCircle,
     },
     {
       value: "low",
       label: "Düşük",
       color: "danger-low text-white",
-      icon: "fas fa-info-circle",
+      icon: Shield,
     },
   ];
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <Card>
+    <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <Card className="max-w-7xl mx-auto">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="text-xl font-semibold text-gray-900">
@@ -139,7 +139,7 @@ export default function FindingForm({ reportId, section, initialData, onClose, o
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
               <div className="space-y-6">
                 <div className="space-y-2">
                   <Label htmlFor="title">Bulgu Başlığı</Label>
@@ -169,7 +169,9 @@ export default function FindingForm({ reportId, section, initialData, onClose, o
                         onClick={() => handleDangerLevelSelect(level.value)}
                         data-testid={`danger-level-${level.value}`}
                       >
-                        <div className="mb-1">⚠️</div>
+                        <div className="mb-2 flex justify-center">
+                          <level.icon size={20} />
+                        </div>
                         <p className="text-sm font-medium">{level.label}</p>
                       </button>
                     ))}
