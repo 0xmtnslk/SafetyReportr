@@ -52,7 +52,6 @@ export class ReactPdfService {
     }
   }
 
-
   // Enhanced Turkish text support with proper encoding
   private turkishSafeText(text: string): string {
     if (!text) return '';
@@ -133,12 +132,10 @@ export class ReactPdfService {
       }
     }
     
-    // Hospital name in WHITE - Turkish characters fixed
+    // Hospital name with proper Turkish encoding
     pdf.setTextColor(255, 255, 255);
     pdf.setFontSize(16);
     pdf.setFont('helvetica', 'bold');
-    
-    // Hospital name with proper Turkish encoding
     pdf.text(this.turkishSafeText('İstinye Üniversitesi Topkapı Liv Hastanesi'), margin + (this.logoBase64 ? 30 : 0), 27);
   }
 
@@ -155,7 +152,7 @@ export class ReactPdfService {
     pdf.setDrawColor(220, 220, 220);
     pdf.line(15, pageHeight - 25, pageWidth - 15, pageHeight - 25);
     
-    // Hospital name and report type with Turkish characters
+    // Hospital name and report type with original Turkish characters
     const footerText = this.turkishSafeText('İstinye Üniversitesi Topkapı Liv Hastanesi İSG Raporu');
     const pageText = this.turkishSafeText(`Sayfa ${pageNumber}/${totalPages}`);
     
@@ -236,7 +233,7 @@ export class ReactPdfService {
 
     let pageNumber = 2;
 
-    // PAGE 2 - YÖNETICI ÖZETİ
+    // PAGE 2 - YÖNETİCİ ÖZETİ
     pdf.addPage();
     this.addPageHeader(pdf);
     currentY = 70;
@@ -247,7 +244,7 @@ export class ReactPdfService {
     pdf.setTextColor(255, 255, 255);
     pdf.setFontSize(12);
     pdf.setFont('helvetica', 'bold');
-    pdf.text(this.turkishSafeText('YÖNETICI ÖZETİ'), margin + 5, currentY + 8);
+    pdf.text(this.turkishSafeText('YÖNETİCİ ÖZETİ'), margin + 5, currentY + 8);
 
     currentY += 20;
 
@@ -275,35 +272,26 @@ export class ReactPdfService {
 
     this.addPageFooter(pdf, pageNumber++, 1);
 
-    // PAGE 3 - BULGULAR (by sections)
+    // FINDINGS - EACH ON SEPARATE PAGES
     const findingsBySections = {
       1: reportData.findings.filter(f => f.section === 1),
       2: reportData.findings.filter(f => f.section === 2), 
       3: reportData.findings.filter(f => f.section === 3)
     };
 
-    // Section 1
+    // Section 1 - Each finding gets its own page
     if (findingsBySections[1].length > 0) {
-      pdf.addPage();
-      this.addPageHeader(pdf);
-      currentY = await this.addSectionContent(pdf, this.turkishSafeText('BÖLÜM 1 - TASARIM/ÜRETIM HATALARI'), findingsBySections[1], 70, margin, contentWidth, pageHeight);
-      this.addPageFooter(pdf, pageNumber++, 1);
+      await this.addSectionContent(pdf, this.turkishSafeText('BÖLÜM 1 - TASARIM/ÜRETIM HATALARI'), findingsBySections[1], 70, margin, contentWidth, pageHeight);
     }
 
-    // Section 2  
+    // Section 2 - Each finding gets its own page
     if (findingsBySections[2].length > 0) {
-      pdf.addPage();
-      this.addPageHeader(pdf);
-      currentY = await this.addSectionContent(pdf, this.turkishSafeText('BÖLÜM 2 - GÜVENLİK BULGULARI'), findingsBySections[2], 70, margin, contentWidth, pageHeight);
-      this.addPageFooter(pdf, pageNumber++, 1);
+      await this.addSectionContent(pdf, this.turkishSafeText('BÖLÜM 2 - GÜVENLİK BULGULARI'), findingsBySections[2], 70, margin, contentWidth, pageHeight);
     }
 
-    // Section 3
+    // Section 3 - Each finding gets its own page
     if (findingsBySections[3].length > 0) {
-      pdf.addPage();
-      this.addPageHeader(pdf);
-      currentY = await this.addSectionContent(pdf, this.turkishSafeText('BÖLÜM 3 - TAMAMLANAN BULGULAR'), findingsBySections[3], 70, margin, contentWidth, pageHeight);
-      this.addPageFooter(pdf, pageNumber++, 1);
+      await this.addSectionContent(pdf, this.turkishSafeText('BÖLÜM 3 - TAMAMLANAN BULGULAR'), findingsBySections[3], 70, margin, contentWidth, pageHeight);
     }
 
     // FINAL PAGE - GENEL DEĞERLENDİRME
@@ -359,37 +347,41 @@ export class ReactPdfService {
       pdf.setFontSize(10);
       pdf.setFont('helvetica', 'normal');
       pdf.setTextColor(100, 100, 100);
-      const pageText = (`Sayfa ${i}/${totalPages}`);
+      const pageText = this.turkishSafeText(`Sayfa ${i}/${totalPages}`);
       pdf.text(pageText, pageWidth - 50, pageHeight - 15);
     }
     
     return new Uint8Array(pdf.output('arraybuffer'));
   }
 
+  // NEW: Each finding gets its own page with structured boxes
   private async addSectionContent(pdf: jsPDF, sectionTitle: string, findings: Finding[], startY: number, margin: number, contentWidth: number, pageHeight: number): Promise<number> {
     let currentY = startY;
-
-    // Section title
-    pdf.setFillColor(37, 99, 235);
-    pdf.rect(margin, currentY, contentWidth, 12, 'F');
-    pdf.setTextColor(255, 255, 255);
-    pdf.setFontSize(12);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text(sectionTitle, margin + 5, currentY + 8);
-
-    currentY += 20;
-
-    // Process each finding
+    
+    // Process each finding on separate pages
     for (const finding of findings) {
-      currentY = this.checkNewPage(pdf, currentY, 60, margin);
+      // NEW PAGE for each finding
+      pdf.addPage();
+      this.addPageHeader(pdf);
+      currentY = 70;
 
-      // Finding title
+      // Section title (repeated on each page)
+      pdf.setFillColor(37, 99, 235);
+      pdf.rect(margin, currentY, contentWidth, 12, 'F');
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(12);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(this.turkishSafeText(sectionTitle), margin + 5, currentY + 8);
+
+      currentY += 20;
+
+      // Finding title box
       pdf.setFillColor(240, 240, 240);
       pdf.rect(margin, currentY, contentWidth, 10, 'F');
       pdf.setTextColor(0, 0, 0);
       pdf.setFontSize(11);
       pdf.setFont('helvetica', 'bold');
-      pdf.text((finding.title), margin + 5, currentY + 7);
+      pdf.text(this.turkishSafeText(finding.title), margin + 5, currentY + 7);
 
       currentY += 15;
 
@@ -407,47 +399,116 @@ export class ReactPdfService {
       pdf.setFontSize(9);
       pdf.setFont('helvetica', 'bold');
       
-      const riskText = finding.dangerLevel === 'high' ? 'YUKSEK' : 
-                      finding.dangerLevel === 'medium' ? 'ORTA' : 'DUSUK';
-      pdf.text((riskText), margin + 30, currentY + 5, { align: 'center' });
+      const riskText = finding.dangerLevel === 'high' ? 'YÜKSEK' : 
+                      finding.dangerLevel === 'medium' ? 'ORTA' : 'DÜŞÜK';
+      pdf.text(this.turkishSafeText(riskText), margin + 30, currentY + 5, { align: 'center' });
 
       currentY += 15;
 
-      // Description
-      pdf.setTextColor(0, 0, 0);
-      pdf.setFont('helvetica', 'normal');
-      currentY = this.addTextWithWrap(pdf, (`Aciklama: ${finding.description}`), margin, currentY, 10, 'normal', contentWidth);
+      // FIXED HEIGHT BOXES for each field
+      const fieldHeight = 35; // Standard height for each field box
       
-      currentY += 5;
+      // Description box (always present)
+      pdf.setFillColor(250, 250, 250);
+      pdf.rect(margin, currentY, contentWidth, fieldHeight, 'F');
+      pdf.setTextColor(0, 0, 0);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(10);
+      pdf.text(this.turkishSafeText('Açıklama:'), margin + 5, currentY + 8);
+      pdf.setFont('helvetica', 'normal');
+      this.addTextWithWrap(
+        pdf, 
+        this.turkishSafeText(finding.description), 
+        margin + 5, 
+        currentY + 15, 
+        10, 
+        'normal', 
+        contentWidth - 10, 
+        fieldHeight - 18 // Height limit
+      );
+      currentY += fieldHeight + 5;
 
-      // Current situation (if available)
+      // Current situation box (if available)
       if (finding.currentSituation) {
-        currentY = this.addTextWithWrap(pdf, (`Mevcut Durum: ${finding.currentSituation}`), margin, currentY, 10, 'normal', contentWidth);
-        currentY += 5;
+        pdf.setFillColor(250, 250, 250);
+        pdf.rect(margin, currentY, contentWidth, fieldHeight, 'F');
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(this.turkishSafeText('Mevcut Durum:'), margin + 5, currentY + 8);
+        pdf.setFont('helvetica', 'normal');
+        this.addTextWithWrap(
+          pdf, 
+          this.turkishSafeText(finding.currentSituation), 
+          margin + 5, 
+          currentY + 15, 
+          10, 
+          'normal', 
+          contentWidth - 10, 
+          fieldHeight - 18
+        );
+        currentY += fieldHeight + 5;
       }
 
-      // Recommendation (if available)
+      // Recommendation box (if available)
       if (finding.recommendation) {
-        currentY = this.addTextWithWrap(pdf, (`Oneri: ${finding.recommendation}`), margin, currentY, 10, 'normal', contentWidth);
-        currentY += 5;
+        pdf.setFillColor(250, 250, 250);
+        pdf.rect(margin, currentY, contentWidth, fieldHeight, 'F');
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(this.turkishSafeText('Öneri:'), margin + 5, currentY + 8);
+        pdf.setFont('helvetica', 'normal');
+        this.addTextWithWrap(
+          pdf, 
+          this.turkishSafeText(finding.recommendation), 
+          margin + 5, 
+          currentY + 15, 
+          10, 
+          'normal', 
+          contentWidth - 10, 
+          fieldHeight - 18
+        );
+        currentY += fieldHeight + 5;
       }
 
-      // Legal basis (if available)
+      // Legal basis box (if available)
       if (finding.legalBasis) {
-        currentY = this.addTextWithWrap(pdf, (`Yasal Dayanak: ${finding.legalBasis}`), margin, currentY, 10, 'normal', contentWidth);
-        currentY += 5;
+        pdf.setFillColor(250, 250, 250);
+        pdf.rect(margin, currentY, contentWidth, fieldHeight, 'F');
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(this.turkishSafeText('Yasal Dayanak:'), margin + 5, currentY + 8);
+        pdf.setFont('helvetica', 'normal');
+        this.addTextWithWrap(
+          pdf, 
+          this.turkishSafeText(finding.legalBasis), 
+          margin + 5, 
+          currentY + 15, 
+          10, 
+          'normal', 
+          contentWidth - 10, 
+          fieldHeight - 18
+        );
+        currentY += fieldHeight + 5;
       }
 
-      // Location (if available)
+      // Location box (if available) - single line
       if (finding.location) {
-        currentY = this.addTextWithWrap(pdf, (`Konum: ${finding.location}`), margin, currentY, 10, 'normal', contentWidth);
-        currentY += 5;
+        const locationHeight = 20;
+        pdf.setFillColor(250, 250, 250);
+        pdf.rect(margin, currentY, contentWidth, locationHeight, 'F');
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(this.turkishSafeText('Konum:'), margin + 5, currentY + 8);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(this.turkishSafeText(finding.location), margin + 5, currentY + 15);
+        currentY += locationHeight + 5;
       }
 
-      // Add images if available
+      // Images (if available) - max 2 per finding
       if (finding.images && finding.images.length > 0) {
-        for (const imageUrl of finding.images.slice(0, 2)) { // Max 2 images per finding
-          currentY = this.checkNewPage(pdf, currentY, 70, margin);
+        for (const imageUrl of finding.images.slice(0, 2)) {
+          // Check if we need a new page for images
+          if (currentY + 70 > pageHeight - 60) {
+            pdf.addPage();
+            this.addPageHeader(pdf);
+            currentY = 70;
+          }
           
           try {
             const optimizedImage = await this.optimizeImage(imageUrl);
@@ -460,8 +521,6 @@ export class ReactPdfService {
           }
         }
       }
-
-      currentY += 10; // Space between findings
     }
 
     return currentY;
