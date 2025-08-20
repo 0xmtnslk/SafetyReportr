@@ -206,9 +206,23 @@ export class ReactPdfService {
     pdf.text(`Proje Lokasyonu: ${reportData.projectLocation}`, pageWidth / 2, currentY, { align: 'center' });
     
     currentY += 15;
-    const reportDateStr = reportData.reportDate instanceof Date ? 
-      reportData.reportDate.toLocaleDateString('tr-TR') : 
-      new Date(reportData.reportDate).toLocaleDateString('tr-TR');
+    // Fix date parsing issue
+    let reportDateStr = 'Tarih belirtilmemiş';
+    if (reportData.reportDate) {
+      try {
+        if (reportData.reportDate instanceof Date && !isNaN(reportData.reportDate.getTime())) {
+          reportDateStr = reportData.reportDate.toLocaleDateString('tr-TR');
+        } else if (typeof reportData.reportDate === 'string' && reportData.reportDate.trim()) {
+          const parsedDate = new Date(reportData.reportDate);
+          if (!isNaN(parsedDate.getTime())) {
+            reportDateStr = parsedDate.toLocaleDateString('tr-TR');
+          }
+        }
+      } catch (error) {
+        console.warn('Date parsing error:', error);
+        reportDateStr = 'Tarih formatı hatalı';
+      }
+    }
     pdf.text(`Rapor Tarihi: ${reportDateStr}`, pageWidth / 2, currentY, { align: 'center' });
     
     currentY += 15;
@@ -440,109 +454,170 @@ export class ReactPdfService {
 
       currentY += 15;
 
-      // DYNAMIC CONTENT BOXES - Content-based heights
-      const boxPadding = 8;
-      const labelHeight = 12;
+      // COMPACT LAYOUT - Reduced spacing for better fit
+      const boxPadding = 6; // Reduced from 8
+      const labelHeight = 10; // Reduced from 12  
       const fieldWidth = contentWidth;
+      const spacing = 3; // Reduced from 5
       
-      // Description box (always present)
-      const descHeight = this.calculateTextHeight(pdf, finding.description, 10, fieldWidth - 16) + labelHeight + boxPadding;
+      // Description box (always present) - compact
+      const descHeight = Math.min(this.calculateTextHeight(pdf, finding.description, 10, fieldWidth - 16) + labelHeight + boxPadding, 40);
       pdf.setFillColor(250, 250, 250);
       pdf.rect(margin, currentY, fieldWidth, descHeight, 'F');
       pdf.setTextColor(0, 0, 0);
       pdf.setFont('Roboto', 'bold');
       pdf.setFontSize(10);
-      pdf.text('Açıklama:', margin + 5, currentY + 8);
+      pdf.text('Açıklama:', margin + 5, currentY + 6);
       pdf.setFont('Roboto', 'normal');
-      this.addTextWithWrap(pdf, finding.description, margin + 5, currentY + 15, 10, 'normal', fieldWidth - 10);
-      currentY += descHeight + 5;
+      this.addTextWithWrap(pdf, finding.description, margin + 5, currentY + 12, 9, 'normal', fieldWidth - 10);
+      currentY += descHeight + spacing;
 
-      // Two-column layout for other fields (if space permits)
+      // Compact two-column layout  
       const halfWidth = (fieldWidth - 5) / 2;
-      let leftColumnY = currentY;
-      let rightColumnY = currentY;
+      let maxHeight = 0;
       
-      // Current situation (left column)
-      if (finding.currentSituation) {
-        const situationHeight = this.calculateTextHeight(pdf, finding.currentSituation, 10, halfWidth - 10) + labelHeight + boxPadding;
-        pdf.setFillColor(250, 250, 250);
-        pdf.rect(margin, leftColumnY, halfWidth, situationHeight, 'F');
-        pdf.setFont('Roboto', 'bold');
-        pdf.text('Mevcut Durum:', margin + 5, leftColumnY + 8);
-        pdf.setFont('Roboto', 'normal');
-        this.addTextWithWrap(pdf, finding.currentSituation, margin + 5, leftColumnY + 15, 10, 'normal', halfWidth - 10);
-        leftColumnY += situationHeight + 5;
-      }
-
-      // Recommendation (right column)
-      if (finding.recommendation) {
-        const recHeight = this.calculateTextHeight(pdf, finding.recommendation, 10, halfWidth - 10) + labelHeight + boxPadding;
-        pdf.setFillColor(250, 250, 250);
-        pdf.rect(margin + halfWidth + 5, rightColumnY, halfWidth, recHeight, 'F');
-        pdf.setFont('Roboto', 'bold');
-        pdf.text('Öneri:', margin + halfWidth + 10, rightColumnY + 8);
-        pdf.setFont('Roboto', 'normal');
-        this.addTextWithWrap(pdf, finding.recommendation, margin + halfWidth + 10, rightColumnY + 15, 10, 'normal', halfWidth - 10);
-        rightColumnY += recHeight + 5;
-      }
-      
-      // Update currentY to the maximum of both columns
-      currentY = Math.max(leftColumnY, rightColumnY);
-
-      // Legal basis (full width)
-      if (finding.legalBasis) {
-        const legalHeight = this.calculateTextHeight(pdf, finding.legalBasis, 10, fieldWidth - 10) + labelHeight + boxPadding;
-        pdf.setFillColor(250, 250, 250);
-        pdf.rect(margin, currentY, fieldWidth, legalHeight, 'F');
-        pdf.setFont('Roboto', 'bold');
-        pdf.text('Yasal Dayanak:', margin + 5, currentY + 8);
-        pdf.setFont('Roboto', 'normal');
-        this.addTextWithWrap(pdf, finding.legalBasis, margin + 5, currentY + 15, 10, 'normal', fieldWidth - 10);
-        currentY += legalHeight + 5;
-      }
-
-      // Location (single line)
-      if (finding.location) {
-        const locationHeight = 20;
-        pdf.setFillColor(250, 250, 250);
-        pdf.rect(margin, currentY, fieldWidth, locationHeight, 'F');
-        pdf.setFont('Roboto', 'bold');
-        pdf.text('Konum:', margin + 5, currentY + 8);
-        pdf.setFont('Roboto', 'normal');
-        pdf.text(finding.location, margin + 5, currentY + 15);
-        currentY += locationHeight + 5;
-      }
-
-      // Images (if available) - max 2 per finding, side by side if possible
-      if (finding.images && finding.images.length > 0) {
-        const imageWidth = 80;
-        const imageHeight = 60;
-        const imagesPerRow = Math.floor(fieldWidth / (imageWidth + 10));
+      // Current situation & Recommendation side by side (if both exist)
+      if (finding.currentSituation && finding.recommendation) {
+        const situationHeight = Math.min(this.calculateTextHeight(pdf, finding.currentSituation, 9, halfWidth - 10) + labelHeight + boxPadding, 35);
+        const recHeight = Math.min(this.calculateTextHeight(pdf, finding.recommendation, 9, halfWidth - 10) + labelHeight + boxPadding, 35);
+        maxHeight = Math.max(situationHeight, recHeight);
         
-        for (let i = 0; i < Math.min(finding.images.length, 2); i++) {
-          // Check if we need a new page for images
-          if (currentY + imageHeight > pageHeight - 60) {
-            pdf.addPage();
-            this.addPageHeader(pdf);
-            currentY = 70;
-          }
-          
-          const xOffset = margin + (i % imagesPerRow) * (imageWidth + 10);
-          const yOffset = currentY + Math.floor(i / imagesPerRow) * (imageHeight + 10);
-          
-          try {
-            const optimizedImage = await this.optimizeImage(finding.images[i]);
-            if (optimizedImage) {
-              pdf.addImage(optimizedImage, 'JPEG', xOffset, yOffset, imageWidth, imageHeight);
-            }
-          } catch (error) {
-            console.warn('Could not add image to PDF:', error);
-          }
+        // Left: Current situation
+        pdf.setFillColor(250, 250, 250);
+        pdf.rect(margin, currentY, halfWidth, situationHeight, 'F');
+        pdf.setFont('Roboto', 'bold');
+        pdf.setFontSize(9);
+        pdf.text('Mevcut Durum:', margin + 5, currentY + 6);
+        pdf.setFont('Roboto', 'normal');
+        this.addTextWithWrap(pdf, finding.currentSituation, margin + 5, currentY + 12, 8, 'normal', halfWidth - 10);
+        
+        // Right: Recommendation
+        pdf.setFillColor(250, 250, 250);
+        pdf.rect(margin + halfWidth + 5, currentY, halfWidth, recHeight, 'F');
+        pdf.setFont('Roboto', 'bold');
+        pdf.text('Öneri:', margin + halfWidth + 10, currentY + 6);
+        pdf.setFont('Roboto', 'normal');
+        this.addTextWithWrap(pdf, finding.recommendation, margin + halfWidth + 10, currentY + 12, 8, 'normal', halfWidth - 10);
+        
+        currentY += maxHeight + spacing;
+      } else {
+        // Single field if only one exists
+        if (finding.currentSituation) {
+          const situationHeight = Math.min(this.calculateTextHeight(pdf, finding.currentSituation, 9, fieldWidth - 16) + labelHeight + boxPadding, 30);
+          pdf.setFillColor(250, 250, 250);
+          pdf.rect(margin, currentY, fieldWidth, situationHeight, 'F');
+          pdf.setFont('Roboto', 'bold');
+          pdf.setFontSize(9);
+          pdf.text('Mevcut Durum:', margin + 5, currentY + 6);
+          pdf.setFont('Roboto', 'normal');
+          this.addTextWithWrap(pdf, finding.currentSituation, margin + 5, currentY + 12, 8, 'normal', fieldWidth - 10);
+          currentY += situationHeight + spacing;
         }
         
-        // Update currentY after images
-        const imageRows = Math.ceil(Math.min(finding.images.length, 2) / imagesPerRow);
-        currentY += imageRows * (imageHeight + 10);
+        if (finding.recommendation) {
+          const recHeight = Math.min(this.calculateTextHeight(pdf, finding.recommendation, 9, fieldWidth - 16) + labelHeight + boxPadding, 30);
+          pdf.setFillColor(250, 250, 250);
+          pdf.rect(margin, currentY, fieldWidth, recHeight, 'F');
+          pdf.setFont('Roboto', 'bold');
+          pdf.setFontSize(9);
+          pdf.text('Öneri:', margin + 5, currentY + 6);
+          pdf.setFont('Roboto', 'normal');
+          this.addTextWithWrap(pdf, finding.recommendation, margin + 5, currentY + 12, 8, 'normal', fieldWidth - 10);
+          currentY += recHeight + spacing;
+        }
+      }
+
+      // Legal basis & Location side by side (if both exist)
+      if (finding.legalBasis && finding.location) {
+        const legalHeight = Math.min(this.calculateTextHeight(pdf, finding.legalBasis, 8, halfWidth - 10) + labelHeight + boxPadding, 30);
+        const locationHeight = 18; // Fixed small height
+        maxHeight = Math.max(legalHeight, locationHeight);
+        
+        // Left: Legal basis
+        pdf.setFillColor(250, 250, 250);
+        pdf.rect(margin, currentY, halfWidth, legalHeight, 'F');
+        pdf.setFont('Roboto', 'bold');
+        pdf.setFontSize(8);
+        pdf.text('Yasal Dayanak:', margin + 5, currentY + 6);
+        pdf.setFont('Roboto', 'normal');
+        this.addTextWithWrap(pdf, finding.legalBasis, margin + 5, currentY + 12, 7, 'normal', halfWidth - 10);
+        
+        // Right: Location
+        pdf.setFillColor(250, 250, 250);
+        pdf.rect(margin + halfWidth + 5, currentY, halfWidth, locationHeight, 'F');
+        pdf.setFont('Roboto', 'bold');
+        pdf.setFontSize(8);
+        pdf.text('Konum:', margin + halfWidth + 10, currentY + 6);
+        pdf.setFont('Roboto', 'normal');
+        pdf.text(finding.location, margin + halfWidth + 10, currentY + 12);
+        
+        currentY += maxHeight + spacing;
+      } else {
+        // Single fields if only one exists
+        if (finding.legalBasis) {
+          const legalHeight = Math.min(this.calculateTextHeight(pdf, finding.legalBasis, 8, fieldWidth - 16) + labelHeight + boxPadding, 25);
+          pdf.setFillColor(250, 250, 250);
+          pdf.rect(margin, currentY, fieldWidth, legalHeight, 'F');
+          pdf.setFont('Roboto', 'bold');
+          pdf.setFontSize(8);
+          pdf.text('Yasal Dayanak:', margin + 5, currentY + 6);
+          pdf.setFont('Roboto', 'normal');
+          this.addTextWithWrap(pdf, finding.legalBasis, margin + 5, currentY + 12, 7, 'normal', fieldWidth - 10);
+          currentY += legalHeight + spacing;
+        }
+        
+        if (finding.location) {
+          const locationHeight = 16;
+          pdf.setFillColor(250, 250, 250);
+          pdf.rect(margin, currentY, fieldWidth, locationHeight, 'F');
+          pdf.setFont('Roboto', 'bold');
+          pdf.setFontSize(8);
+          pdf.text('Konum:', margin + 5, currentY + 6);
+          pdf.setFont('Roboto', 'normal');
+          pdf.text(finding.location, margin + 5, currentY + 12);
+          currentY += locationHeight + spacing;
+        }
+      }
+
+      // OPTIMIZED Images - Keep on same page with compact sizing
+      if (finding.images && finding.images.length > 0) {
+        const imageWidth = 70; // Smaller images
+        const imageHeight = 50;
+        const imageSpacing = 8;
+        const maxImages = 2;
+        const imagesCount = Math.min(finding.images.length, maxImages);
+        
+        // Calculate total height needed for images
+        const totalImageHeight = imageHeight + 10; // Small buffer
+        
+        // Smart positioning - keep images with content if possible
+        const spaceLeft = pageHeight - 60 - currentY; // Account for footer
+        const willFitOnPage = spaceLeft >= totalImageHeight;
+        
+        if (willFitOnPage || currentY < 150) { // If early in page, definitely keep together
+          // Images side by side (if 2), or single centered
+          const totalWidth = (imagesCount * imageWidth) + ((imagesCount - 1) * imageSpacing);
+          const startX = margin + (fieldWidth - totalWidth) / 2; // Center images
+          
+          for (let i = 0; i < imagesCount; i++) {
+            const xOffset = startX + (i * (imageWidth + imageSpacing));
+            const yOffset = currentY;
+            
+            try {
+              const optimizedImage = await this.optimizeImage(finding.images[i]);
+              if (optimizedImage) {
+                pdf.addImage(optimizedImage, 'JPEG', xOffset, yOffset, imageWidth, imageHeight);
+              }
+            } catch (error) {
+              console.warn('Could not add image to PDF:', error);
+            }
+          }
+          
+          currentY += totalImageHeight;
+        } else {
+          // If very little space left, move to next finding (images will be skipped)
+          console.log('Skipping images due to insufficient space - keeping content compact');
+        }
       }
     }
 
