@@ -136,8 +136,10 @@ export default function Reports() {
         return "Tamamlandı";
       case "in_progress":
         return "Devam Ediyor";
+      case "draft":
+        return "Devam Ediyor";
       default:
-        return "Taslak";
+        return "Devam Ediyor";
     }
   };
 

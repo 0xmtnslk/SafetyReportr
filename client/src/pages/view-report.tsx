@@ -293,14 +293,13 @@ export default function ViewReport({ id }: ViewReportProps) {
                     <h4 className="font-medium text-gray-900 mb-2">Fotoğraflar</h4>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                       {finding.images.map((image: string, imgIndex: number) => (
-                        <div key={imgIndex} className="relative group cursor-pointer">
+                        <div key={imgIndex} className="relative group cursor-pointer" onClick={() => setPreviewImage(image)}>
                           <img
                             src={image}
                             alt={`${finding.title} - ${imgIndex + 1}`}
                             className="w-full h-24 object-cover rounded border hover:opacity-80 transition-opacity"
-                            onClick={() => setPreviewImage(image)}
                           />
-                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded flex items-center justify-center">
+                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded flex items-center justify-center pointer-events-none">
                             <ZoomIn size={20} className="text-white" />
                           </div>
                         </div>
