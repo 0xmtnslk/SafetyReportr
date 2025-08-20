@@ -38,7 +38,7 @@ export default function FindingForm({ reportId, section, initialData, onClose, o
         const response = await apiRequest("PUT", `/api/findings/${initialData.id}`, data);
         return response.json();
       } else {
-        const response = await apiRequest("POST", "/api/findings", data);
+        const response = await apiRequest("POST", `/api/reports/${reportId}/findings`, data);
         return response.json();
       }
     },
@@ -49,7 +49,7 @@ export default function FindingForm({ reportId, section, initialData, onClose, o
           console.log('🟢 Düşük risk bulgusu tamamlanmış bölümüne kopyalanıyor...');
           
           // Create a copy in section 4 (completed findings)
-          await apiRequest("POST", "/api/findings", {
+          await apiRequest("POST", `/api/reports/${reportId}/findings`, {
             reportId,
             section: 4,
             ...formData,
