@@ -36,12 +36,9 @@ interface ProcessStep {
 
 export class ReactPdfService {
   private logoBase64: string = '';
-  private tahomaFont: string = '';
-  private tahomaBoldFont: string = '';
 
   constructor() {
     this.loadLogo();
-    this.loadTahomaFonts();
   }
 
   private loadLogo() {
@@ -55,67 +52,78 @@ export class ReactPdfService {
     }
   }
 
-  private loadTahomaFonts() {
-    // Tahoma fonts disabled due to loading issues
-    // Using Helvetica which has excellent Turkish character support
-    console.log('Using Helvetica font for Turkish character support');
-    this.tahomaFont = '';
-    this.tahomaBoldFont = '';
-  }
-
-  // Proper Turkish character handling - preserve UTF-8 encoding
-  private encodeTurkishText(text: string): string {
+  // NEW: Robust Turkish character support using Unicode escape sequences
+  private fixTurkishText(text: string): string {
     if (!text) return '';
-    // Just normalize to NFC for consistent encoding - don't replace characters!
-    return text.normalize('NFC');
+    
+    // Convert to proper Unicode and then to jsPDF compatible format
+    return text
+      .replace(/İ/g, '\u0130')  // Turkish İ
+      .replace(/ı/g, '\u0131')  // Turkish ı 
+      .replace(/Ğ/g, '\u011E')  // Turkish Ğ
+      .replace(/ğ/g, '\u011F')  // Turkish ğ
+      .replace(/Ş/g, '\u015E')  // Turkish Ş
+      .replace(/ş/g, '\u015F')  // Turkish ş
+      .replace(/Ü/g, '\u00DC')  // Turkish Ü
+      .replace(/ü/g, '\u00FC')  // Turkish ü
+      .replace(/Ö/g, '\u00D6')  // Turkish Ö
+      .replace(/ö/g, '\u00F6')  // Turkish ö
+      .replace(/Ç/g, '\u00C7')  // Turkish Ç
+      .replace(/ç/g, '\u00E7');  // Turkish ç
   }
 
-  private setupFonts(pdf: jsPDF) {
-    // Use built-in Helvetica font which supports Turkish characters well
-    console.log('Using built-in Helvetica font for reliable Turkish character support');
-    // Set UTF-8 encoding to ensure proper Turkish character display
-    pdf.setFont('helvetica');
-    pdf.setCharSpace(0);
-    pdf.setR2L(false);
-  }
-
-  // Helper function to add text with proper Turkish encoding and word wrap
+  // Enhanced text wrapper with Turkish support
   private addTextWithWrap(pdf: jsPDF, text: string, x: number, y: number, fontSize: number = 11, fontStyle: string = 'normal', maxWidth: number = 170): number {
     if (!text) return y;
     
     pdf.setFontSize(fontSize);
-    
-    // Use Helvetica which has excellent Turkish character support
     pdf.setFont('helvetica', fontStyle);
     
-    // Properly encode Turkish characters
-    const processedText = this.encodeTurkishText(text);
+    // Process Turkish characters
+    const processedText = this.fixTurkishText(text);
     const lines = pdf.splitTextToSize(processedText, maxWidth);
     
-    // Better line height for Turkish text readability
-    const lineHeight = fontSize * 0.52; // Increased from 0.35 to 0.52
+    const lineHeight = fontSize * 0.6; // Better spacing
 
     lines.forEach((line: string, index: number) => {
-      if (line.trim()) { // Skip empty lines
+      if (line.trim()) {
         pdf.text(line, x, y + (index * lineHeight));
       }
     });
 
-    return y + (lines.length * lineHeight) + (fontSize * 0.3); // Better spacing
+    return y + (lines.length * lineHeight) + (fontSize * 0.4);
   }
 
-  // Helper function to check if new page is needed
-  private checkNewPage(pdf: jsPDF, currentY: number, neededHeight: number, margin: number = 15): number {
-    const pageHeight = pdf.internal.pageSize.getHeight();
-    if (currentY + neededHeight > pageHeight - margin) {
-      pdf.addPage();
-      return margin;
+  // NEW: Enhanced header with proper Turkish characters
+  private addPageHeader(pdf: jsPDF) {
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const margin = 15;
+    
+    // Blue background like in logo color
+    pdf.setFillColor(37, 99, 235);
+    pdf.rect(0, 0, pageWidth, 45, 'F');
+    
+    // Logo
+    if (this.logoBase64) {
+      try {
+        pdf.addImage(this.logoBase64, 'PNG', margin, 10, 25, 25);
+      } catch (error) {
+        console.warn('Could not add logo:', error);
+      }
     }
-    return currentY;
+    
+    // Hospital name in WHITE - Turkish characters fixed
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(16);
+    pdf.setFont('helvetica', 'bold');
+    
+    // Use fixed Turkish text
+    const hospitalName = this.fixTurkishText('İstinye Üniversitesi Topkapı Liv Hastanesi');
+    pdf.text(hospitalName, margin + (this.logoBase64 ? 30 : 0), 27);
   }
 
-  // Add page numbers with proper Turkish text
-  private addPageNumber(pdf: jsPDF, pageNumber: number, totalPages: number) {
+  // NEW: Enhanced footer with Turkish characters
+  private addPageFooter(pdf: jsPDF, pageNumber: number, totalPages: number) {
     const pageHeight = pdf.internal.pageSize.getHeight();
     const pageWidth = pdf.internal.pageSize.getWidth();
     
@@ -124,14 +132,95 @@ export class ReactPdfService {
     pdf.setTextColor(100, 100, 100);
     
     // Footer line
-    pdf.setDrawColor(200, 200, 200);
-    pdf.line(15, pageHeight - 22, pageWidth - 15, pageHeight - 22);
+    pdf.setDrawColor(220, 220, 220);
+    pdf.line(15, pageHeight - 25, pageWidth - 15, pageHeight - 25);
     
-    // Hospital name and report type
-    const footerText = this.encodeTurkishText('İstinye Üniversitesi Topkapı Liv Hastanesi İSG Raporu');
-    const pageText = this.encodeTurkishText(`Sayfa ${pageNumber}/${totalPages}`);
-    pdf.text(footerText, 15, pageHeight - 12);
-    pdf.text(pageText, pageWidth - 45, pageHeight - 12);
+    // Hospital name and report type with Turkish characters
+    const footerText = this.fixTurkishText('İstinye Üniversitesi Topkapı Liv Hastanesi İSG Raporu');
+    const pageText = this.fixTurkishText(`Sayfa ${pageNumber}/${totalPages}`);
+    
+    pdf.text(footerText, 15, pageHeight - 15);
+    pdf.text(pageText, pageWidth - 50, pageHeight - 15);
+  }
+
+  // Helper function to check if new page is needed
+  private checkNewPage(pdf: jsPDF, currentY: number, neededHeight: number, margin: number = 15): number {
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    if (currentY + neededHeight > pageHeight - 60) { // Account for footer
+      pdf.addPage();
+      this.addPageHeader(pdf);
+      return 60; // Start after header
+    }
+    return currentY;
+  }
+
+  async generatePDF(reportData: ReportData): Promise<Uint8Array> {
+    console.log('PDF generating for report:', reportData.reportNumber);
+
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    
+    // Setup for Turkish characters
+    pdf.setFont('helvetica');
+    
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const margin = 15;
+    const contentWidth = pageWidth - (margin * 2);
+    let currentY = 60; // Start after header
+
+    // Add header to first page
+    this.addPageHeader(pdf);
+
+    // COVER PAGE CONTENT
+    pdf.setTextColor(0, 0, 0);
+    pdf.setFontSize(24);
+    pdf.setFont('helvetica', 'bold');
+    
+    currentY += 30;
+    const reportTitle = this.fixTurkishText('İSG DENETİM RAPORU');
+    pdf.text(reportTitle, pageWidth / 2, currentY, { align: 'center' });
+    
+    currentY += 20;
+    pdf.setFontSize(16);
+    pdf.setFont('helvetica', 'normal');
+    
+    const reportNumber = this.fixTurkishText(`Rapor No: ${reportData.reportNumber}`);
+    pdf.text(reportNumber, pageWidth / 2, currentY, { align: 'center' });
+    
+    currentY += 15;
+    const projectLocation = this.fixTurkishText(`Proje Lokasyonu: ${reportData.projectLocation}`);
+    pdf.text(projectLocation, pageWidth / 2, currentY, { align: 'center' });
+    
+    currentY += 15;
+    const reportDate = this.fixTurkishText(`Rapor Tarihi: ${new Date(reportData.reportDate).toLocaleDateString('tr-TR')}`);
+    pdf.text(reportDate, pageWidth / 2, currentY, { align: 'center' });
+    
+    currentY += 15;
+    const reporter = this.fixTurkishText(`Rapor Eden: ${reportData.reporter}`);
+    pdf.text(reporter, pageWidth / 2, currentY, { align: 'center' });
+
+    // Add footer to first page
+    this.addPageFooter(pdf, 1, 1);
+
+    console.log('PDF generated successfully');
+    
+    // Fix total pages count
+    const totalPages = pdf.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+      pdf.setPage(i);
+      
+      // Clear and update page number
+      pdf.setFillColor(255, 255, 255);
+      pdf.rect(pageWidth - 70, pageHeight - 20, 60, 10, 'F');
+      
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setTextColor(100, 100, 100);
+      const pageText = this.fixTurkishText(`Sayfa ${i}/${totalPages}`);
+      pdf.text(pageText, pageWidth - 50, pageHeight - 15);
+    }
+    
+    return new Uint8Array(pdf.output('arraybuffer'));
   }
 
   // Optimize and convert image to base64 using Sharp (server-side)
@@ -180,420 +269,6 @@ export class ReactPdfService {
     } catch (error) {
       console.warn('Could not optimize image:', error);
       return '';
-    }
-  }
-
-  async generatePDF(reportData: ReportData): Promise<Uint8Array> {
-    console.log('PDF generating for report:', reportData.reportNumber);
-
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    
-    // Setup fonts for Turkish character support
-    this.setupFonts(pdf);
-    
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
-    const margin = 15;
-    const contentWidth = pageWidth - (margin * 2);
-    let currentY = margin;
-    let pageNumber = 1;
-    
-    // Calculate total pages estimate (will be updated at the end)
-    const totalPages = 6; // Base pages: Cover, Summary, 3 sections, General eval
-
-    // COVER PAGE
-    // Header with logo background
-    pdf.setFillColor(37, 99, 235);
-    pdf.rect(0, 0, pageWidth, 45, 'F');
-
-    // Add actual logo if available
-    if (this.logoBase64) {
-      try {
-        pdf.addImage(this.logoBase64, 'PNG', margin, 8, 30, 30);
-      } catch (error) {
-        console.warn('Could not add logo to PDF:', error);
-      }
-    }
-
-    // Company name
-    pdf.setTextColor(255, 255, 255);
-    pdf.setFontSize(20);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('MLPCARE', margin + (this.logoBase64 ? 35 : 0), 25);
-
-    // Title with proper Turkish character encoding
-    pdf.setTextColor(37, 99, 235);
-    pdf.setFontSize(22);
-    pdf.setFont('helvetica', 'bold');
-    currentY = 70;
-    currentY = this.addTextWithWrap(pdf, 'İŞ SAĞLIĞI VE GÜVENLİĞİ', margin, currentY, 22, 'bold', contentWidth);
-    currentY = this.addTextWithWrap(pdf, 'SAHA GÖZLEM RAPORU', margin, currentY, 22, 'bold', contentWidth);
-
-    // Project location
-    pdf.setTextColor(100, 100, 100);
-    pdf.setFontSize(14);
-    currentY += 15;
-    currentY = this.addTextWithWrap(pdf, reportData.projectLocation, margin, currentY, 14, 'normal', contentWidth);
-
-    // Report info table
-    currentY += 25;
-    const tableData = [
-      ['Rapor Numarası:', reportData.reportNumber],
-      ['Rapor Tarihi:', typeof reportData.reportDate === 'string' ? reportData.reportDate : new Date(reportData.reportDate).toLocaleDateString('tr-TR')],
-      ['Proje Lokasyonu:', reportData.projectLocation],
-      ['İSG Uzmanı:', reportData.reporter],
-      ['Toplam Bulgu:', (reportData.findings?.length || 0).toString()]
-    ];
-
-    pdf.setTextColor(0, 0, 0);
-    pdf.setFontSize(12);
-
-    tableData.forEach(([label, value]) => {
-      currentY = this.checkNewPage(pdf, currentY, 15, margin);
-      
-      // Label
-      pdf.setFont('helvetica', 'bold');
-      pdf.setTextColor(37, 99, 235);
-      pdf.text(this.encodeTurkishText(label), margin, currentY);
-      
-      // Value
-      pdf.setFont('helvetica', 'normal');
-      pdf.setTextColor(0, 0, 0);
-      pdf.text(this.encodeTurkishText(value), margin + 65, currentY);
-      
-      currentY += 10; // Increased spacing
-    });
-
-    // Footer note
-    currentY += 25;
-    pdf.setFontSize(10);
-    pdf.setTextColor(100, 100, 100);
-    currentY = this.addTextWithWrap(pdf, 'Bu rapor İş Sağlığı ve Güvenliği Kanunu kapsamında hazırlanmıştır.', margin, currentY, 10, 'normal', contentWidth);
-
-    this.addPageNumber(pdf, pageNumber++, totalPages);
-
-    // PAGE 2 - YÖNETİCİ ÖZETİ
-    pdf.addPage();
-    currentY = margin;
-
-    // Page header
-    pdf.setFillColor(37, 99, 235);
-    pdf.rect(0, 0, pageWidth, 35, 'F');
-    pdf.setTextColor(255, 255, 255);
-    pdf.setFontSize(14);
-    pdf.setFont('helvetica', 'bold');
-    if (this.logoBase64) {
-      try {
-        pdf.addImage(this.logoBase64, 'PNG', margin, 5, 25, 25);
-      } catch (error) {
-        console.warn('Could not add logo:', error);
-      }
-    }
-    pdf.text('MLPCARE', margin + (this.logoBase64 ? 30 : 0), 15);
-    pdf.text('YÖNETİCİ ÖZETİ', margin + (this.logoBase64 ? 30 : 0), 25);
-
-    currentY = 50;
-
-    // Section title
-    pdf.setFillColor(37, 99, 235);
-    pdf.rect(margin, currentY, contentWidth, 12, 'F');
-    pdf.setTextColor(255, 255, 255);
-    pdf.setFontSize(12);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('YÖNETİCİ ÖZETİ', margin + 5, currentY + 8);
-
-    currentY += 20;
-
-    // Content
-    pdf.setFillColor(248, 250, 252);
-    const contentHeight = Math.max(50, Math.min(120, (reportData.managementSummary?.length || 0) / 6));
-    pdf.rect(margin, currentY, contentWidth, contentHeight, 'F');
-    
-    pdf.setTextColor(0, 0, 0);
-    pdf.setFontSize(11);
-    pdf.setFont('helvetica', 'normal');
-    
-    const summary = reportData.managementSummary || 'Yönetici özeti henüz eklenmemiştir.';
-    currentY = this.addTextWithWrap(pdf, summary, margin + 8, currentY + 12, 11, 'normal', contentWidth - 16);
-
-    this.addPageNumber(pdf, pageNumber++, totalPages);
-
-    // PAGE 3 - TASARIM HATALARI
-    pdf.addPage();
-    currentY = margin;
-    this.addPageHeader(pdf, 'TASARIM/İMALAT/MONTAJ HATALARI');
-    currentY = 50;
-
-    const designErrors = reportData.findings?.filter(f => f.section === 2) || [];
-    currentY = await this.addSectionContent(pdf, 'TASARIM/İMALAT/MONTAJ HATALARI', designErrors, currentY, margin, contentWidth, pageHeight);
-    this.addPageNumber(pdf, pageNumber++, totalPages);
-
-    // PAGE 4 - İŞ SAĞLIĞI VE GÜVENLİĞİ BULGULARI
-    pdf.addPage();
-    currentY = margin;
-    this.addPageHeader(pdf, 'İŞ SAĞLIĞI VE GÜVENLİĞİ BULGULARI');
-    currentY = 50;
-
-    const safetyFindings = reportData.findings?.filter(f => f.section === 3) || [];
-    currentY = await this.addSectionContent(pdf, 'İŞ SAĞLIĞI VE GÜVENLİĞİ BULGULARI', safetyFindings, currentY, margin, contentWidth, pageHeight);
-    this.addPageNumber(pdf, pageNumber++, totalPages);
-
-    // PAGE 5 - TAMAMLANMIŞ BULGULAR
-    pdf.addPage();
-    currentY = margin;
-    this.addPageHeader(pdf, 'TAMAMLANMIŞ BULGULAR');
-    currentY = 50;
-
-    const completedFindings = reportData.findings?.filter(f => f.section === 4) || [];
-    currentY = await this.addSectionContent(pdf, 'TAMAMLANMIŞ BULGULAR', completedFindings, currentY, margin, contentWidth, pageHeight);
-    this.addPageNumber(pdf, pageNumber++, totalPages);
-
-    // PAGE 6 - GENEL DEĞERLENDİRME
-    pdf.addPage();
-    currentY = margin;
-    this.addPageHeader(pdf, 'GENEL DEĞERLENDİRME');
-    currentY = 50;
-
-    // Section title
-    pdf.setFillColor(37, 99, 235);
-    pdf.rect(margin, currentY, contentWidth, 12, 'F');
-    pdf.setTextColor(255, 255, 255);
-    pdf.setFontSize(12);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('GENEL DEĞERLENDİRME', margin + 5, currentY + 8);
-
-    currentY += 20;
-
-    // Content
-    pdf.setFillColor(248, 250, 252);
-    const evalContentHeight = Math.max(120, Math.min(180, (reportData.generalEvaluation?.length || 0) / 6));
-    pdf.rect(margin, currentY, contentWidth, evalContentHeight, 'F');
-    
-    pdf.setTextColor(0, 0, 0);
-    pdf.setFontSize(11);
-    pdf.setFont('helvetica', 'normal');
-    
-    const evaluation = reportData.generalEvaluation || 'Genel değerlendirme henüz eklenmemiştir.';
-    currentY = this.addTextWithWrap(pdf, evaluation, margin + 8, currentY + 12, 11, 'normal', contentWidth - 16);
-
-    this.addPageNumber(pdf, pageNumber++, totalPages);
-
-    // Update total pages count correctly
-    const actualTotalPages = pdf.getNumberOfPages();
-    
-    // Go back and update all page numbers with correct total
-    for (let i = 1; i <= actualTotalPages; i++) {
-      pdf.setPage(i);
-      
-      // Clear previous page number area
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      pdf.setFillColor(255, 255, 255);
-      pdf.rect(pageWidth - 60, pageHeight - 18, 50, 8, 'F');
-      
-      // Re-add page number with correct total
-      pdf.setFontSize(10);
-      pdf.setFont('helvetica', 'normal');
-      pdf.setTextColor(100, 100, 100);
-      const pageText = this.encodeTurkishText(`Sayfa ${i}/${actualTotalPages}`);
-      pdf.text(pageText, pageWidth - 45, pageHeight - 12);
-    }
-    
-    console.log('PDF generated successfully');
-    return new Uint8Array(pdf.output('arraybuffer'));
-  }
-
-  private addPageHeader(pdf: jsPDF, title: string) {
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const margin = 15;
-    
-    // Header background with logo color
-    pdf.setFillColor(37, 99, 235);
-    pdf.rect(0, 0, pageWidth, 40, 'F');
-    
-    // Logo
-    if (this.logoBase64) {
-      try {
-        pdf.addImage(this.logoBase64, 'PNG', margin, 8, 24, 24);
-      } catch (error) {
-        console.warn('Could not add logo:', error);
-      }
-    }
-    
-    // Hospital name as main title
-    pdf.setTextColor(255, 255, 255);
-    pdf.setFontSize(16);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text(this.encodeTurkishText('İstinye Üniversitesi Topkapı Liv Hastanesi'), margin + (this.logoBase64 ? 30 : 0), 20);
-  }
-
-  private async addSectionContent(pdf: jsPDF, sectionTitle: string, findings: Finding[], startY: number, margin: number, contentWidth: number, pageHeight: number): Promise<number> {
-    let currentY = startY;
-
-    // Section title
-    pdf.setFillColor(37, 99, 235);
-    pdf.rect(margin, currentY, contentWidth, 12, 'F');
-    pdf.setTextColor(255, 255, 255);
-    pdf.setFontSize(12);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text(sectionTitle, margin + 5, currentY + 8);
-
-    currentY += 20;
-
-    if (findings.length === 0) {
-      pdf.setFillColor(248, 250, 252);
-      pdf.rect(margin, currentY, contentWidth, 25, 'F');
-      pdf.setTextColor(0, 0, 0);
-      pdf.setFontSize(11);
-      pdf.text(this.encodeTurkishText('Bu bölümde herhangi bir bulgu tespit edilmemiştir.'), margin + 8, currentY + 16);
-      return currentY + 35;
-    }
-
-    return await this.addFindings(pdf, findings, currentY, margin, contentWidth, pageHeight);
-  }
-
-  private async addFindings(pdf: jsPDF, findings: Finding[], startY: number, margin: number, contentWidth: number, pageHeight: number): Promise<number> {
-    let currentY = startY;
-
-    for (let i = 0; i < findings.length; i++) {
-      const finding = findings[i];
-      
-      currentY = this.checkNewPage(pdf, currentY, 80, margin);
-
-      // Finding box
-      pdf.setFillColor(243, 244, 246);
-      pdf.rect(margin, currentY, contentWidth, 12, 'F');
-
-      // Finding title
-      pdf.setTextColor(17, 24, 39);
-      pdf.setFontSize(13);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text(this.encodeTurkishText(`BULGU ${i + 1}: ${finding.title}`), margin + 8, currentY + 9);
-
-      // Risk level and location
-      pdf.setFontSize(10);
-      pdf.setFont('helvetica', 'normal');
-      pdf.setTextColor(107, 114, 128);
-      pdf.text(this.encodeTurkishText(`Konum: ${finding.location || 'Belirtilmemiş'}`), margin + 8, currentY + 22);
-
-      // Risk badge
-      const riskText = this.getRiskText(finding.dangerLevel);
-      const riskColor = this.getRiskColor(finding.dangerLevel);
-      
-      pdf.setFillColor(riskColor.r, riskColor.g, riskColor.b);
-      pdf.rect(margin + contentWidth - 45, currentY + 16, 40, 10, 'F');
-      pdf.setTextColor(255, 255, 255);
-      pdf.setFontSize(9);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text(this.encodeTurkishText(riskText), margin + contentWidth - 42, currentY + 22);
-
-      currentY += 35;
-
-      // Finding content
-      pdf.setTextColor(0, 0, 0);
-      pdf.setFontSize(11);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text(this.encodeTurkishText('Mevcut Durum:'), margin + 8, currentY);
-      currentY += 8;
-      
-      pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(10);
-      currentY = this.addTextWithWrap(pdf, finding.currentSituation || finding.description, margin + 8, currentY, 10, 'normal', contentWidth - 16);
-
-      if (finding.legalBasis) {
-        currentY += 8;
-        pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(11);
-        pdf.text(this.encodeTurkishText('Hukuki Dayanak:'), margin + 8, currentY);
-        currentY += 8;
-        
-        pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(10);
-        currentY = this.addTextWithWrap(pdf, finding.legalBasis, margin + 8, currentY, 10, 'normal', contentWidth - 16);
-      }
-
-      if (finding.recommendation) {
-        currentY += 8;
-        pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(11);
-        pdf.text(this.encodeTurkishText('Öneri/Çözüm:'), margin + 8, currentY);
-        currentY += 8;
-        
-        pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(10);
-        currentY = this.addTextWithWrap(pdf, finding.recommendation, margin + 8, currentY, 10, 'normal', contentWidth - 16);
-      }
-
-      // Process timeline if available
-      if (finding.processSteps && finding.processSteps.length > 0) {
-        currentY += 12;
-        pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(11);
-        pdf.text(this.encodeTurkishText('Süreç Skalası:'), margin + 8, currentY);
-        currentY += 8;
-        
-        finding.processSteps.forEach(step => {
-          pdf.setFont('helvetica', 'normal');
-          pdf.setFontSize(9);
-          pdf.text(this.encodeTurkishText(`• ${step.date}: ${step.description}`), margin + 12, currentY);
-          currentY += 6;
-        });
-      }
-
-      // Images section with ACTUAL display
-      if (finding.images && finding.images.length > 0) {
-        currentY += 12;
-        currentY = this.checkNewPage(pdf, currentY, 80, margin);
-        
-        pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(11);
-        pdf.text(this.encodeTurkishText('Fotoğraflar:'), margin + 8, currentY);
-        currentY += 12;
-
-        // Display first image
-        if (finding.images[0]) {
-          try {
-            const optimizedImage = await this.optimizeImage(finding.images[0]);
-            if (optimizedImage) {
-              const imageWidth = (contentWidth - 30) / 2;
-              const imageHeight = imageWidth * 0.75;
-              
-              currentY = this.checkNewPage(pdf, currentY, imageHeight + 15, margin);
-              pdf.addImage(optimizedImage, 'JPEG', margin + 15, currentY, imageWidth, imageHeight);
-              currentY += imageHeight + 8;
-            }
-          } catch (error) {
-            console.warn('Could not add image:', error);
-          }
-        }
-        
-        pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(10);
-        pdf.text(this.encodeTurkishText(`${finding.images.length} adet fotoğraf eklenmiştir.`), margin + 8, currentY);
-        currentY += 12;
-      }
-
-      currentY += 20; // Better space between findings
-    }
-
-    return currentY;
-  }
-
-  private getRiskText(level: string): string {
-    switch (level) {
-      case 'high': return 'YÜKSEK RİSK';
-      case 'medium': return 'ORTA RİSK';
-      case 'low': return 'DÜŞÜK RİSK';
-      default: return 'ORTA RİSK';
-    }
-  }
-
-  private getRiskColor(level: string): { r: number; g: number; b: number } {
-    switch (level) {
-      case 'high': return { r: 220, g: 38, b: 38 };
-      case 'medium': return { r: 234, g: 88, b: 12 };
-      case 'low': return { r: 22, g: 163, b: 74 };
-      default: return { r: 234, g: 88, b: 12 };
     }
   }
 }
