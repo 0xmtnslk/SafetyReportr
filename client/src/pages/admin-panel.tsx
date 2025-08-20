@@ -170,6 +170,23 @@ export default function AdminPanel() {
     }
   };
 
+  // Generate random password
+  const generatePassword = () => {
+    const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
+    let password = "";
+    for (let i = 0; i < 12; i++) {
+      password += charset.charAt(Math.floor(Math.random() * charset.length));
+    }
+    return password;
+  };
+
+  // Handle create dialog open
+  const handleCreateDialogOpen = () => {
+    const autoPassword = generatePassword();
+    createForm.setValue("password", autoPassword);
+    setIsCreateDialogOpen(true);
+  };
+
   // Handle edit dialog open
   const handleEditUser = (user: User) => {
     setEditingUser(user);
@@ -268,7 +285,11 @@ export default function AdminPanel() {
             <h2 className="text-xl font-semibold">Kullanıcılar</h2>
             <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="flex items-center gap-2" data-testid="button-add-user">
+                <Button 
+                  className="flex items-center gap-2" 
+                  onClick={handleCreateDialogOpen}
+                  data-testid="button-add-user"
+                >
                   <UserPlus className="h-4 w-4" />
                   Kullanıcı Ekle
                 </Button>
@@ -351,15 +372,31 @@ export default function AdminPanel() {
                       name="password"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Şifre (İsteğe Bağlı)</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="password" 
-                              placeholder="Boş bırakılırsa otomatik üretilir" 
-                              {...field} 
-                              data-testid="input-password"
-                            />
-                          </FormControl>
+                          <FormLabel>Şifre</FormLabel>
+                          <div className="flex gap-2">
+                            <FormControl>
+                              <Input 
+                                type="text" 
+                                placeholder="Otomatik üretildi"
+                                {...field} 
+                                data-testid="input-password"
+                              />
+                            </FormControl>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => {
+                                const newPassword = generatePassword();
+                                createForm.setValue("password", newPassword);
+                              }}
+                              data-testid="button-generate-password"
+                            >
+                              Yenile
+                            </Button>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Bu şifreyi kullanıcıya verin. İlk girişte değiştirmesi gerekecek.
+                          </p>
                           <FormMessage />
                         </FormItem>
                       )}

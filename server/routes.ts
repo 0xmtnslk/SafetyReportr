@@ -10,7 +10,6 @@ import {
   insertFindingSchema, 
   insertOfflineQueueSchema,
   adminCreateUserSchema,
-  changePasswordSchema,
   resetPasswordRequestSchema,
   resetPasswordSchema
 } from "@shared/schema";
