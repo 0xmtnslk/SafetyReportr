@@ -73,6 +73,9 @@ export class ReactPdfService {
     pdf.setFontSize(fontSize);
     pdf.setFont('Roboto', fontStyle);
     
+    // ALWAYS ensure text is BLACK before writing
+    pdf.setTextColor(0, 0, 0);
+    
     // Use original text with Turkish characters - Roboto supports them!
     const lines = pdf.splitTextToSize(text, maxWidth);
     
@@ -463,6 +466,7 @@ export class ReactPdfService {
         // Left: Current situation
         pdf.setFillColor(250, 250, 250);
         pdf.rect(margin, currentY, halfWidth, situationHeight, 'F');
+        pdf.setTextColor(0, 0, 0); // BLACK TEXT
         pdf.setFont('Roboto', 'bold');
         pdf.setFontSize(9);
         pdf.text('Mevcut Durum:', margin + 5, currentY + 5);
@@ -472,6 +476,7 @@ export class ReactPdfService {
         // Right: Recommendation  
         pdf.setFillColor(250, 250, 250);
         pdf.rect(margin + halfWidth + 5, currentY, halfWidth, recHeight, 'F');
+        pdf.setTextColor(0, 0, 0); // BLACK TEXT
         pdf.setFont('Roboto', 'bold');
         pdf.text('Öneri:', margin + halfWidth + 10, currentY + 5);
         pdf.setFont('Roboto', 'normal');
@@ -484,6 +489,7 @@ export class ReactPdfService {
           const situationHeight = Math.min(this.calculateTextHeight(pdf, finding.currentSituation, 9, fieldWidth - 12) + labelHeight + boxPadding, 30);
           pdf.setFillColor(250, 250, 250);
           pdf.rect(margin, currentY, fieldWidth, situationHeight, 'F');
+          pdf.setTextColor(0, 0, 0); // BLACK TEXT
           pdf.setFont('Roboto', 'bold');
           pdf.setFontSize(9);
           pdf.text('Mevcut Durum:', margin + 5, currentY + 5);
@@ -496,6 +502,7 @@ export class ReactPdfService {
           const recHeight = Math.min(this.calculateTextHeight(pdf, finding.recommendation, 9, fieldWidth - 12) + labelHeight + boxPadding, 30);
           pdf.setFillColor(250, 250, 250);
           pdf.rect(margin, currentY, fieldWidth, recHeight, 'F');
+          pdf.setTextColor(0, 0, 0); // BLACK TEXT
           pdf.setFont('Roboto', 'bold');
           pdf.setFontSize(9);
           pdf.text('Öneri:', margin + 5, currentY + 5);
@@ -510,6 +517,7 @@ export class ReactPdfService {
         const legalHeight = Math.min(this.calculateTextHeight(pdf, finding.legalBasis, 8, fieldWidth - 12) + labelHeight + boxPadding, 25);
         pdf.setFillColor(250, 250, 250);
         pdf.rect(margin, currentY, fieldWidth, legalHeight, 'F');
+        pdf.setTextColor(0, 0, 0); // BLACK TEXT
         pdf.setFont('Roboto', 'bold');
         pdf.setFontSize(9);
         pdf.text('Yasal Dayanak:', margin + 5, currentY + 5);
@@ -523,6 +531,7 @@ export class ReactPdfService {
         const processHeight = Math.min((finding.processSteps.length * 10) + labelHeight + boxPadding, 40);
         pdf.setFillColor(250, 250, 250);
         pdf.rect(margin, currentY, fieldWidth, processHeight, 'F');
+        pdf.setTextColor(0, 0, 0); // BLACK TEXT
         pdf.setFont('Roboto', 'bold');
         pdf.setFontSize(9);
         pdf.text('Süreç Adımları:', margin + 5, currentY + 5);
