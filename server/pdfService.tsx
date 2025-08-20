@@ -135,6 +135,11 @@ export class ReactPdfService {
 
   async generatePDF(reportData: ReportData): Promise<Uint8Array> {
     console.log('PDF generating for report:', reportData.reportNumber);
+    console.log('Report data check:', {
+      projectLocation: reportData.projectLocation,
+      reporter: reportData.reporter,
+      managementSummary: reportData.managementSummary?.substring(0, 100)
+    });
 
     const pdf = new jsPDF('p', 'mm', 'a4');
     
