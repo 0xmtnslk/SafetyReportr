@@ -266,9 +266,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         generatedPassword: userData.password ? undefined : password,
         message: `Kullanıcı başarıyla oluşturuldu${!userData.password ? `. Geçici şifre: ${password}` : ''}`
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Create user error:", error);
-      if (error.name === 'ZodError') {
+      if (error?.name === 'ZodError') {
         return res.status(400).json({ message: "Geçersiz veri formatı", errors: error.errors });
       }
       res.status(500).json({ message: "Kullanıcı oluşturulurken hata oluştu" });
@@ -333,24 +333,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Change password (All users)
   app.post("/api/auth/change-password", authenticateToken, async (req, res) => {
     try {
-      const passwordData = changePasswordSchema.parse(req.body);
+      const { currentPassword, newPassword } = req.body;
+      
+      // Simple validation
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ message: "Mevcut şifre ve yeni şifre gereklidir" });
+      }
+      
+      if (newPassword.length < 6) {
+        return res.status(400).json({ message: "Yeni şifre en az 6 karakter olmalıdır" });
+      }
+      
       const currentUser = (req as any).user;
 
       // Verify current password
-      const user = await storage.validateUserCredentials(currentUser.username, passwordData.currentPassword);
+      const user = await storage.validateUserCredentials(currentUser.username, currentPassword);
       if (!user) {
         return res.status(400).json({ message: 'Mevcut şifre yanlış' });
       }
 
       // Change password and mark first login as complete
-      await storage.changePassword(currentUser.id, passwordData.newPassword);
+      await storage.changePassword(currentUser.id, newPassword);
       
       res.json({ message: 'Şifre başarıyla değiştirildi' });
     } catch (error) {
       console.error("Change password error:", error);
-      if (error.name === 'ZodError') {
-        return res.status(400).json({ message: "Geçersiz veri formatı", errors: error.errors });
-      }
       res.status(500).json({ message: "Şifre değiştirilirken hata oluştu" });
     }
   });
@@ -396,12 +403,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Change password and clear reset token
       await storage.changePassword(user.id, resetData.newPassword);
-      await storage.setResetToken(user.id, null, null);
+      await storage.setResetToken(user.id, '', new Date());
       
       res.json({ message: 'Şifre başarıyla sıfırlandı' });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Reset password error:", error);
-      if (error.name === 'ZodError') {
+      if (error?.name === 'ZodError') {
         return res.status(400).json({ message: "Geçersiz veri formatı", errors: error.errors });
       }
       res.status(500).json({ message: "Şifre sıfırlanırken hata oluştu" });

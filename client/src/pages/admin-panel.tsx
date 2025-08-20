@@ -17,14 +17,12 @@ import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
-// Location options - can be moved to constants file
-const LOCATIONS = [
-  "Merkez Kampüs",
-  "Tıp Fakültesi",
-  "Mühendislik Fakültesi",
-  "İktisadi ve İdari Bilimler Fakültesi",
-  "Eğitim Fakültesi",
-  "Fen Edebiyat Fakültesi"
+// Örnek lokasyonlar (placeholder için)
+const LOCATION_EXAMPLES = [
+  "Topkapı Liv Hastanesi",
+  "GOP MedicalPark",
+  "Merkez Hastane",
+  "Anadolu Sağlık Merkezi"
 ];
 
 // User type from shared schema
@@ -337,20 +335,13 @@ export default function AdminPanel() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Lokasyon</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-location">
-                                <SelectValue placeholder="Lokasyon seçiniz" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {LOCATIONS.map(location => (
-                                <SelectItem key={location} value={location}>
-                                  {location}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <FormControl>
+                            <Input 
+                              placeholder="Örn: Topkapı Liv Hastanesi, GOP MedicalPark"
+                              {...field} 
+                              data-testid="input-location"
+                            />
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -555,20 +546,13 @@ export default function AdminPanel() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Lokasyon</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger data-testid="select-edit-location">
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {LOCATIONS.map(location => (
-                          <SelectItem key={location} value={location}>
-                            {location}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <Input 
+                        placeholder="Örn: Topkapı Liv Hastanesi, GOP MedicalPark"
+                        {...field} 
+                        data-testid="input-edit-location"
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
