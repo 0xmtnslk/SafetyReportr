@@ -383,9 +383,9 @@ export class ReactPdfService {
       // NEW PAGE for each finding
       pdf.addPage();
       this.addPageHeader(pdf);
-      currentY = 70;
+      currentY = 50; // Reduced from 70
 
-      // Section title (repeated on each page)
+      // Section title (repeated on each page) - minimal spacing
       pdf.setFillColor(37, 99, 235);
       pdf.rect(margin, currentY, contentWidth, 12, 'F');
       pdf.setTextColor(255, 255, 255);
@@ -393,7 +393,7 @@ export class ReactPdfService {
       pdf.setFont('Roboto', 'bold');
       pdf.text(sectionTitle, margin + 5, currentY + 8);
 
-      currentY += 20;
+      currentY += 15; // Reduced from 20
       
       // SPECIAL: For section 3 (Completed findings), show original section
       if (sectionNumber === 3 && finding.section && finding.section !== 3) {
@@ -438,22 +438,26 @@ export class ReactPdfService {
                       finding.dangerLevel === 'medium' ? 'ORTA' : 'DÜŞÜK';
       pdf.text(riskText, margin + 30, currentY + 5, { align: 'center' });
 
-      currentY += 15;
+      currentY += 10; // Reduced spacing
 
-      // COMPACT LAYOUT - No Description section (removed per user request)
-      const boxPadding = 6;
-      const labelHeight = 10;
+      // ULTRA COMPACT LAYOUT - Minimal spacing everywhere
+      const boxPadding = 4; // Reduced from 6
+      const labelHeight = 8;  // Reduced from 10
       const fieldWidth = contentWidth;
-      const spacing = 3;
+      const spacing = 2; // Reduced from 3
 
-      // Two-column layout: Current situation & Recommendation side by side  
+      // SMART LAYOUT - Only show fields that have data
       const halfWidth = (fieldWidth - 5) / 2;
       let maxHeight = 0;
       
-      // Current situation & Recommendation side by side (if both exist)
-      if (finding.currentSituation && finding.recommendation) {
-        const situationHeight = Math.min(this.calculateTextHeight(pdf, finding.currentSituation, 9, halfWidth - 10) + labelHeight + boxPadding, 40);
-        const recHeight = Math.min(this.calculateTextHeight(pdf, finding.recommendation, 9, halfWidth - 10) + labelHeight + boxPadding, 40);
+      // Check what data we have
+      const hasSituation = finding.currentSituation && finding.currentSituation.trim();
+      const hasRecommendation = finding.recommendation && finding.recommendation.trim();
+      
+      // Current situation & Recommendation side by side (only if BOTH exist and have data)
+      if (hasSituation && hasRecommendation) {
+        const situationHeight = Math.min(this.calculateTextHeight(pdf, finding.currentSituation, 9, halfWidth - 10) + labelHeight + boxPadding, 35);
+        const recHeight = Math.min(this.calculateTextHeight(pdf, finding.recommendation, 9, halfWidth - 10) + labelHeight + boxPadding, 35);
         maxHeight = Math.max(situationHeight, recHeight);
         
         // Left: Current situation
@@ -461,124 +465,104 @@ export class ReactPdfService {
         pdf.rect(margin, currentY, halfWidth, situationHeight, 'F');
         pdf.setFont('Roboto', 'bold');
         pdf.setFontSize(9);
-        pdf.text('Mevcut Durum:', margin + 5, currentY + 6);
+        pdf.text('Mevcut Durum:', margin + 5, currentY + 5);
         pdf.setFont('Roboto', 'normal');
-        this.addTextWithWrap(pdf, finding.currentSituation, margin + 5, currentY + 12, 9, 'normal', halfWidth - 10);
+        this.addTextWithWrap(pdf, finding.currentSituation, margin + 5, currentY + 10, 8, 'normal', halfWidth - 10);
         
-        // Right: Recommendation
+        // Right: Recommendation  
         pdf.setFillColor(250, 250, 250);
         pdf.rect(margin + halfWidth + 5, currentY, halfWidth, recHeight, 'F');
         pdf.setFont('Roboto', 'bold');
-        pdf.text('Öneri:', margin + halfWidth + 10, currentY + 6);
+        pdf.text('Öneri:', margin + halfWidth + 10, currentY + 5);
         pdf.setFont('Roboto', 'normal');
-        this.addTextWithWrap(pdf, finding.recommendation, margin + halfWidth + 10, currentY + 12, 9, 'normal', halfWidth - 10);
+        this.addTextWithWrap(pdf, finding.recommendation, margin + halfWidth + 10, currentY + 10, 8, 'normal', halfWidth - 10);
         
         currentY += maxHeight + spacing;
       } else {
-        // Single field if only one exists (full width)
-        if (finding.currentSituation) {
-          const situationHeight = Math.min(this.calculateTextHeight(pdf, finding.currentSituation, 9, fieldWidth - 16) + labelHeight + boxPadding, 35);
+        // Single field if only one exists (full width) - ONLY if it has data
+        if (hasSituation) {
+          const situationHeight = Math.min(this.calculateTextHeight(pdf, finding.currentSituation, 9, fieldWidth - 12) + labelHeight + boxPadding, 30);
           pdf.setFillColor(250, 250, 250);
           pdf.rect(margin, currentY, fieldWidth, situationHeight, 'F');
           pdf.setFont('Roboto', 'bold');
           pdf.setFontSize(9);
-          pdf.text('Mevcut Durum:', margin + 5, currentY + 6);
+          pdf.text('Mevcut Durum:', margin + 5, currentY + 5);
           pdf.setFont('Roboto', 'normal');
-          this.addTextWithWrap(pdf, finding.currentSituation, margin + 5, currentY + 12, 9, 'normal', fieldWidth - 10);
+          this.addTextWithWrap(pdf, finding.currentSituation, margin + 5, currentY + 10, 8, 'normal', fieldWidth - 10);
           currentY += situationHeight + spacing;
         }
         
-        if (finding.recommendation) {
-          const recHeight = Math.min(this.calculateTextHeight(pdf, finding.recommendation, 9, fieldWidth - 16) + labelHeight + boxPadding, 35);
+        if (hasRecommendation) {
+          const recHeight = Math.min(this.calculateTextHeight(pdf, finding.recommendation, 9, fieldWidth - 12) + labelHeight + boxPadding, 30);
           pdf.setFillColor(250, 250, 250);
           pdf.rect(margin, currentY, fieldWidth, recHeight, 'F');
           pdf.setFont('Roboto', 'bold');
           pdf.setFontSize(9);
-          pdf.text('Öneri:', margin + 5, currentY + 6);
+          pdf.text('Öneri:', margin + 5, currentY + 5);
           pdf.setFont('Roboto', 'normal');
-          this.addTextWithWrap(pdf, finding.recommendation, margin + 5, currentY + 12, 9, 'normal', fieldWidth - 10);
+          this.addTextWithWrap(pdf, finding.recommendation, margin + 5, currentY + 10, 8, 'normal', fieldWidth - 10);
           currentY += recHeight + spacing;
         }
       }
 
-      // Legal basis only (Location removed per user request)
-      if (finding.legalBasis) {
-        const legalHeight = Math.min(this.calculateTextHeight(pdf, finding.legalBasis, 9, fieldWidth - 16) + labelHeight + boxPadding, 30);
+      // Legal basis only (ONLY if it has data)
+      if (finding.legalBasis && finding.legalBasis.trim()) {
+        const legalHeight = Math.min(this.calculateTextHeight(pdf, finding.legalBasis, 8, fieldWidth - 12) + labelHeight + boxPadding, 25);
         pdf.setFillColor(250, 250, 250);
         pdf.rect(margin, currentY, fieldWidth, legalHeight, 'F');
         pdf.setFont('Roboto', 'bold');
         pdf.setFontSize(9);
-        pdf.text('Yasal Dayanak:', margin + 5, currentY + 6);
+        pdf.text('Yasal Dayanak:', margin + 5, currentY + 5);
         pdf.setFont('Roboto', 'normal');
-        this.addTextWithWrap(pdf, finding.legalBasis, margin + 5, currentY + 12, 8, 'normal', fieldWidth - 10);
+        this.addTextWithWrap(pdf, finding.legalBasis, margin + 5, currentY + 10, 8, 'normal', fieldWidth - 10);
         currentY += legalHeight + spacing;
       }
       
-      // Process steps (NEW - requested by user)
+      // Process steps (ONLY if they exist and have data)
       if (finding.processSteps && finding.processSteps.length > 0) {
-        const processHeight = Math.min((finding.processSteps.length * 12) + labelHeight + boxPadding, 50);
+        const processHeight = Math.min((finding.processSteps.length * 10) + labelHeight + boxPadding, 40);
         pdf.setFillColor(250, 250, 250);
         pdf.rect(margin, currentY, fieldWidth, processHeight, 'F');
         pdf.setFont('Roboto', 'bold');
         pdf.setFontSize(9);
-        pdf.text('Süreç Adımları:', margin + 5, currentY + 6);
+        pdf.text('Süreç Adımları:', margin + 5, currentY + 5);
         pdf.setFont('Roboto', 'normal');
         
-        let stepY = currentY + 12;
+        let stepY = currentY + 10;
         finding.processSteps.forEach((step, index) => {
           const stepDate = new Date(step.date).toLocaleDateString('tr-TR');
-          pdf.setFontSize(8);
+          pdf.setFontSize(7);
           pdf.text(`${index + 1}. ${stepDate}: ${step.description}`, margin + 5, stepY);
-          stepY += 10;
+          stepY += 8; // Reduced spacing
         });
         
         currentY += processHeight + spacing;
       }
 
-      // FIXED Images - Always show images, better space management
+      // KEEP IMAGES ON SAME PAGE - Ultra compact image management
       if (finding.images && finding.images.length > 0) {
-        const imageWidth = 80; // Slightly larger
-        const imageHeight = 55;
-        const imageSpacing = 10;
+        const imageWidth = 75; // Compact size
+        const imageHeight = 50;
+        const imageSpacing = 8;
         const maxImages = 2;
         const imagesCount = Math.min(finding.images.length, maxImages);
         
-        // Calculate required space
-        const totalImageHeight = imageHeight + 15; // Buffer for images
-        const spaceLeft = pageHeight - 60 - currentY; // Account for footer
+        // Calculate required space for images
+        const totalImageHeight = imageHeight + 20; // Title + images + small buffer
+        const spaceLeft = pageHeight - 50 - currentY; // Account for footer (reduced from 60)
         
-        // If not enough space, continue anyway but check space more carefully
-        if (spaceLeft < totalImageHeight && currentY > 150) {
-          // Add a new page for images if we're too far down
-          pdf.addPage();
-          this.addPageHeader(pdf);
-          currentY = 70;
-          
-          // Add section title again
-          pdf.setFillColor(37, 99, 235);
-          pdf.rect(margin, currentY, contentWidth, 12, 'F');
-          pdf.setTextColor(255, 255, 255);
-          pdf.setFontSize(12);
-          pdf.setFont('Roboto', 'bold');
-          pdf.text(sectionTitle, margin + 5, currentY + 8);
-          currentY += 20;
-          
-          // Finding title again
-          pdf.setFillColor(240, 240, 240);
-          pdf.rect(margin, currentY, contentWidth, 10, 'F');
-          pdf.setTextColor(0, 0, 0);
-          pdf.setFontSize(10);
-          pdf.setFont('Roboto', 'bold');
-          pdf.text(`${finding.title} (Fotoğraflar)`, margin + 5, currentY + 7);
-          currentY += 15;
+        // ONLY move to new page if absolutely no space (very conservative)
+        if (spaceLeft < totalImageHeight && currentY > 200) { // Increased threshold from 150
+          console.log('Moving images to new page due to insufficient space');
+          // This should rarely happen now
         }
         
-        // Add images title
+        // Add images title - compact
         pdf.setFont('Roboto', 'bold');
-        pdf.setFontSize(9);
+        pdf.setFontSize(8);
         pdf.setTextColor(0, 0, 0);
         pdf.text('Fotoğraflar:', margin, currentY);
-        currentY += 12;
+        currentY += 8; // Reduced from 12
         
         // Images layout - side by side if 2, centered if 1
         const totalWidth = (imagesCount * imageWidth) + ((imagesCount - 1) * imageSpacing);
@@ -598,7 +582,7 @@ export class ReactPdfService {
           }
         }
         
-        currentY += imageHeight + 10;
+        currentY += imageHeight + 5; // Reduced buffer
       }
     }
 
