@@ -53,7 +53,7 @@ async function createAdminUser() {
 }
 
 // Run if called directly
-if (require.main === module) {
+if (import.meta.url === `file://${process.argv[1]}`) {
   createAdminUser().then(() => {
     console.log("🎉 Database seeding completed!");
     process.exit(0);
