@@ -58,7 +58,7 @@ export class ReactPdfService {
   // REMOVED: No need for character replacement with Roboto font!
   // Roboto font properly supports Turkish characters: İ, ı, Ğ, ğ, Ş, ş, Ü, ü, Ö, ö, Ç, ç
 
-  // IMPROVED: Dynamic text wrapper that returns actual height used
+  // AGGRESSIVE BLACK TEXT ENFORCER - Force all text to be black
   private addTextWithWrap(
     pdf: jsPDF, 
     text: string, 
@@ -70,11 +70,9 @@ export class ReactPdfService {
   ): number {
     if (!text) return y;
     
+    // FORCE RESET everything to ensure visibility
     pdf.setFontSize(fontSize);
     pdf.setFont('Roboto', fontStyle);
-    
-    // ALWAYS ensure text is BLACK before writing
-    pdf.setTextColor(0, 0, 0);
     
     // Use original text with Turkish characters - Roboto supports them!
     const lines = pdf.splitTextToSize(text, maxWidth);
@@ -83,6 +81,9 @@ export class ReactPdfService {
 
     lines.forEach((line: string, index: number) => {
       if (line.trim()) {
+        // FORCE BLACK COLOR for each individual line
+        pdf.setTextColor(0, 0, 0);
+        pdf.setFont('Roboto', fontStyle); // Reset font too
         pdf.text(line, x, y + (index * lineHeight));
       }
     });
@@ -470,8 +471,10 @@ export class ReactPdfService {
         pdf.setFont('Roboto', 'bold');
         pdf.setFontSize(9);
         pdf.text('Mevcut Durum:', margin + 5, currentY + 5);
-        pdf.setTextColor(0, 0, 0); // BLACK TEXT for content
+        // FORCE BLACK TEXT - Double ensure
+        pdf.setTextColor(0, 0, 0);
         pdf.setFont('Roboto', 'normal');
+        pdf.setFontSize(8); // Set font size too
         this.addTextWithWrap(pdf, finding.currentSituation, margin + 5, currentY + 10, 8, 'normal', halfWidth - 10);
         
         // Right: Recommendation - DARKER BACKGROUND
@@ -480,8 +483,10 @@ export class ReactPdfService {
         pdf.setTextColor(0, 0, 0); // BLACK TEXT
         pdf.setFont('Roboto', 'bold');
         pdf.text('Öneri:', margin + halfWidth + 10, currentY + 5);
-        pdf.setTextColor(0, 0, 0); // BLACK TEXT for content
+        // FORCE BLACK TEXT - Double ensure
+        pdf.setTextColor(0, 0, 0);
         pdf.setFont('Roboto', 'normal');
+        pdf.setFontSize(8); // Set font size too
         this.addTextWithWrap(pdf, finding.recommendation, margin + halfWidth + 10, currentY + 10, 8, 'normal', halfWidth - 10);
         
         currentY += maxHeight + spacing;
@@ -495,8 +500,10 @@ export class ReactPdfService {
           pdf.setFont('Roboto', 'bold');
           pdf.setFontSize(9);
           pdf.text('Mevcut Durum:', margin + 5, currentY + 5);
-          pdf.setTextColor(0, 0, 0); // BLACK TEXT for content
+          // FORCE BLACK TEXT - Double ensure
+          pdf.setTextColor(0, 0, 0);
           pdf.setFont('Roboto', 'normal');
+          pdf.setFontSize(8); // Set font size too
           this.addTextWithWrap(pdf, finding.currentSituation, margin + 5, currentY + 10, 8, 'normal', fieldWidth - 10);
           currentY += situationHeight + spacing;
         }
@@ -509,8 +516,10 @@ export class ReactPdfService {
           pdf.setFont('Roboto', 'bold');
           pdf.setFontSize(9);
           pdf.text('Öneri:', margin + 5, currentY + 5);
-          pdf.setTextColor(0, 0, 0); // BLACK TEXT for content
+          // FORCE BLACK TEXT - Double ensure
+          pdf.setTextColor(0, 0, 0);
           pdf.setFont('Roboto', 'normal');
+          pdf.setFontSize(8); // Set font size too
           this.addTextWithWrap(pdf, finding.recommendation, margin + 5, currentY + 10, 8, 'normal', fieldWidth - 10);
           currentY += recHeight + spacing;
         }
@@ -525,8 +534,10 @@ export class ReactPdfService {
         pdf.setFont('Roboto', 'bold');
         pdf.setFontSize(9);
         pdf.text('Yasal Dayanak:', margin + 5, currentY + 5);
-        pdf.setTextColor(0, 0, 0); // BLACK TEXT for content
+        // FORCE BLACK TEXT - Double ensure
+        pdf.setTextColor(0, 0, 0);
         pdf.setFont('Roboto', 'normal');
+        pdf.setFontSize(8); // Set font size too
         this.addTextWithWrap(pdf, finding.legalBasis, margin + 5, currentY + 10, 8, 'normal', fieldWidth - 10);
         currentY += legalHeight + spacing;
       }
@@ -546,7 +557,9 @@ export class ReactPdfService {
         let stepY = currentY + 10;
         finding.processSteps.forEach((step, index) => {
           const stepDate = new Date(step.date).toLocaleDateString('tr-TR');
-          pdf.setTextColor(0, 0, 0); // BLACK TEXT for each step
+          // FORCE BLACK TEXT AND FONT for each step - aggressive reset
+          pdf.setTextColor(0, 0, 0); 
+          pdf.setFont('Roboto', 'normal');
           pdf.setFontSize(7);
           pdf.text(`${index + 1}. ${stepDate}: ${step.description}`, margin + 5, stepY);
           stepY += 8; // Reduced spacing
