@@ -63,30 +63,20 @@ export class ReactPdfService {
     this.tahomaBoldFont = '';
   }
 
-  // Helper function to properly encode Turkish characters
+  // Proper Turkish character handling - preserve UTF-8 encoding
   private encodeTurkishText(text: string): string {
     if (!text) return '';
-    // Normalize to NFC and ensure proper UTF-8 encoding for Turkish characters
-    return text
-      .normalize('NFC')
-      .replace(/\u0131/g, 'ı')  // ı
-      .replace(/\u0130/g, 'İ')  // İ  
-      .replace(/\u011F/g, 'ğ')  // ğ
-      .replace(/\u011E/g, 'Ğ')  // Ğ
-      .replace(/\u015F/g, 'ş')  // ş
-      .replace(/\u015E/g, 'Ş')  // Ş
-      .replace(/\u00FC/g, 'ü')  // ü
-      .replace(/\u00DC/g, 'Ü')  // Ü
-      .replace(/\u00F6/g, 'ö')  // ö
-      .replace(/\u00D6/g, 'Ö')  // Ö
-      .replace(/\u00E7/g, 'ç')  // ç
-      .replace(/\u00C7/g, 'Ç');  // Ç
+    // Just normalize to NFC for consistent encoding - don't replace characters!
+    return text.normalize('NFC');
   }
 
   private setupFonts(pdf: jsPDF) {
     // Use built-in Helvetica font which supports Turkish characters well
     console.log('Using built-in Helvetica font for reliable Turkish character support');
-    // No custom font loading needed - Helvetica works great with Turkish
+    // Set UTF-8 encoding to ensure proper Turkish character display
+    pdf.setFont('helvetica');
+    pdf.setCharSpace(0);
+    pdf.setR2L(false);
   }
 
   // Helper function to add text with proper Turkish encoding and word wrap
@@ -389,7 +379,7 @@ export class ReactPdfService {
     this.addPageNumber(pdf, pageNumber++, totalPages);
 
     // Update total pages count correctly
-    const actualTotalPages = pdf.internal.getNumberOfPages();
+    const actualTotalPages = pdf.getNumberOfPages();
     
     // Go back and update all page numbers with correct total
     for (let i = 1; i <= actualTotalPages; i++) {
