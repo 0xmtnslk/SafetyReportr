@@ -201,7 +201,7 @@ export default function ViewReport({ id }: ViewReportProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div className="flex items-center">
               <MapPin className="text-gray-400 mr-2" size={16} />
               <div>
@@ -223,6 +223,37 @@ export default function ViewReport({ id }: ViewReportProps) {
                 <p className="font-medium">
                   {new Date((report as any).reportDate).toLocaleDateString("tr-TR")}
                 </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Finding Statistics */}
+          <div className="border-t pt-4">
+            <h3 className="font-medium text-gray-900 mb-3">Bulgu İstatistikleri</h3>
+            <div className="flex gap-4 flex-wrap">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                <span className="text-sm text-gray-600">
+                  {Array.isArray(findings) ? findings.filter((f: any) => f.dangerLevel === 'high').length : 0} Yüksek
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                <span className="text-sm text-gray-600">
+                  {Array.isArray(findings) ? findings.filter((f: any) => f.dangerLevel === 'medium').length : 0} Orta
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                <span className="text-sm text-gray-600">
+                  {Array.isArray(findings) ? findings.filter((f: any) => f.dangerLevel === 'low').length : 0} Düşük
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                <span className="text-sm text-gray-600">
+                  {Array.isArray(findings) ? findings.filter((f: any) => f.section === 4 || (f.isCompleted && f.dangerLevel === 'low')).length : 0} Tamamlanmış
+                </span>
               </div>
             </div>
           </div>

@@ -357,6 +357,8 @@ export class DatabaseStorage implements IStorage {
   async getReportStats(userId: string): Promise<{
     totalReports: number;
     highRiskFindings: number;
+    mediumRiskFindings: number;
+    completedFindings: number;
     completedReports: number;
   }> {
     const userReports = await this.getUserReports(userId);
@@ -364,14 +366,21 @@ export class DatabaseStorage implements IStorage {
     const completedReports = userReports.filter(r => r.status === 'completed').length;
     
     let highRiskFindings = 0;
+    let mediumRiskFindings = 0;
+    let completedFindings = 0;
+    
     for (const report of userReports) {
       const reportFindings = await this.getReportFindings(report.id);
       highRiskFindings += reportFindings.filter(f => f.dangerLevel === 'high').length;
+      mediumRiskFindings += reportFindings.filter(f => f.dangerLevel === 'medium').length;
+      completedFindings += reportFindings.filter(f => f.section === 4 || (f.isCompleted && f.dangerLevel === 'low')).length;
     }
 
     return {
       totalReports,
       highRiskFindings,
+      mediumRiskFindings,
+      completedFindings,
       completedReports,
     };
   }
@@ -379,6 +388,8 @@ export class DatabaseStorage implements IStorage {
   async getStats(): Promise<{
     totalReports: number;
     highRiskFindings: number;
+    mediumRiskFindings: number;
+    completedFindings: number;
     completedReports: number;
   }> {
     const allReports = await db.select().from(reports);
@@ -386,14 +397,21 @@ export class DatabaseStorage implements IStorage {
     const completedReports = allReports.filter(r => r.status === 'completed').length;
     
     let highRiskFindings = 0;
+    let mediumRiskFindings = 0;
+    let completedFindings = 0;
+    
     for (const report of allReports) {
       const reportFindings = await this.getReportFindings(report.id);
       highRiskFindings += reportFindings.filter(f => f.dangerLevel === 'high').length;
+      mediumRiskFindings += reportFindings.filter(f => f.dangerLevel === 'medium').length;
+      completedFindings += reportFindings.filter(f => f.section === 4 || (f.isCompleted && f.dangerLevel === 'low')).length;
     }
 
     return {
       totalReports,
       highRiskFindings,
+      mediumRiskFindings,
+      completedFindings,
       completedReports,
     };
   }

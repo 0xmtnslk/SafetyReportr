@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText, AlertTriangle, CheckCircle, Clock, CheckCircle2 } from "lucide-react";
+import { FileText, AlertTriangle, CheckCircle, Clock, CheckCircle2, TrendingUp, Shield, Target } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "wouter";
 
@@ -66,8 +66,8 @@ export default function Dashboard() {
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center">
-              <div className="bg-primary bg-opacity-10 p-3 rounded-xl">
-                <FileText className="text-primary text-xl" size={24} />
+              <div className="bg-blue-500 bg-opacity-10 p-3 rounded-xl">
+                <TrendingUp className="text-blue-500 text-xl" size={24} />
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Toplam Rapor</p>
@@ -82,11 +82,11 @@ export default function Dashboard() {
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center">
-              <div className="bg-danger bg-opacity-10 p-3 rounded-xl">
-                <AlertTriangle className="text-danger text-xl" size={24} />
+              <div className="bg-red-500 bg-opacity-10 p-3 rounded-xl">
+                <Shield className="text-red-500 text-xl" size={24} />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Yüksek Risk</p>
+                <p className="text-sm font-medium text-gray-600">Yüksek Risk Bulguları</p>
                 <p className="text-2xl font-bold text-gray-900" data-testid="stat-high-risk">
                   {(stats as any)?.highRiskFindings || 0}
                 </p>
@@ -98,13 +98,13 @@ export default function Dashboard() {
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center">
-              <div className="bg-success bg-opacity-10 p-3 rounded-xl">
-                <CheckCircle className="text-success text-xl" size={24} />
+              <div className="bg-green-500 bg-opacity-10 p-3 rounded-xl">
+                <Target className="text-green-500 text-xl" size={24} />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Tamamlanan</p>
+                <p className="text-sm font-medium text-gray-600">Tamamlanan Bulgular</p>
                 <p className="text-2xl font-bold text-gray-900" data-testid="stat-completed">
-                  {(stats as any)?.completedReports || 0}
+                  {(stats as any)?.completedFindings || 0}
                 </p>
               </div>
             </div>
@@ -147,9 +147,16 @@ export default function Dashboard() {
                   <div className="flex items-center space-x-2">
                     <div className="flex items-center gap-2">
                       {report.status === "completed" ? (
-                        <div className="flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-success bg-opacity-10 text-success">
-                          <CheckCircle2 size={14} />
-                          Tamamlandı
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-success bg-opacity-10 text-success">
+                            <CheckCircle2 size={14} />
+                            Tamamlandı
+                          </div>
+                          <div className="w-24 bg-success h-4 rounded-full flex items-center justify-center">
+                            <span className="text-[10px] font-medium text-white">
+                              Tamamlandı
+                            </span>
+                          </div>
                         </div>
                       ) : (
                         <div className="flex flex-col gap-1">
@@ -157,11 +164,22 @@ export default function Dashboard() {
                             <Clock size={14} />
                             Devam Ediyor
                           </div>
-                          <div className="w-24 bg-gray-200 rounded-full h-1.5">
+                          <div className="relative w-24 bg-gray-200 rounded-full h-4">
                             <div 
-                              className="bg-warning h-1.5 rounded-full transition-all duration-300" 
+                              className="bg-warning h-4 rounded-full transition-all duration-300 flex items-center justify-center" 
                               style={{ width: `${calculateProgress(report)}%` }}
-                            ></div>
+                            >
+                              <span className="text-[10px] font-medium text-white whitespace-nowrap px-1">
+                                {calculateProgress(report) === 100 ? 'Hazır' : `${Math.round(calculateProgress(report))}%`}
+                              </span>
+                            </div>
+                            {calculateProgress(report) < 100 && (
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <span className="text-[10px] font-medium text-gray-600">
+                                  Devam Ediyor
+                                </span>
+                              </div>
+                            )}
                           </div>
                         </div>
                       )}
