@@ -53,6 +53,27 @@ export class ReactPdfService {
   }
 
 
+  // Enhanced Turkish text support with proper encoding
+  private turkishSafeText(text: string): string {
+    if (!text) return '';
+    
+    // Ensure proper UTF-8 encoding for Turkish characters
+    return text
+      .normalize('NFC')  // Canonical decomposition then canonical composition
+      .replace(/\u0130/g, 'İ')  // Turkish İ (capital)
+      .replace(/\u0131/g, 'ı')  // Turkish ı (lowercase)
+      .replace(/\u011E/g, 'Ğ')  // Turkish Ğ (capital)
+      .replace(/\u011F/g, 'ğ')  // Turkish ğ (lowercase)  
+      .replace(/\u015E/g, 'Ş')  // Turkish Ş (capital)
+      .replace(/\u015F/g, 'ş')  // Turkish ş (lowercase)
+      .replace(/\u00DC/g, 'Ü')  // Turkish Ü (capital)
+      .replace(/\u00FC/g, 'ü')  // Turkish ü (lowercase)
+      .replace(/\u00D6/g, 'Ö')  // Turkish Ö (capital)
+      .replace(/\u00F6/g, 'ö')  // Turkish ö (lowercase)
+      .replace(/\u00C7/g, 'Ç')  // Turkish Ç (capital)
+      .replace(/\u00E7/g, 'ç');  // Turkish ç (lowercase)
+  }
+
   // Enhanced text wrapper with Turkish support
   private addTextWithWrap(pdf: jsPDF, text: string, x: number, y: number, fontSize: number = 11, fontStyle: string = 'normal', maxWidth: number = 170): number {
     if (!text) return y;
@@ -60,8 +81,9 @@ export class ReactPdfService {
     pdf.setFontSize(fontSize);
     pdf.setFont('helvetica', fontStyle);
     
-    // Use text as-is with UTF-8 support
-    const lines = pdf.splitTextToSize(text, maxWidth);
+    // Process text for proper Turkish character display
+    const processedText = this.turkishSafeText(text);
+    const lines = pdf.splitTextToSize(processedText, maxWidth);
     
     const lineHeight = fontSize * 0.6; // Better spacing
 
@@ -97,8 +119,8 @@ export class ReactPdfService {
     pdf.setFontSize(16);
     pdf.setFont('helvetica', 'bold');
     
-    // Hospital name with original Turkish characters
-    pdf.text('İstinye Üniversitesi Topkapı Liv Hastanesi', margin + (this.logoBase64 ? 30 : 0), 27);
+    // Hospital name with proper Turkish encoding
+    pdf.text(this.turkishSafeText('İstinye Üniversitesi Topkapı Liv Hastanesi'), margin + (this.logoBase64 ? 30 : 0), 27);
   }
 
   // NEW: Enhanced footer with Turkish characters
@@ -115,8 +137,8 @@ export class ReactPdfService {
     pdf.line(15, pageHeight - 25, pageWidth - 15, pageHeight - 25);
     
     // Hospital name and report type with Turkish characters
-    const footerText = 'İstinye Üniversitesi Topkapı Liv Hastanesi İSG Raporu';
-    const pageText = `Sayfa ${pageNumber}/${totalPages}`;
+    const footerText = this.turkishSafeText('İstinye Üniversitesi Topkapı Liv Hastanesi İSG Raporu');
+    const pageText = this.turkishSafeText(`Sayfa ${pageNumber}/${totalPages}`);
     
     pdf.text(footerText, 15, pageHeight - 15);
     pdf.text(pageText, pageWidth - 50, pageHeight - 15);
@@ -141,10 +163,19 @@ export class ReactPdfService {
       managementSummary: reportData.managementSummary?.substring(0, 100)
     });
 
-    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pdf = new jsPDF({
+      orientation: 'p',
+      unit: 'mm', 
+      format: 'a4',
+      compress: true,
+      precision: 2,
+      filters: ['ASCIIHexEncode']
+    });
     
-    // Setup for Turkish characters
+    // Enhanced Turkish character setup
     pdf.setFont('helvetica');
+    pdf.setR2L(false);
+    pdf.setLanguage('tr');
     
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
@@ -161,25 +192,25 @@ export class ReactPdfService {
     pdf.setFont('helvetica', 'bold');
     
     currentY += 30;
-    pdf.text('İSG DENETİM RAPORU', pageWidth / 2, currentY, { align: 'center' });
+    pdf.text(this.turkishSafeText('İSG DENETİM RAPORU'), pageWidth / 2, currentY, { align: 'center' });
     
     currentY += 20;
     pdf.setFontSize(16);
     pdf.setFont('helvetica', 'normal');
     
-    pdf.text(`Rapor No: ${reportData.reportNumber}`, pageWidth / 2, currentY, { align: 'center' });
+    pdf.text(this.turkishSafeText(`Rapor No: ${reportData.reportNumber}`), pageWidth / 2, currentY, { align: 'center' });
     
     currentY += 15;
-    pdf.text(`Proje Lokasyonu: ${reportData.projectLocation}`, pageWidth / 2, currentY, { align: 'center' });
+    pdf.text(this.turkishSafeText(`Proje Lokasyonu: ${reportData.projectLocation}`), pageWidth / 2, currentY, { align: 'center' });
     
     currentY += 15;
     const reportDateStr = reportData.reportDate instanceof Date ? 
       reportData.reportDate.toLocaleDateString('tr-TR') : 
       new Date(reportData.reportDate).toLocaleDateString('tr-TR');
-    pdf.text(`Rapor Tarihi: ${reportDateStr}`, pageWidth / 2, currentY, { align: 'center' });
+    pdf.text(this.turkishSafeText(`Rapor Tarihi: ${reportDateStr}`), pageWidth / 2, currentY, { align: 'center' });
     
     currentY += 15;
-    pdf.text(`Rapor Eden: ${reportData.reporter}`, pageWidth / 2, currentY, { align: 'center' });
+    pdf.text(this.turkishSafeText(`Rapor Eden: ${reportData.reporter}`), pageWidth / 2, currentY, { align: 'center' });
 
     // Add footer to first page
     this.addPageFooter(pdf, 1, 1);
@@ -197,7 +228,7 @@ export class ReactPdfService {
     pdf.setTextColor(255, 255, 255);
     pdf.setFontSize(12);
     pdf.setFont('helvetica', 'bold');
-    pdf.text(('YÖNETICI ÖZETİ'), margin + 5, currentY + 8);
+    pdf.text(this.turkishSafeText('YÖNETICI ÖZETİ'), margin + 5, currentY + 8);
 
     currentY += 20;
 
@@ -207,7 +238,7 @@ export class ReactPdfService {
     pdf.rect(margin, currentY, contentWidth, summaryHeight, 'F');
     
     pdf.setTextColor(0, 0, 0);
-    const summary = reportData.managementSummary || ('Yönetici özeti henüz eklenmemiştir.');
+    const summary = reportData.managementSummary || this.turkishSafeText('Yönetici özeti henüz eklenmemiştir.');
     currentY = this.addTextWithWrap(pdf, (summary), margin + 8, currentY + 12, 11, 'normal', contentWidth - 16);
 
     this.addPageFooter(pdf, pageNumber++, 1);
@@ -223,7 +254,7 @@ export class ReactPdfService {
     if (findingsBySections[1].length > 0) {
       pdf.addPage();
       this.addPageHeader(pdf);
-      currentY = await this.addSectionContent(pdf, ('BÖLÜM 1 - TASARIM/ÜRETIM HATALARI'), findingsBySections[1], 70, margin, contentWidth, pageHeight);
+      currentY = await this.addSectionContent(pdf, this.turkishSafeText('BÖLÜM 1 - TASARIM/ÜRETIM HATALARI'), findingsBySections[1], 70, margin, contentWidth, pageHeight);
       this.addPageFooter(pdf, pageNumber++, 1);
     }
 
@@ -231,7 +262,7 @@ export class ReactPdfService {
     if (findingsBySections[2].length > 0) {
       pdf.addPage();
       this.addPageHeader(pdf);
-      currentY = await this.addSectionContent(pdf, ('BÖLÜM 2 - GÜVENLİK BULGULARI'), findingsBySections[2], 70, margin, contentWidth, pageHeight);
+      currentY = await this.addSectionContent(pdf, this.turkishSafeText('BÖLÜM 2 - GÜVENLİK BULGULARI'), findingsBySections[2], 70, margin, contentWidth, pageHeight);
       this.addPageFooter(pdf, pageNumber++, 1);
     }
 
@@ -239,7 +270,7 @@ export class ReactPdfService {
     if (findingsBySections[3].length > 0) {
       pdf.addPage();
       this.addPageHeader(pdf);
-      currentY = await this.addSectionContent(pdf, ('BÖLÜM 3 - TAMAMLANAN BULGULAR'), findingsBySections[3], 70, margin, contentWidth, pageHeight);
+      currentY = await this.addSectionContent(pdf, this.turkishSafeText('BÖLÜM 3 - TAMAMLANAN BULGULAR'), findingsBySections[3], 70, margin, contentWidth, pageHeight);
       this.addPageFooter(pdf, pageNumber++, 1);
     }
 
@@ -254,7 +285,7 @@ export class ReactPdfService {
     pdf.setTextColor(255, 255, 255);
     pdf.setFontSize(12);
     pdf.setFont('helvetica', 'bold');
-    pdf.text(('GENEL DEĞERLENDİRME'), margin + 5, currentY + 8);
+    pdf.text(this.turkishSafeText('GENEL DEĞERLENDİRME'), margin + 5, currentY + 8);
 
     currentY += 20;
 
@@ -264,7 +295,7 @@ export class ReactPdfService {
     pdf.rect(margin, currentY, contentWidth, evalContentHeight, 'F');
     
     pdf.setTextColor(0, 0, 0);
-    const evaluation = reportData.generalEvaluation || ('Genel değerlendirme henüz eklenmemiştir.');
+    const evaluation = reportData.generalEvaluation || this.turkishSafeText('Genel değerlendirme henüz eklenmemiştir.');
     currentY = this.addTextWithWrap(pdf, (evaluation), margin + 8, currentY + 12, 11, 'normal', contentWidth - 16);
 
     this.addPageFooter(pdf, pageNumber++, 1);
