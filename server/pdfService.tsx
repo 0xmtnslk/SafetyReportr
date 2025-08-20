@@ -475,8 +475,8 @@ export class ReactPdfService {
       
       // Current situation & Recommendation side by side (only if BOTH exist and have data)
       if (hasSituation && hasRecommendation) {
-        const situationHeight = Math.min(this.calculateTextHeight(pdf, finding.currentSituation, 9, halfWidth - 10) + labelHeight + boxPadding, 35);
-        const recHeight = Math.min(this.calculateTextHeight(pdf, finding.recommendation, 9, halfWidth - 10) + labelHeight + boxPadding, 35);
+        const situationHeight = Math.min(this.calculateTextHeight(pdf, finding.currentSituation, 10, halfWidth - 10) + labelHeight + boxPadding, 35);
+        const recHeight = Math.min(this.calculateTextHeight(pdf, finding.recommendation, 10, halfWidth - 10) + labelHeight + boxPadding, 35);
         maxHeight = Math.max(situationHeight, recHeight);
         
         // Left: Current situation - DARKER BACKGROUND
@@ -490,7 +490,7 @@ export class ReactPdfService {
         pdf.setTextColor(0, 0, 0);
         pdf.setFont('Roboto', 'normal');
         pdf.setFontSize(8); // Set font size too
-        this.addTextWithWrap(pdf, finding.currentSituation, margin + 5, currentY + 10, 8, 'normal', halfWidth - 10);
+        this.addTextWithWrap(pdf, finding.currentSituation, margin + 5, currentY + 10, 10, 'normal', halfWidth - 10);
         
         // Right: Recommendation - DARKER BACKGROUND
         pdf.setFillColor(240, 240, 240); // Darker gray
@@ -502,13 +502,13 @@ export class ReactPdfService {
         pdf.setTextColor(0, 0, 0);
         pdf.setFont('Roboto', 'normal');
         pdf.setFontSize(8); // Set font size too
-        this.addTextWithWrap(pdf, finding.recommendation, margin + halfWidth + 10, currentY + 10, 8, 'normal', halfWidth - 10);
+        this.addTextWithWrap(pdf, finding.recommendation, margin + halfWidth + 10, currentY + 10, 10, 'normal', halfWidth - 10);
         
         currentY += maxHeight + spacing;
       } else {
         // Single field if only one exists (full width) - ONLY if it has data
         if (hasSituation) {
-          const situationHeight = Math.min(this.calculateTextHeight(pdf, finding.currentSituation, 9, fieldWidth - 12) + labelHeight + boxPadding, 30);
+          const situationHeight = Math.min(this.calculateTextHeight(pdf, finding.currentSituation, 10, fieldWidth - 12) + labelHeight + boxPadding, 30);
           pdf.setFillColor(240, 240, 240); // Darker gray
           pdf.rect(margin, currentY, fieldWidth, situationHeight, 'F');
           pdf.setTextColor(0, 0, 0); // BLACK TEXT
@@ -519,12 +519,12 @@ export class ReactPdfService {
           pdf.setTextColor(0, 0, 0);
           pdf.setFont('Roboto', 'normal');
           pdf.setFontSize(8); // Set font size too
-          this.addTextWithWrap(pdf, finding.currentSituation, margin + 5, currentY + 10, 8, 'normal', fieldWidth - 10);
+          this.addTextWithWrap(pdf, finding.currentSituation, margin + 5, currentY + 10, 10, 'normal', fieldWidth - 10);
           currentY += situationHeight + spacing;
         }
         
         if (hasRecommendation) {
-          const recHeight = Math.min(this.calculateTextHeight(pdf, finding.recommendation, 9, fieldWidth - 12) + labelHeight + boxPadding, 30);
+          const recHeight = Math.min(this.calculateTextHeight(pdf, finding.recommendation, 10, fieldWidth - 12) + labelHeight + boxPadding, 30);
           pdf.setFillColor(240, 240, 240); // Darker gray
           pdf.rect(margin, currentY, fieldWidth, recHeight, 'F');
           pdf.setTextColor(0, 0, 0); // BLACK TEXT
@@ -535,14 +535,14 @@ export class ReactPdfService {
           pdf.setTextColor(0, 0, 0);
           pdf.setFont('Roboto', 'normal');
           pdf.setFontSize(8); // Set font size too
-          this.addTextWithWrap(pdf, finding.recommendation, margin + 5, currentY + 10, 8, 'normal', fieldWidth - 10);
+          this.addTextWithWrap(pdf, finding.recommendation, margin + 5, currentY + 10, 10, 'normal', fieldWidth - 10);
           currentY += recHeight + spacing;
         }
       }
 
       // Legal basis only (ONLY if it has data)
       if (finding.legalBasis && finding.legalBasis.trim()) {
-        const legalHeight = Math.min(this.calculateTextHeight(pdf, finding.legalBasis, 8, fieldWidth - 12) + labelHeight + boxPadding, 25);
+        const legalHeight = Math.min(this.calculateTextHeight(pdf, finding.legalBasis, 9, fieldWidth - 12) + labelHeight + boxPadding, 25);
         pdf.setFillColor(240, 240, 240); // Darker gray
         pdf.rect(margin, currentY, fieldWidth, legalHeight, 'F');
         pdf.setTextColor(0, 0, 0); // BLACK TEXT
@@ -553,7 +553,7 @@ export class ReactPdfService {
         pdf.setTextColor(0, 0, 0);
         pdf.setFont('Roboto', 'normal');
         pdf.setFontSize(8); // Set font size too
-        this.addTextWithWrap(pdf, finding.legalBasis, margin + 5, currentY + 10, 8, 'normal', fieldWidth - 10);
+        this.addTextWithWrap(pdf, finding.legalBasis, margin + 5, currentY + 10, 9, 'normal', fieldWidth - 10);
         currentY += legalHeight + spacing;
       }
       
@@ -575,7 +575,7 @@ export class ReactPdfService {
           // FORCE BLACK TEXT AND FONT for each step - aggressive reset
           pdf.setTextColor(0, 0, 0); 
           pdf.setFont('Roboto', 'normal');
-          pdf.setFontSize(7);
+          pdf.setFontSize(8);
           pdf.text(`${index + 1}. ${stepDate}: ${step.description}`, margin + 5, stepY);
           stepY += 8; // Reduced spacing
         });
