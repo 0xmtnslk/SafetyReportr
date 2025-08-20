@@ -59,7 +59,7 @@ export default function ViewReport({ id }: ViewReportProps) {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `ISG_Raporu_${reportData.reportNumber || new Date().toISOString().split('T')[0]}.pdf`;
+      a.download = `ISG_Raporu_${report.reportNumber || new Date().toISOString().split('T')[0]}.pdf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);

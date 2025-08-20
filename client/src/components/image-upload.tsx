@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { CloudUpload, Camera, FolderOpen, X } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { CloudUpload, Camera, FolderOpen, X, ZoomIn } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { compressImage } from "@/lib/imageCompression";
 
@@ -12,6 +13,7 @@ interface ImageUploadProps {
 
 export default function ImageUpload({ onImageUploaded, images, onRemoveImage }: ImageUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -179,8 +181,17 @@ export default function ImageUpload({ onImageUploaded, images, onRemoveImage }: 
               <img
                 src={imagePath}
                 alt={`Uploaded ${index + 1}`}
-                className="w-full h-32 object-cover rounded-lg"
+                className="w-full h-48 object-cover rounded-lg cursor-pointer transition-transform hover:scale-105"
+                onClick={() => setPreviewImage(imagePath)}
               />
+              <button
+                type="button"
+                className="absolute top-2 left-2 bg-black/50 text-white w-8 h-8 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={() => setPreviewImage(imagePath)}
+                data-testid={`button-preview-image-${index}`}
+              >
+                <ZoomIn size={16} />
+              </button>
               <button
                 type="button"
                 className="absolute top-2 right-2 bg-danger text-white w-8 h-8 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
@@ -193,6 +204,24 @@ export default function ImageUpload({ onImageUploaded, images, onRemoveImage }: 
           ))}
         </div>
       )}
+
+      {/* Full Size Image Preview Modal */}
+      <Dialog open={!!previewImage} onOpenChange={() => setPreviewImage(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] p-2">
+          <DialogHeader>
+            <DialogTitle>Fotoğraf Ön İzlemesi</DialogTitle>
+          </DialogHeader>
+          {previewImage && (
+            <div className="flex justify-center items-center max-h-[80vh] overflow-auto">
+              <img
+                src={previewImage}
+                alt="Tam Boyut Önizleme"
+                className="max-w-full max-h-full object-contain rounded-lg"
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

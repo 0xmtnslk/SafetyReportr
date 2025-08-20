@@ -1,6 +1,6 @@
 import { reports, findings, users, offlineQueue, type User, type InsertUser, type Report, type InsertReport, type Finding, type InsertFinding, type OfflineQueueItem, type InsertOfflineQueueItem } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, inArray } from "drizzle-orm";
+import { eq, desc, and, inArray, sql } from "drizzle-orm";
 import bcrypt from "bcrypt";
 
 export interface IStorage {
@@ -273,7 +273,16 @@ export class DatabaseStorage implements IStorage {
   async getReportFindings(reportId: string): Promise<Finding[]> {
     return await db.select().from(findings)
       .where(eq(findings.reportId, reportId))
-      .orderBy(desc(findings.createdAt));
+      .orderBy(
+        // Risk seviyesine göre sıralama: high (1) -> medium (2) -> low (3)
+        sql`CASE 
+          WHEN ${findings.dangerLevel} = 'high' THEN 1 
+          WHEN ${findings.dangerLevel} = 'medium' THEN 2 
+          WHEN ${findings.dangerLevel} = 'low' THEN 3 
+          ELSE 4 
+        END ASC`,
+        desc(findings.createdAt) // Aynı risk seviyesinde tarihe göre
+      );
   }
 
   async createFinding(finding: InsertFinding): Promise<Finding> {
