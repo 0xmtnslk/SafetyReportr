@@ -580,49 +580,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`📸 Fotoğraf yükleniyor: ${req.file.originalname} (${req.file.mimetype})`);
       
-      // Dosya uzantısını orijinal formatına göre ayarla
-      let outputExtension = '.jpg'; // varsayılan
+      // Image processing with Sharp
       let sharpProcessor = sharp(req.file.buffer)
         .resize(1200, 900, { 
           fit: 'inside', 
           withoutEnlargement: true 
         });
       
-      // Format'a göre işlem ve uzantı belirleme
+      // Format'a göre işlem belirleme
       switch (req.file.mimetype) {
         case 'image/png':
-          outputExtension = '.png';
           sharpProcessor = sharpProcessor.png({ quality: 90, progressive: true });
           break;
         case 'image/webp':
-          outputExtension = '.webp';
           sharpProcessor = sharpProcessor.webp({ quality: 85 });
           break;
         default: // jpeg
-          outputExtension = '.jpg';
           sharpProcessor = sharpProcessor.jpeg({ quality: 85, progressive: true });
       }
-      
-      const filename = `${Date.now()}_${Math.random().toString(36).substring(2)}${outputExtension}`;
-      const filepath = path.join('uploads', filename);
-      
-      // uploads klasörünü oluştur (yoksa)
-      const uploadsDir = path.dirname(filepath);
-      if (!fs.existsSync(uploadsDir)) {
-        fs.mkdirSync(uploadsDir, { recursive: true });
-      }
 
-      // Fotoğrafı işle ve kaydet
+      // Process the image
       const processedBuffer = await sharpProcessor.toBuffer();
-      fs.writeFileSync(filepath, processedBuffer);
       
-      const imagePath = `/${filepath}`;
-      console.log(`✅ Fotoğraf kaydedildi: ${imagePath}`);
+      // Upload to object storage instead of local filesystem
+      const { ObjectStorageService } = await import("./objectStorage");
+      const objectStorageService = new ObjectStorageService();
+      
+      const imagePath = await objectStorageService.uploadImage(
+        processedBuffer,
+        req.file.originalname,
+        req.file.mimetype
+      );
+      
+      console.log(`✅ Fotoğraf cloud depolamaya kaydedildi: ${imagePath}`);
 
       res.json({ 
         message: 'Fotoğraf başarıyla yüklendi', 
         path: imagePath,
-        filename: filename,
         originalName: req.file.originalname,
         size: processedBuffer.length
       });
@@ -633,6 +627,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "Fotoğraf yüklenirken hata oluştu", 
         error: (error as any).message 
       });
+    }
+  });
+
+  // Serve images from object storage
+  app.get("/images/:filename", async (req, res) => {
+    try {
+      const { ObjectStorageService } = await import("./objectStorage");
+      const objectStorageService = new ObjectStorageService();
+      
+      const imagePath = `/images/${req.params.filename}`;
+      const imageFile = await objectStorageService.getImageFile(imagePath);
+      
+      if (!imageFile) {
+        return res.status(404).json({ error: "Image not found" });
+      }
+      
+      await objectStorageService.downloadObject(imageFile, res);
+    } catch (error) {
+      console.error("Error serving image:", error);
+      res.status(500).json({ error: "Error serving image" });
     }
   });
 
