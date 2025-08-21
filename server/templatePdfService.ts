@@ -465,7 +465,40 @@ export class TemplatePdfService {
         return imageUrl;
       }
       
-      // Local dosya yolu için
+      // Cloud storage images (new system)
+      if (imageUrl.startsWith('/images/')) {
+        try {
+          const { ObjectStorageService } = await import("./objectStorage");
+          const objectStorageService = new ObjectStorageService();
+          const imageFile = await objectStorageService.getImageFile(imageUrl);
+          
+          if (imageFile) {
+            // Download file buffer from cloud storage
+            const buffer = await new Promise<Buffer>((resolve, reject) => {
+              const chunks: Buffer[] = [];
+              const stream = imageFile.createReadStream();
+              
+              stream.on('data', (chunk) => chunks.push(chunk));
+              stream.on('end', () => resolve(Buffer.concat(chunks)));
+              stream.on('error', reject);
+            });
+            
+            // Get file metadata to determine format
+            const [metadata] = await imageFile.getMetadata();
+            let format = 'jpeg'; // default
+            if (metadata.contentType) {
+              if (metadata.contentType.includes('png')) format = 'png';
+              else if (metadata.contentType.includes('webp')) format = 'jpeg'; // Convert WebP to JPEG for PDF
+            }
+            
+            return `data:image/${format};base64,${buffer.toString('base64')}`;
+          }
+        } catch (cloudError) {
+          console.warn('Cloud storage image fetch failed:', cloudError);
+        }
+      }
+      
+      // Legacy local dosya yolu için (backward compatibility)
       if (imageUrl.startsWith('/uploads/') || imageUrl.startsWith('./uploads/')) {
         const imagePath = join(process.cwd(), imageUrl);
         if (existsSync(imagePath)) {
