@@ -467,20 +467,28 @@ export class TemplatePdfService {
       
       // Cloud storage images (new system)
       if (imageUrl.startsWith('/images/')) {
+        console.log('📄 PDF: Processing cloud image:', imageUrl);
         try {
           const { ObjectStorageService } = await import("./objectStorage");
           const objectStorageService = new ObjectStorageService();
           const imageFile = await objectStorageService.getImageFile(imageUrl);
           
           if (imageFile) {
+            console.log('📄 PDF: Image file found, downloading buffer...');
             // Download file buffer from cloud storage
             const buffer = await new Promise<Buffer>((resolve, reject) => {
               const chunks: Buffer[] = [];
               const stream = imageFile.createReadStream();
               
               stream.on('data', (chunk) => chunks.push(chunk));
-              stream.on('end', () => resolve(Buffer.concat(chunks)));
-              stream.on('error', reject);
+              stream.on('end', () => {
+                console.log('📄 PDF: Buffer download complete, size:', Buffer.concat(chunks).length);
+                resolve(Buffer.concat(chunks));
+              });
+              stream.on('error', (err) => {
+                console.error('📄 PDF: Stream error:', err);
+                reject(err);
+              });
             });
             
             // Get file metadata to determine format
@@ -491,10 +499,13 @@ export class TemplatePdfService {
               else if (metadata.contentType.includes('webp')) format = 'jpeg'; // Convert WebP to JPEG for PDF
             }
             
+            console.log('📄 PDF: Image processed successfully, format:', format);
             return `data:image/${format};base64,${buffer.toString('base64')}`;
+          } else {
+            console.warn('📄 PDF: Image file not found:', imageUrl);
           }
         } catch (cloudError) {
-          console.warn('Cloud storage image fetch failed:', cloudError);
+          console.error('📄 PDF: Cloud storage image fetch failed:', cloudError);
         }
       }
       
