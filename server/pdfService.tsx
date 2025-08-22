@@ -655,27 +655,77 @@ export class ReactPdfService {
           .toBuffer();
         
         return `data:image/jpeg;base64,${optimized.toString('base64')}`;
+      } else if (imageUrl.startsWith('/images/')) {
+        // Cloud storage images
+        try {
+          const { ObjectStorageService } = await import("./objectStorage");
+          const objectStorageService = new ObjectStorageService();
+          const imageFile = await objectStorageService.getImageFile(imageUrl);
+          
+          if (imageFile) {
+            // Download file buffer from cloud storage
+            const buffer = await new Promise<Buffer>((resolve, reject) => {
+              const chunks: Buffer[] = [];
+              const stream = imageFile.createReadStream();
+              
+              stream.on('data', (chunk) => chunks.push(chunk));
+              stream.on('end', () => resolve(Buffer.concat(chunks)));
+              stream.on('error', reject);
+            });
+            
+            // Process with Sharp and return base64
+            const optimized = await sharp.default(buffer)
+              .resize(400, 400, { fit: 'inside', withoutEnlargement: true })
+              .jpeg({ quality: 80 })
+              .toBuffer();
+            
+            return `data:image/jpeg;base64,${optimized.toString('base64')}`;
+          } else {
+            console.warn('Cloud image not found:', imageUrl);
+            return '';
+          }
+        } catch (cloudError) {
+          console.warn('Cloud storage error:', cloudError);
+          return '';
+        }
       } else if (imageUrl.startsWith('/uploads/')) {
         // Local upload path
         imagePath = path.join(process.cwd(), imageUrl);
+        
+        // Check if file exists
+        if (!fs.existsSync(imagePath)) {
+          console.warn('Image file not found:', imagePath);
+          return '';
+        }
+        
+        // Process the image with Sharp
+        const optimized = await sharp.default(imagePath)
+          .resize(400, 400, { fit: 'inside', withoutEnlargement: true })
+          .jpeg({ quality: 80 })
+          .toBuffer();
+        
+        return `data:image/jpeg;base64,${optimized.toString('base64')}`;
       } else if (imageUrl.startsWith('uploads/')) {
         // Relative upload path
         imagePath = path.join(process.cwd(), imageUrl);
+        
+        // Check if file exists
+        if (!fs.existsSync(imagePath)) {
+          console.warn('Image file not found:', imagePath);
+          return '';
+        }
+        
+        // Process the image with Sharp
+        const optimized = await sharp.default(imagePath)
+          .resize(400, 400, { fit: 'inside', withoutEnlargement: true })
+          .jpeg({ quality: 80 })
+          .toBuffer();
+        
+        return `data:image/jpeg;base64,${optimized.toString('base64')}`;
       }
       
-      // Check if file exists
-      if (!fs.existsSync(imagePath)) {
-        console.warn('Image file not found:', imagePath);
-        return '';
-      }
-      
-      // Process the image with Sharp
-      const optimized = await sharp.default(imagePath)
-        .resize(400, 400, { fit: 'inside', withoutEnlargement: true })
-        .jpeg({ quality: 80 })
-        .toBuffer();
-      
-      return `data:image/jpeg;base64,${optimized.toString('base64')}`;
+      // If no valid path found, return empty
+      return '';
     } catch (error) {
       console.warn('Could not optimize image:', error);
       return '';
