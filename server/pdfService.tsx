@@ -322,25 +322,11 @@ export class ReactPdfService {
     console.log('Section 4 (Diğer):', findingsBySections[4].length, 'findings');
     console.log('All findings:', reportData.findings.map(f => ({ section: f.section, title: f.title })));
 
-    // Section 1 findings → PDF BÖLÜM 2
-    if (findingsBySections[1].length > 0) {
-      await this.addSectionContent(
-        pdf, 
-        'BÖLÜM 2 - TASARIM/İMALAT/MONTAJ HATALARI', 
-        findingsBySections[1], 
-        70, 
-        margin, 
-        contentWidth, 
-        pageHeight,
-        1
-      );
-    }
-
-    // Section 2 findings → PDF BÖLÜM 3
+    // UI Section 2 → PDF BÖLÜM 2 (Tasarım/İmalat/Montaj)
     if (findingsBySections[2].length > 0) {
       await this.addSectionContent(
         pdf, 
-        'BÖLÜM 3 - İŞ SAĞLIĞI VE GÜVENLİĞİ BULGULARI', 
+        'BÖLÜM 2 - TASARIM/İMALAT/MONTAJ HATALARI', 
         findingsBySections[2], 
         70, 
         margin, 
@@ -350,18 +336,31 @@ export class ReactPdfService {
       );
     }
 
-    // Section 3 findings → PDF BÖLÜM 4 (sadece section 3)
-    const allCompletedFindings = [...findingsBySections[3], ...findingsBySections[4]];
-    if (allCompletedFindings.length > 0) {
+    // UI Section 3 → PDF BÖLÜM 3 (İSG Bulguları)
+    if (findingsBySections[3].length > 0) {
       await this.addSectionContent(
         pdf, 
-        'BÖLÜM 4 - TAMAMLANMIŞ BULGULAR', 
-        allCompletedFindings, 
+        'BÖLÜM 3 - İŞ SAĞLIĞI VE GÜVENLİĞİ BULGULARI', 
+        findingsBySections[3], 
         70, 
         margin, 
         contentWidth, 
         pageHeight,
-        3 // Special handling for completed findings
+        3
+      );
+    }
+
+    // UI Section 4 → PDF BÖLÜM 4 (Tamamlanmış Bulgular)
+    if (findingsBySections[4].length > 0) {
+      await this.addSectionContent(
+        pdf, 
+        'BÖLÜM 4 - TAMAMLANMIŞ BULGULAR', 
+        findingsBySections[4], 
+        70, 
+        margin, 
+        contentWidth, 
+        pageHeight,
+        4 // Completed findings
       );
     }
 
