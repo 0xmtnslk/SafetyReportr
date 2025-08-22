@@ -320,11 +320,11 @@ export class ReactPdfService {
     console.log('Section 3 (Tamamlanmış):', findingsBySections[3].length, 'findings');
     console.log('All findings:', reportData.findings.map(f => ({ section: f.section, title: f.title })));
 
-    // Section 1 - Tasarim/Imalat/Montaj Hatalari -> BÖLÜM 2
+    // Section 1 - Tasarim/Imalat/Montaj Hatalari (aynı section numbering)
     if (findingsBySections[1].length > 0) {
       await this.addSectionContent(
         pdf, 
-        'BÖLÜM 2 - TASARIM/İMALAT/MONTAJ HATALARI', 
+        'BÖLÜM 1 - TASARIM/İMALAT/MONTAJ HATALARI', 
         findingsBySections[1], 
         70, 
         margin, 
@@ -334,11 +334,11 @@ export class ReactPdfService {
       );
     }
 
-    // Section 2 - Is Sagligi ve Guvenligi Bulgulari -> BÖLÜM 3
+    // Section 2 - Is Sagligi ve Guvenligi Bulgulari (aynı section numbering)
     if (findingsBySections[2].length > 0) {
       await this.addSectionContent(
         pdf, 
-        'BÖLÜM 3 - İŞ SAĞLIĞI VE GÜVENLİĞİ BULGULARI', 
+        'BÖLÜM 2 - İŞ SAĞLIĞI VE GÜVENLİĞİ BULGULARI', 
         findingsBySections[2], 
         70, 
         margin, 
@@ -348,11 +348,11 @@ export class ReactPdfService {
       );
     }
 
-    // Section 3/4 - Tamamlanmis Bulgular -> BÖLÜM 4
+    // Section 3 - Tamamlanmis Bulgular (aynı section numbering)
     if (findingsBySections[3].length > 0) {
       await this.addSectionContent(
         pdf, 
-        'BÖLÜM 4 - TAMAMLANMIŞ BULGULAR', 
+        'BÖLÜM 3 - TAMAMLANMIŞ BULGULAR', 
         findingsBySections[3], 
         70, 
         margin, 
