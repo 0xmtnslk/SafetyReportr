@@ -313,6 +313,13 @@ export class ReactPdfService {
       3: reportData.findings.filter(f => f.section === 3 || f.section === 4 || (f.isCompleted && f.dangerLevel === 'low')) // Include completed findings logic
     };
 
+    // DEBUG: Check what findings we have
+    console.log('PDF DEBUG - Findings by sections:');
+    console.log('Section 1 (Tasarım/İmalat):', findingsBySections[1].length, 'findings');
+    console.log('Section 2 (İş Sağlığı):', findingsBySections[2].length, 'findings');
+    console.log('Section 3 (Tamamlanmış):', findingsBySections[3].length, 'findings');
+    console.log('All findings:', reportData.findings.map(f => ({ section: f.section, title: f.title })));
+
     // Section 1 - Tasarim/Imalat/Montaj Hatalari -> BÖLÜM 2
     if (findingsBySections[1].length > 0) {
       await this.addSectionContent(
@@ -376,9 +383,9 @@ export class ReactPdfService {
     // Content - SMART HEIGHT with page break support  
     const evaluation = reportData.generalEvaluation || 'Genel değerlendirme henüz eklenmemiştir.';
     const evalTextHeight = this.calculateTextHeight(pdf, evaluation, 11, contentWidth - 16);
-    const maxSinglePageHeight = pageHeight - currentY - 100; // Space for footer
+    const maxEvalPageHeight = pageHeight - currentY - 100; // Space for footer
     
-    if (evalTextHeight > maxSinglePageHeight) {
+    if (evalTextHeight > maxEvalPageHeight) {
       // Long text - use minimal box and enable page breaks
       const evalBoxHeight = 80;
       pdf.setFillColor(248, 250, 252);
@@ -542,8 +549,8 @@ export class ReactPdfService {
       
       // Current situation & Recommendation side by side (only if BOTH exist and have data)
       if (hasSituation && hasRecommendation) {
-        const situationHeight = this.calculateTextHeight(pdf, finding.currentSituation, 10, halfWidth - 10) + labelHeight + boxPadding + 5; // Removed max limit
-        const recHeight = this.calculateTextHeight(pdf, finding.recommendation, 10, halfWidth - 10) + labelHeight + boxPadding + 5; // Removed max limit
+        const situationHeight = this.calculateTextHeight(pdf, finding.currentSituation || '', 10, halfWidth - 10) + labelHeight + boxPadding + 5; // Removed max limit
+        const recHeight = this.calculateTextHeight(pdf, finding.recommendation || '', 10, halfWidth - 10) + labelHeight + boxPadding + 5; // Removed max limit
         maxHeight = Math.max(situationHeight, recHeight);
         
         // Left: Current situation - DARKER BACKGROUND
@@ -557,7 +564,7 @@ export class ReactPdfService {
         pdf.setTextColor(0, 0, 0);
         pdf.setFont('Roboto', 'normal');
         pdf.setFontSize(8); // Set font size too
-        this.addTextWithWrap(pdf, finding.currentSituation, margin + 5, currentY + 10, 10, 'normal', halfWidth - 10);
+        this.addTextWithWrap(pdf, finding.currentSituation || '', margin + 5, currentY + 10, 10, 'normal', halfWidth - 10);
         
         // Right: Recommendation - DARKER BACKGROUND
         pdf.setFillColor(240, 240, 240); // Darker gray
@@ -569,13 +576,13 @@ export class ReactPdfService {
         pdf.setTextColor(0, 0, 0);
         pdf.setFont('Roboto', 'normal');
         pdf.setFontSize(8); // Set font size too
-        this.addTextWithWrap(pdf, finding.recommendation, margin + halfWidth + 10, currentY + 10, 10, 'normal', halfWidth - 10);
+        this.addTextWithWrap(pdf, finding.recommendation || '', margin + halfWidth + 10, currentY + 10, 10, 'normal', halfWidth - 10);
         
         currentY += maxHeight + spacing;
       } else {
         // Single field if only one exists (full width) - ONLY if it has data
         if (hasSituation) {
-          const situationHeight = this.calculateTextHeight(pdf, finding.currentSituation, 10, fieldWidth - 12) + labelHeight + boxPadding + 5; // Removed max limit
+          const situationHeight = this.calculateTextHeight(pdf, finding.currentSituation || '', 10, fieldWidth - 12) + labelHeight + boxPadding + 5; // Removed max limit
           pdf.setFillColor(240, 240, 240); // Darker gray
           pdf.rect(margin, currentY, fieldWidth, situationHeight, 'F');
           pdf.setTextColor(0, 0, 0); // BLACK TEXT
@@ -586,12 +593,12 @@ export class ReactPdfService {
           pdf.setTextColor(0, 0, 0);
           pdf.setFont('Roboto', 'normal');
           pdf.setFontSize(8); // Set font size too
-          this.addTextWithWrap(pdf, finding.currentSituation, margin + 5, currentY + 10, 10, 'normal', fieldWidth - 10);
+          this.addTextWithWrap(pdf, finding.currentSituation || '', margin + 5, currentY + 10, 10, 'normal', fieldWidth - 10);
           currentY += situationHeight + spacing;
         }
         
         if (hasRecommendation) {
-          const recHeight = this.calculateTextHeight(pdf, finding.recommendation, 10, fieldWidth - 12) + labelHeight + boxPadding + 5; // Removed max limit
+          const recHeight = this.calculateTextHeight(pdf, finding.recommendation || '', 10, fieldWidth - 12) + labelHeight + boxPadding + 5; // Removed max limit
           pdf.setFillColor(240, 240, 240); // Darker gray
           pdf.rect(margin, currentY, fieldWidth, recHeight, 'F');
           pdf.setTextColor(0, 0, 0); // BLACK TEXT
@@ -602,14 +609,14 @@ export class ReactPdfService {
           pdf.setTextColor(0, 0, 0);
           pdf.setFont('Roboto', 'normal');
           pdf.setFontSize(8); // Set font size too
-          this.addTextWithWrap(pdf, finding.recommendation, margin + 5, currentY + 10, 10, 'normal', fieldWidth - 10);
+          this.addTextWithWrap(pdf, finding.recommendation || '', margin + 5, currentY + 10, 10, 'normal', fieldWidth - 10);
           currentY += recHeight + spacing;
         }
       }
 
       // Legal basis only (ONLY if it has data)
       if (finding.legalBasis && finding.legalBasis.trim()) {
-        const legalHeight = this.calculateTextHeight(pdf, finding.legalBasis, 9, fieldWidth - 12) + labelHeight + boxPadding + 5; // Removed max limit
+        const legalHeight = this.calculateTextHeight(pdf, finding.legalBasis || '', 9, fieldWidth - 12) + labelHeight + boxPadding + 5; // Removed max limit
         pdf.setFillColor(240, 240, 240); // Darker gray
         pdf.rect(margin, currentY, fieldWidth, legalHeight, 'F');
         pdf.setTextColor(0, 0, 0); // BLACK TEXT
@@ -620,7 +627,7 @@ export class ReactPdfService {
         pdf.setTextColor(0, 0, 0);
         pdf.setFont('Roboto', 'normal');
         pdf.setFontSize(8); // Set font size too
-        this.addTextWithWrap(pdf, finding.legalBasis, margin + 5, currentY + 10, 9, 'normal', fieldWidth - 10);
+        this.addTextWithWrap(pdf, finding.legalBasis || '', margin + 5, currentY + 10, 9, 'normal', fieldWidth - 10);
         currentY += legalHeight + spacing;
       }
       
