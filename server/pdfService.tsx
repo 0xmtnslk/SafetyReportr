@@ -306,11 +306,12 @@ export class ReactPdfService {
 
     this.addPageFooter(pdf, pageNumber++, 1);
 
-    // FINDINGS - EACH ON SEPARATE PAGES
+    // FINDINGS - EACH ON SEPARATE PAGES - CLEAN MAPPING
     const findingsBySections = {
-      1: reportData.findings.filter(f => f.section === 1),
-      2: reportData.findings.filter(f => f.section === 2), 
-      3: reportData.findings.filter(f => f.section === 3 || f.section === 4 || (f.isCompleted && f.dangerLevel === 'low')) // Include completed findings logic
+      1: reportData.findings.filter(f => f.section === 1), // Tasarım/İmalat
+      2: reportData.findings.filter(f => f.section === 2), // İş Sağlığı  
+      3: reportData.findings.filter(f => f.section === 3), // Tamamlanmış
+      4: reportData.findings.filter(f => f.section === 4)  // Diğer tamamlanmış (varsa)
     };
 
     // DEBUG: Check what findings we have
@@ -318,6 +319,7 @@ export class ReactPdfService {
     console.log('Section 1 (Tasarım/İmalat):', findingsBySections[1].length, 'findings');
     console.log('Section 2 (İş Sağlığı):', findingsBySections[2].length, 'findings');
     console.log('Section 3 (Tamamlanmış):', findingsBySections[3].length, 'findings');
+    console.log('Section 4 (Diğer):', findingsBySections[4].length, 'findings');
     console.log('All findings:', reportData.findings.map(f => ({ section: f.section, title: f.title })));
 
     // Section 1 findings → PDF BÖLÜM 2
@@ -348,12 +350,13 @@ export class ReactPdfService {
       );
     }
 
-    // Section 3 findings → PDF BÖLÜM 4
-    if (findingsBySections[3].length > 0) {
+    // Section 3 findings → PDF BÖLÜM 4 (sadece section 3)
+    const allCompletedFindings = [...findingsBySections[3], ...findingsBySections[4]];
+    if (allCompletedFindings.length > 0) {
       await this.addSectionContent(
         pdf, 
         'BÖLÜM 4 - TAMAMLANMIŞ BULGULAR', 
-        findingsBySections[3], 
+        allCompletedFindings, 
         70, 
         margin, 
         contentWidth, 
