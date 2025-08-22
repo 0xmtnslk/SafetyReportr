@@ -265,8 +265,11 @@ export class TemplatePdfService {
       } else if (imageUrl.startsWith('http')) {
         // External URL
         imageData = await this.optimizeImage(imageUrl);
+      } else if (imageUrl.startsWith('/images/') || imageUrl.startsWith('/uploads/')) {
+        // Cloud storage or local images - process through optimizeImage
+        imageData = await this.optimizeImage(imageUrl);
       } else {
-        // Local path or base64
+        // Base64 data
         imageData = imageUrl;
       }
 
