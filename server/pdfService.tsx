@@ -244,13 +244,15 @@ export class ReactPdfService {
 
     currentY += 20;
 
-    // Content background - FIXED HEIGHT
-    const summaryBoxHeight = 120; // Fixed height box
+    // Content background - DYNAMIC HEIGHT
+    const summary = reportData.managementSummary || 'Yönetici özeti henüz eklenmemiştir.';
+    const textHeight = this.calculateTextHeight(pdf, summary, 11, contentWidth - 16);
+    const summaryBoxHeight = Math.max(textHeight + 24, 60); // Dynamic with minimum height
+    
     pdf.setFillColor(248, 250, 252);
     pdf.rect(margin, currentY, contentWidth, summaryBoxHeight, 'F');
     
     pdf.setTextColor(0, 0, 0);
-    const summary = reportData.managementSummary || 'Yönetici özeti henüz eklenmemiştir.';
     
     // Use text wrapping for summary
     this.addTextWithWrap(
@@ -271,7 +273,7 @@ export class ReactPdfService {
     const findingsBySections = {
       1: reportData.findings.filter(f => f.section === 1),
       2: reportData.findings.filter(f => f.section === 2), 
-      3: reportData.findings.filter(f => f.section === 3)
+      3: reportData.findings.filter(f => f.section === 3 || f.section === 4 || (f.isCompleted && f.dangerLevel === 'low')) // Include completed findings logic
     };
 
     // Section 1 - Tasarim/Imalat/Montaj Hatalari
@@ -334,13 +336,15 @@ export class ReactPdfService {
 
     currentY += 20;
 
-    // Content - FIXED HEIGHT
-    const evalBoxHeight = 150; // Fixed height box
+    // Content - DYNAMIC HEIGHT
+    const evaluation = reportData.generalEvaluation || 'Genel değerlendirme henüz eklenmemiştir.';
+    const evalTextHeight = this.calculateTextHeight(pdf, evaluation, 11, contentWidth - 16);
+    const evalBoxHeight = Math.max(evalTextHeight + 24, 80); // Dynamic with minimum height
+    
     pdf.setFillColor(248, 250, 252);
     pdf.rect(margin, currentY, contentWidth, evalBoxHeight, 'F');
     
     pdf.setTextColor(0, 0, 0);
-    const evaluation = reportData.generalEvaluation || 'Genel değerlendirme henüz eklenmemiştir.';
     
     // Use text wrapping for evaluation
     this.addTextWithWrap(
@@ -475,8 +479,8 @@ export class ReactPdfService {
       
       // Current situation & Recommendation side by side (only if BOTH exist and have data)
       if (hasSituation && hasRecommendation) {
-        const situationHeight = Math.min(this.calculateTextHeight(pdf, finding.currentSituation, 10, halfWidth - 10) + labelHeight + boxPadding, 35);
-        const recHeight = Math.min(this.calculateTextHeight(pdf, finding.recommendation, 10, halfWidth - 10) + labelHeight + boxPadding, 35);
+        const situationHeight = this.calculateTextHeight(pdf, finding.currentSituation, 10, halfWidth - 10) + labelHeight + boxPadding + 5; // Removed max limit
+        const recHeight = this.calculateTextHeight(pdf, finding.recommendation, 10, halfWidth - 10) + labelHeight + boxPadding + 5; // Removed max limit
         maxHeight = Math.max(situationHeight, recHeight);
         
         // Left: Current situation - DARKER BACKGROUND
@@ -508,7 +512,7 @@ export class ReactPdfService {
       } else {
         // Single field if only one exists (full width) - ONLY if it has data
         if (hasSituation) {
-          const situationHeight = Math.min(this.calculateTextHeight(pdf, finding.currentSituation, 10, fieldWidth - 12) + labelHeight + boxPadding, 30);
+          const situationHeight = this.calculateTextHeight(pdf, finding.currentSituation, 10, fieldWidth - 12) + labelHeight + boxPadding + 5; // Removed max limit
           pdf.setFillColor(240, 240, 240); // Darker gray
           pdf.rect(margin, currentY, fieldWidth, situationHeight, 'F');
           pdf.setTextColor(0, 0, 0); // BLACK TEXT
@@ -524,7 +528,7 @@ export class ReactPdfService {
         }
         
         if (hasRecommendation) {
-          const recHeight = Math.min(this.calculateTextHeight(pdf, finding.recommendation, 10, fieldWidth - 12) + labelHeight + boxPadding, 30);
+          const recHeight = this.calculateTextHeight(pdf, finding.recommendation, 10, fieldWidth - 12) + labelHeight + boxPadding + 5; // Removed max limit
           pdf.setFillColor(240, 240, 240); // Darker gray
           pdf.rect(margin, currentY, fieldWidth, recHeight, 'F');
           pdf.setTextColor(0, 0, 0); // BLACK TEXT
@@ -542,7 +546,7 @@ export class ReactPdfService {
 
       // Legal basis only (ONLY if it has data)
       if (finding.legalBasis && finding.legalBasis.trim()) {
-        const legalHeight = Math.min(this.calculateTextHeight(pdf, finding.legalBasis, 9, fieldWidth - 12) + labelHeight + boxPadding, 25);
+        const legalHeight = this.calculateTextHeight(pdf, finding.legalBasis, 9, fieldWidth - 12) + labelHeight + boxPadding + 5; // Removed max limit
         pdf.setFillColor(240, 240, 240); // Darker gray
         pdf.rect(margin, currentY, fieldWidth, legalHeight, 'F');
         pdf.setTextColor(0, 0, 0); // BLACK TEXT
@@ -559,7 +563,7 @@ export class ReactPdfService {
       
       // Process steps (ONLY if they exist and have data)
       if (finding.processSteps && finding.processSteps.length > 0) {
-        const processHeight = Math.min((finding.processSteps.length * 10) + labelHeight + boxPadding, 40);
+        const processHeight = (finding.processSteps.length * 10) + labelHeight + boxPadding + 10; // Removed max limit, dynamic height
         pdf.setFillColor(240, 240, 240); // Darker gray
         pdf.rect(margin, currentY, fieldWidth, processHeight, 'F');
         pdf.setTextColor(0, 0, 0); // BLACK TEXT
@@ -608,9 +612,8 @@ export class ReactPdfService {
         pdf.text('Fotoğraflar:', margin, currentY);
         currentY += 8; // Reduced from 12
         
-        // Images layout - side by side if 2, centered if 1
-        const totalWidth = (imagesCount * imageWidth) + ((imagesCount - 1) * imageSpacing);
-        const startX = margin + (fieldWidth - totalWidth) / 2;
+        // Images layout - side by side starting from left (not centered)
+        const startX = margin;
         
         for (let i = 0; i < imagesCount; i++) {
           const xOffset = startX + (i * (imageWidth + imageSpacing));
