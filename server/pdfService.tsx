@@ -58,7 +58,7 @@ export class ReactPdfService {
   // REMOVED: No need for character replacement with Roboto font!
   // Roboto font properly supports Turkish characters: İ, ı, Ğ, ğ, Ş, ş, Ü, ü, Ö, ö, Ç, ç
 
-  // AGGRESSIVE BLACK TEXT ENFORCER - Force all text to be black
+  // AGGRESSIVE BLACK TEXT ENFORCER with PAGE BREAK support
   private addTextWithWrap(
     pdf: jsPDF, 
     text: string, 
@@ -66,7 +66,8 @@ export class ReactPdfService {
     y: number, 
     fontSize: number = 11, 
     fontStyle: string = 'normal', 
-    maxWidth: number = 170
+    maxWidth: number = 170,
+    enablePageBreak: boolean = false
   ): number {
     if (!text) return y;
     
@@ -78,18 +79,28 @@ export class ReactPdfService {
     const lines = pdf.splitTextToSize(text, maxWidth);
     
     const lineHeight = fontSize * 0.6; // Better line spacing
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    let currentY = y;
 
     lines.forEach((line: string, index: number) => {
       if (line.trim()) {
+        // Check if we need a page break
+        if (enablePageBreak && currentY + lineHeight > pageHeight - 80) {
+          pdf.addPage();
+          this.addPageHeader(pdf);
+          currentY = 70; // Start after header
+        }
+        
         // FORCE BLACK COLOR for each individual line
         pdf.setTextColor(0, 0, 0);
         pdf.setFont('Roboto', fontStyle); // Reset font too
-        pdf.text(line, x, y + (index * lineHeight));
+        pdf.text(line, x, currentY);
+        currentY += lineHeight;
       }
     });
 
     // Return the actual Y position after text
-    return y + (lines.length * lineHeight);
+    return currentY;
   }
   
   // NEW: Calculate required height for text (for dynamic boxes)
@@ -244,28 +255,54 @@ export class ReactPdfService {
 
     currentY += 20;
 
-    // Content background - DYNAMIC HEIGHT
+    // Content background - SMART HEIGHT with page break support
     const summary = reportData.managementSummary || 'Yönetici özeti henüz eklenmemiştir.';
     const textHeight = this.calculateTextHeight(pdf, summary, 11, contentWidth - 16);
-    const summaryBoxHeight = Math.max(textHeight + 24, 60); // Dynamic with minimum height
+    const maxSinglePageHeight = pageHeight - currentY - 100; // Space for footer
     
-    pdf.setFillColor(248, 250, 252);
-    pdf.rect(margin, currentY, contentWidth, summaryBoxHeight, 'F');
-    
-    pdf.setTextColor(0, 0, 0);
-    
-    // Use text wrapping for summary
-    this.addTextWithWrap(
-      pdf, 
-      summary, 
-      margin + 8, 
-      currentY + 12, 
-      11, 
-      'normal', 
-      contentWidth - 16
-    );
-    
-    currentY += summaryBoxHeight;
+    if (textHeight > maxSinglePageHeight) {
+      // Long text - use minimal box and enable page breaks
+      const summaryBoxHeight = 60;
+      pdf.setFillColor(248, 250, 252);
+      pdf.rect(margin, currentY, contentWidth, summaryBoxHeight, 'F');
+      
+      pdf.setTextColor(0, 0, 0);
+      
+      // Use text wrapping with page break for long text
+      const finalY = this.addTextWithWrap(
+        pdf, 
+        summary, 
+        margin + 8, 
+        currentY + 12, 
+        11, 
+        'normal', 
+        contentWidth - 16,
+        true // Enable page break for long text
+      );
+      
+      currentY = finalY + 10;
+    } else {
+      // Short text - use dynamic height box
+      const summaryBoxHeight = Math.max(textHeight + 24, 60);
+      pdf.setFillColor(248, 250, 252);
+      pdf.rect(margin, currentY, contentWidth, summaryBoxHeight, 'F');
+      
+      pdf.setTextColor(0, 0, 0);
+      
+      // Use normal text wrapping
+      this.addTextWithWrap(
+        pdf, 
+        summary, 
+        margin + 8, 
+        currentY + 12, 
+        11, 
+        'normal', 
+        contentWidth - 16,
+        false // No page break needed
+      );
+      
+      currentY += summaryBoxHeight;
+    }
 
     this.addPageFooter(pdf, pageNumber++, 1);
 
@@ -276,11 +313,11 @@ export class ReactPdfService {
       3: reportData.findings.filter(f => f.section === 3 || f.section === 4 || (f.isCompleted && f.dangerLevel === 'low')) // Include completed findings logic
     };
 
-    // Section 1 - Tasarim/Imalat/Montaj Hatalari
+    // Section 1 - Tasarim/Imalat/Montaj Hatalari -> BÖLÜM 2
     if (findingsBySections[1].length > 0) {
       await this.addSectionContent(
         pdf, 
-        'BÖLÜM 1 - TASARIM/İMALAT/MONTAJ HATALARI', 
+        'BÖLÜM 2 - TASARIM/İMALAT/MONTAJ HATALARI', 
         findingsBySections[1], 
         70, 
         margin, 
@@ -290,11 +327,11 @@ export class ReactPdfService {
       );
     }
 
-    // Section 2 - Is Sagligi ve Guvenligi Bulgulari  
+    // Section 2 - Is Sagligi ve Guvenligi Bulgulari -> BÖLÜM 3
     if (findingsBySections[2].length > 0) {
       await this.addSectionContent(
         pdf, 
-        'BÖLÜM 2 - İŞ SAĞLIĞI VE GÜVENLİĞİ BULGULARI', 
+        'BÖLÜM 3 - İŞ SAĞLIĞI VE GÜVENLİĞİ BULGULARI', 
         findingsBySections[2], 
         70, 
         margin, 
@@ -304,11 +341,11 @@ export class ReactPdfService {
       );
     }
 
-    // Section 3 - Tamamlanmis Bulgular (with original section references)
+    // Section 3/4 - Tamamlanmis Bulgular -> BÖLÜM 4
     if (findingsBySections[3].length > 0) {
       await this.addSectionContent(
         pdf, 
-        'BÖLÜM 3 - TAMAMLANMIŞ BULGULAR', 
+        'BÖLÜM 4 - TAMAMLANMIŞ BULGULAR', 
         findingsBySections[3], 
         70, 
         margin, 
@@ -336,28 +373,54 @@ export class ReactPdfService {
 
     currentY += 20;
 
-    // Content - DYNAMIC HEIGHT
+    // Content - SMART HEIGHT with page break support  
     const evaluation = reportData.generalEvaluation || 'Genel değerlendirme henüz eklenmemiştir.';
     const evalTextHeight = this.calculateTextHeight(pdf, evaluation, 11, contentWidth - 16);
-    const evalBoxHeight = Math.max(evalTextHeight + 24, 80); // Dynamic with minimum height
+    const maxSinglePageHeight = pageHeight - currentY - 100; // Space for footer
     
-    pdf.setFillColor(248, 250, 252);
-    pdf.rect(margin, currentY, contentWidth, evalBoxHeight, 'F');
-    
-    pdf.setTextColor(0, 0, 0);
-    
-    // Use text wrapping for evaluation
-    this.addTextWithWrap(
-      pdf, 
-      evaluation, 
-      margin + 8, 
-      currentY + 12, 
-      11, 
-      'normal', 
-      contentWidth - 16
-    );
-    
-    currentY += evalBoxHeight;
+    if (evalTextHeight > maxSinglePageHeight) {
+      // Long text - use minimal box and enable page breaks
+      const evalBoxHeight = 80;
+      pdf.setFillColor(248, 250, 252);
+      pdf.rect(margin, currentY, contentWidth, evalBoxHeight, 'F');
+      
+      pdf.setTextColor(0, 0, 0);
+      
+      // Use text wrapping with page break for long text
+      const finalY = this.addTextWithWrap(
+        pdf, 
+        evaluation, 
+        margin + 8, 
+        currentY + 12, 
+        11, 
+        'normal', 
+        contentWidth - 16,
+        true // Enable page break for long text
+      );
+      
+      currentY = finalY + 10;
+    } else {
+      // Short text - use dynamic height box
+      const evalBoxHeight = Math.max(evalTextHeight + 24, 80);
+      pdf.setFillColor(248, 250, 252);
+      pdf.rect(margin, currentY, contentWidth, evalBoxHeight, 'F');
+      
+      pdf.setTextColor(0, 0, 0);
+      
+      // Use normal text wrapping
+      this.addTextWithWrap(
+        pdf, 
+        evaluation, 
+        margin + 8, 
+        currentY + 12, 
+        11, 
+        'normal', 
+        contentWidth - 16,
+        false // No page break needed
+      );
+      
+      currentY += evalBoxHeight;
+    }
 
     this.addPageFooter(pdf, pageNumber++, 1);
 
