@@ -314,13 +314,6 @@ export class ReactPdfService {
       4: reportData.findings.filter(f => f.section === 4)  // Diğer tamamlanmış (varsa)
     };
 
-    // DEBUG: Check what findings we have
-    console.log('PDF DEBUG - Findings by sections:');
-    console.log('Section 1 (Tasarım/İmalat):', findingsBySections[1].length, 'findings');
-    console.log('Section 2 (İş Sağlığı):', findingsBySections[2].length, 'findings');
-    console.log('Section 3 (Tamamlanmış):', findingsBySections[3].length, 'findings');
-    console.log('Section 4 (Diğer):', findingsBySections[4].length, 'findings');
-    console.log('All findings:', reportData.findings.map(f => ({ section: f.section, title: f.title })));
 
     // UI Section 2 → PDF BÖLÜM 2 (Tasarım/İmalat/Montaj)
     if (findingsBySections[2].length > 0) {
