@@ -9,7 +9,7 @@ export default function Navigation() {
   const { user, logout } = useAuth();
 
   const navItems = [
-    { path: "/", label: "Ana Sayfa", icon: Home },
+    { path: "/dashboard", label: "Ana Sayfa", icon: Home },
     { path: "/create-report", label: "Yeni Rapor", icon: Plus },
     { path: "/reports", label: "Raporlar", icon: FileText },
     ...(user?.role === 'admin' ? [{ path: "/admin", label: "Admin Panel", icon: Shield }] : []),
@@ -64,7 +64,7 @@ export default function Navigation() {
           <div className="flex space-x-1 overflow-x-auto scrollbar-hide">
             {navItems.map((item) => {
               const Icon = item.icon;
-              const isActive = location === item.path;
+              const isActive = (item.path === "/dashboard" && (location === "/" || location === "/dashboard")) || location === item.path;
               
               return (
                 <button
