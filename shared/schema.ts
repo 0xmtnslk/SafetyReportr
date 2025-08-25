@@ -8,12 +8,28 @@ export const users = pgTable("users", {
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
   fullName: text("full_name").notNull(),
-  role: text("role").notNull().default("user"), // "admin" | "user"
-  location: text("location"), // Hospital/Project location for user access
+  role: text("role").notNull().default("user"), 
+  // Roles: "central_admin" | "location_manager" | "safety_specialist" | "occupational_physician" | "technical_manager" | "user"
+  position: text("position"), // e.g., "İş Güvenliği Uzmanı", "Teknik Hizmetler Müdürü", "İşyeri Hekimi"
+  locationId: varchar("location_id"), // Will reference locations.id
+  location: text("location"), // Legacy field - to be deprecated
   firstLogin: boolean("first_login").default(true), // Force password change on first login
   resetToken: text("reset_token"), // Password reset token
   resetTokenExpiry: timestamp("reset_token_expiry"), // Token expiration
   isActive: boolean("is_active").default(true), // Admin can deactivate users
+  createdBy: varchar("created_by"), // Will reference users.id
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Locations table - Hospitals, Medical Centers etc.
+export const locations = pgTable("locations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(), // e.g., "İstinye Üniversite Topkapı Liv Hastanesi"
+  address: text("address").notNull(), // Full address
+  type: text("type").notNull().default("hospital"), // hospital, medical_center, clinic
+  isActive: boolean("is_active").default(true),
+  createdBy: varchar("created_by").references(() => users.id), // Created by central management
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -24,6 +40,7 @@ export const reports = pgTable("reports", {
   reportDate: timestamp("report_date").notNull(),
   reporter: text("reporter").notNull(),
   projectLocation: text("project_location").notNull(),
+  locationId: varchar("location_id").references(() => locations.id), // Link to location
   status: text("status").notNull().default("draft"), // draft, in_progress, completed
   managementSummary: text("management_summary"),
   generalEvaluation: text("general_evaluation"),
@@ -88,13 +105,22 @@ export const pdfTemplateFields = pgTable("pdf_template_fields", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Insert schemas
+// Insert schemas  
+export const insertLocationSchema = createInsertSchema(locations).pick({
+  name: true,
+  address: true,
+  type: true,
+  isActive: true,
+});
+
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
   fullName: true,
   role: true,
-  location: true,
+  position: true,
+  locationId: true,
+  location: true, // Keep for backward compatibility
   isActive: true,
 });
 
@@ -132,6 +158,7 @@ export const insertReportSchema = createInsertSchema(reports).pick({
   reportDate: true,
   reporter: true,
   projectLocation: true,
+  locationId: true,
   status: true,
   managementSummary: true,
   generalEvaluation: true,
@@ -185,6 +212,9 @@ export const insertPdfTemplateFieldSchema = createInsertSchema(pdfTemplateFields
 });
 
 // Types
+export type Location = typeof locations.$inferSelect;
+export type InsertLocation = z.infer<typeof insertLocationSchema>;
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type AdminCreateUser = z.infer<typeof adminCreateUserSchema>;
