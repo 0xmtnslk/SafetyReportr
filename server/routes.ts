@@ -59,6 +59,56 @@ const requireAdmin = (req: Request, res: Response, next: NextFunction) => {
   next();
 };
 
+// Central Management (can create hospitals and assign specialists)
+const requireCentralManagement = (req: Request, res: Response, next: NextFunction) => {
+  const user = (req as any).user;
+  if (!user || !['central_admin', 'location_manager'].includes(user.role)) {
+    return res.status(403).json({ message: 'Merkez yönetim yetkisi gerekli' });
+  }
+  next();
+};
+
+// Safety Specialists (can create reports and manage users)
+const requireSafetySpecialist = (req: Request, res: Response, next: NextFunction) => {
+  const user = (req as any).user;
+  if (!user || !['central_admin', 'location_manager', 'safety_specialist'].includes(user.role)) {
+    return res.status(403).json({ message: 'İş güvenliği uzmanı yetkisi gerekli' });
+  }
+  next();
+};
+
+// Technical Staff (can only update process management sections)
+const requireTechnicalAccess = (req: Request, res: Response, next: NextFunction) => {
+  const user = (req as any).user;
+  if (!user || !['central_admin', 'location_manager', 'safety_specialist', 'technical_manager'].includes(user.role)) {
+    return res.status(403).json({ message: 'Teknik erişim yetkisi gerekli' });
+  }
+  next();
+};
+
+// Check if user can edit findings (technical managers can only edit process steps)
+const canEditFinding = async (req: Request, res: Response, next: NextFunction) => {
+  const user = (req as any).user;
+  
+  if (['central_admin', 'location_manager', 'safety_specialist'].includes(user.role)) {
+    return next(); // Full editing rights
+  }
+  
+  if (user.role === 'technical_manager') {
+    // Only allow editing processSteps field
+    const allowedFields = ['processSteps'];
+    const requestedFields = Object.keys(req.body);
+    
+    const hasUnauthorizedFields = requestedFields.some(field => !allowedFields.includes(field));
+    if (hasUnauthorizedFields) {
+      return res.status(403).json({ message: 'Sadece süreç yönetimi güncelleyebilirsiniz' });
+    }
+    return next();
+  }
+  
+  return res.status(403).json({ message: 'Bulgu düzenleme yetkisi yok' });
+};
+
 // Middleware to check if password change is required (first login)
 const checkPasswordChangeRequired = async (req: any, res: Response, next: NextFunction) => {
   try {
@@ -91,22 +141,32 @@ const checkPasswordChangeRequired = async (req: any, res: Response, next: NextFu
   }
 };
 
-const requireRole = (role: string) => {
+const requireRole = (roles: string | string[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
     const user = (req as any).user;
-    if (!user || user.role !== role) {
-      return res.status(403).json({ message: `${role} yetkisi gerekli` });
+    const allowedRoles = Array.isArray(roles) ? roles : [roles];
+    
+    if (!user || !allowedRoles.includes(user.role)) {
+      return res.status(403).json({ message: `Gerekli yetki: ${allowedRoles.join(' veya ')}` });
     }
     next();
   };
 };
 
 // Location-based filtering middleware
-const addLocationFilter = (req: Request, res: Response, next: NextFunction) => {
+const addLocationFilter = async (req: Request, res: Response, next: NextFunction) => {
   const user = (req as any).user;
   
-  // Admin sees everything, users only see their location
-  if (user && user.role !== 'admin' && user.location) {
+  // Central admin sees everything
+  if (user && user.role === 'central_admin') {
+    return next();
+  }
+  
+  // Location-based users only see their location data
+  if (user && user.locationId) {
+    (req as any).locationFilter = user.locationId;
+  } else if (user && user.location) {
+    // Legacy location field support
     (req as any).locationFilter = user.location;
   }
   
@@ -222,8 +282,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ADMIN USER MANAGEMENT ROUTES
   
-  // Get all users (Admin only)
-  app.get("/api/admin/users", authenticateToken, requireAdmin, async (req, res) => {
+  // Get all users (Central Management only)
+  app.get("/api/admin/users", authenticateToken, requireCentralManagement, async (req, res) => {
     try {
       const users = await storage.getAllUsers();
       // Don't send passwords in response
@@ -238,10 +298,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create new user (Admin only)
-  app.post("/api/admin/users", authenticateToken, requireAdmin, async (req, res) => {
+  // Create new user (Safety Specialists can create normal users)
+  app.post("/api/admin/users", authenticateToken, requireSafetySpecialist, async (req, res) => {
     try {
+      const currentUser = (req as any).user;
       const userData = adminCreateUserSchema.parse(req.body);
+      
+      // Check authorization for creating different role types
+      if (userData.role === 'central_admin' && !['central_admin'].includes(currentUser.role || '')) {
+        return res.status(403).json({ message: 'Sadece merkez yönetim central admin oluşturabilir' });
+      }
+      
+      if (['location_manager', 'safety_specialist'].includes(userData.role || '') && 
+          !['central_admin', 'location_manager'].includes(currentUser.role || '')) {
+        return res.status(403).json({ message: 'Yönetici rolleri oluşturmak için merkez yönetim yetkisi gerekli' });
+      }
       
       // Check if user already exists
       const existingUser = await storage.getUserByUsername(userData.username);
@@ -252,12 +323,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Generate password if not provided
       const password = userData.password || generateRandomPassword(10);
       
-      const newUser = await storage.createUser({
+      // Set creator and location
+      const newUserData = {
         ...userData,
-        password
-      });
+        password,
+        createdBy: currentUser.id,
+        // If creator has a location and no location specified, use creator's location
+        locationId: userData.locationId || currentUser.locationId
+      };
+      
+      const newUser = await storage.createUser(newUserData);
 
-      // Don't send password in response, but include it in success message for admin
+      // Don't send password in response, but include it in success message
       const { password: _, resetToken, resetTokenExpiry, ...userResponse } = newUser;
       
       res.status(201).json({ 
@@ -274,16 +351,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Update user (Admin only)
-  app.put("/api/admin/users/:id", authenticateToken, requireAdmin, async (req, res) => {
+  // Update user (Safety Specialists can update users)
+  app.put("/api/admin/users/:id", authenticateToken, requireSafetySpecialist, async (req, res) => {
     try {
       const { id } = req.params;
+      const currentUser = (req as any).user;
       const updateData = req.body;
 
       // Validate user exists
       const existingUser = await storage.getUser(id);
       if (!existingUser) {
         return res.status(404).json({ message: 'Kullanıcı bulunamadı' });
+      }
+
+      // Check authorization for updating different role types
+      if (updateData.role === 'central_admin' && !['central_admin'].includes(currentUser.role || '')) {
+        return res.status(403).json({ message: 'Central admin rolünü sadece central admin değiştirebilir' });
+      }
+      
+      if (['location_manager', 'safety_specialist'].includes(updateData.role || '') && 
+          !['central_admin', 'location_manager'].includes(currentUser.role || '')) {
+        return res.status(403).json({ message: 'Yönetici rollerini değiştirmek için merkez yönetim yetkisi gerekli' });
       }
 
       // Check username uniqueness if username is being updated
@@ -415,16 +503,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Reports CRUD routes
-  app.get("/api/reports", authenticateToken, checkPasswordChangeRequired, async (req, res) => {
+  app.get("/api/reports", authenticateToken, checkPasswordChangeRequired, addLocationFilter, async (req, res) => {
     try {
       const currentUser = (req as any).user;
+      const locationFilter = (req as any).locationFilter;
       let reports: any[];
 
-      // Admin users can see all reports, regular users see their own reports + location reports  
-      if (currentUser.role === 'admin') {
+      // Central admin sees all reports
+      if (currentUser.role === 'central_admin') {
         reports = await storage.getAllReports();
+      } else if (locationFilter) {
+        // Location-based users see their location reports
+        reports = await storage.getUserAccessibleReports(currentUser.id, locationFilter);
       } else {
-        reports = await storage.getUserAccessibleReports(currentUser.id, currentUser.location);
+        // Fallback to user's own reports
+        reports = await storage.getUserReports(currentUser.id);
       }
 
       res.json(reports);
@@ -448,7 +541,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/reports", authenticateToken, checkPasswordChangeRequired, async (req: any, res) => {
+  app.post("/api/reports", authenticateToken, checkPasswordChangeRequired, requireSafetySpecialist, async (req: any, res) => {
     try {
       const validation = insertReportSchema.safeParse(req.body);
       if (!validation.success) {
@@ -466,7 +559,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/reports/:id", authenticateToken, checkPasswordChangeRequired, async (req, res) => {
+  app.put("/api/reports/:id", authenticateToken, checkPasswordChangeRequired, requireSafetySpecialist, async (req, res) => {
     try {
       const validation = insertReportSchema.partial().safeParse(req.body);
       if (!validation.success) {
@@ -485,7 +578,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/reports/:id", authenticateToken, checkPasswordChangeRequired, async (req, res) => {
+  app.delete("/api/reports/:id", authenticateToken, checkPasswordChangeRequired, requireSafetySpecialist, async (req, res) => {
     try {
       const success = await storage.deleteReport(req.params.id);
       if (success) {
@@ -510,7 +603,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/reports/:reportId/findings", authenticateToken, checkPasswordChangeRequired, async (req, res) => {
+  app.post("/api/reports/:reportId/findings", authenticateToken, checkPasswordChangeRequired, requireSafetySpecialist, async (req, res) => {
     try {
       const validation = insertFindingSchema.safeParse({
         ...req.body,
@@ -529,7 +622,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/findings/:id", authenticateToken, checkPasswordChangeRequired, async (req, res) => {
+  app.put("/api/findings/:id", authenticateToken, checkPasswordChangeRequired, canEditFinding, async (req, res) => {
     try {
       const validation = insertFindingSchema.partial().safeParse(req.body);
       if (!validation.success) {
@@ -548,7 +641,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/findings/:id", authenticateToken, checkPasswordChangeRequired, async (req, res) => {
+  app.delete("/api/findings/:id", authenticateToken, checkPasswordChangeRequired, requireSafetySpecialist, async (req, res) => {
     try {
       const success = await storage.deleteFinding(req.params.id);
       if (success) {
@@ -650,16 +743,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/stats", authenticateToken, checkPasswordChangeRequired, async (req, res) => {
+  app.get("/api/stats", authenticateToken, checkPasswordChangeRequired, addLocationFilter, async (req, res) => {
     try {
       const currentUser = (req as any).user;
+      const locationFilter = (req as any).locationFilter;
       let stats: any;
 
-      // Admin users get global stats, regular users get their own + location stats  
-      if (currentUser.role === 'admin') {
+      // Central admin gets global stats
+      if (currentUser.role === 'central_admin') {
         stats = await storage.getStats();
+      } else if (locationFilter) {
+        // Location-based users get their location stats
+        stats = await storage.getUserLocationStats(currentUser.id, locationFilter);
       } else {
-        stats = await storage.getUserLocationStats(currentUser.id, currentUser.location);
+        // Fallback to user's own stats
+        stats = await storage.getReportStats(currentUser.id);
       }
 
       res.json(stats);

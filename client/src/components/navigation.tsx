@@ -4,16 +4,48 @@ import { HardHat, Home, Plus, FileText, LogOut, Shield } from "lucide-react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 
+// Helper function to get role display names
+const getRoleDisplayName = (role?: string) => {
+  const roleNames: Record<string, string> = {
+    'central_admin': 'Merkez Yönetim',
+    'location_manager': 'Lokasyon Yöneticisi',
+    'safety_specialist': 'İş Güvenliği Uzmanı',
+    'occupational_physician': 'İşyeri Hekimi',
+    'technical_manager': 'Teknik Müdür',
+    'user': 'Kullanıcı'
+  };
+  return roleNames[role || ''] || role || 'Kullanıcı';
+};
+
 export default function Navigation() {
   const [location, setLocation] = useLocation();
   const { user, logout } = useAuth();
 
-  const navItems = [
-    { path: "/dashboard", label: "Ana Sayfa", icon: Home },
-    { path: "/create-report", label: "Yeni Rapor", icon: Plus },
-    { path: "/reports", label: "Raporlar", icon: FileText },
-    ...(user?.role === 'admin' ? [{ path: "/admin", label: "Admin Panel", icon: Shield }] : []),
-  ];
+  // Role-based navigation items
+  const getNavItems = () => {
+    const baseItems = [
+      { path: "/dashboard", label: "Ana Sayfa", icon: Home },
+    ];
+    
+    // Safety specialists and above can create reports
+    if (['central_admin', 'location_manager', 'safety_specialist'].includes(user?.role || '')) {
+      baseItems.push(
+        { path: "/create-report", label: "Yeni Rapor", icon: Plus },
+      );
+    }
+    
+    // All authenticated users can view reports
+    baseItems.push({ path: "/reports", label: "Raporlar", icon: FileText });
+    
+    // Central management and location managers can access admin panel
+    if (['central_admin', 'location_manager', 'safety_specialist'].includes(user?.role || '')) {
+      baseItems.push({ path: "/admin", label: "Yönetim Panel", icon: Shield });
+    }
+    
+    return baseItems;
+  };
+
+  const navItems = getNavItems();
 
   return (
     <>
@@ -40,9 +72,14 @@ export default function Navigation() {
                     {(user?.fullName || user?.username || 'U').charAt(0).toUpperCase()}
                   </span>
                 </div>
-                <span className="text-sm font-medium text-gray-700" data-testid="user-name">
-                  {user?.fullName || user?.username}
-                </span>
+                <div className="flex flex-col text-left">
+                  <span className="text-sm font-medium text-gray-700" data-testid="user-name">
+                    {user?.fullName || user?.username}
+                  </span>
+                  <span className="text-xs text-gray-500" data-testid="user-role">
+                    {getRoleDisplayName(user?.role)}
+                  </span>
+                </div>
               </div>
               <Button
                 variant="ghost"
