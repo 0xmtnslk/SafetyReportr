@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Users, UserPlus, Edit, Trash2, Shield, MapPin, Key, Building2, Phone, Mail, Plus } from "lucide-react";
+import { Users, UserPlus, Edit, Trash2, Shield, MapPin, Key, Building2, Phone, Mail, Plus, Search, X } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -166,6 +166,40 @@ function SearchableSelect({ value, onValueChange, options, placeholder, disabled
   );
 }
 
+// Reusable Search Input Component
+interface SearchInputProps {
+  placeholder: string;
+  value: string;
+  onChange: (value: string) => void;
+  className?: string;
+  "data-testid"?: string;
+}
+
+function SearchInput({ placeholder, value, onChange, className = "", "data-testid": testId }: SearchInputProps) {
+  return (
+    <div className={`relative ${className}`}>
+      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+      <Input
+        type="text"
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="pl-10 pr-10"
+        data-testid={testId}
+      />
+      {value && (
+        <button
+          onClick={() => onChange("")}
+          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+          data-testid="clear-search"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      )}
+    </div>
+  );
+}
+
 // User type from shared schema
 interface User {
   id: string;
@@ -274,6 +308,10 @@ export default function AdminPanel() {
   const [selectedCreateCity, setSelectedCreateCity] = useState<string>("");
   const [selectedEditCity, setSelectedEditCity] = useState<string>("");
   
+  // Search states
+  const [hospitalSearch, setHospitalSearch] = useState<string>("");
+  const [userSearch, setUserSearch] = useState<string>("");
+  
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -286,6 +324,25 @@ export default function AdminPanel() {
   const { data: hospitals, isLoading: isHospitalsLoading, error: hospitalsError } = useQuery<Location[]>({
     queryKey: ['/api/admin/hospitals'],
   });
+
+  // Filtered data based on search
+  const filteredUsers = (users || []).filter(user => 
+    user.fullName.toLowerCase().includes(userSearch.toLowerCase()) ||
+    user.username.toLowerCase().includes(userSearch.toLowerCase()) ||
+    user.email.toLowerCase().includes(userSearch.toLowerCase()) ||
+    user.phone.toLowerCase().includes(userSearch.toLowerCase()) ||
+    getRoleDisplayName(user.role).toLowerCase().includes(userSearch.toLowerCase())
+  );
+
+  const filteredHospitals = (hospitals || []).filter(hospital => 
+    hospital.name.toLowerCase().includes(hospitalSearch.toLowerCase()) ||
+    hospital.shortName?.toLowerCase().includes(hospitalSearch.toLowerCase()) ||
+    hospital.city?.toLowerCase().includes(hospitalSearch.toLowerCase()) ||
+    hospital.district?.toLowerCase().includes(hospitalSearch.toLowerCase()) ||
+    hospital.address?.toLowerCase().includes(hospitalSearch.toLowerCase()) ||
+    hospital.phone?.toLowerCase().includes(hospitalSearch.toLowerCase()) ||
+    hospital.email?.toLowerCase().includes(hospitalSearch.toLowerCase())
+  );
 
   // Create user mutation
   const createUserMutation = useMutation({
@@ -649,22 +706,30 @@ export default function AdminPanel() {
             </Card>
           </div>
 
-          {/* Add User Button */}
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold">Kullanıcılar</h2>
-            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-              <DialogTrigger asChild>
-                <Button 
-                  className="flex items-center gap-2" 
-                  onClick={handleCreateDialogOpen}
-                  data-testid="button-add-user"
-                >
-                  <UserPlus className="h-4 w-4" />
-                  Kullanıcı Ekle
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
+          {/* User Management Header and Search */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <h2 className="text-xl font-semibold">Kullanıcılar ({filteredUsers?.length || 0})</h2>
+            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+              <SearchInput
+                placeholder="Kullanıcı, email, telefon veya rol ara..."
+                value={userSearch}
+                onChange={setUserSearch}
+                className="w-full sm:w-80"
+                data-testid="search-users"
+              />
+                <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button 
+                      className="flex items-center gap-2" 
+                      onClick={handleCreateDialogOpen}
+                      data-testid="button-add-user"
+                    >
+                      <UserPlus className="h-4 w-4" />
+                      Kullanıcı Ekle
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
                   <DialogTitle>Yeni Kullanıcı Ekle</DialogTitle>
                   <DialogDescription>
                     Sisteme yeni kullanıcı ekleyin. Şifre belirtilmezse otomatik üretilir.
@@ -810,9 +875,10 @@ export default function AdminPanel() {
                     </div>
                   </form>
                 </Form>
-              </DialogContent>
-            </Dialog>
-          </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            </div>
 
           {/* Users Table */}
           <Card>
@@ -821,13 +887,13 @@ export default function AdminPanel() {
                 <div className="text-center py-8">
                   <p>Kullanıcılar yükleniyor...</p>
                 </div>
-              ) : users?.length === 0 ? (
+              ) : filteredUsers?.length === 0 ? (
                 <div className="text-center py-8">
                   <p className="text-muted-foreground">Hiç kullanıcı bulunamadı.</p>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {users?.map((user) => (
+                  {filteredUsers?.map((user) => (
                     <div 
                       key={user.id}
                       className="flex items-center justify-between p-4 border rounded-lg"
@@ -960,21 +1026,33 @@ export default function AdminPanel() {
           {/* Hospitals Actions */}
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Hastane Yönetimi</CardTitle>
-                  <CardDescription>
-                    Sistem hastanelerini ve sağlık tesislerini yönetin
-                  </CardDescription>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Hastane Yönetimi</CardTitle>
+                    <CardDescription>
+                      Sistem hastanelerini ve sağlık tesislerini yönetin
+                    </CardDescription>
+                  </div>
+                  <Button 
+                    onClick={() => setIsCreateHospitalDialogOpen(true)}
+                    className="flex items-center gap-2"
+                    data-testid="button-add-hospital"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Yeni Hastane
+                  </Button>
                 </div>
-                <Button 
-                  onClick={() => setIsCreateHospitalDialogOpen(true)}
-                  className="flex items-center gap-2"
-                  data-testid="button-add-hospital"
-                >
-                  <Plus className="h-4 w-4" />
-                  Yeni Hastane
-                </Button>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-medium">Hastaneler ({filteredHospitals?.length || 0})</h3>
+                  <SearchInput
+                    placeholder="Hastane adı, şehir, ilçe veya telefon ara..."
+                    value={hospitalSearch}
+                    onChange={setHospitalSearch}
+                    className="w-80"
+                    data-testid="search-hospitals"
+                  />
+                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -992,8 +1070,17 @@ export default function AdminPanel() {
                 </div>
               )}
 
+              {/* No Hospitals Found */}
+              {!isHospitalsLoading && !hospitalsError && filteredHospitals && filteredHospitals.length === 0 && (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">
+                    {hospitalSearch ? "Arama kriterlerine uygun hastane bulunamadı." : "Hiç hastane bulunamadı."}
+                  </p>
+                </div>
+              )}
+
               {/* Hospitals Table */}
-              {hospitals && hospitals.length > 0 && (
+              {filteredHospitals && filteredHospitals.length > 0 && (
                 <div className="rounded-md border">
                   <table className="w-full">
                     <thead>
@@ -1007,7 +1094,7 @@ export default function AdminPanel() {
                       </tr>
                     </thead>
                     <tbody>
-                      {hospitals.map((hospital) => (
+                      {filteredHospitals.map((hospital) => (
                         <tr key={hospital.id} className="border-b">
                           <td className="p-3">
                             <div>
