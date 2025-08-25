@@ -59,19 +59,20 @@ export default function Dashboard() {
   
   // Group reports by hospital
   const groupedReports = useMemo(() => {
-    const filtered = recentReportsData.filter(report => {
+    const hospitalsArray = Array.isArray(hospitals) ? hospitals : [];
+    const filtered = recentReportsData.filter((report: any) => {
       if (!searchTerm) return true;
       const searchLower = searchTerm.toLowerCase();
       return (
         report.reportNumber?.toLowerCase().includes(searchLower) ||
         report.reporter?.toLowerCase().includes(searchLower) ||
         report.location?.toLowerCase().includes(searchLower) ||
-        hospitals.find(h => h.id === report.locationId)?.name.toLowerCase().includes(searchLower)
+        hospitalsArray.find((h: any) => h.id === report.locationId)?.name.toLowerCase().includes(searchLower)
       );
     });
 
-    const groups = filtered.reduce((acc, report) => {
-      const hospital = hospitals.find(h => h.id === report.locationId);
+    const groups = filtered.reduce((acc: any, report: any) => {
+      const hospital = hospitalsArray.find((h: any) => h.id === report.locationId);
       const hospitalName = hospital?.name || 'Belirtilmemiş Kuruluş';
       const hospitalId = report.locationId || 'unknown';
       
@@ -88,10 +89,11 @@ export default function Dashboard() {
 
     // Sort hospitals by name and reports by date (newest first)
     return Object.entries(groups)
-      .map(([hospitalId, data]) => ({
+      .map(([hospitalId, data]: [string, any]) => ({
         hospitalId,
-        ...data,
-        reports: data.reports.sort((a, b) => new Date(b.reportDate).getTime() - new Date(a.reportDate).getTime())
+        hospitalName: data.hospitalName,
+        hospitalInfo: data.hospitalInfo,
+        reports: data.reports.sort((a: any, b: any) => new Date(b.reportDate).getTime() - new Date(a.reportDate).getTime())
       }))
       .sort((a, b) => a.hospitalName.localeCompare(b.hospitalName, 'tr'));
   }, [recentReportsData, hospitals, searchTerm]);
