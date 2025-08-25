@@ -757,10 +757,32 @@ export default function AdminPanel() {
             </Card>
           </div>
 
-          {/* User Management Header and Search */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div className="flex items-center gap-4">
-              <h2 className="text-xl font-semibold">Kullanıcılar ({filteredUsers?.length || 0})</h2>
+          {/* Turkey Map Visualization */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <MapPin className="h-5 w-5 text-blue-600" />
+                <div>
+                  <h3 className="text-lg font-semibold">Türkiye Hastane Dağılımı</h3>
+                  <p className="text-sm text-muted-foreground">İllere tıklayarak hastane bilgilerini görüntüleyin</p>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="pb-6">
+              {/* Turkey Map component will be added here */}
+              <div className="text-center p-8 text-muted-foreground">
+                Türkiye haritası yakında eklenecek
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Hospital Management Header */}
+          <Card>
+            <CardHeader>
+              <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <div className="flex items-center gap-4">
+                    <h2 className="text-xl font-semibold">Hastaneler ({hospitals?.length || 0})</h2>
               
               {/* View Mode Toggle */}
               <div className="flex items-center bg-muted rounded-lg p-1">
@@ -1478,17 +1500,10 @@ export default function AdminPanel() {
             </Card>
           </div>
 
-          {/* Turkey Map Visualization */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <MapPin className="h-5 w-5 text-blue-600" />
-                <div>
-                  <h3 className="text-lg font-semibold">Türkiye Hastane Dağılımı</h3>
-                  <p className="text-sm text-muted-foreground">İllere tıklayarak hastane bilgilerini görüntüleyin</p>
-                </div>
-              </div>
-            </CardHeader>
+          {/* User Management Header and Search */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div className="flex items-center gap-4">
+              <h2 className="text-xl font-semibold">Kullanıcılar ({filteredUsers?.length || 0})</h2>
             <CardContent className="pb-6">
               {(() => {
                 // Calculate province statistics
