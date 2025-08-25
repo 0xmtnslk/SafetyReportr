@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Users, UserPlus, Edit, Trash2, Shield, MapPin, Key, Building2, Phone, Mail, Plus, Search, X, Upload, Camera, User, Copy, Grid3X3, List, Image } from "lucide-react";
 import { ObjectUploader } from "@/components/ObjectUploader";
+import TurkeyMap from "@/components/TurkeyMap";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -348,6 +349,29 @@ export default function AdminPanel() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Helper function to get user counts per hospital
+  const getUserCountsByHospital = (users: User[], hospitals: Location[]) => {
+    const userCounts: Record<string, { total: number; byRole: Record<string, number> }> = {};
+    
+    hospitals?.forEach(hospital => {
+      userCounts[hospital.id] = { total: 0, byRole: {} };
+    });
+
+    users?.forEach(user => {
+      if (user.location) {
+        // Find hospital by name matching location
+        const hospital = hospitals?.find(h => h.name === user.location);
+        if (hospital) {
+          userCounts[hospital.id] = userCounts[hospital.id] || { total: 0, byRole: {} };
+          userCounts[hospital.id].total += 1;
+          userCounts[hospital.id].byRole[user.role] = (userCounts[hospital.id].byRole[user.role] || 0) + 1;
+        }
+      }
+    });
+
+    return userCounts;
+  };
+
   // Fetch users
   const { data: users, isLoading, error } = useQuery<User[]>({
     queryKey: ['/api/admin/users'],
@@ -376,6 +400,9 @@ export default function AdminPanel() {
     hospital.phone?.toLowerCase().includes(hospitalSearch.toLowerCase()) ||
     hospital.email?.toLowerCase().includes(hospitalSearch.toLowerCase())
   );
+
+  // Calculate user counts per hospital
+  const userCountsByHospital = getUserCountsByHospital(users || [], hospitals || []);
 
   // Create user mutation
   const createUserMutation = useMutation({
@@ -1435,6 +1462,56 @@ export default function AdminPanel() {
         </TabsContent>
 
         <TabsContent value="hospitals" className="space-y-6">
+          {/* Turkey Map Section */}
+          <Card className="mb-6">
+            <CardContent className="p-6">
+              <div className="text-center mb-4">
+                <h3 className="text-lg font-semibold mb-2">Türkiye Hastane Dağılımı</h3>
+                <p className="text-sm text-muted-foreground">
+                  Hastanelerin şehirlere göre dağılımını ve sayılarını görüntüleyebilirsiniz
+                </p>
+              </div>
+              
+              <TurkeyMap 
+                hospitals={hospitals || []}
+                onCityHover={(city, cityHospitals) => {
+                  // Optional: Show tooltip or info
+                }}
+                onCityClick={(city, cityHospitals) => {
+                  // Optional: Navigate to city details or show modal
+                }}
+              />
+              
+              {/* Map Statistics */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-blue-600">
+                    {hospitals?.length || 0}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Toplam Hastane</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-green-600">
+                    {users?.length || 0}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Toplam Kullanıcı</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-orange-600">
+                    {hospitals?.filter(h => h.isActive).length || 0}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Aktif Hastane</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-purple-600">
+                    {Object.keys(hospitals?.reduce((acc, h) => ({ ...acc, [h.city]: true }), {}) || {}).length}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Hizmet Verilen Şehir</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Hospitals Stats */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card>
@@ -1622,6 +1699,19 @@ export default function AdminPanel() {
                               <Mail className="h-3 w-3 flex-shrink-0" />
                               <span className="truncate">
                                 {hospital.email}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Users className="h-3 w-3 flex-shrink-0" />
+                              <span className="truncate">
+                                {userCountsByHospital[hospital.id]?.total || 0} kullanıcı
+                                {userCountsByHospital[hospital.id]?.total > 0 && (
+                                  <span className="ml-1 text-muted-foreground">
+                                    ({Object.entries(userCountsByHospital[hospital.id]?.byRole || {})
+                                      .map(([role, count]) => `${count} ${getRoleDisplayName(role)}`)
+                                      .join(', ')})
+                                  </span>
+                                )}
                               </span>
                             </div>
                           </div>
