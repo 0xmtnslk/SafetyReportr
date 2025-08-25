@@ -106,20 +106,20 @@ const editUserSchema = z.object({
 
 // Hospital schemas
 const createHospitalSchema = z.object({
-  name: z.string().min(2, "Hastane adı en az 2 karakter olmalıdır"),
+  name: z.string().min(1, "Hastane adı gerekli"),
   shortName: z.string().optional(),
-  type: z.enum(['hospital', 'medical_center', 'clinic', 'office'], 
-    { required_error: "Hastane tipi seçiniz" }),
-  phone: z.string().min(10, "Telefon numarası en az 10 karakter olmalıdır"),
-  email: z.string().email("Geçerli bir e-posta adresi giriniz"),
-  website: z.string().url("Geçerli bir website adresi giriniz").optional().or(z.literal("")),
-  address: z.string().min(5, "Adres en az 5 karakter olmalıdır"),
-  district: z.string().min(2, "İlçe adı en az 2 karakter olmalıdır"),
-  city: z.string().min(2, "Şehir adı en az 2 karakter olmalıdır"),
+  address: z.string().min(1, "Adres gerekli"),
+  phone: z.string().min(1, "Telefon gerekli"),
+  email: z.string().email("Geçerli email gerekli"),
+  website: z.string().url().optional().or(z.literal("")),
+  district: z.string().min(1, "İlçe gerekli"),
+  city: z.string().min(1, "Şehir gerekli"),
   postalCode: z.string().optional(),
   country: z.string().default("Türkiye"),
   taxNumber: z.string().optional(),
-  legalRepresentative: z.string().optional()
+  legalRepresentative: z.string().optional(),
+  type: z.enum(["hospital", "medical_center", "clinic", "office"]).default("hospital"),
+  isActive: z.boolean().default(true)
 });
 
 const editHospitalSchema = createHospitalSchema.extend({
@@ -219,6 +219,72 @@ export default function AdminPanel() {
     },
   });
 
+  // Hospital Mutations
+  // Create hospital mutation
+  const createHospitalMutation = useMutation({
+    mutationFn: (hospitalData: CreateHospitalForm) => 
+      apiRequest('POST', '/api/admin/hospitals', hospitalData),
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/hospitals'] });
+      setIsCreateHospitalDialogOpen(false);
+      createHospitalForm.reset();
+      toast({
+        title: "Başarılı",
+        description: data.message || "Hastane başarıyla oluşturuldu",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Hata",
+        description: error.message || "Hastane oluşturulurken hata oluştu",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update hospital mutation
+  const updateHospitalMutation = useMutation({
+    mutationFn: ({ id, hospitalData }: { id: string; hospitalData: EditHospitalForm }) => 
+      apiRequest('PUT', `/api/admin/hospitals/${id}`, hospitalData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/hospitals'] });
+      setIsEditHospitalDialogOpen(false);
+      setEditingHospital(null);
+      editHospitalForm.reset();
+      toast({
+        title: "Başarılı",
+        description: "Hastane başarıyla güncellendi",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Hata",
+        description: error.message || "Hastane güncellenirken hata oluştu",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete hospital mutation
+  const deleteHospitalMutation = useMutation({
+    mutationFn: (hospitalId: string) => 
+      apiRequest('DELETE', `/api/admin/hospitals/${hospitalId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/hospitals'] });
+      toast({
+        title: "Başarılı",
+        description: "Hastane başarıyla silindi",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Hata",
+        description: error.message || "Hastane silinirken hata oluştu",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Forms
   const createForm = useForm<CreateUserForm>({
     resolver: zodResolver(createUserSchema),
@@ -238,6 +304,47 @@ export default function AdminPanel() {
       fullName: "",
       role: "user",
       location: "",
+      isActive: true
+    },
+  });
+
+  // Hospital Forms
+  const createHospitalForm = useForm<CreateHospitalForm>({
+    resolver: zodResolver(createHospitalSchema),
+    defaultValues: {
+      name: "",
+      shortName: "",
+      address: "",
+      phone: "",
+      email: "",
+      website: "",
+      district: "",
+      city: "",
+      postalCode: "",
+      country: "Türkiye",
+      taxNumber: "",
+      legalRepresentative: "",
+      type: "hospital",
+      isActive: true
+    },
+  });
+
+  const editHospitalForm = useForm<EditHospitalForm>({
+    resolver: zodResolver(editHospitalSchema),
+    defaultValues: {
+      name: "",
+      shortName: "",
+      address: "",
+      phone: "",
+      email: "",
+      website: "",
+      district: "",
+      city: "",
+      postalCode: "",
+      country: "Türkiye",
+      taxNumber: "",
+      legalRepresentative: "",
+      type: "hospital",
       isActive: true
     },
   });
@@ -285,6 +392,44 @@ export default function AdminPanel() {
   // Handle delete user
   const handleDeleteUser = (userId: string) => {
     deleteUserMutation.mutate(userId);
+  };
+
+  // Hospital Handlers
+  // Handle create hospital
+  const onCreateHospitalSubmit = (data: CreateHospitalForm) => {
+    createHospitalMutation.mutate(data);
+  };
+
+  // Handle edit hospital
+  const onEditHospitalSubmit = (data: EditHospitalForm) => {
+    if (editingHospital) {
+      updateHospitalMutation.mutate({ id: editingHospital.id, hospitalData: data });
+    }
+  };
+
+  // Handle edit hospital dialog open
+  const handleEditHospital = (hospital: Location) => {
+    setEditingHospital(hospital);
+    editHospitalForm.setValue("name", hospital.name);
+    editHospitalForm.setValue("shortName", hospital.shortName || "");
+    editHospitalForm.setValue("address", hospital.address || "");
+    editHospitalForm.setValue("phone", hospital.phone || "");
+    editHospitalForm.setValue("email", hospital.email || "");
+    editHospitalForm.setValue("website", hospital.website || "");
+    editHospitalForm.setValue("district", hospital.district || "");
+    editHospitalForm.setValue("city", hospital.city || "");
+    editHospitalForm.setValue("postalCode", hospital.postalCode || "");
+    editHospitalForm.setValue("country", hospital.country || "Türkiye");
+    editHospitalForm.setValue("taxNumber", hospital.taxNumber || "");
+    editHospitalForm.setValue("legalRepresentative", hospital.legalRepresentative || "");
+    editHospitalForm.setValue("type", hospital.type || "hospital");
+    editHospitalForm.setValue("isActive", hospital.isActive);
+    setIsEditHospitalDialogOpen(true);
+  };
+
+  // Handle delete hospital
+  const handleDeleteHospital = (hospitalId: string) => {
+    deleteHospitalMutation.mutate(hospitalId);
   };
 
   if (error) {
