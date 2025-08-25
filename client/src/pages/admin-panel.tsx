@@ -299,7 +299,6 @@ const editUserSchema = z.object({
 const createHospitalSchema = z.object({
   name: z.string().min(1, "Hastane adı gerekli"),
   shortName: z.string().optional(),
-  logo: z.string().optional(),
   address: z.string().min(1, "Adres gerekli"),
   phone: z.string().min(1, "Telefon gerekli"),
   email: z.string().email("Geçerli email gerekli"),
@@ -550,7 +549,6 @@ export default function AdminPanel() {
     defaultValues: {
       name: "",
       shortName: "",
-      logo: "",
       address: "",
       phone: "",
       email: "",
@@ -571,7 +569,6 @@ export default function AdminPanel() {
     defaultValues: {
       name: "",
       shortName: "",
-      logo: "",
       address: "",
       phone: "",
       email: "",
@@ -650,7 +647,6 @@ export default function AdminPanel() {
     setEditingHospital(hospital);
     editHospitalForm.setValue("name", hospital.name);
     editHospitalForm.setValue("shortName", hospital.shortName || "");
-    editHospitalForm.setValue("logo", hospital.logo || "");
     editHospitalForm.setValue("address", hospital.address || "");
     editHospitalForm.setValue("phone", hospital.phone || "");
     editHospitalForm.setValue("email", hospital.email || "");
@@ -701,20 +697,741 @@ export default function AdminPanel() {
         </div>
       </div>
 
-      <Tabs defaultValue="hospitals" className="space-y-6">
+      <Tabs defaultValue="users" className="space-y-6">
         <TabsList>
-          <TabsTrigger value="hospitals" className="flex items-center gap-2">
-            <Building2 className="h-4 w-4" />
-            Hastane Yönetimi
-          </TabsTrigger>
           <TabsTrigger value="users" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
             Kullanıcı Yönetimi
           </TabsTrigger>
+          <TabsTrigger value="hospitals" className="flex items-center gap-2">
+            <Building2 className="h-4 w-4" />
+            Hastane Yönetimi
+          </TabsTrigger>
         </TabsList>
 
+        <TabsContent value="users" className="space-y-6">
+          {/* Users Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-blue-600" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Toplam Kullanıcı</p>
+                    <p className="text-2xl font-bold">{users?.length || 0}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2">
+                  <Shield className="h-5 w-5 text-green-600" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Admin Kullanıcı</p>
+                    <p className="text-2xl font-bold">
+                      {users?.filter(u => ['central_admin', 'location_manager'].includes(u.role)).length || 0}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2">
+                  <Key className="h-5 w-5 text-amber-600" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">İlk Giriş Bekleyen</p>
+                    <p className="text-2xl font-bold">
+                      {users?.filter(u => u.firstLogin).length || 0}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* User Management Header and Search */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div className="flex items-center gap-4">
+              <h2 className="text-xl font-semibold">Kullanıcılar ({filteredUsers?.length || 0})</h2>
+              
+              {/* View Mode Toggle */}
+              <div className="flex items-center bg-muted rounded-lg p-1">
+                <Button
+                  variant={userViewMode === 'card' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setUserViewMode('card')}
+                  className="h-7 px-2"
+                  data-testid="button-card-view"
+                >
+                  <Grid3X3 className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={userViewMode === 'list' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setUserViewMode('list')}
+                  className="h-7 px-2"
+                  data-testid="button-list-view"
+                >
+                  <List className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            
+            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+              <SearchInput
+                placeholder="Kullanıcı, email, telefon veya rol ara..."
+                value={userSearch}
+                onChange={setUserSearch}
+                className="w-full sm:w-80"
+                data-testid="search-users"
+              />
+                <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button 
+                      className="flex items-center gap-2" 
+                      onClick={handleCreateDialogOpen}
+                      data-testid="button-add-user"
+                    >
+                      <UserPlus className="h-4 w-4" />
+                      Kullanıcı Ekle
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center gap-2">
+                        <UserPlus className="h-5 w-5" />
+                        Yeni Kullanıcı Ekle
+                      </DialogTitle>
+                      <DialogDescription>
+                        Yeni kullanıcı bilgilerini girin. E-posta ve telefon zorunlu, kullanıcı adı otomatik oluşturulur.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <Form {...createForm}>
+                      <form onSubmit={createForm.handleSubmit(onCreateSubmit)} className="space-y-6">
+                        {/* Personal Information Section */}
+                        <div className="space-y-4">
+                          <h3 className="font-medium text-base flex items-center gap-2">
+                            <User className="h-4 w-4" />
+                            Kişisel Bilgiler
+                          </h3>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField
+                              control={createForm.control}
+                              name="fullName"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Ad Soyad *</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder="Ad Soyad" {...field} data-testid="input-fullname" />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            
+                            <FormField
+                              control={createForm.control}
+                              name="email"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>E-posta *</FormLabel>
+                                  <FormControl>
+                                    <Input 
+                                      type="email" 
+                                      placeholder="ornek@email.com" 
+                                      {...field} 
+                                      data-testid="input-email"
+                                      onChange={(e) => {
+                                        field.onChange(e);
+                                        // Auto-generate username based on email
+                                        const emailPart = e.target.value.split('@')[0];
+                                        if (emailPart) {
+                                          createForm.setValue('username', emailPart.toLowerCase().replace(/[^a-z0-9]/g, ''));
+                                        }
+                                      }}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            
+                            <FormField
+                              control={createForm.control}
+                              name="phone"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Telefon *</FormLabel>
+                                  <FormControl>
+                                    <Input 
+                                      type="tel" 
+                                      placeholder="05XX XXX XX XX" 
+                                      {...field} 
+                                      data-testid="input-phone" 
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Role and Organization Section */}
+                        <div className="space-y-4">
+                          <h3 className="font-medium text-base flex items-center gap-2">
+                            <Building2 className="h-4 w-4" />
+                            Rol ve Kuruluş Bilgileri
+                          </h3>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField
+                              control={createForm.control}
+                              name="role"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Rol *</FormLabel>
+                                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl>
+                                      <SelectTrigger data-testid="select-role">
+                                        <SelectValue placeholder="Rol seçiniz" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      <SelectItem value="user">Normal Kullanıcı</SelectItem>
+                                      <SelectItem value="responsible_manager">Sorumlu Müdür</SelectItem>
+                                      <SelectItem value="occupational_physician">İşyeri Hekimi</SelectItem>
+                                      <SelectItem value="safety_specialist">İş Güvenliği Uzmanı</SelectItem>
+                                      <SelectItem value="central_admin">Merkez Yönetim (ADMIN)</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={createForm.control}
+                              name="locationId"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Hastane/Kuruluş *</FormLabel>
+                                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl>
+                                      <SelectTrigger data-testid="select-location">
+                                        <SelectValue placeholder="Hastane seçiniz" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      {hospitals?.map((hospital) => (
+                                        <SelectItem key={hospital.id} value={hospital.id}>
+                                          {hospital.name}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  <FormDescription>
+                                    Kullanıcının çalıştığı hastane veya sağlık kuruluşunu seçiniz
+                                  </FormDescription>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={createForm.control}
+                              name="position"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Pozisyon</FormLabel>
+                                  <FormControl>
+                                    <Input 
+                                      placeholder="Örn: İş Güvenliği Uzmanı, Teknik Müdür" 
+                                      data-testid="input-position"
+                                      {...field}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            
+                            <FormField
+                              control={createForm.control}
+                              name="department"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Departman</FormLabel>
+                                  <FormControl>
+                                    <Input 
+                                      placeholder="Örn: Teknik Hizmetler, İK"
+                                      data-testid="input-department"
+                                      {...field}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Optional Section */}
+                        <div className="space-y-4">
+                          <h3 className="font-medium text-base flex items-center gap-2">
+                            <Camera className="h-4 w-4" />
+                            İsteğe Bağlı Bilgiler
+                          </h3>
+                          
+                          <FormField
+                            control={createForm.control}
+                            name="profileImage"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Profil Resmi</FormLabel>
+                                <div className="flex items-center gap-4">
+                                  {field.value && (
+                                    <div className="w-16 h-16 rounded-full overflow-hidden bg-muted">
+                                      <img 
+                                        src={field.value} 
+                                        alt="Profil resmi önizlemesi" 
+                                        className="w-full h-full object-cover"
+                                      />
+                                    </div>
+                                  )}
+                                  <ObjectUploader
+                                    folder="profiles"
+                                    maxFileSize={2097152} // 2MB
+                                    onGetUploadParameters={() => 
+                                      fetch('/api/objects/upload/profiles', {
+                                        method: 'POST',
+                                        headers: {
+                                          'Authorization': `Bearer ${localStorage.getItem('token')}`
+                                        }
+                                      }).then(res => res.json()).then(data => ({
+                                        method: 'PUT' as const,
+                                        url: data.uploadURL
+                                      }))
+                                    }
+                                    onComplete={(result) => {
+                                      const uploadedFile = result.successful[0];
+                                      if (uploadedFile?.uploadURL) {
+                                        // Normalize the object URL to our API format
+                                        const normalizedPath = uploadedFile.uploadURL.includes('storage.googleapis.com') 
+                                          ? `/objects/profiles/${uploadedFile.uploadURL.split('/').pop()}`
+                                          : uploadedFile.uploadURL;
+                                        field.onChange(normalizedPath);
+                                      }
+                                    }}
+                                    buttonClassName="text-sm"
+                                  >
+                                    <Upload className="h-4 w-4 mr-2" />
+                                    {field.value ? "Resmi Değiştir" : "Resim Yükle"}
+                                  </ObjectUploader>
+                                </div>
+                                <FormDescription>
+                                  Profil resmi opsiyoneldir. Maksimum 2MB, JPG/PNG formatı desteklenir.
+                                </FormDescription>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        {/* Auto-generated Information */}
+                        <div className="space-y-4">
+                          <h3 className="font-medium text-base flex items-center gap-2">
+                            <Key className="h-4 w-4" />
+                            Otomatik Oluşturulan Bilgiler
+                          </h3>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField
+                              control={createForm.control}
+                              name="username"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Kullanıcı Adı</FormLabel>
+                                  <FormControl>
+                                    <Input 
+                                      {...field} 
+                                      data-testid="input-username" 
+                                      placeholder="E-postadan otomatik oluşturulur"
+                                      className="bg-muted"
+                                      readOnly
+                                    />
+                                  </FormControl>
+                                  <FormDescription>
+                                    E-posta adresinden otomatik oluşturulur
+                                  </FormDescription>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={createForm.control}
+                              name="password"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Geçici Şifre</FormLabel>
+                                  <div className="flex gap-2">
+                                    <FormControl>
+                                      <Input 
+                                        type="text" 
+                                        placeholder="Otomatik üretilecek"
+                                        {...field} 
+                                        data-testid="input-password"
+                                        className="bg-muted font-mono"
+                                        readOnly
+                                      />
+                                    </FormControl>
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      onClick={() => {
+                                        const newPassword = generatePassword();
+                                        createForm.setValue("password", newPassword);
+                                      }}
+                                      data-testid="button-generate-password"
+                                    >
+                                      Yenile
+                                    </Button>
+                                  </div>
+                                  <FormDescription>
+                                    Bu şifre kullanıcıya verilecek. İlk girişte değiştirmesi gerekir.
+                                  </FormDescription>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                          
+                          {/* Copy Credentials Section */}
+                          {(createForm.watch("username") || createForm.watch("password")) && (
+                            <div className="flex gap-2 pt-2">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  const username = createForm.getValues("username");
+                                  const password = createForm.getValues("password");
+                                  
+                                  if (username && password) {
+                                    const credentialsText = `Kullanıcı Adı: ${username}\nŞifre: ${password}`;
+                                    navigator.clipboard.writeText(credentialsText);
+                                    toast({
+                                      title: "Kopyalandı",
+                                      description: "Kullanıcı bilgileri panoya kopyalandı",
+                                    });
+                                  }
+                                }}
+                                data-testid="button-copy-credentials"
+                                className="flex items-center gap-2"
+                              >
+                                <Copy className="h-4 w-4" />
+                                Bilgileri Kopyala
+                              </Button>
+                              <span className="text-sm text-muted-foreground flex items-center">
+                                Kullanıcıya göndermek için bilgileri kopyalayın
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex gap-2 pt-6 border-t">
+                          <Button 
+                            type="submit" 
+                            disabled={createUserMutation.isPending}
+                            data-testid="button-submit-create"
+                            className="flex-1"
+                          >
+                            {createUserMutation.isPending ? "Oluşturuluyor..." : "Kullanıcı Oluştur"}
+                          </Button>
+                          <Button 
+                            type="button" 
+                            variant="outline" 
+                            onClick={() => setIsCreateDialogOpen(false)}
+                            data-testid="button-cancel-create"
+                          >
+                            İptal
+                          </Button>
+                        </div>
+                      </form>
+                    </Form>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            </div>
+
+          {/* Users Display */}
+          <Card>
+            <CardContent className="p-6">
+              {isLoading ? (
+                <div className="text-center py-8">
+                  <p>Kullanıcılar yükleniyor...</p>
+                </div>
+              ) : filteredUsers?.length === 0 ? (
+                <div className="text-center py-8">
+                  <Users className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">Hiç kullanıcı bulunamadı.</p>
+                  <Button 
+                    onClick={() => setIsCreateDialogOpen(true)}
+                    className="mt-4"
+                  >
+                    İlk Kullanıcıyı Ekle
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  {/* Card View */}
+                  {userViewMode === 'card' && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {filteredUsers?.map((user) => {
+                        const userHospital = hospitals?.find(h => h.id === user.locationId);
+                        return (
+                          <div 
+                            key={user.id}
+                            className="border rounded-lg p-4 hover:shadow-md transition-shadow bg-card"
+                            data-testid={`user-card-${user.id}`}
+                          >
+                            {/* User Header with Avatar */}
+                            <div className="flex items-start gap-3 mb-3">
+                              <div className="w-12 h-12 rounded-full overflow-hidden bg-muted flex items-center justify-center">
+                                {user.profileImage ? (
+                                  <img 
+                                    src={getProfileImageOrDefault(user.profileImage)} 
+                                    alt={user.fullName}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <img 
+                                    src={getProfileImageOrDefault()} 
+                                    alt="Default"
+                                    className="w-8 h-8 object-contain opacity-50"
+                                  />
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <h3 className="font-semibold text-sm truncate" data-testid={`text-fullname-${user.id}`}>
+                                  {user.fullName}
+                                </h3>
+                                <p className="text-xs text-muted-foreground truncate" data-testid={`text-username-${user.id}`}>
+                                  @{user.username}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Role and Status Badges */}
+                            <div className="flex flex-wrap gap-1 mb-3">
+                              <Badge variant={['central_admin', 'safety_specialist', 'occupational_physician'].includes(user.role) ? 'default' : 'secondary'} className="text-xs">
+                                {getRoleDisplayName(user.role)}
+                              </Badge>
+                              {user.firstLogin && (
+                                <Badge variant="outline" className="text-amber-600 text-xs">
+                                  İlk Giriş
+                                </Badge>
+                              )}
+                              {!user.isActive && (
+                                <Badge variant="destructive" className="text-xs">
+                                  Pasif
+                                </Badge>
+                              )}
+                            </div>
+
+                            {/* User Details */}
+                            <div className="space-y-2 text-xs text-muted-foreground mb-4">
+                              <div className="flex items-center gap-1">
+                                <MapPin className="h-3 w-3 flex-shrink-0" />
+                                <span className="truncate">
+                                  {getLocationDisplayName(userHospital)}
+                                </span>
+                              </div>
+                              {user.position && (
+                                <div className="flex items-center gap-1">
+                                  <User className="h-3 w-3 flex-shrink-0" />
+                                  <span className="truncate text-blue-600">
+                                    {user.position}
+                                  </span>
+                                </div>
+                              )}
+                              {user.email && (
+                                <div className="flex items-center gap-1">
+                                  <Mail className="h-3 w-3 flex-shrink-0" />
+                                  <span className="truncate">
+                                    {user.email}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex gap-2">
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => handleEditUser(user)}
+                                data-testid={`button-edit-${user.id}`}
+                                className="flex-1"
+                              >
+                                <Edit className="h-3 w-3 mr-1" />
+                                Düzenle
+                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    data-testid={`button-delete-${user.id}`}
+                                    className="px-3"
+                                  >
+                                    <Trash2 className="h-3 w-3 text-red-600" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Kullanıcı Sil</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      {user.fullName} kullanıcısını sistemden silmek istediğinizden emin misiniz? 
+                                      Bu işlem geri alınamaz.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>İptal</AlertDialogCancel>
+                                    <AlertDialogAction 
+                                      onClick={() => handleDeleteUser(user.id)}
+                                      className="bg-red-600 hover:bg-red-700"
+                                      data-testid={`button-confirm-delete-${user.id}`}
+                                    >
+                                      Sil
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* List View */}
+                  {userViewMode === 'list' && (
+                    <div className="space-y-2">
+                      {filteredUsers?.map((user) => {
+                        const userHospital = hospitals?.find(h => h.id === user.locationId);
+                        return (
+                          <div 
+                            key={user.id}
+                            className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50"
+                            data-testid={`user-row-${user.id}`}
+                          >
+                            <div className="flex items-center gap-3 flex-1">
+                              <div className="w-8 h-8 rounded-full overflow-hidden bg-muted flex items-center justify-center flex-shrink-0">
+                                {user.profileImage ? (
+                                  <img 
+                                    src={getProfileImageOrDefault(user.profileImage)} 
+                                    alt={user.fullName}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <img 
+                                    src={getProfileImageOrDefault()} 
+                                    alt="Default"
+                                    className="w-6 h-6 object-contain opacity-50"
+                                  />
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <h3 className="font-semibold truncate" data-testid={`text-fullname-${user.id}`}>
+                                    {user.fullName}
+                                  </h3>
+                                  <Badge variant={['central_admin', 'safety_specialist', 'occupational_physician'].includes(user.role) ? 'default' : 'secondary'} className="text-xs">
+                                    {getRoleDisplayName(user.role)}
+                                  </Badge>
+                                  {user.firstLogin && (
+                                    <Badge variant="outline" className="text-amber-600 text-xs">
+                                      İlk Giriş
+                                    </Badge>
+                                  )}
+                                  {!user.isActive && (
+                                    <Badge variant="destructive" className="text-xs">
+                                      Pasif
+                                    </Badge>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                  <span data-testid={`text-username-${user.id}`}>@{user.username}</span>
+                                  <span className="flex items-center gap-1">
+                                    <MapPin className="h-3 w-3" />
+                                    {getLocationDisplayName(userHospital)}
+                                  </span>
+                                  {user.position && (
+                                    <span className="text-blue-600">
+                                      {user.position}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => handleEditUser(user)}
+                                data-testid={`button-edit-${user.id}`}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    data-testid={`button-delete-${user.id}`}
+                                  >
+                                    <Trash2 className="h-4 w-4 text-red-600" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Kullanıcı Sil</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      {user.fullName} kullanıcısını sistemden silmek istediğinizden emin misiniz? 
+                                      Bu işlem geri alınamaz.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>İptal</AlertDialogCancel>
+                                    <AlertDialogAction 
+                                      onClick={() => handleDeleteUser(user.id)}
+                                      className="bg-red-600 hover:bg-red-700"
+                                      data-testid={`button-confirm-delete-${user.id}`}
+                                    >
+                                      Sil
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="hospitals" className="space-y-6">
-          {/* Hospital Stats */}
+          {/* Hospitals Stats */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card>
               <CardContent className="p-6">
@@ -757,126 +1474,831 @@ export default function AdminPanel() {
             </Card>
           </div>
 
-          {/* Turkey Map Visualization */}
+          {/* Hospital Management Header */}
           <Card>
             <CardHeader>
-              <div className="flex items-center gap-2">
-                <MapPin className="h-5 w-5 text-blue-600" />
-                <div>
-                  <h3 className="text-lg font-semibold">Türkiye Hastane Dağılımı</h3>
-                  <p className="text-sm text-muted-foreground">İllere tıklayarak hastane bilgilerini görüntüleyin</p>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="pb-6">
-              {/* Turkey Map component will be added here */}
-              <div className="text-center p-8 text-muted-foreground">
-                Türkiye haritası yakında eklenecek
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Hospital Management */}
-          <Card>
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <div>
-                  <CardTitle>Hastane Yönetimi</CardTitle>
-                  <CardDescription>
-                    Sistem hastanelerini ve sağlık tesislerini yönetin
-                  </CardDescription>
-                </div>
-                <Button 
-                  className="flex items-center gap-2"
-                  data-testid="button-add-hospital"
-                >
-                  <Plus className="h-4 w-4" />
-                  Yeni Hastane
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8">
-                <Building2 className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">Hastane yönetimi özelliği yakında eklenecek</p>
-              </div>
-            </CardContent>
-          </Card>
-
-        </TabsContent>
-
-        <TabsContent value="users" className="space-y-6">
-          {/* User Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2">
-                  <Users className="h-5 w-5 text-blue-600" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Toplam Kullanıcı</p>
-                    <p className="text-2xl font-bold">{users?.length || 0}</p>
+              <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <div className="flex items-center gap-4">
+                    <h2 className="text-xl font-semibold">Hastaneler ({hospitals?.length || 0})</h2>
+                    
+                    {/* View Mode Toggle */}
+                    <div className="flex items-center bg-muted rounded-lg p-1">
+                      <Button
+                        variant={hospitalViewMode === 'card' ? 'default' : 'ghost'}
+                        size="sm"
+                        onClick={() => setHospitalViewMode('card')}
+                        className="h-7 px-2"
+                        data-testid="button-hospital-card-view"
+                      >
+                        <Grid3X3 className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant={hospitalViewMode === 'list' ? 'default' : 'ghost'}
+                        size="sm"
+                        onClick={() => setHospitalViewMode('list')}
+                        className="h-7 px-2"
+                        data-testid="button-hospital-list-view"
+                      >
+                        <List className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2">
-                  <Shield className="h-5 w-5 text-green-600" />
                   <div>
-                    <p className="text-sm text-muted-foreground">Admin Kullanıcı</p>
-                    <p className="text-2xl font-bold">
-                      {users?.filter(u => ['central_admin', 'location_manager'].includes(u.role)).length || 0}
-                    </p>
+                    <CardTitle>Hastane Yönetimi</CardTitle>
+                    <CardDescription>
+                      Sistem hastanelerini ve sağlık tesislerini yönetin
+                    </CardDescription>
                   </div>
+                  <Button 
+                    onClick={() => setIsCreateHospitalDialogOpen(true)}
+                    className="flex items-center gap-2"
+                    data-testid="button-add-hospital"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Yeni Hastane
+                  </Button>
                 </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2">
-                  <Key className="h-5 w-5 text-amber-600" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">İlk Giriş Bekleyen</p>
-                    <p className="text-2xl font-bold">
-                      {users?.filter(u => u.firstLogin).length || 0}
-                    </p>
-                  </div>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-medium">Hastaneler ({filteredHospitals?.length || 0})</h3>
+                  <SearchInput
+                    placeholder="Hastane adı, şehir, ilçe veya telefon ara..."
+                    value={hospitalSearch}
+                    onChange={setHospitalSearch}
+                    className="w-80"
+                    data-testid="search-hospitals"
+                  />
                 </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* User Management Header */}
-          <Card>
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <div>
-                  <CardTitle>Kullanıcı Yönetimi</CardTitle>
-                  <CardDescription>
-                    Sistem kullanıcılarını yönetin ve yeni hesaplar oluşturun
-                  </CardDescription>
-                </div>
-                <Button 
-                  className="flex items-center gap-2"
-                  data-testid="button-add-user"
-                >
-                  <UserPlus className="h-4 w-4" />
-                  Kullanıcı Ekle
-                </Button>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8">
-                <Users className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">Kullanıcı yönetimi özellikleri yakında eklenecek</p>
-              </div>
+              {/* Hospitals Loading State */}
+              {isHospitalsLoading && (
+                <div className="text-center py-8">
+                  <p>Hastaneler yükleniyor...</p>
+                </div>
+              )}
+
+              {/* Hospitals Error State */}
+              {hospitalsError && (
+                <div className="text-center py-8 text-red-600">
+                  <p>Hastaneler yüklenirken hata oluştu.</p>
+                </div>
+              )}
+
+              {/* No Hospitals Found */}
+              {!isHospitalsLoading && !hospitalsError && filteredHospitals && filteredHospitals.length === 0 && (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">
+                    {hospitalSearch ? "Arama kriterlerine uygun hastane bulunamadı." : "Hiç hastane bulunamadı."}
+                  </p>
+                </div>
+              )}
+
+              {/* Hospitals Display */}
+              {filteredHospitals && filteredHospitals.length > 0 && (
+                <>
+                  {/* Card View */}
+                  {hospitalViewMode === 'card' && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {filteredHospitals.map((hospital) => (
+                        <div 
+                          key={hospital.id}
+                          className="border rounded-lg p-4 hover:shadow-md transition-shadow bg-card"
+                          data-testid={`hospital-card-${hospital.id}`}
+                        >
+                          {/* Hospital Header with Logo */}
+                          <div className="flex items-start gap-3 mb-3">
+                            <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted flex items-center justify-center">
+                              <img 
+                                src={getHospitalLogoOrDefault(hospital.logo)} 
+                                alt={hospital.name}
+                                className="w-8 h-8 object-contain"
+                              />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-semibold text-sm truncate" data-testid={`text-hospital-name-${hospital.id}`}>
+                                {hospital.name}
+                              </h3>
+                              {hospital.shortName && (
+                                <p className="text-xs text-muted-foreground truncate">
+                                  {hospital.shortName}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Type and Status Badges */}
+                          <div className="flex flex-wrap gap-1 mb-3">
+                            <Badge variant="secondary" className="text-xs">
+                              {hospital.type === 'hospital' ? 'Hastane' :
+                               hospital.type === 'medical_center' ? 'Tıp Merkezi' :
+                               hospital.type === 'clinic' ? 'Klinik' : 'Ofis'}
+                            </Badge>
+                            <Badge variant={hospital.isActive ? "default" : "destructive"} className="text-xs">
+                              {hospital.isActive ? "Aktif" : "Pasif"}
+                            </Badge>
+                          </div>
+
+                          {/* Hospital Details */}
+                          <div className="space-y-2 text-xs text-muted-foreground mb-4">
+                            <div className="flex items-center gap-1">
+                              <MapPin className="h-3 w-3 flex-shrink-0" />
+                              <span className="truncate">
+                                {hospital.city}, {hospital.district}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Phone className="h-3 w-3 flex-shrink-0" />
+                              <span className="truncate">
+                                {hospital.phone}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Mail className="h-3 w-3 flex-shrink-0" />
+                              <span className="truncate">
+                                {hospital.email}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Action Buttons */}
+                          <div className="flex gap-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => handleEditHospital(hospital)}
+                              data-testid={`button-edit-hospital-${hospital.id}`}
+                              className="flex-1"
+                            >
+                              <Edit className="h-3 w-3 mr-1" />
+                              Düzenle
+                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  data-testid={`button-delete-hospital-${hospital.id}`}
+                                  className="px-3"
+                                >
+                                  <Trash2 className="h-3 w-3 text-red-600" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Hastaneyi Sil</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    "{hospital.name}" hastanesini silmek istediğinizden emin misiniz?
+                                    Bu işlem geri alınamaz ve bu hastaneye bağlı kullanıcılar etkilenebilir.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>İptal</AlertDialogCancel>
+                                  <AlertDialogAction 
+                                    onClick={() => handleDeleteHospital(hospital.id)}
+                                    className="bg-red-600 hover:bg-red-700"
+                                  >
+                                    Sil
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* List View */}
+                  {hospitalViewMode === 'list' && (
+                    <div className="space-y-2">
+                      {filteredHospitals.map((hospital) => (
+                        <div 
+                          key={hospital.id}
+                          className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50"
+                          data-testid={`hospital-row-${hospital.id}`}
+                        >
+                          <div className="flex items-center gap-3 flex-1">
+                            <div className="w-8 h-8 rounded-lg overflow-hidden bg-muted flex items-center justify-center flex-shrink-0">
+                              <img 
+                                src={getHospitalLogoOrDefault(hospital.logo)} 
+                                alt={hospital.name}
+                                className="w-6 h-6 object-contain"
+                              />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <h3 className="font-semibold truncate" data-testid={`text-hospital-name-${hospital.id}`}>
+                                  {hospital.name}
+                                </h3>
+                                <Badge variant="secondary" className="text-xs">
+                                  {hospital.type === 'hospital' ? 'Hastane' :
+                                   hospital.type === 'medical_center' ? 'Tıp Merkezi' :
+                                   hospital.type === 'clinic' ? 'Klinik' : 'Ofis'}
+                                </Badge>
+                                <Badge variant={hospital.isActive ? "default" : "destructive"} className="text-xs">
+                                  {hospital.isActive ? "Aktif" : "Pasif"}
+                                </Badge>
+                              </div>
+                              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                <span className="flex items-center gap-1">
+                                  <MapPin className="h-3 w-3" />
+                                  {hospital.city}, {hospital.district}
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <Phone className="h-3 w-3" />
+                                  {hospital.phone}
+                                </span>
+                                {hospital.shortName && (
+                                  <span className="text-blue-600">
+                                    {hospital.shortName}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleEditHospital(hospital)}
+                              data-testid={`button-edit-hospital-${hospital.id}`}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm"
+                                  data-testid={`button-delete-hospital-${hospital.id}`}
+                                >
+                                  <Trash2 className="h-4 w-4 text-red-600" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Hastaneyi Sil</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    "{hospital.name}" hastanesini silmek istediğinizden emin misiniz?
+                                    Bu işlem geri alınamaz ve bu hastaneye bağlı kullanıcılar etkilenebilir.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>İptal</AlertDialogCancel>
+                                  <AlertDialogAction 
+                                    onClick={() => handleDeleteHospital(hospital.id)}
+                                    className="bg-red-600 hover:bg-red-700"
+                                  >
+                                    Sil
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* No Hospitals */}
+              {hospitals && hospitals.length === 0 && (
+                <div className="text-center py-8">
+                  <Building2 className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">Henüz hastane eklenmemiş</p>
+                  <Button 
+                    onClick={() => setIsCreateHospitalDialogOpen(true)}
+                    className="mt-4"
+                  >
+                    İlk Hastaneyi Ekle
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
 
+          {/* Hospital Create Dialog Placeholder */}
+          {/* TODO: Add Hospital Create/Edit Forms */}
         </TabsContent>
-
       </Tabs>
+
+      {/* Edit User Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Kullanıcı Düzenle</DialogTitle>
+            <DialogDescription>
+              Kullanıcı bilgilerini güncelleyin.
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...editForm}>
+            <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4">
+              <FormField
+                control={editForm.control}
+                name="username"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Kullanıcı Adı</FormLabel>
+                    <FormControl>
+                      <Input {...field} data-testid="input-edit-username" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editForm.control}
+                name="fullName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Ad Soyad</FormLabel>
+                    <FormControl>
+                      <Input {...field} data-testid="input-edit-fullname" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editForm.control}
+                name="role"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Rol</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-edit-role">
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="user">Normal Kullanıcı</SelectItem>
+                        <SelectItem value="responsible_manager">Sorumlu Müdür</SelectItem>
+                        <SelectItem value="occupational_physician">İşyeri Hekimi</SelectItem>
+                        <SelectItem value="safety_specialist">İş Güvenliği Uzmanı</SelectItem>
+                        <SelectItem value="central_admin">Merkez Yönetim (ADMIN)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editForm.control}
+                name="location"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Lokasyon</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Örn: Topkapı Liv Hastanesi, GOP MedicalPark"
+                        {...field} 
+                        data-testid="input-edit-location"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="flex gap-2 pt-4">
+                <Button 
+                  type="submit" 
+                  disabled={updateUserMutation.isPending}
+                  data-testid="button-submit-edit"
+                >
+                  {updateUserMutation.isPending ? "Güncelleniyor..." : "Güncelle"}
+                </Button>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setIsEditDialogOpen(false)}
+                  data-testid="button-cancel-edit"
+                >
+                  İptal
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Hospital Dialog */}
+      <Dialog open={isCreateHospitalDialogOpen} onOpenChange={setIsCreateHospitalDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Plus className="h-5 w-5" />
+              Yeni Hastane Ekle
+            </DialogTitle>
+            <DialogDescription>
+              Sisteme yeni bir hastane/sağlık kuruluşu ekleyin. Tüm bilgileri doğru doldurunuz.
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...createHospitalForm}>
+            <form onSubmit={createHospitalForm.handleSubmit(onCreateHospitalSubmit)} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={createHospitalForm.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Hastane Adı *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Hastane adını giriniz" {...field} data-testid="input-create-hospital-name" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={createHospitalForm.control}
+                  name="shortName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Kısa Ad</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Kısa ad (isteğe bağlı)" {...field} data-testid="input-create-hospital-short-name" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <FormField
+                control={createHospitalForm.control}
+                name="address"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Adres *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Tam adres giriniz" {...field} data-testid="input-create-hospital-address" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={createHospitalForm.control}
+                  name="city"
+                  render={({ field }) => {
+                    const cityOptions = Object.keys(TURKEY_CITIES).map(city => ({ value: city, label: city }));
+                    return (
+                      <FormItem>
+                        <FormLabel>Şehir *</FormLabel>
+                        <FormControl>
+                          <SearchableSelect
+                            value={field.value}
+                            onValueChange={(value) => {
+                              field.onChange(value);
+                              setSelectedCreateCity(value);
+                              createHospitalForm.setValue("district", ""); // Reset district when city changes
+                            }}
+                            options={cityOptions}
+                            placeholder="Şehir seçiniz (arama yapabilirsiniz)"
+                            data-testid="select-create-hospital-city"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
+                />
+                <FormField
+                  control={createHospitalForm.control}
+                  name="district"
+                  render={({ field }) => {
+                    const districtOptions = selectedCreateCity ? 
+                      TURKEY_CITIES[selectedCreateCity as keyof typeof TURKEY_CITIES]?.map(district => ({ value: district, label: district })) || [] 
+                      : [];
+                    return (
+                      <FormItem>
+                        <FormLabel>İlçe *</FormLabel>
+                        <FormControl>
+                          <SearchableSelect
+                            value={field.value}
+                            onValueChange={field.onChange}
+                            options={districtOptions}
+                            placeholder={selectedCreateCity ? "İlçe seçiniz (arama yapabilirsiniz)" : "Önce şehir seçiniz"}
+                            disabled={!selectedCreateCity}
+                            data-testid="select-create-hospital-district"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={createHospitalForm.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Telefon *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="0212-555-0000" {...field} data-testid="input-create-hospital-phone" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={createHospitalForm.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>E-posta *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="info@hastane.com" type="email" {...field} data-testid="input-create-hospital-email" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={createHospitalForm.control}
+                  name="website"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Website</FormLabel>
+                      <FormControl>
+                        <Input placeholder="https://hastane.com" type="url" {...field} data-testid="input-create-hospital-website" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={createHospitalForm.control}
+                  name="type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Kuruluş Tipi *</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-create-hospital-type">
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="hospital">Hastane</SelectItem>
+                          <SelectItem value="medical_center">Tıp Merkezi</SelectItem>
+                          <SelectItem value="clinic">Klinik</SelectItem>
+                          <SelectItem value="office">Ofis</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="flex gap-2 pt-4">
+                <Button 
+                  type="submit" 
+                  disabled={createHospitalMutation.isPending}
+                  data-testid="button-submit-create-hospital"
+                >
+                  {createHospitalMutation.isPending ? "Oluşturuluyor..." : "Hastane Oluştur"}
+                </Button>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setIsCreateHospitalDialogOpen(false)}
+                  data-testid="button-cancel-create-hospital"
+                >
+                  İptal
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Hospital Dialog */}
+      <Dialog open={isEditHospitalDialogOpen} onOpenChange={setIsEditHospitalDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Edit className="h-5 w-5" />
+              Hastane Düzenle
+            </DialogTitle>
+            <DialogDescription>
+              {editingHospital?.name} hastanesinin bilgilerini güncelleyin.
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...editHospitalForm}>
+            <form onSubmit={editHospitalForm.handleSubmit(onEditHospitalSubmit)} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={editHospitalForm.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Hastane Adı *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Hastane adını giriniz" {...field} data-testid="input-edit-hospital-name" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editHospitalForm.control}
+                  name="shortName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Kısa Ad</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Kısa ad (isteğe bağlı)" {...field} data-testid="input-edit-hospital-short-name" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <FormField
+                control={editHospitalForm.control}
+                name="address"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Adres *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Tam adres giriniz" {...field} data-testid="input-edit-hospital-address" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={editHospitalForm.control}
+                  name="city"
+                  render={({ field }) => {
+                    const cityOptions = Object.keys(TURKEY_CITIES).map(city => ({ value: city, label: city }));
+                    return (
+                      <FormItem>
+                        <FormLabel>Şehir *</FormLabel>
+                        <FormControl>
+                          <SearchableSelect
+                            value={field.value}
+                            onValueChange={(value) => {
+                              field.onChange(value);
+                              setSelectedEditCity(value);
+                              editHospitalForm.setValue("district", ""); // Reset district when city changes
+                            }}
+                            options={cityOptions}
+                            placeholder="Şehir seçiniz (arama yapabilirsiniz)"
+                            data-testid="select-edit-hospital-city"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
+                />
+                <FormField
+                  control={editHospitalForm.control}
+                  name="district"
+                  render={({ field }) => {
+                    const districtOptions = selectedEditCity ? 
+                      TURKEY_CITIES[selectedEditCity as keyof typeof TURKEY_CITIES]?.map(district => ({ value: district, label: district })) || [] 
+                      : [];
+                    return (
+                      <FormItem>
+                        <FormLabel>İlçe *</FormLabel>
+                        <FormControl>
+                          <SearchableSelect
+                            value={field.value}
+                            onValueChange={field.onChange}
+                            options={districtOptions}
+                            placeholder={selectedEditCity ? "İlçe seçiniz (arama yapabilirsiniz)" : "Önce şehir seçiniz"}
+                            disabled={!selectedEditCity}
+                            data-testid="select-edit-hospital-district"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={editHospitalForm.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Telefon *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="0212-555-0000" {...field} data-testid="input-edit-hospital-phone" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editHospitalForm.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>E-posta *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="info@hastane.com" type="email" {...field} data-testid="input-edit-hospital-email" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={editHospitalForm.control}
+                  name="website"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Website</FormLabel>
+                      <FormControl>
+                        <Input placeholder="https://hastane.com" type="url" {...field} data-testid="input-edit-hospital-website" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editHospitalForm.control}
+                  name="type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Kuruluş Tipi *</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-edit-hospital-type">
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="hospital">Hastane</SelectItem>
+                          <SelectItem value="medical_center">Tıp Merkezi</SelectItem>
+                          <SelectItem value="clinic">Klinik</SelectItem>
+                          <SelectItem value="office">Ofis</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <FormField
+                control={editHospitalForm.control}
+                name="isActive"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">Aktif Durum</FormLabel>
+                      <FormDescription>
+                        Hastane aktif mi pasif mi?
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <input
+                        type="checkbox"
+                        checked={field.value}
+                        onChange={field.onChange}
+                        data-testid="checkbox-edit-hospital-active"
+                        className="h-4 w-4"
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              <div className="flex gap-2 pt-4">
+                <Button 
+                  type="submit" 
+                  disabled={updateHospitalMutation.isPending}
+                  data-testid="button-submit-edit-hospital"
+                >
+                  {updateHospitalMutation.isPending ? "Güncelleniyor..." : "Hastane Güncelle"}
+                </Button>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setIsEditHospitalDialogOpen(false)}
+                  data-testid="button-cancel-edit-hospital"
+                >
+                  İptal
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
