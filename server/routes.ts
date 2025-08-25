@@ -282,8 +282,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ADMIN USER MANAGEMENT ROUTES
   
-  // Get all users (Central Management only)
-  app.get("/api/admin/users", authenticateToken, requireCentralManagement, async (req, res) => {
+  // Get all users (Safety Specialists and above can view users)
+  app.get("/api/admin/users", authenticateToken, requireSafetySpecialist, async (req, res) => {
     try {
       const users = await storage.getAllUsers();
       // Don't send passwords in response

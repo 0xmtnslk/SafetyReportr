@@ -17,6 +17,19 @@ import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
+// Helper function to get role display names
+const getRoleDisplayName = (role: string) => {
+  const roleNames: Record<string, string> = {
+    'central_admin': 'Merkez Yönetim',
+    'location_manager': 'Lokasyon Yöneticisi',
+    'safety_specialist': 'İş Güvenliği Uzmanı',
+    'occupational_physician': 'İşyeri Hekimi',
+    'technical_manager': 'Teknik Müdür',
+    'user': 'Kullanıcı'
+  };
+  return roleNames[role] || role;
+};
+
 // Örnek lokasyonlar (placeholder için)
 const LOCATION_EXAMPLES = [
   "Topkapı Liv Hastanesi",
@@ -30,8 +43,10 @@ interface User {
   id: string;
   username: string;
   fullName: string;
-  role: 'admin' | 'user';
-  location: string;
+  role: 'central_admin' | 'location_manager' | 'safety_specialist' | 'occupational_physician' | 'technical_manager' | 'user';
+  position?: string;
+  location?: string;
+  locationId?: string;
   firstLogin: boolean;
   isActive: boolean;
   createdAt: string;
@@ -42,16 +57,22 @@ interface User {
 const createUserSchema = z.object({
   username: z.string().min(3, "Kullanıcı adı en az 3 karakter olmalıdır"),
   fullName: z.string().min(2, "Ad soyad en az 2 karakter olmalıdır"),
-  role: z.enum(['admin', 'user'], { required_error: "Rol seçiniz" }),
-  location: z.string().min(1, "Lokasyon seçiniz"),
+  role: z.enum(['central_admin', 'location_manager', 'safety_specialist', 'occupational_physician', 'technical_manager', 'user'], 
+    { required_error: "Rol seçiniz" }),
+  position: z.string().optional(),
+  location: z.string().optional(),
+  locationId: z.string().optional(),
   password: z.string().optional()
 });
 
 const editUserSchema = z.object({
   username: z.string().min(3, "Kullanıcı adı en az 3 karakter olmalıdır"),
   fullName: z.string().min(2, "Ad soyad en az 2 karakter olmalıdır"),
-  role: z.enum(['admin', 'user'], { required_error: "Rol seçiniz" }),
-  location: z.string().min(1, "Lokasyon seçiniz"),
+  role: z.enum(['central_admin', 'location_manager', 'safety_specialist', 'occupational_physician', 'technical_manager', 'user'], 
+    { required_error: "Rol seçiniz" }),
+  position: z.string().optional(),
+  location: z.string().optional(),
+  locationId: z.string().optional(),
   isActive: z.boolean()
 });
 
@@ -259,7 +280,7 @@ export default function AdminPanel() {
                   <div>
                     <p className="text-sm text-muted-foreground">Admin Kullanıcı</p>
                     <p className="text-2xl font-bold">
-                      {users?.filter(u => u.role === 'admin').length || 0}
+                      {users?.filter(u => ['central_admin', 'location_manager'].includes(u.role)).length || 0}
                     </p>
                   </div>
                 </div>
@@ -343,13 +364,35 @@ export default function AdminPanel() {
                             </FormControl>
                             <SelectContent>
                               <SelectItem value="user">Kullanıcı</SelectItem>
-                              <SelectItem value="admin">Admin</SelectItem>
+                              <SelectItem value="technical_manager">Teknik Müdür</SelectItem>
+                              <SelectItem value="occupational_physician">İşyeri Hekimi</SelectItem>
+                              <SelectItem value="safety_specialist">İş Güvenliği Uzmanı</SelectItem>
+                              <SelectItem value="location_manager">Lokasyon Yöneticisi</SelectItem>
+                              <SelectItem value="central_admin">Merkez Yönetim</SelectItem>
                             </SelectContent>
                           </Select>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
+                    <FormField
+                      control={createForm.control}
+                      name="position"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Pozisyon</FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder="Örn: İş Güvenliği Uzmanı, Teknik Müdür" 
+                              data-testid="input-position"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
                     <FormField
                       control={createForm.control}
                       name="location"
@@ -448,8 +491,8 @@ export default function AdminPanel() {
                           <h3 className="font-semibold" data-testid={`text-username-${user.id}`}>
                             {user.fullName}
                           </h3>
-                          <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
-                            {user.role === 'admin' ? 'Admin' : 'Kullanıcı'}
+                          <Badge variant={['central_admin', 'location_manager', 'safety_specialist'].includes(user.role) ? 'default' : 'secondary'}>
+                            {getRoleDisplayName(user.role)}
                           </Badge>
                           {user.firstLogin && (
                             <Badge variant="outline" className="text-amber-600">
@@ -466,8 +509,13 @@ export default function AdminPanel() {
                           <span data-testid={`text-login-${user.id}`}>@{user.username}</span>
                           <span className="flex items-center gap-1">
                             <MapPin className="h-3 w-3" />
-                            {user.location}
+                            {user.location || 'Lokasyon belirtilmemiş'}
                           </span>
+                          {user.position && (
+                            <span className="text-sm text-blue-600">
+                              {user.position}
+                            </span>
+                          )}
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -570,7 +618,11 @@ export default function AdminPanel() {
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="user">Kullanıcı</SelectItem>
-                        <SelectItem value="admin">Admin</SelectItem>
+                        <SelectItem value="technical_manager">Teknik Müdür</SelectItem>
+                        <SelectItem value="occupational_physician">İşyeri Hekimi</SelectItem>
+                        <SelectItem value="safety_specialist">İş Güvenliği Uzmanı</SelectItem>
+                        <SelectItem value="location_manager">Lokasyon Yöneticisi</SelectItem>
+                        <SelectItem value="central_admin">Merkez Yönetim</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
