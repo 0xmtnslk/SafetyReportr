@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Users, UserPlus, Edit, Trash2, Shield, MapPin, Key, Building2, Phone, Mail, Plus } from "lucide-react";
@@ -36,6 +36,16 @@ const LOCATION_EXAMPLES = [
   "Merkez Hastane",
   "Anadolu Sağlık Merkezi"
 ];
+
+// Turkey City-District Data
+const TURKEY_CITIES = {
+  "İstanbul": ["Adalar", "Arnavutköy", "Ataşehir", "Avcılar", "Bağcılar", "Bahçelievler", "Bakırköy", "Başakşehir", "Bayrampaşa", "Beşiktaş", "Beykoz", "Beylikdüzü", "Beyoğlu", "Büyükçekmece", "Çatalca", "Çekmeköy", "Esenler", "Esenyurt", "Eyüpsultan", "Fatih", "Gaziosmanpaşa", "Güngören", "Kadıköy", "Kağıthane", "Kartal", "Küçükçekmece", "Maltepe", "Pendik", "Sancaktepe", "Sarıyer", "Silivri", "Sultanbeyli", "Sultangazi", "Şile", "Şişli", "Tuzla", "Ümraniye", "Üsküdar", "Zeytinburnu"],
+  "Ankara": ["Akyurt", "Altındağ", "Ayaş", "Bala", "Beypazarı", "Çamlıdere", "Çankaya", "Çubuk", "Elmadağ", "Etimesgut", "Evren", "Gölbaşı", "Güdül", "Haymana", "Kalecik", "Kazan", "Keçiören", "Kızılcahamam", "Mamak", "Nallıhan", "Polatlı", "Pursaklar", "Sincan", "Şereflikoçhisar", "Yenimahalle"],
+  "İzmir": ["Aliağa", "Balçova", "Bayındır", "Bayraklı", "Bergama", "Beydağ", "Bornova", "Buca", "Çeşme", "Çiğli", "Dikili", "Foça", "Gaziemir", "Güzelbahçe", "Karabağlar", "Karaburun", "Karşıyaka", "Kemalpaşa", "Kınık", "Kiraz", "Konak", "Menderes", "Menemen", "Narlıdere", "Ödemiş", "Seferihisar", "Selçuk", "Tire", "Torbalı", "Urla"],
+  "Bursa": ["Büyükorhan", "Gemlik", "Gürsu", "Harmancık", "İnegöl", "İznik", "Karacabey", "Keles", "Kestel", "Mudanya", "Mustafakemalpaşa", "Nilüfer", "Orhaneli", "Orhangazi", "Osmangazi", "Yenişehir", "Yıldırım"],
+  "Antalya": ["Akseki", "Aksu", "Alanya", "Demre", "Döşemealtı", "Elmalı", "Finike", "Gazipaşa", "Gündoğmuş", "İbradı", "Kaş", "Kemer", "Kepez", "Konyaaltı", "Korkuteli", "Kumluca", "Manavgat", "Muratpaşa", "Serik"],
+  "Adana": ["Aladağ", "Ceyhan", "Çukurova", "Feke", "İmamoğlu", "Karaisalı", "Karataş", "Kozan", "Pozantı", "Saimbeyli", "Sarıçam", "Seyhan", "Tufanbeyli", "Yumurtalık", "Yüreğir"]
+};
 
 // User type from shared schema
 interface User {
@@ -140,6 +150,10 @@ export default function AdminPanel() {
   const [isCreateHospitalDialogOpen, setIsCreateHospitalDialogOpen] = useState(false);
   const [isEditHospitalDialogOpen, setIsEditHospitalDialogOpen] = useState(false);
   const [editingHospital, setEditingHospital] = useState<Location | null>(null);
+  
+  // City/District state  
+  const [selectedCreateCity, setSelectedCreateCity] = useState<string>("");
+  const [selectedEditCity, setSelectedEditCity] = useState<string>("");
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -424,6 +438,9 @@ export default function AdminPanel() {
     editHospitalForm.setValue("legalRepresentative", hospital.legalRepresentative || "");
     editHospitalForm.setValue("type", hospital.type || "hospital");
     editHospitalForm.setValue("isActive", hospital.isActive);
+    
+    // Set selected city for dropdown to work properly
+    setSelectedEditCity(hospital.city || "");
     setIsEditHospitalDialogOpen(true);
   };
 
@@ -1143,26 +1160,48 @@ export default function AdminPanel() {
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={createHospitalForm.control}
-                  name="district"
+                  name="city"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>İlçe *</FormLabel>
-                      <FormControl>
-                        <Input placeholder="İlçe adı" {...field} data-testid="input-create-hospital-district" />
-                      </FormControl>
+                      <FormLabel>Şehir *</FormLabel>
+                      <Select onValueChange={(value) => {
+                        field.onChange(value);
+                        setSelectedCreateCity(value);
+                        createHospitalForm.setValue("district", ""); // Reset district when city changes
+                      }} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-create-hospital-city">
+                            <SelectValue placeholder="Şehir seçiniz" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {Object.keys(TURKEY_CITIES).map((city) => (
+                            <SelectItem key={city} value={city}>{city}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
                 <FormField
                   control={createHospitalForm.control}
-                  name="city"
+                  name="district"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Şehir *</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Şehir adı" {...field} data-testid="input-create-hospital-city" />
-                      </FormControl>
+                      <FormLabel>İlçe *</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!selectedCreateCity}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-create-hospital-district">
+                            <SelectValue placeholder={selectedCreateCity ? "İlçe seçiniz" : "Önce şehir seçiniz"} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {selectedCreateCity && TURKEY_CITIES[selectedCreateCity as keyof typeof TURKEY_CITIES]?.map((district) => (
+                            <SelectItem key={district} value={district}>{district}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -1314,26 +1353,48 @@ export default function AdminPanel() {
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={editHospitalForm.control}
-                  name="district"
+                  name="city"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>İlçe *</FormLabel>
-                      <FormControl>
-                        <Input placeholder="İlçe adı" {...field} data-testid="input-edit-hospital-district" />
-                      </FormControl>
+                      <FormLabel>Şehir *</FormLabel>
+                      <Select onValueChange={(value) => {
+                        field.onChange(value);
+                        setSelectedEditCity(value);
+                        editHospitalForm.setValue("district", ""); // Reset district when city changes
+                      }} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-edit-hospital-city">
+                            <SelectValue placeholder="Şehir seçiniz" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {Object.keys(TURKEY_CITIES).map((city) => (
+                            <SelectItem key={city} value={city}>{city}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
                 <FormField
                   control={editHospitalForm.control}
-                  name="city"
+                  name="district"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Şehir *</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Şehir adı" {...field} data-testid="input-edit-hospital-city" />
-                      </FormControl>
+                      <FormLabel>İlçe *</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value} disabled={!selectedEditCity}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-edit-hospital-district">
+                            <SelectValue placeholder={selectedEditCity ? "İlçe seçiniz" : "Önce şehir seçiniz"} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {selectedEditCity && TURKEY_CITIES[selectedEditCity as keyof typeof TURKEY_CITIES]?.map((district) => (
+                            <SelectItem key={district} value={district}>{district}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
