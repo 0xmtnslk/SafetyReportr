@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { FileText, AlertTriangle, CheckCircle, Clock, CheckCircle2, TrendingUp, Shield, Target, Search, Building2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { FileText, AlertTriangle, CheckCircle, Clock, CheckCircle2, TrendingUp, Shield, Target, Search, Building2, Grid3X3, List } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "wouter";
 import { useState, useMemo } from "react";
@@ -10,6 +11,7 @@ export default function Dashboard() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const [searchTerm, setSearchTerm] = useState("");
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
 
   // Progress calculation function
   const calculateProgress = (report: any) => {
@@ -184,15 +186,37 @@ export default function Dashboard() {
               <Building2 className="h-5 w-5" />
               Hastane Raporları
             </CardTitle>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <Input
-                placeholder="Rapor, hastane veya kişi ara..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 w-full sm:w-80"
-                data-testid="input-search-reports"
-              />
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  placeholder="Rapor, hastane veya kişi ara..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 w-full sm:w-80"
+                  data-testid="input-search-reports"
+                />
+              </div>
+              <div className="flex bg-muted rounded-lg p-1">
+                <Button
+                  variant={viewMode === 'list' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('list')}
+                  className="h-8 px-3"
+                  data-testid="button-view-list"
+                >
+                  <List className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('grid')}
+                  className="h-8 px-3"
+                  data-testid="button-view-grid"
+                >
+                  <Grid3X3 className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </div>
         </CardHeader>
@@ -206,89 +230,187 @@ export default function Dashboard() {
               Arama kriterlerinize uygun rapor bulunamadı.
             </p>
           ) : (
-            <div className="space-y-8">
-              {groupedReports.map(({ hospitalId, hospitalName, hospitalInfo, reports }) => (
-                <div key={hospitalId} className="space-y-4">
-                  {/* Hospital Header */}
-                  <div className="flex items-center gap-3 pb-3 border-b border-gray-200">
-                    <div className="w-8 h-8 bg-blue-500 bg-opacity-10 rounded-lg flex items-center justify-center">
-                      {hospitalInfo?.logo ? (
-                        <img 
-                          src={hospitalInfo.logo} 
-                          alt={hospitalName}
-                          className="w-6 h-6 object-contain"
-                        />
-                      ) : (
-                        <Building2 className="text-blue-500 h-4 w-4" />
-                      )}
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900">{hospitalName}</h3>
-                      <p className="text-sm text-gray-500">{reports.length} rapor</p>
-                    </div>
-                  </div>
-                  
-                  {/* Hospital Reports */}
-                  <div className="space-y-3 ml-2">
-                    {reports.map((report: any) => (
-                      <div
-                        key={report.id}
-                        className="flex flex-col sm:flex-row sm:items-center justify-between p-4 hover:bg-gray-50 rounded-xl transition-colors cursor-pointer gap-3 border border-gray-100"
-                        data-testid={`report-item-${report.id}`}
-                        onClick={() => setLocation(`/view-report/${report.id}`)}
-                      >
-                        <div className="flex items-center flex-1 min-w-0">
-                          <div className="w-10 h-10 bg-primary bg-opacity-10 rounded-xl flex items-center justify-center mr-3 flex-shrink-0">
-                            <FileText className="text-primary" size={18} />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="font-medium text-gray-900 truncate">
-                              Rapor #{report.reportNumber}
-                            </p>
-                            <p className="text-sm text-gray-500 truncate">
-                              {new Date(report.reportDate).toLocaleDateString("tr-TR")} - {report.reporter}
-                            </p>
-                          </div>
+            <>
+              {/* List View */}
+              {viewMode === 'list' && (
+                <div className="space-y-8">
+                  {groupedReports.map(({ hospitalId, hospitalName, hospitalInfo, reports }) => (
+                    <div key={hospitalId} className="space-y-4">
+                      {/* Hospital Header */}
+                      <div className="flex items-center gap-3 pb-3 border-b border-gray-200">
+                        <div className="w-8 h-8 bg-blue-500 bg-opacity-10 rounded-lg flex items-center justify-center">
+                          {hospitalInfo?.logo ? (
+                            <img 
+                              src={hospitalInfo.logo} 
+                              alt={hospitalName}
+                              className="w-6 h-6 object-contain"
+                            />
+                          ) : (
+                            <Building2 className="text-blue-500 h-4 w-4" />
+                          )}
                         </div>
-                        <div className="flex items-center space-x-2 sm:justify-end flex-shrink-0">
-                          <div className="flex items-center gap-2">
-                            {report.status === "completed" ? (
-                              <div className="flex flex-col gap-2">
-                                <div className="relative w-32 bg-success h-6 rounded-full flex items-center justify-center">
-                                  <CheckCircle2 size={14} className="mr-1" />
-                                  <span className="text-xs font-medium text-white">
-                                    Tamamlandı
-                                  </span>
-                                </div>
-                                <div className="text-xs text-gray-500 text-center">
-                                  %100 tamamlandı
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="flex flex-col gap-2">
-                                <div className="relative w-32 bg-gray-200 rounded-full h-6">
-                                  <div 
-                                    className="bg-warning h-6 rounded-full transition-all duration-300 flex items-center justify-center" 
-                                    style={{ width: `${Math.max(calculateProgress(report), 25)}%` }}
-                                  >
-                                    <span className="text-xs font-medium text-white whitespace-nowrap px-2">
-                                      {calculateProgress(report) === 100 ? 'Hazır' : 'Devam Ediyor'}
-                                    </span>
-                                  </div>
-                                </div>
-                                <div className="text-xs text-gray-500 text-center">
-                                  {Math.round(calculateProgress(report))}% tamamlandı
-                                </div>
-                              </div>
-                            )}
-                          </div>
+                        <div>
+                          <h3 className="font-semibold text-gray-900">{hospitalName}</h3>
+                          <p className="text-sm text-gray-500">{reports.length} rapor</p>
                         </div>
                       </div>
-                    ))}
-                  </div>
+                      
+                      {/* Hospital Reports */}
+                      <div className="space-y-3 ml-2">
+                        {reports.map((report: any) => (
+                          <div
+                            key={report.id}
+                            className="flex flex-col sm:flex-row sm:items-center justify-between p-4 hover:bg-gray-50 rounded-xl transition-colors cursor-pointer gap-3 border border-gray-100"
+                            data-testid={`report-item-${report.id}`}
+                            onClick={() => setLocation(`/view-report/${report.id}`)}
+                          >
+                            <div className="flex items-center flex-1 min-w-0">
+                              <div className="w-10 h-10 bg-primary bg-opacity-10 rounded-xl flex items-center justify-center mr-3 flex-shrink-0">
+                                <FileText className="text-primary" size={18} />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="font-medium text-gray-900 truncate">
+                                  Rapor #{report.reportNumber}
+                                </p>
+                                <p className="text-sm text-gray-500 truncate">
+                                  {new Date(report.reportDate).toLocaleDateString("tr-TR")} - {report.reporter}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-2 sm:justify-end flex-shrink-0">
+                              <div className="flex items-center gap-2">
+                                {report.status === "completed" ? (
+                                  <div className="flex flex-col gap-2">
+                                    <div className="relative w-32 bg-success h-6 rounded-full flex items-center justify-center">
+                                      <CheckCircle2 size={14} className="mr-1" />
+                                      <span className="text-xs font-medium text-white">
+                                        Tamamlandı
+                                      </span>
+                                    </div>
+                                    <div className="text-xs text-gray-500 text-center">
+                                      %100 tamamlandı
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="flex flex-col gap-2">
+                                    <div className="relative w-32 bg-gray-200 rounded-full h-6">
+                                      <div 
+                                        className="bg-warning h-6 rounded-full transition-all duration-300 flex items-center justify-center" 
+                                        style={{ width: `${Math.max(calculateProgress(report), 25)}%` }}
+                                      >
+                                        <span className="text-xs font-medium text-white whitespace-nowrap px-2">
+                                          {calculateProgress(report) === 100 ? 'Hazır' : 'Devam Ediyor'}
+                                        </span>
+                                      </div>
+                                    </div>
+                                    <div className="text-xs text-gray-500 text-center">
+                                      {Math.round(calculateProgress(report))}% tamamlandı
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              )}
+
+              {/* Grid View */}
+              {viewMode === 'grid' && (
+                <div className="space-y-8">
+                  {groupedReports.map(({ hospitalId, hospitalName, hospitalInfo, reports }) => (
+                    <div key={hospitalId} className="space-y-4">
+                      {/* Hospital Header */}
+                      <div className="flex items-center gap-3 pb-3 border-b border-gray-200">
+                        <div className="w-8 h-8 bg-blue-500 bg-opacity-10 rounded-lg flex items-center justify-center">
+                          {hospitalInfo?.logo ? (
+                            <img 
+                              src={hospitalInfo.logo} 
+                              alt={hospitalName}
+                              className="w-6 h-6 object-contain"
+                            />
+                          ) : (
+                            <Building2 className="text-blue-500 h-4 w-4" />
+                          )}
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-gray-900">{hospitalName}</h3>
+                          <p className="text-sm text-gray-500">{reports.length} rapor</p>
+                        </div>
+                      </div>
+                      
+                      {/* Hospital Reports Grid */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 ml-2">
+                        {reports.map((report: any) => (
+                          <Card
+                            key={report.id}
+                            className="cursor-pointer hover:shadow-md transition-shadow border border-gray-100"
+                            onClick={() => setLocation(`/view-report/${report.id}`)}
+                            data-testid={`report-card-${report.id}`}
+                          >
+                            <CardContent className="p-4">
+                              <div className="flex items-start justify-between mb-3">
+                                <div className="w-10 h-10 bg-primary bg-opacity-10 rounded-xl flex items-center justify-center">
+                                  <FileText className="text-primary" size={18} />
+                                </div>
+                                <div className="text-right">
+                                  {report.status === "completed" ? (
+                                    <div className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-success text-white">
+                                      <CheckCircle2 size={12} className="mr-1" />
+                                      Tamamlandı
+                                    </div>
+                                  ) : (
+                                    <div className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-warning text-white">
+                                      <Clock size={12} className="mr-1" />
+                                      Devam Ediyor
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              <div className="space-y-2">
+                                <h4 className="font-medium text-gray-900">
+                                  Rapor #{report.reportNumber}
+                                </h4>
+                                <p className="text-sm text-gray-500">
+                                  {new Date(report.reportDate).toLocaleDateString("tr-TR")}
+                                </p>
+                                <p className="text-sm text-gray-600">
+                                  {report.reporter}
+                                </p>
+                                
+                                {/* Progress Bar for Grid View */}
+                                <div className="mt-3">
+                                  <div className="flex items-center justify-between mb-1">
+                                    <span className="text-xs text-gray-500">İlerleme</span>
+                                    <span className="text-xs text-gray-500">
+                                      {report.status === "completed" ? "100" : Math.round(calculateProgress(report))}%
+                                    </span>
+                                  </div>
+                                  <div className="w-full bg-gray-200 rounded-full h-2">
+                                    <div 
+                                      className={`h-2 rounded-full transition-all duration-300 ${
+                                        report.status === "completed" ? "bg-success" : "bg-warning"
+                                      }`}
+                                      style={{ 
+                                        width: `${report.status === "completed" ? "100" : Math.max(calculateProgress(report), 25)}%` 
+                                      }}
+                                    ></div>
+                                  </div>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
