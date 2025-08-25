@@ -701,53 +701,55 @@ export default function AdminPanel() {
         </div>
       </div>
 
-      <Tabs defaultValue="users" className="space-y-6">
+      <Tabs defaultValue="hospitals" className="space-y-6">
         <TabsList>
-          <TabsTrigger value="users" className="flex items-center gap-2">
-            <Users className="h-4 w-4" />
-            Kullanıcı Yönetimi
-          </TabsTrigger>
           <TabsTrigger value="hospitals" className="flex items-center gap-2">
             <Building2 className="h-4 w-4" />
             Hastane Yönetimi
           </TabsTrigger>
+          <TabsTrigger value="users" className="flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            Kullanıcı Yönetimi
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="users" className="space-y-6">
-          {/* Users Stats */}
+        <TabsContent value="hospitals" className="space-y-6">
+          {/* Hospital Stats */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2">
-                  <Users className="h-5 w-5 text-blue-600" />
+              <CardContent className="p-6">
+                <div className="flex items-center gap-4">
+                  <Building2 className="h-8 w-8 text-blue-600" />
                   <div>
-                    <p className="text-sm text-muted-foreground">Toplam Kullanıcı</p>
-                    <p className="text-2xl font-bold">{users?.length || 0}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2">
-                  <Shield className="h-5 w-5 text-green-600" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Admin Kullanıcı</p>
-                    <p className="text-2xl font-bold">
-                      {users?.filter(u => ['central_admin', 'location_manager'].includes(u.role)).length || 0}
+                    <p className="text-sm font-medium text-muted-foreground">Toplam Hastane</p>
+                    <p className="text-2xl font-bold" data-testid="text-total-hospitals">
+                      {hospitals?.length || 0}
                     </p>
                   </div>
                 </div>
               </CardContent>
             </Card>
             <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2">
-                  <Key className="h-5 w-5 text-amber-600" />
+              <CardContent className="p-6">
+                <div className="flex items-center gap-4">
+                  <Building2 className="h-8 w-8 text-green-600" />
                   <div>
-                    <p className="text-sm text-muted-foreground">İlk Giriş Bekleyen</p>
-                    <p className="text-2xl font-bold">
-                      {users?.filter(u => u.firstLogin).length || 0}
+                    <p className="text-sm font-medium text-muted-foreground">Aktif Hastane</p>
+                    <p className="text-2xl font-bold" data-testid="text-active-hospitals">
+                      {hospitals?.filter(h => h.isActive).length || 0}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center gap-4">
+                  <MapPin className="h-8 w-8 text-orange-600" />
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Şehir Sayısı</p>
+                    <p className="text-2xl font-bold" data-testid="text-city-count">
+                      {hospitals ? new Set(hospitals.map(h => h.city)).size : 0}
                     </p>
                   </div>
                 </div>
@@ -1434,49 +1436,192 @@ export default function AdminPanel() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="hospitals" className="space-y-6">
-          {/* Hospitals Stats */}
+        <TabsContent value="users" className="space-y-6">
+          {/* User Stats */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center gap-4">
-                  <Building2 className="h-8 w-8 text-blue-600" />
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-blue-600" />
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Toplam Hastane</p>
-                    <p className="text-2xl font-bold" data-testid="text-total-hospitals">
-                      {hospitals?.length || 0}
+                    <p className="text-sm text-muted-foreground">Toplam Kullanıcı</p>
+                    <p className="text-2xl font-bold">{users?.length || 0}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2">
+                  <Shield className="h-5 w-5 text-green-600" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Admin Kullanıcı</p>
+                    <p className="text-2xl font-bold">
+                      {users?.filter(u => ['central_admin', 'location_manager'].includes(u.role)).length || 0}
                     </p>
                   </div>
                 </div>
               </CardContent>
             </Card>
             <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center gap-4">
-                  <Building2 className="h-8 w-8 text-green-600" />
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2">
+                  <Key className="h-5 w-5 text-amber-600" />
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Aktif Hastane</p>
-                    <p className="text-2xl font-bold" data-testid="text-active-hospitals">
-                      {hospitals?.filter(h => h.isActive).length || 0}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center gap-4">
-                  <MapPin className="h-8 w-8 text-orange-600" />
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Şehir Sayısı</p>
-                    <p className="text-2xl font-bold" data-testid="text-city-count">
-                      {hospitals ? new Set(hospitals.map(h => h.city)).size : 0}
+                    <p className="text-sm text-muted-foreground">İlk Giriş Bekleyen</p>
+                    <p className="text-2xl font-bold">
+                      {users?.filter(u => u.firstLogin).length || 0}
                     </p>
                   </div>
                 </div>
               </CardContent>
             </Card>
           </div>
+
+          {/* Turkey Map Visualization */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <MapPin className="h-5 w-5 text-blue-600" />
+                <div>
+                  <h3 className="text-lg font-semibold">Türkiye Hastane Dağılımı</h3>
+                  <p className="text-sm text-muted-foreground">İllere tıklayarak hastane bilgilerini görüntüleyin</p>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="pb-6">
+              {(() => {
+                // Calculate province statistics
+                const provinceStats = hospitals?.reduce((acc, hospital) => {
+                  const province = hospital.city;
+                  if (!province) return acc;
+                  
+                  if (!acc[province]) {
+                    acc[province] = {
+                      hospitalCount: 0,
+                      userCount: 0,
+                      hospitals: []
+                    };
+                  }
+                  
+                  const hospitalUsers = users?.filter(u => u.location === hospital.id) || [];
+                  acc[province].hospitalCount += 1;
+                  acc[province].userCount += hospitalUsers.length;
+                  acc[province].hospitals.push({
+                    name: hospital.name,
+                    userCount: hospitalUsers.length
+                  });
+                  
+                  return acc;
+                }, {} as Record<string, { hospitalCount: number; userCount: number; hospitals: Array<{name: string; userCount: number}> }>);
+
+                return (
+                  <div className="relative">
+                    {/* Map Container - Responsive */}
+                    <div className="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20 rounded-lg p-4 min-h-[200px] flex items-center justify-center">
+                      
+                      {/* Simplified Turkey Regions Map */}
+                      <div className="grid grid-cols-4 gap-2 w-full max-w-md">
+                        {/* Major Regions with Hospital Data */}
+                        {[
+                          { name: 'İstanbul', cities: ['İstanbul'], position: 'col-span-1' },
+                          { name: 'Ankara', cities: ['Ankara'], position: 'col-span-1' },
+                          { name: 'İzmir', cities: ['İzmir'], position: 'col-span-1' },
+                          { name: 'Antalya', cities: ['Antalya'], position: 'col-span-1' },
+                          { name: 'Marmara', cities: ['Bursa', 'Kocaeli', 'Balıkesir', 'Çanakkale'], position: 'col-span-2' },
+                          { name: 'Ege', cities: ['Manisa', 'Aydın', 'Muğla', 'Denizli'], position: 'col-span-2' },
+                          { name: 'Akdeniz', cities: ['Mersin', 'Adana', 'Hatay', 'Kahramanmaraş'], position: 'col-span-2' },
+                          { name: 'İç Anadolu', cities: ['Konya', 'Kayseri', 'Sivas', 'Yozgat'], position: 'col-span-2' },
+                          { name: 'Karadeniz', cities: ['Trabzon', 'Samsun', 'Ordu', 'Zonguldak'], position: 'col-span-2' },
+                          { name: 'Doğu Anadolu', cities: ['Erzurum', 'Malatya', 'Van', 'Ağrı'], position: 'col-span-2' },
+                          { name: 'Güneydoğu', cities: ['Diyarbakır', 'Şanlıurfa', 'Gaziantep', 'Mardin'], position: 'col-span-2' }
+                        ].map((region) => {
+                          const regionStats = region.cities.reduce((acc, city) => {
+                            const cityData = provinceStats?.[city];
+                            if (cityData) {
+                              acc.hospitalCount += cityData.hospitalCount;
+                              acc.userCount += cityData.userCount;
+                              acc.hospitals.push(...cityData.hospitals);
+                            }
+                            return acc;
+                          }, { hospitalCount: 0, userCount: 0, hospitals: [] as Array<{name: string; userCount: number}> });
+
+                          return (
+                            <div
+                              key={region.name}
+                              className={`${region.position} relative group cursor-pointer`}
+                            >
+                              <div className={`
+                                rounded-lg p-3 text-center transition-all duration-200 border-2
+                                ${regionStats.hospitalCount > 0 
+                                  ? 'bg-blue-100 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700 hover:bg-blue-200 dark:hover:bg-blue-900/50' 
+                                  : 'bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-700'}
+                              `}>
+                                <h4 className="font-medium text-sm text-gray-800 dark:text-gray-200">
+                                  {region.name}
+                                </h4>
+                                {regionStats.hospitalCount > 0 ? (
+                                  <div className="mt-1">
+                                    <p className="text-xs text-blue-600 dark:text-blue-400 font-semibold">
+                                      🏥 {regionStats.hospitalCount} hastane
+                                    </p>
+                                    <p className="text-xs text-green-600 dark:text-green-400">
+                                      👥 {regionStats.userCount} kullanıcı
+                                    </p>
+                                  </div>
+                                ) : (
+                                  <p className="text-xs text-gray-500 mt-1">Henüz hastane yok</p>
+                                )}
+                              </div>
+
+                              {/* Hover Tooltip */}
+                              {regionStats.hospitalCount > 0 && (
+                                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border p-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10">
+                                  <div className="text-sm">
+                                    <h5 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">{region.name} Bölgesi</h5>
+                                    <div className="space-y-1">
+                                      <p className="text-blue-600 dark:text-blue-400">📊 Toplam: {regionStats.hospitalCount} hastane, {regionStats.userCount} kullanıcı</p>
+                                      <div className="mt-2">
+                                        <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Hastaneler:</p>
+                                        {regionStats.hospitals.slice(0, 3).map((hospital, idx) => (
+                                          <p key={idx} className="text-xs text-gray-600 dark:text-gray-400">
+                                            • {hospital.name} ({hospital.userCount} kullanıcı)
+                                          </p>
+                                        ))}
+                                        {regionStats.hospitals.length > 3 && (
+                                          <p className="text-xs text-gray-500 dark:text-gray-500">
+                                            +{regionStats.hospitals.length - 3} hastane daha...
+                                          </p>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  {/* Arrow */}
+                                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-2 h-2 bg-white dark:bg-gray-800 border-b border-r rotate-45"></div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Map Legend */}
+                    <div className="mt-4 flex flex-wrap gap-4 justify-center text-sm">
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 bg-blue-100 dark:bg-blue-900/30 border-2 border-blue-300 dark:border-blue-700 rounded"></div>
+                        <span className="text-gray-600 dark:text-gray-400">Hastane var</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 bg-gray-100 dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 rounded"></div>
+                        <span className="text-gray-600 dark:text-gray-400">Hastane yok</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </CardContent>
+          </Card>
 
           {/* Hospital Management Header */}
           <Card>
@@ -1603,6 +1748,58 @@ export default function AdminPanel() {
                               {hospital.isActive ? "Aktif" : "Pasif"}
                             </Badge>
                           </div>
+
+                          {/* User Statistics */}
+                          {(() => {
+                            const hospitalUsers = users?.filter(u => u.location === hospital.id) || [];
+                            const userStats = {
+                              total: hospitalUsers.length,
+                              normal: hospitalUsers.filter(u => u.role === 'user').length,
+                              specialist: hospitalUsers.filter(u => u.role === 'safety_specialist').length,
+                              manager: hospitalUsers.filter(u => u.role === 'responsible_manager').length,
+                              locationManager: hospitalUsers.filter(u => u.role === 'location_manager').length,
+                            };
+
+                            return (
+                              <div className="bg-muted/50 rounded-lg p-3 mb-3">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Users className="h-4 w-4 text-blue-600" />
+                                  <span className="text-xs font-medium">Kullanıcılar</span>
+                                  <Badge variant="outline" className="text-xs ml-auto">
+                                    {userStats.total}
+                                  </Badge>
+                                </div>
+                                {userStats.total > 0 && (
+                                  <div className="grid grid-cols-2 gap-2 text-xs">
+                                    {userStats.normal > 0 && (
+                                      <div className="flex justify-between">
+                                        <span className="text-muted-foreground">Normal:</span>
+                                        <span className="font-medium">{userStats.normal}</span>
+                                      </div>
+                                    )}
+                                    {userStats.specialist > 0 && (
+                                      <div className="flex justify-between">
+                                        <span className="text-muted-foreground">İSG Uzmanı:</span>
+                                        <span className="font-medium">{userStats.specialist}</span>
+                                      </div>
+                                    )}
+                                    {userStats.manager > 0 && (
+                                      <div className="flex justify-between">
+                                        <span className="text-muted-foreground">Sorumlu Müdür:</span>
+                                        <span className="font-medium">{userStats.manager}</span>
+                                      </div>
+                                    )}
+                                    {userStats.locationManager > 0 && (
+                                      <div className="flex justify-between">
+                                        <span className="text-muted-foreground">Hastane Yönetici:</span>
+                                        <span className="font-medium">{userStats.locationManager}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })()}
 
                           {/* Hospital Details */}
                           <div className="space-y-2 text-xs text-muted-foreground mb-4">
