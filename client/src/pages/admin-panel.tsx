@@ -13,7 +13,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Users, UserPlus, Edit, Trash2, Shield, MapPin, Key, Building2, Phone, Mail, Plus, Search, X } from "lucide-react";
+import { Users, UserPlus, Edit, Trash2, Shield, MapPin, Key, Building2, Phone, Mail, Plus, Search, X, Upload, Camera, User } from "lucide-react";
+import { ObjectUploader } from "@/components/ObjectUploader";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -243,14 +244,17 @@ interface Location {
 
 // Form schemas
 const createUserSchema = z.object({
-  username: z.string().min(3, "Kullanıcı adı en az 3 karakter olmalıdır"),
+  email: z.string().email("Geçerli bir e-posta adresi giriniz"),
+  phone: z.string().min(10, "Telefon numarası en az 10 karakter olmalıdır"),
   fullName: z.string().min(2, "Ad soyad en az 2 karakter olmalıdır"),
   role: z.enum(['central_admin', 'safety_specialist', 'occupational_physician', 'responsible_manager', 'user'], 
     { required_error: "Rol seçiniz" }),
+  locationId: z.string().min(1, "Hastane/kuruluş seçiniz"),
   position: z.string().optional(),
-  location: z.string().optional(),
-  locationId: z.string().optional(),
-  password: z.string().optional()
+  department: z.string().optional(),
+  profileImage: z.string().optional(),
+  username: z.string().optional(), // Will be auto-generated
+  password: z.string().optional()  // Will be auto-generated
 });
 
 const editUserSchema = z.object({
@@ -479,10 +483,15 @@ export default function AdminPanel() {
   const createForm = useForm<CreateUserForm>({
     resolver: zodResolver(createUserSchema),
     defaultValues: {
-      username: "",
+      email: "",
+      phone: "",
       fullName: "",
       role: "user",
-      location: "",
+      locationId: "",
+      position: "",
+      department: "",
+      profileImage: "",
+      username: "",
       password: ""
     },
   });
@@ -728,153 +737,335 @@ export default function AdminPanel() {
                       Kullanıcı Ekle
                     </Button>
                   </DialogTrigger>
-                  <DialogContent>
+                  <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
-                  <DialogTitle>Yeni Kullanıcı Ekle</DialogTitle>
-                  <DialogDescription>
-                    Sisteme yeni kullanıcı ekleyin. Şifre belirtilmezse otomatik üretilir.
-                  </DialogDescription>
-                </DialogHeader>
-                <Form {...createForm}>
-                  <form onSubmit={createForm.handleSubmit(onCreateSubmit)} className="space-y-4">
-                    <FormField
-                      control={createForm.control}
-                      name="username"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Kullanıcı Adı</FormLabel>
-                          <FormControl>
-                            <Input placeholder="kullanici_adi" {...field} data-testid="input-username" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={createForm.control}
-                      name="fullName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Ad Soyad</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Ad Soyad" {...field} data-testid="input-fullname" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={createForm.control}
-                      name="role"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Rol</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-role">
-                                <SelectValue placeholder="Rol seçiniz" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="user">Normal Kullanıcı</SelectItem>
-                              <SelectItem value="responsible_manager">Sorumlu Müdür</SelectItem>
-                              <SelectItem value="occupational_physician">İşyeri Hekimi</SelectItem>
-                              <SelectItem value="safety_specialist">İş Güvenliği Uzmanı</SelectItem>
-                              <SelectItem value="central_admin">Merkez Yönetim (ADMIN)</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={createForm.control}
-                      name="position"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Pozisyon</FormLabel>
-                          <FormControl>
-                            <Input 
-                              placeholder="Örn: İş Güvenliği Uzmanı, Teknik Müdür" 
-                              data-testid="input-position"
-                              {...field}
+                      <DialogTitle className="flex items-center gap-2">
+                        <UserPlus className="h-5 w-5" />
+                        Yeni Kullanıcı Ekle
+                      </DialogTitle>
+                      <DialogDescription>
+                        Yeni kullanıcı bilgilerini girin. E-posta ve telefon zorunlu, kullanıcı adı otomatik oluşturulur.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <Form {...createForm}>
+                      <form onSubmit={createForm.handleSubmit(onCreateSubmit)} className="space-y-6">
+                        {/* Personal Information Section */}
+                        <div className="space-y-4">
+                          <h3 className="font-medium text-base flex items-center gap-2">
+                            <User className="h-4 w-4" />
+                            Kişisel Bilgiler
+                          </h3>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField
+                              control={createForm.control}
+                              name="fullName"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Ad Soyad *</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder="Ad Soyad" {...field} data-testid="input-fullname" />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
                             />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={createForm.control}
-                      name="location"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Lokasyon</FormLabel>
-                          <FormControl>
-                            <Input 
-                              placeholder="Örn: Topkapı Liv Hastanesi, GOP MedicalPark"
-                              {...field} 
-                              data-testid="input-location"
+                            
+                            <FormField
+                              control={createForm.control}
+                              name="email"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>E-posta *</FormLabel>
+                                  <FormControl>
+                                    <Input 
+                                      type="email" 
+                                      placeholder="ornek@email.com" 
+                                      {...field} 
+                                      data-testid="input-email"
+                                      onChange={(e) => {
+                                        field.onChange(e);
+                                        // Auto-generate username based on email
+                                        const emailPart = e.target.value.split('@')[0];
+                                        if (emailPart) {
+                                          createForm.setValue('username', emailPart.toLowerCase().replace(/[^a-z0-9]/g, ''));
+                                        }
+                                      }}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
                             />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={createForm.control}
-                      name="password"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Şifre</FormLabel>
-                          <div className="flex gap-2">
-                            <FormControl>
-                              <Input 
-                                type="text" 
-                                placeholder="Otomatik üretildi"
-                                {...field} 
-                                data-testid="input-password"
-                              />
-                            </FormControl>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              onClick={() => {
-                                const newPassword = generatePassword();
-                                createForm.setValue("password", newPassword);
-                              }}
-                              data-testid="button-generate-password"
-                            >
-                              Yenile
-                            </Button>
+                            
+                            <FormField
+                              control={createForm.control}
+                              name="phone"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Telefon *</FormLabel>
+                                  <FormControl>
+                                    <Input 
+                                      type="tel" 
+                                      placeholder="05XX XXX XX XX" 
+                                      {...field} 
+                                      data-testid="input-phone" 
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
                           </div>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Bu şifreyi kullanıcıya verin. İlk girişte değiştirmesi gerekecek.
-                          </p>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <div className="flex gap-2 pt-4">
-                      <Button 
-                        type="submit" 
-                        disabled={createUserMutation.isPending}
-                        data-testid="button-submit-create"
-                      >
-                        {createUserMutation.isPending ? "Oluşturuluyor..." : "Kullanıcı Oluştur"}
-                      </Button>
-                      <Button 
-                        type="button" 
-                        variant="outline" 
-                        onClick={() => setIsCreateDialogOpen(false)}
-                        data-testid="button-cancel-create"
-                      >
-                        İptal
-                      </Button>
-                    </div>
-                  </form>
-                </Form>
+                        </div>
+
+                        {/* Role and Organization Section */}
+                        <div className="space-y-4">
+                          <h3 className="font-medium text-base flex items-center gap-2">
+                            <Building2 className="h-4 w-4" />
+                            Rol ve Kuruluş Bilgileri
+                          </h3>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField
+                              control={createForm.control}
+                              name="role"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Rol *</FormLabel>
+                                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl>
+                                      <SelectTrigger data-testid="select-role">
+                                        <SelectValue placeholder="Rol seçiniz" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      <SelectItem value="user">Normal Kullanıcı</SelectItem>
+                                      <SelectItem value="responsible_manager">Sorumlu Müdür</SelectItem>
+                                      <SelectItem value="occupational_physician">İşyeri Hekimi</SelectItem>
+                                      <SelectItem value="safety_specialist">İş Güvenliği Uzmanı</SelectItem>
+                                      <SelectItem value="central_admin">Merkez Yönetim (ADMIN)</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={createForm.control}
+                              name="locationId"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Hastane/Kuruluş *</FormLabel>
+                                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl>
+                                      <SelectTrigger data-testid="select-location">
+                                        <SelectValue placeholder="Hastane seçiniz" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      {hospitals?.map((hospital) => (
+                                        <SelectItem key={hospital.id} value={hospital.id}>
+                                          {hospital.name}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  <FormDescription>
+                                    Kullanıcının çalıştığı hastane veya sağlık kuruluşunu seçiniz
+                                  </FormDescription>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={createForm.control}
+                              name="position"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Pozisyon</FormLabel>
+                                  <FormControl>
+                                    <Input 
+                                      placeholder="Örn: İş Güvenliği Uzmanı, Teknik Müdür" 
+                                      data-testid="input-position"
+                                      {...field}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            
+                            <FormField
+                              control={createForm.control}
+                              name="department"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Departman</FormLabel>
+                                  <FormControl>
+                                    <Input 
+                                      placeholder="Örn: Teknik Hizmetler, İK"
+                                      data-testid="input-department"
+                                      {...field}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Optional Section */}
+                        <div className="space-y-4">
+                          <h3 className="font-medium text-base flex items-center gap-2">
+                            <Camera className="h-4 w-4" />
+                            İsteğe Bağlı Bilgiler
+                          </h3>
+                          
+                          <FormField
+                            control={createForm.control}
+                            name="profileImage"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Profil Resmi</FormLabel>
+                                <div className="flex items-center gap-4">
+                                  {field.value && (
+                                    <div className="w-16 h-16 rounded-full overflow-hidden bg-muted">
+                                      <img 
+                                        src={field.value} 
+                                        alt="Profil resmi önizlemesi" 
+                                        className="w-full h-full object-cover"
+                                      />
+                                    </div>
+                                  )}
+                                  <ObjectUploader
+                                    folder="profiles"
+                                    maxFileSize={2097152} // 2MB
+                                    onGetUploadParameters={() => 
+                                      fetch('/api/objects/upload/profiles', {
+                                        method: 'POST',
+                                        headers: {
+                                          'Authorization': `Bearer ${localStorage.getItem('token')}`
+                                        }
+                                      }).then(res => res.json()).then(data => ({
+                                        method: 'PUT' as const,
+                                        url: data.uploadURL
+                                      }))
+                                    }
+                                    onComplete={(result) => {
+                                      const uploadedFile = result.successful[0];
+                                      if (uploadedFile?.uploadURL) {
+                                        field.onChange(uploadedFile.uploadURL);
+                                      }
+                                    }}
+                                    buttonClassName="text-sm"
+                                  >
+                                    <Upload className="h-4 w-4 mr-2" />
+                                    {field.value ? "Resmi Değiştir" : "Resim Yükle"}
+                                  </ObjectUploader>
+                                </div>
+                                <FormDescription>
+                                  Profil resmi opsiyoneldir. Maksimum 2MB, JPG/PNG formatı desteklenir.
+                                </FormDescription>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        {/* Auto-generated Information */}
+                        <div className="space-y-4">
+                          <h3 className="font-medium text-base flex items-center gap-2">
+                            <Key className="h-4 w-4" />
+                            Otomatik Oluşturulan Bilgiler
+                          </h3>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField
+                              control={createForm.control}
+                              name="username"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Kullanıcı Adı</FormLabel>
+                                  <FormControl>
+                                    <Input 
+                                      {...field} 
+                                      data-testid="input-username" 
+                                      placeholder="E-postadan otomatik oluşturulur"
+                                      className="bg-muted"
+                                      readOnly
+                                    />
+                                  </FormControl>
+                                  <FormDescription>
+                                    E-posta adresinden otomatik oluşturulur
+                                  </FormDescription>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={createForm.control}
+                              name="password"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Geçici Şifre</FormLabel>
+                                  <div className="flex gap-2">
+                                    <FormControl>
+                                      <Input 
+                                        type="text" 
+                                        placeholder="Otomatik üretilecek"
+                                        {...field} 
+                                        data-testid="input-password"
+                                        className="bg-muted font-mono"
+                                        readOnly
+                                      />
+                                    </FormControl>
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      onClick={() => {
+                                        const newPassword = generatePassword();
+                                        createForm.setValue("password", newPassword);
+                                      }}
+                                      data-testid="button-generate-password"
+                                    >
+                                      Yenile
+                                    </Button>
+                                  </div>
+                                  <FormDescription>
+                                    Bu şifre kullanıcıya verilecek. İlk girişte değiştirmesi gerekir.
+                                  </FormDescription>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex gap-2 pt-4">
+                          <Button 
+                            type="submit" 
+                            disabled={createUserMutation.isPending}
+                            data-testid="button-submit-create"
+                            className="flex-1"
+                          >
+                            {createUserMutation.isPending ? "Oluşturuluyor..." : "Kullanıcı Oluştur"}
+                          </Button>
+                          <Button 
+                            type="button" 
+                            variant="outline" 
+                            onClick={() => setIsCreateDialogOpen(false)}
+                            data-testid="button-cancel-create"
+                          >
+                            İptal
+                          </Button>
+                        </div>
+                      </form>
+                    </Form>
                   </DialogContent>
                 </Dialog>
               </div>

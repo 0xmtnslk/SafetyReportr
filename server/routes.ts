@@ -21,6 +21,7 @@ import { ReactPdfService } from "./pdfService";
 // import { TemplateManager } from "./templateManager";
 import jwt from "jsonwebtoken";
 import multer from "multer";
+import { ObjectStorageService } from "./objectStorage";
 import sharp from "sharp";
 import path from "path";
 import crypto from "crypto";
@@ -241,7 +242,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const newUser = await storage.createUser({
         username,
         password,
-        fullName
+        fullName,
+        email: `${username}@temp.com`, // Temporary email for register
+        phone: '5555555555', // Temporary phone for register  
+        role: 'user'
       });
 
       const token = jwt.sign(
@@ -989,6 +993,118 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Template sistem kapalı - sadece mevcut ReactPDF sistemi kullanılıyor
+
+  // Object Storage Upload Endpoints
+  const objectStorageService = new ObjectStorageService();
+
+  // Get upload URL for profile images
+  app.post("/api/objects/upload/profiles", authenticateToken, async (req, res) => {
+    try {
+      const uploadURL = await objectStorageService.getUploadURL('profiles');
+      res.json({ uploadURL });
+    } catch (error: any) {
+      console.error("Error getting profile upload URL:", error);
+      res.status(500).json({ error: "Error getting upload URL" });
+    }
+  });
+
+  // Get upload URL for hospital logos
+  app.post("/api/objects/upload/logos", authenticateToken, async (req, res) => {
+    try {
+      const currentUser = (req as any).user;
+      
+      // Check if user has permission to upload logos
+      if (!['central_admin', 'safety_specialist', 'occupational_physician'].includes(currentUser.role)) {
+        return res.status(403).json({ error: 'Bu işlem için yetkiniz yok' });
+      }
+      
+      const uploadURL = await objectStorageService.getUploadURL('logos');
+      res.json({ uploadURL });
+    } catch (error: any) {
+      console.error("Error getting logo upload URL:", error);
+      res.status(500).json({ error: "Error getting upload URL" });
+    }
+  });
+
+  // Serve objects (profiles and logos)
+  app.get("/objects/:objectPath(*)", async (req, res) => {
+    try {
+      const objectFile = await objectStorageService.getImageFile(`/${req.params.objectPath}`);
+      if (!objectFile) {
+        return res.status(404).json({ error: "File not found" });
+      }
+      await objectStorageService.downloadObject(objectFile, res);
+    } catch (error: any) {
+      console.error("Error serving object:", error);
+      if (!res.headersSent) {
+        res.status(500).json({ error: "Error serving file" });
+      }
+    }
+  });
+
+  // Update user profile image
+  app.put("/api/users/:id/profile-image", authenticateToken, async (req, res) => {
+    try {
+      const userId = req.params.id;
+      const currentUser = (req as any).user;
+      const { imageURL } = req.body;
+
+      // Users can only update their own profile image, or admin can update anyone's
+      if (currentUser.id !== userId && !['central_admin'].includes(currentUser.role)) {
+        return res.status(403).json({ error: 'Bu kullanıcının profil resmini değiştirme yetkiniz yok' });
+      }
+
+      if (!imageURL) {
+        return res.status(400).json({ error: "imageURL is required" });
+      }
+
+      const imagePath = objectStorageService.normalizeObjectPath(imageURL);
+      
+      // Update user profile image in database
+      const updatedUser = await storage.updateUser(userId, { profileImage: imagePath });
+      
+      if (!updatedUser) {
+        return res.status(404).json({ error: 'Kullanıcı bulunamadı' });
+      }
+
+      res.json({ profileImage: imagePath, message: 'Profil resmi başarıyla güncellendi' });
+    } catch (error: any) {
+      console.error("Error updating profile image:", error);
+      res.status(500).json({ error: "Error updating profile image" });
+    }
+  });
+
+  // Update hospital logo
+  app.put("/api/hospitals/:id/logo", authenticateToken, async (req, res) => {
+    try {
+      const hospitalId = req.params.id;
+      const currentUser = (req as any).user;
+      const { logoURL } = req.body;
+
+      // Check permissions: admin, safety_specialist, occupational_physician
+      if (!['central_admin', 'safety_specialist', 'occupational_physician'].includes(currentUser.role)) {
+        return res.status(403).json({ error: 'Hastane logosunu değiştirme yetkiniz yok' });
+      }
+
+      if (!logoURL) {
+        return res.status(400).json({ error: "logoURL is required" });
+      }
+
+      const logoPath = objectStorageService.normalizeObjectPath(logoURL);
+      
+      // Update hospital logo in database
+      const updatedHospital = await storage.updateLocation(hospitalId, { logo: logoPath });
+      
+      if (!updatedHospital) {
+        return res.status(404).json({ error: 'Hastane bulunamadı' });
+      }
+
+      res.json({ logo: logoPath, message: 'Hastane logosu başarıyla güncellendi' });
+    } catch (error: any) {
+      console.error("Error updating hospital logo:", error);
+      res.status(500).json({ error: "Error updating hospital logo" });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;
