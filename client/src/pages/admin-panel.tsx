@@ -20,6 +20,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import mlpLogoPath from "@/assets/mlp-logo.png";
 
 // Helper function to get role display names
 const getRoleDisplayName = (role: string) => {
@@ -45,7 +46,7 @@ const getProfileImageOrDefault = (profileImage?: string) => {
   if (profileImage && profileImage.startsWith('/objects/')) {
     return profileImage;
   }
-  return "/src/assets/mlp-logo.png"; // Default medicalisg logo
+  return mlpLogoPath; // Default medicalisg logo
 };
 
 // Helper function to get hospital logo or default
@@ -53,7 +54,7 @@ const getHospitalLogoOrDefault = (logo?: string) => {
   if (logo && logo.startsWith('/objects/')) {
     return logo;
   }
-  return "/src/assets/mlp-logo.png"; // Default medicalisg logo
+  return mlpLogoPath; // Default medicalisg logo
 };
 
 // Örnek lokasyonlar (placeholder için)
@@ -618,7 +619,7 @@ export default function AdminPanel() {
     editForm.setValue("username", user.username);
     editForm.setValue("fullName", user.fullName);
     editForm.setValue("role", user.role);
-    editForm.setValue("location", user.location);
+    editForm.setValue("locationId", user.locationId || ""); // Hospital ID for dropdown
     editForm.setValue("isActive", user.isActive);
     setIsEditDialogOpen(true);
   };
