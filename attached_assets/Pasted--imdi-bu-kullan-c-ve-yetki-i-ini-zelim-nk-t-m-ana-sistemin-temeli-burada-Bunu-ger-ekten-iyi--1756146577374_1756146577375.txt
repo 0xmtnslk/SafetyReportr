@@ -1,0 +1,40 @@
+Şimdi bu kullanıcı ve yetki işini çözelim. Çünkü tüm ana sistemin temeli burada. Bunu gerçekten iyi bir şekilde çözmek istiyorum. Sonrasında farklı farklı raporlamalarda yeni şeyleri birlikte ekleyeceğiz.
+
+İlk işimiz bu kullanıcı ve yetkilendirme işini doğru şekilde çözelim
+
+1. admin yetkisi.
+Bu yetki tüm her şeye sahip olan kişi veya kişiler olacaktır. Bunlar admin, iş güvenliği uzmanı, işyeri hekimi, ilgili sorumlu müdürler, normal kullanıcı, toplu kullanıcı girişi rapor oluşturma, rapor hazırlama, rapor görüntüleme, kısaca tüm yetkiye sahip kişiler. 
+ hazırlanmış rapor şablonları (ki ileride check-list tarzı hazır rapor şablonu da yapacağız. Şimdilik yapma onun için detaylı çalışacağız.)
+Yeni rapor şablonu üretme. 
+Tüm girilmiş olan hastane ve lokasyonların analizlerini görme.
+
+kısaca tüm her şeye erişimi olan yetkili.
+
+2. İş güvenliği uzmanı yetkisi.
+
+Bu atanmış olduğu hastane içinde, Sorumlu müdürler, normal kullanıcı ekleme çıkarma, rapor hazırlama, kendisine tanımlanmış raporları belirtilen süre içinde girme, Hazırlanmış olan raporları devamında kontrol etme gibi yetkilere sahip olacaktır. 
+Tüm rapor analizleri kendi hastanesi ile sınırlı şekilde gösterilecektir.
+
+3. İşyeri Hekimi yetkisi.
+Yine iş güvenliği uzmanı ile aynı yetkilere sahip olacak ve sadece kendi hastanesini görecektir.
+
+4. Sorumlu Müdürler yetkisi
+Bu yetkililer. Hazırlanan raporlarda kendisine atanmış olan rapor maddelerini görme, süreç yönetimi kısmında ilgili madde konusunda alınan aksiyon hakkında güncelleme yapma hakkına sahip olacaktır. 
+Dikkat! bu kullanıcılar raporlardaki maddeleri kapatma yetkisine sahip değildir. Sadece süreç yönetiminde alınan aksiyonlarla ilgili olarak güncelleme yapabilir. 
+
+5. Normal Kullanıcı yetkisi
+Şimdilik bu alanla ilgili olarak bir işlem yapmayacağız ama ilerleyen dönemde o kısımla ilgili olarak da işlemlerimiz olacaktır.
+
+
+Şimdi şu adıma geçelim. Burada admin olanlar için  ayrı bir dashboard sayfası planlamak lazım. Çünkü o hem hastanelerin içine girdiğinde orada detaylı hastaneyle ilgili dashboard inceleyebilir. isterse sistemde kayıtlı olan tüm hastaneler için genel bir analiz dashboard olabilir. Bu nedenle admin için farklı bir dashboard planlamak gerekiyor.
+
+İkinci olarak hastanelerde yani iş güvenliği uzmanı işyeri hekimi için kendi hastanesiyle ilgili olarak bir dashboard planlamak gerekiyor. Kendi hastanesinde analizleri ve rapor sonuçlarını görebilmesi gerekiyor.
+
+üçüncü olarak da sorumlu müdürler için bir dashboard planlamak gerekiyor. Çünkü onlar sadece kendisine tanımlanmış olan rapor maddelerini görebilecek ve onlarla ilgili aldığı aksiyonları oraya girebilecek. Tabii ki orada hiç bakmadığı için farklı bir bölüm inceleyip aksiyon aldığı için farklı bir bölüm en son tamamladıkları için farklı bir bölüm olmalı "to do list" mantığında bir dashboard planlayabilirsin. 
+
+Normal kullanıcı için bir dashboard yapacağız ama ilerleyen süreçte.
+
+O yüzden yetkilendirme ve hastane tanımlama süreci oldukça önemli. 
+
+Bir hastane açmak içinde olması gerekenleri de ekleyelim.
+Çünkü hastaneyi admin yetkisinde olanlar açabilir. Fakat düzenleme yetkisi, (silme yok!) iş güvenliği uzmanı ve işyeri hekiminde olabilir. (Adres, logo vs gibi.)
