@@ -9,7 +9,7 @@ export const users = pgTable("users", {
   password: text("password").notNull(),
   fullName: text("full_name").notNull(),
   role: text("role").notNull().default("user"), 
-  // Roles: "central_admin" | "location_manager" | "safety_specialist" | "occupational_physician" | "technical_manager" | "user"
+  // Roles: "central_admin" | "safety_specialist" | "occupational_physician" | "responsible_manager" | "user"
   position: text("position"), // e.g., "İş Güvenliği Uzmanı", "Teknik Hizmetler Müdürü", "İşyeri Hekimi"
   locationId: varchar("location_id"), // Will reference locations.id
   location: text("location"), // Legacy field - to be deprecated

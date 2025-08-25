@@ -59,29 +59,29 @@ const requireAdmin = (req: Request, res: Response, next: NextFunction) => {
   next();
 };
 
-// Central Management (can create hospitals and assign specialists)
+// Central Management (can create hospitals and assign specialists) - ADMIN role
 const requireCentralManagement = (req: Request, res: Response, next: NextFunction) => {
   const user = (req as any).user;
-  if (!user || !['central_admin', 'location_manager'].includes(user.role)) {
-    return res.status(403).json({ message: 'Merkez yönetim yetkisi gerekli' });
+  if (!user || user.role !== 'central_admin') {
+    return res.status(403).json({ message: 'Merkez yönetim (ADMIN) yetkisi gerekli' });
   }
   next();
 };
 
-// Safety Specialists (can create reports and manage users)
+// Safety Specialists and Occupational Physicians (can create reports and manage users)
 const requireSafetySpecialist = (req: Request, res: Response, next: NextFunction) => {
   const user = (req as any).user;
-  if (!user || !['central_admin', 'location_manager', 'safety_specialist'].includes(user.role)) {
-    return res.status(403).json({ message: 'İş güvenliği uzmanı yetkisi gerekli' });
+  if (!user || !['central_admin', 'safety_specialist', 'occupational_physician'].includes(user.role)) {
+    return res.status(403).json({ message: 'İş güvenliği uzmanı veya işyeri hekimi yetkisi gerekli' });
   }
   next();
 };
 
-// Technical Staff (can only update process management sections)
-const requireTechnicalAccess = (req: Request, res: Response, next: NextFunction) => {
+// Responsible Managers (can only update process management sections)  
+const requireResponsibleManagerAccess = (req: Request, res: Response, next: NextFunction) => {
   const user = (req as any).user;
-  if (!user || !['central_admin', 'location_manager', 'safety_specialist', 'technical_manager'].includes(user.role)) {
-    return res.status(403).json({ message: 'Teknik erişim yetkisi gerekli' });
+  if (!user || !['central_admin', 'safety_specialist', 'occupational_physician', 'responsible_manager'].includes(user.role)) {
+    return res.status(403).json({ message: 'Sorumlu müdür erişim yetkisi gerekli' });
   }
   next();
 };
@@ -90,11 +90,11 @@ const requireTechnicalAccess = (req: Request, res: Response, next: NextFunction)
 const canEditFinding = async (req: Request, res: Response, next: NextFunction) => {
   const user = (req as any).user;
   
-  if (['central_admin', 'location_manager', 'safety_specialist'].includes(user.role)) {
+  if (['central_admin', 'safety_specialist', 'occupational_physician'].includes(user.role)) {
     return next(); // Full editing rights
   }
   
-  if (user.role === 'technical_manager') {
+  if (user.role === 'responsible_manager') {
     // Only allow editing processSteps field
     const allowedFields = ['processSteps'];
     const requestedFields = Object.keys(req.body);
@@ -309,9 +309,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: 'Sadece merkez yönetim central admin oluşturabilir' });
       }
       
-      if (['location_manager', 'safety_specialist'].includes(userData.role || '') && 
-          !['central_admin', 'location_manager'].includes(currentUser.role || '')) {
-        return res.status(403).json({ message: 'Yönetici rolleri oluşturmak için merkez yönetim yetkisi gerekli' });
+      if (['safety_specialist', 'occupational_physician'].includes(userData.role || '') && 
+          !['central_admin'].includes(currentUser.role || '')) {
+        return res.status(403).json({ message: 'Uzman rolleri oluşturmak için ADMIN yetkisi gerekli' });
+      }
+      
+      // Safety specialists and occupational physicians can create responsible managers and users
+      if (['responsible_manager'].includes(userData.role || '') && 
+          !['central_admin', 'safety_specialist', 'occupational_physician'].includes(currentUser.role || '')) {
+        return res.status(403).json({ message: 'Sorumlu müdür oluşturmak için uzman yetkisi gerekli' });
       }
       
       // Check if user already exists
@@ -369,9 +375,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: 'Central admin rolünü sadece central admin değiştirebilir' });
       }
       
-      if (['location_manager', 'safety_specialist'].includes(updateData.role || '') && 
-          !['central_admin', 'location_manager'].includes(currentUser.role || '')) {
-        return res.status(403).json({ message: 'Yönetici rollerini değiştirmek için merkez yönetim yetkisi gerekli' });
+      if (['safety_specialist', 'occupational_physician'].includes(updateData.role || '') && 
+          !['central_admin'].includes(currentUser.role || '')) {
+        return res.status(403).json({ message: 'Uzman rollerini değiştirmek için ADMIN yetkisi gerekli' });
+      }
+      
+      if (['responsible_manager'].includes(updateData.role || '') && 
+          !['central_admin', 'safety_specialist', 'occupational_physician'].includes(currentUser.role || '')) {
+        return res.status(403).json({ message: 'Sorumlu müdür rolünü değiştirmek için uzman yetkisi gerekli' });
       }
 
       // Check username uniqueness if username is being updated

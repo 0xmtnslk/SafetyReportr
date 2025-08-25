@@ -20,12 +20,11 @@ import { apiRequest } from "@/lib/queryClient";
 // Helper function to get role display names
 const getRoleDisplayName = (role: string) => {
   const roleNames: Record<string, string> = {
-    'central_admin': 'Merkez Yönetim',
-    'location_manager': 'Lokasyon Yöneticisi',
+    'central_admin': 'Merkez Yönetim (ADMIN)',
     'safety_specialist': 'İş Güvenliği Uzmanı',
     'occupational_physician': 'İşyeri Hekimi',
-    'technical_manager': 'Teknik Müdür',
-    'user': 'Kullanıcı'
+    'responsible_manager': 'Sorumlu Müdür',
+    'user': 'Normal Kullanıcı'
   };
   return roleNames[role] || role;
 };
@@ -43,7 +42,7 @@ interface User {
   id: string;
   username: string;
   fullName: string;
-  role: 'central_admin' | 'location_manager' | 'safety_specialist' | 'occupational_physician' | 'technical_manager' | 'user';
+  role: 'central_admin' | 'safety_specialist' | 'occupational_physician' | 'responsible_manager' | 'user';
   position?: string;
   location?: string;
   locationId?: string;
@@ -57,7 +56,7 @@ interface User {
 const createUserSchema = z.object({
   username: z.string().min(3, "Kullanıcı adı en az 3 karakter olmalıdır"),
   fullName: z.string().min(2, "Ad soyad en az 2 karakter olmalıdır"),
-  role: z.enum(['central_admin', 'location_manager', 'safety_specialist', 'occupational_physician', 'technical_manager', 'user'], 
+  role: z.enum(['central_admin', 'safety_specialist', 'occupational_physician', 'responsible_manager', 'user'], 
     { required_error: "Rol seçiniz" }),
   position: z.string().optional(),
   location: z.string().optional(),
@@ -68,7 +67,7 @@ const createUserSchema = z.object({
 const editUserSchema = z.object({
   username: z.string().min(3, "Kullanıcı adı en az 3 karakter olmalıdır"),
   fullName: z.string().min(2, "Ad soyad en az 2 karakter olmalıdır"),
-  role: z.enum(['central_admin', 'location_manager', 'safety_specialist', 'occupational_physician', 'technical_manager', 'user'], 
+  role: z.enum(['central_admin', 'safety_specialist', 'occupational_physician', 'responsible_manager', 'user'], 
     { required_error: "Rol seçiniz" }),
   position: z.string().optional(),
   location: z.string().optional(),
@@ -363,12 +362,11 @@ export default function AdminPanel() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="user">Kullanıcı</SelectItem>
-                              <SelectItem value="technical_manager">Teknik Müdür</SelectItem>
+                              <SelectItem value="user">Normal Kullanıcı</SelectItem>
+                              <SelectItem value="responsible_manager">Sorumlu Müdür</SelectItem>
                               <SelectItem value="occupational_physician">İşyeri Hekimi</SelectItem>
                               <SelectItem value="safety_specialist">İş Güvenliği Uzmanı</SelectItem>
-                              <SelectItem value="location_manager">Lokasyon Yöneticisi</SelectItem>
-                              <SelectItem value="central_admin">Merkez Yönetim</SelectItem>
+                              <SelectItem value="central_admin">Merkez Yönetim (ADMIN)</SelectItem>
                             </SelectContent>
                           </Select>
                           <FormMessage />
@@ -617,12 +615,11 @@ export default function AdminPanel() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="user">Kullanıcı</SelectItem>
-                        <SelectItem value="technical_manager">Teknik Müdür</SelectItem>
+                        <SelectItem value="user">Normal Kullanıcı</SelectItem>
+                        <SelectItem value="responsible_manager">Sorumlu Müdür</SelectItem>
                         <SelectItem value="occupational_physician">İşyeri Hekimi</SelectItem>
                         <SelectItem value="safety_specialist">İş Güvenliği Uzmanı</SelectItem>
-                        <SelectItem value="location_manager">Lokasyon Yöneticisi</SelectItem>
-                        <SelectItem value="central_admin">Merkez Yönetim</SelectItem>
+                        <SelectItem value="central_admin">Merkez Yönetim (ADMIN)</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />

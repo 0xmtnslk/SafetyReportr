@@ -7,14 +7,13 @@ import { useAuth } from "@/hooks/useAuth";
 // Helper function to get role display names
 const getRoleDisplayName = (role?: string) => {
   const roleNames: Record<string, string> = {
-    'central_admin': 'Merkez Yönetim',
-    'location_manager': 'Lokasyon Yöneticisi',
+    'central_admin': 'Merkez Yönetim (ADMIN)',
     'safety_specialist': 'İş Güvenliği Uzmanı',
     'occupational_physician': 'İşyeri Hekimi',
-    'technical_manager': 'Teknik Müdür',
-    'user': 'Kullanıcı'
+    'responsible_manager': 'Sorumlu Müdür',
+    'user': 'Normal Kullanıcı'
   };
-  return roleNames[role || ''] || role || 'Kullanıcı';
+  return roleNames[role || ''] || role || 'Normal Kullanıcı';
 };
 
 export default function Navigation() {
@@ -27,8 +26,8 @@ export default function Navigation() {
       { path: "/dashboard", label: "Ana Sayfa", icon: Home },
     ];
     
-    // Safety specialists and above can create reports
-    if (['central_admin', 'location_manager', 'safety_specialist'].includes(user?.role || '')) {
+    // Safety specialists, occupational physicians and admin can create reports
+    if (['central_admin', 'safety_specialist', 'occupational_physician'].includes(user?.role || '')) {
       baseItems.push(
         { path: "/create-report", label: "Yeni Rapor", icon: Plus },
       );
@@ -37,8 +36,8 @@ export default function Navigation() {
     // All authenticated users can view reports
     baseItems.push({ path: "/reports", label: "Raporlar", icon: FileText });
     
-    // Central management and location managers can access admin panel
-    if (['central_admin', 'location_manager', 'safety_specialist'].includes(user?.role || '')) {
+    // Admin, safety specialists and occupational physicians can access admin panel
+    if (['central_admin', 'safety_specialist', 'occupational_physician'].includes(user?.role || '')) {
       baseItems.push({ path: "/admin", label: "Yönetim Panel", icon: Shield });
     }
     

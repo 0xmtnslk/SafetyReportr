@@ -101,14 +101,36 @@ async function seedLocationsAndUsers() {
       createdBy: centralAdminId
     });
 
-    // Regular user - Technical Services Manager
+    // Responsible Manager - Technical Services Manager  
     await db.insert(users).values({
       username: "ahmet.yilmaz",
       password: await bcrypt.hash("AhmetYilmaz2024!", 10),
       fullName: "Ahmet Yılmaz",
-      role: "technical_manager",
+      role: "responsible_manager",
       position: "Teknik Hizmetler Müdürü",
       locationId: topkapiLiv.id, // Assign to Topkapı Liv
+      createdBy: centralAdminId
+    });
+    
+    // Occupational Physician - Add to Topkapı Liv
+    await db.insert(users).values({
+      username: "dr.ayse.kaya",
+      password: await bcrypt.hash("DrAyseKaya2024!", 10),
+      fullName: "Dr. Ayşe Kaya",
+      role: "occupational_physician",
+      position: "İşyeri Hekimi",
+      locationId: topkapiLiv.id, // Assign to Topkapı Liv
+      createdBy: centralAdminId
+    });
+    
+    // Occupational Physician - Add to MedicalPark GOP  
+    await db.insert(users).values({
+      username: "dr.mehmet.ozkan",
+      password: await bcrypt.hash("DrMehmetOzkan2024!", 10),
+      fullName: "Dr. Mehmet Özkan", 
+      role: "occupational_physician",
+      position: "İşyeri Hekimi",
+      locationId: medicalParkGop.id, // Assign to GOP
       createdBy: centralAdminId
     });
 
@@ -129,7 +151,9 @@ async function seedLocationsAndUsers() {
     console.log("• Buğra Torlak (İş Güvenliği Uzmanı): bugra.torlak / BugraTorlak2024!");
     console.log("• Murat Bakal (Yönetim): murat.bakal / MuratBakal2024!");
     console.log("• Şifa Harmanköy (Yönetim): sifa.harmankoy / SifaHarmankoy2024!");
-    console.log("• Ahmet Yılmaz (Teknik Müdür): ahmet.yilmaz / AhmetYilmaz2024!");
+    console.log("• Ahmet Yılmaz (Sorumlu Müdür): ahmet.yilmaz / AhmetYilmaz2024!");
+    console.log("• Dr. Ayşe Kaya (İşyeri Hekimi): dr.ayse.kaya / DrAyseKaya2024!");
+    console.log("• Dr. Mehmet Özkan (İşyeri Hekimi): dr.mehmet.ozkan / DrMehmetOzkan2024!");
 
   } catch (error) {
     console.error("❌ Error seeding locations and users:", error);
