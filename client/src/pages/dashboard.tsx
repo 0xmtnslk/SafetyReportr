@@ -40,21 +40,6 @@ export default function Dashboard() {
     queryKey: ["/api/admin/hospitals"],
   });
 
-  if (statsLoading || reportsLoading || hospitalsLoading) {
-    return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/3 mb-4"></div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-32 bg-gray-200 rounded-2xl"></div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   const recentReportsData = Array.isArray(recentReports) ? recentReports : [];
   
   // Group reports by hospital
@@ -97,6 +82,21 @@ export default function Dashboard() {
       }))
       .sort((a, b) => a.hospitalName.localeCompare(b.hospitalName, 'tr'));
   }, [recentReportsData, hospitals, searchTerm]);
+
+  if (statsLoading || reportsLoading || hospitalsLoading) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-1/3 mb-4"></div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-32 bg-gray-200 rounded-2xl"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
