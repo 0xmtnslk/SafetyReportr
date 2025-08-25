@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FileText, AlertTriangle, CheckCircle, Clock, CheckCircle2, TrendingUp, Shield, Target, Search, Building2, Grid3X3, List } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "wouter";
@@ -11,7 +12,8 @@ export default function Dashboard() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const [searchTerm, setSearchTerm] = useState("");
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('grid');
+  const [selectedCity, setSelectedCity] = useState<string>("");
 
   // Progress calculation function
   const calculateProgress = (report: any) => {
@@ -47,19 +49,31 @@ export default function Dashboard() {
   // Group reports by hospital
   const groupedReports = useMemo(() => {
     const hospitalsArray = Array.isArray(hospitals) ? hospitals : [];
+    
+    // First filter by city if selected
+    let cityFilteredHospitals = hospitalsArray;
+    if (selectedCity) {
+      cityFilteredHospitals = hospitalsArray.filter((h: any) => h.city === selectedCity);
+    }
+    
+    // Then filter reports by search term
     const filtered = recentReportsData.filter((report: any) => {
+      // Only include reports from hospitals in selected city
+      const hospital = cityFilteredHospitals.find((h: any) => h.id === report.locationId);
+      if (!hospital) return false;
+      
       if (!searchTerm) return true;
       const searchLower = searchTerm.toLowerCase();
       return (
         report.reportNumber?.toLowerCase().includes(searchLower) ||
         report.reporter?.toLowerCase().includes(searchLower) ||
         report.location?.toLowerCase().includes(searchLower) ||
-        hospitalsArray.find((h: any) => h.id === report.locationId)?.name.toLowerCase().includes(searchLower)
+        hospital.name.toLowerCase().includes(searchLower)
       );
     });
 
     const groups = filtered.reduce((acc: any, report: any) => {
-      const hospital = hospitalsArray.find((h: any) => h.id === report.locationId);
+      const hospital = cityFilteredHospitals.find((h: any) => h.id === report.locationId);
       const hospitalName = hospital?.name || 'Belirtilmemiş Kuruluş';
       const hospitalId = report.locationId || 'unknown';
       
@@ -83,7 +97,7 @@ export default function Dashboard() {
         reports: data.reports.sort((a: any, b: any) => new Date(b.reportDate).getTime() - new Date(a.reportDate).getTime())
       }))
       .sort((a, b) => a.hospitalName.localeCompare(b.hospitalName, 'tr'));
-  }, [recentReportsData, hospitals, searchTerm]);
+  }, [recentReportsData, hospitals, searchTerm, selectedCity]);
 
   if (statsLoading || reportsLoading || hospitalsLoading) {
     return (
@@ -187,6 +201,17 @@ export default function Dashboard() {
               Hastane Raporları
             </CardTitle>
             <div className="flex items-center gap-4">
+              <Select value={selectedCity} onValueChange={setSelectedCity}>
+                <SelectTrigger className="w-32" data-testid="select-city">
+                  <SelectValue placeholder="Tüm Şehirler" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Tüm Şehirler</SelectItem>
+                  <SelectItem value="Adana">Adana</SelectItem>
+                  <SelectItem value="İstanbul">İstanbul</SelectItem>
+                </SelectContent>
+              </Select>
+              
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <Input
