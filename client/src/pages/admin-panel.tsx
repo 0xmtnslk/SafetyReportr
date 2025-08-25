@@ -920,7 +920,7 @@ export default function AdminPanel() {
                               <Button 
                                 variant="ghost" 
                                 size="sm"
-                                onClick={() => {/* TODO: handleEditHospital(hospital) */}}
+                                onClick={() => handleEditHospital(hospital)}
                                 data-testid={`button-edit-hospital-${hospital.id}`}
                               >
                                 <Edit className="h-4 w-4" />
@@ -1076,6 +1076,371 @@ export default function AdminPanel() {
                   variant="outline" 
                   onClick={() => setIsEditDialogOpen(false)}
                   data-testid="button-cancel-edit"
+                >
+                  İptal
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Hospital Dialog */}
+      <Dialog open={isCreateHospitalDialogOpen} onOpenChange={setIsCreateHospitalDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Plus className="h-5 w-5" />
+              Yeni Hastane Ekle
+            </DialogTitle>
+            <DialogDescription>
+              Sisteme yeni bir hastane/sağlık kuruluşu ekleyin. Tüm bilgileri doğru doldurunuz.
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...createHospitalForm}>
+            <form onSubmit={createHospitalForm.handleSubmit(onCreateHospitalSubmit)} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={createHospitalForm.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Hastane Adı *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Hastane adını giriniz" {...field} data-testid="input-create-hospital-name" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={createHospitalForm.control}
+                  name="shortName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Kısa Ad</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Kısa ad (isteğe bağlı)" {...field} data-testid="input-create-hospital-short-name" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <FormField
+                control={createHospitalForm.control}
+                name="address"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Adres *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Tam adres giriniz" {...field} data-testid="input-create-hospital-address" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={createHospitalForm.control}
+                  name="district"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>İlçe *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="İlçe adı" {...field} data-testid="input-create-hospital-district" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={createHospitalForm.control}
+                  name="city"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Şehir *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Şehir adı" {...field} data-testid="input-create-hospital-city" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={createHospitalForm.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Telefon *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="0212-555-0000" {...field} data-testid="input-create-hospital-phone" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={createHospitalForm.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>E-posta *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="info@hastane.com" type="email" {...field} data-testid="input-create-hospital-email" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={createHospitalForm.control}
+                  name="website"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Website</FormLabel>
+                      <FormControl>
+                        <Input placeholder="https://hastane.com" type="url" {...field} data-testid="input-create-hospital-website" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={createHospitalForm.control}
+                  name="type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Kuruluş Tipi *</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-create-hospital-type">
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="hospital">Hastane</SelectItem>
+                          <SelectItem value="medical_center">Tıp Merkezi</SelectItem>
+                          <SelectItem value="clinic">Klinik</SelectItem>
+                          <SelectItem value="office">Ofis</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="flex gap-2 pt-4">
+                <Button 
+                  type="submit" 
+                  disabled={createHospitalMutation.isPending}
+                  data-testid="button-submit-create-hospital"
+                >
+                  {createHospitalMutation.isPending ? "Oluşturuluyor..." : "Hastane Oluştur"}
+                </Button>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setIsCreateHospitalDialogOpen(false)}
+                  data-testid="button-cancel-create-hospital"
+                >
+                  İptal
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Hospital Dialog */}
+      <Dialog open={isEditHospitalDialogOpen} onOpenChange={setIsEditHospitalDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Edit className="h-5 w-5" />
+              Hastane Düzenle
+            </DialogTitle>
+            <DialogDescription>
+              {editingHospital?.name} hastanesinin bilgilerini güncelleyin.
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...editHospitalForm}>
+            <form onSubmit={editHospitalForm.handleSubmit(onEditHospitalSubmit)} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={editHospitalForm.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Hastane Adı *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Hastane adını giriniz" {...field} data-testid="input-edit-hospital-name" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editHospitalForm.control}
+                  name="shortName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Kısa Ad</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Kısa ad (isteğe bağlı)" {...field} data-testid="input-edit-hospital-short-name" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <FormField
+                control={editHospitalForm.control}
+                name="address"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Adres *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Tam adres giriniz" {...field} data-testid="input-edit-hospital-address" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={editHospitalForm.control}
+                  name="district"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>İlçe *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="İlçe adı" {...field} data-testid="input-edit-hospital-district" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editHospitalForm.control}
+                  name="city"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Şehir *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Şehir adı" {...field} data-testid="input-edit-hospital-city" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={editHospitalForm.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Telefon *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="0212-555-0000" {...field} data-testid="input-edit-hospital-phone" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editHospitalForm.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>E-posta *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="info@hastane.com" type="email" {...field} data-testid="input-edit-hospital-email" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={editHospitalForm.control}
+                  name="website"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Website</FormLabel>
+                      <FormControl>
+                        <Input placeholder="https://hastane.com" type="url" {...field} data-testid="input-edit-hospital-website" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editHospitalForm.control}
+                  name="type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Kuruluş Tipi *</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-edit-hospital-type">
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="hospital">Hastane</SelectItem>
+                          <SelectItem value="medical_center">Tıp Merkezi</SelectItem>
+                          <SelectItem value="clinic">Klinik</SelectItem>
+                          <SelectItem value="office">Ofis</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <FormField
+                control={editHospitalForm.control}
+                name="isActive"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">Aktif Durum</FormLabel>
+                      <FormDescription>
+                        Hastane aktif mi pasif mi?
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <input
+                        type="checkbox"
+                        checked={field.value}
+                        onChange={field.onChange}
+                        data-testid="checkbox-edit-hospital-active"
+                        className="h-4 w-4"
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              <div className="flex gap-2 pt-4">
+                <Button 
+                  type="submit" 
+                  disabled={updateHospitalMutation.isPending}
+                  data-testid="button-submit-edit-hospital"
+                >
+                  {updateHospitalMutation.isPending ? "Güncelleniyor..." : "Hastane Güncelle"}
+                </Button>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setIsEditHospitalDialogOpen(false)}
+                  data-testid="button-cancel-edit-hospital"
                 >
                   İptal
                 </Button>
