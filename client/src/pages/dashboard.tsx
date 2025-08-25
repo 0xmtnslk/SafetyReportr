@@ -13,7 +13,7 @@ export default function Dashboard() {
   const [, setLocation] = useLocation();
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('grid');
-  const [selectedCity, setSelectedCity] = useState<string>("");
+  const [selectedCity, setSelectedCity] = useState<string>("all");
 
   // Progress calculation function
   const calculateProgress = (report: any) => {
@@ -52,7 +52,7 @@ export default function Dashboard() {
     
     // First filter by city if selected
     let cityFilteredHospitals = hospitalsArray;
-    if (selectedCity) {
+    if (selectedCity && selectedCity !== "all") {
       cityFilteredHospitals = hospitalsArray.filter((h: any) => h.city === selectedCity);
     }
     
@@ -115,7 +115,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-8">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">
           Hoş Geldiniz{user?.fullName ? `, ${user.fullName}` : ""}
@@ -206,7 +206,7 @@ export default function Dashboard() {
                   <SelectValue placeholder="Tüm Şehirler" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Tüm Şehirler</SelectItem>
+                  <SelectItem value="all">Tüm Şehirler</SelectItem>
                   <SelectItem value="Adana">Adana</SelectItem>
                   <SelectItem value="İstanbul">İstanbul</SelectItem>
                 </SelectContent>

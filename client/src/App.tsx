@@ -53,10 +53,32 @@ function Router() {
     return <ChangePassword />;
   }
 
+  // If authenticated and on protected route, render with navigation layout
+  if (user && !user.firstLogin && isProtectedRoute) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navigation>
+          {user && <OfflineIndicator />}
+          <Switch>
+            <Route path="/dashboard" component={Dashboard} />
+            <Route path="/create-report" component={CreateReport} />
+            <Route path="/reports" component={Reports} />
+            <Route path="/edit-report/:id" component={EditReport} />
+            <Route path="/view-report/:id">
+              {(params) => <ViewReport id={params.id} />}
+            </Route>
+            <Route path="/admin" component={AdminPanel} />
+            <Route path="/change-password" component={ChangePassword} />
+            <Route component={() => <div className="p-8"><div>404 - Page Not Found</div></div>} />
+          </Switch>
+        </Navigation>
+      </div>
+    );
+  }
+
+  // For non-authenticated routes or special cases
   return (
     <div className="min-h-screen bg-background">
-      {/* Show navigation only for authenticated users on app pages */}
-      {user && !user.firstLogin && isProtectedRoute && <Navigation />}
       {user && <OfflineIndicator />}
       
       <Switch>
