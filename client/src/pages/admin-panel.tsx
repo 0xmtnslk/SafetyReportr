@@ -299,6 +299,7 @@ const editUserSchema = z.object({
 const createHospitalSchema = z.object({
   name: z.string().min(1, "Hastane adı gerekli"),
   shortName: z.string().optional(),
+  logo: z.string().optional(),
   address: z.string().min(1, "Adres gerekli"),
   phone: z.string().min(1, "Telefon gerekli"),
   email: z.string().email("Geçerli email gerekli"),
@@ -549,6 +550,7 @@ export default function AdminPanel() {
     defaultValues: {
       name: "",
       shortName: "",
+      logo: "",
       address: "",
       phone: "",
       email: "",
@@ -569,6 +571,7 @@ export default function AdminPanel() {
     defaultValues: {
       name: "",
       shortName: "",
+      logo: "",
       address: "",
       phone: "",
       email: "",
@@ -647,6 +650,7 @@ export default function AdminPanel() {
     setEditingHospital(hospital);
     editHospitalForm.setValue("name", hospital.name);
     editHospitalForm.setValue("shortName", hospital.shortName || "");
+    editHospitalForm.setValue("logo", hospital.logo || "");
     editHospitalForm.setValue("address", hospital.address || "");
     editHospitalForm.setValue("phone", hospital.phone || "");
     editHospitalForm.setValue("email", hospital.email || "");
@@ -1848,17 +1852,27 @@ export default function AdminPanel() {
               />
               <FormField
                 control={editForm.control}
-                name="location"
+                name="locationId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Lokasyon</FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder="Örn: Topkapı Liv Hastanesi, GOP MedicalPark"
-                        {...field} 
-                        data-testid="input-edit-location"
-                      />
-                    </FormControl>
+                    <FormLabel>Hastane/Kuruluş *</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-edit-location">
+                          <SelectValue placeholder="Hastane seçiniz" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {hospitals?.map((hospital) => (
+                          <SelectItem key={hospital.id} value={hospital.id}>
+                            {hospital.name} {hospital.shortName ? `(${hospital.shortName})` : ''}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      Kullanıcının çalıştığı hastane veya sağlık kuruluşunu seçiniz
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -1927,6 +1941,71 @@ export default function AdminPanel() {
                   )}
                 />
               </div>
+
+              {/* Hospital Logo Upload */}
+              <FormField
+                control={createHospitalForm.control}
+                name="logo"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Hastane Logosu</FormLabel>
+                    <FormControl>
+                      <div className="flex items-center gap-4">
+                        {field.value && (
+                          <div className="w-16 h-16 rounded-lg overflow-hidden bg-muted flex items-center justify-center border">
+                            <img 
+                              src={getHospitalLogoOrDefault(field.value)} 
+                              alt="Logo Preview"
+                              className="w-12 h-12 object-contain"
+                            />
+                          </div>
+                        )}
+                        <ObjectUploader
+                          maxNumberOfFiles={1}
+                          maxFileSize={5242880} // 5MB
+                          onGetUploadParameters={async () => {
+                            const response = await fetch('/api/objects/upload', { method: 'POST' });
+                            const data = await response.json();
+                            return { method: 'PUT' as const, url: data.uploadURL };
+                          }}
+                          onComplete={(result) => {
+                            if (result.successful.length > 0) {
+                              const uploadedFile = result.successful[0];
+                              // Normalize the URL to our object path format
+                              const normalizedPath = uploadedFile.uploadURL?.replace(
+                                /https:\/\/storage\.googleapis\.com\/[^\/]+\/(.+)\?.*/, 
+                                '/objects/$1'
+                              );
+                              if (normalizedPath) {
+                                field.onChange(normalizedPath);
+                              }
+                            }
+                          }}
+                          buttonClassName="flex items-center gap-2"
+                        >
+                          <Upload className="h-4 w-4" />
+                          Logo Yükle
+                        </ObjectUploader>
+                        {field.value && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => field.onChange("")}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </FormControl>
+                    <FormDescription>
+                      Hastane logosu yükleyebilirsiniz (maksimum 5MB, JPG/PNG)
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <FormField
                 control={createHospitalForm.control}
                 name="address"
@@ -2123,6 +2202,71 @@ export default function AdminPanel() {
                   )}
                 />
               </div>
+
+              {/* Hospital Logo Upload */}
+              <FormField
+                control={editHospitalForm.control}
+                name="logo"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Hastane Logosu</FormLabel>
+                    <FormControl>
+                      <div className="flex items-center gap-4">
+                        {field.value && (
+                          <div className="w-16 h-16 rounded-lg overflow-hidden bg-muted flex items-center justify-center border">
+                            <img 
+                              src={getHospitalLogoOrDefault(field.value)} 
+                              alt="Logo Preview"
+                              className="w-12 h-12 object-contain"
+                            />
+                          </div>
+                        )}
+                        <ObjectUploader
+                          maxNumberOfFiles={1}
+                          maxFileSize={5242880} // 5MB
+                          onGetUploadParameters={async () => {
+                            const response = await fetch('/api/objects/upload', { method: 'POST' });
+                            const data = await response.json();
+                            return { method: 'PUT' as const, url: data.uploadURL };
+                          }}
+                          onComplete={(result) => {
+                            if (result.successful.length > 0) {
+                              const uploadedFile = result.successful[0];
+                              // Normalize the URL to our object path format
+                              const normalizedPath = uploadedFile.uploadURL?.replace(
+                                /https:\/\/storage\.googleapis\.com\/[^\/]+\/(.+)\?.*/, 
+                                '/objects/$1'
+                              );
+                              if (normalizedPath) {
+                                field.onChange(normalizedPath);
+                              }
+                            }
+                          }}
+                          buttonClassName="flex items-center gap-2"
+                        >
+                          <Upload className="h-4 w-4" />
+                          Logo Yükle
+                        </ObjectUploader>
+                        {field.value && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => field.onChange("")}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </FormControl>
+                    <FormDescription>
+                      Hastane logosu yükleyebilirsiniz (maksimum 5MB, JPG/PNG)
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <FormField
                 control={editHospitalForm.control}
                 name="address"
