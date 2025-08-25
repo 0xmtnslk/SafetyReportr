@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Users, UserPlus, Edit, Trash2, Shield, MapPin, Key, Building2, Phone, Mail, Plus, Search, X, Upload, Camera, User } from "lucide-react";
+import { Users, UserPlus, Edit, Trash2, Shield, MapPin, Key, Building2, Phone, Mail, Plus, Search, X, Upload, Camera, User, Copy } from "lucide-react";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -507,6 +507,14 @@ export default function AdminPanel() {
     },
   });
 
+  // Auto-generate password when create dialog opens
+  React.useEffect(() => {
+    if (isCreateDialogOpen && !createForm.getValues("password")) {
+      const newPassword = generatePassword();
+      createForm.setValue("password", newPassword);
+    }
+  }, [isCreateDialogOpen]);
+
   // Hospital Forms
   const createHospitalForm = useForm<CreateHospitalForm>({
     resolver: zodResolver(createHospitalSchema),
@@ -958,7 +966,11 @@ export default function AdminPanel() {
                                     onComplete={(result) => {
                                       const uploadedFile = result.successful[0];
                                       if (uploadedFile?.uploadURL) {
-                                        field.onChange(uploadedFile.uploadURL);
+                                        // Normalize the object URL to our API format
+                                        const normalizedPath = uploadedFile.uploadURL.includes('storage.googleapis.com') 
+                                          ? `/objects/profiles/${uploadedFile.uploadURL.split('/').pop()}`
+                                          : uploadedFile.uploadURL;
+                                        field.onChange(normalizedPath);
                                       }
                                     }}
                                     buttonClassName="text-sm"
@@ -1044,9 +1056,41 @@ export default function AdminPanel() {
                               )}
                             />
                           </div>
+                          
+                          {/* Copy Credentials Section */}
+                          {(createForm.watch("username") || createForm.watch("password")) && (
+                            <div className="flex gap-2 pt-2">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  const username = createForm.getValues("username");
+                                  const password = createForm.getValues("password");
+                                  
+                                  if (username && password) {
+                                    const credentialsText = `Kullanıcı Adı: ${username}\nŞifre: ${password}`;
+                                    navigator.clipboard.writeText(credentialsText);
+                                    toast({
+                                      title: "Kopyalandı",
+                                      description: "Kullanıcı bilgileri panoya kopyalandı",
+                                    });
+                                  }
+                                }}
+                                data-testid="button-copy-credentials"
+                                className="flex items-center gap-2"
+                              >
+                                <Copy className="h-4 w-4" />
+                                Bilgileri Kopyala
+                              </Button>
+                              <span className="text-sm text-muted-foreground flex items-center">
+                                Kullanıcıya göndermek için bilgileri kopyalayın
+                              </span>
+                            </div>
+                          )}
                         </div>
 
-                        <div className="flex gap-2 pt-4">
+                        <div className="flex gap-2 pt-6 border-t">
                           <Button 
                             type="submit" 
                             disabled={createUserMutation.isPending}
