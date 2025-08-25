@@ -8,9 +8,13 @@ export const users = pgTable("users", {
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
   fullName: text("full_name").notNull(),
+  email: text("email").notNull().unique(), // Required - Contact email
+  phone: text("phone").notNull(), // Required - Contact phone
+  profileImage: text("profile_image"), // Optional - Profile photo URL from object storage
   role: text("role").notNull().default("user"), 
   // Roles: "central_admin" | "safety_specialist" | "occupational_physician" | "responsible_manager" | "user"
   position: text("position"), // e.g., "İş Güvenliği Uzmanı", "Teknik Hizmetler Müdürü", "İşyeri Hekimi"
+  department: text("department"), // Department within hospital for granular permissions
   locationId: varchar("location_id"), // Will reference locations.id
   location: text("location"), // Legacy field - to be deprecated
   firstLogin: boolean("first_login").default(true), // Force password change on first login
@@ -26,8 +30,27 @@ export const users = pgTable("users", {
 export const locations = pgTable("locations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(), // e.g., "İstinye Üniversite Topkapı Liv Hastanesi"
-  address: text("address").notNull(), // Full address
-  type: text("type").notNull().default("hospital"), // hospital, medical_center, clinic
+  shortName: text("short_name"), // e.g., "Topkapı Liv", "GOP Hastanesi"
+  logo: text("logo"), // Hospital logo URL from object storage
+  type: text("type").notNull().default("hospital"), // hospital, medical_center, clinic, office
+  
+  // Contact Information
+  phone: text("phone").notNull(),
+  email: text("email").notNull(),
+  website: text("website"),
+  
+  // Address Information (Turkish Address System)
+  address: text("address").notNull(), // Street address
+  district: text("district").notNull(), // İlçe
+  city: text("city").notNull(), // İl
+  postalCode: text("postal_code"),
+  country: text("country").default("Türkiye"),
+  
+  // Organization Details
+  taxNumber: text("tax_number"),
+  legalRepresentative: text("legal_representative"),
+  
+  // System Fields
   isActive: boolean("is_active").default(true),
   createdBy: varchar("created_by").references(() => users.id), // Created by central management
   createdAt: timestamp("created_at").defaultNow(),
@@ -108,20 +131,41 @@ export const pdfTemplateFields = pgTable("pdf_template_fields", {
 // Insert schemas  
 export const insertLocationSchema = createInsertSchema(locations).pick({
   name: true,
-  address: true,
+  shortName: true,
+  logo: true,
   type: true,
+  phone: true,
+  email: true,
+  website: true,
+  address: true,
+  district: true,
+  city: true,
+  postalCode: true,
+  country: true,
+  taxNumber: true,
+  legalRepresentative: true,
   isActive: true,
+}).extend({
+  email: z.string().email("Geçerli bir e-posta adresi giriniz"),
+  phone: z.string().min(10, "Telefon numarası en az 10 karakter olmalıdır"),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
   fullName: true,
+  email: true,
+  phone: true,
+  profileImage: true,
   role: true,
   position: true,
+  department: true,
   locationId: true,
   location: true, // Keep for backward compatibility
   isActive: true,
+}).extend({
+  email: z.string().email("Geçerli bir e-posta adresi giriniz"),
+  phone: z.string().min(10, "Telefon numarası en az 10 karakter olmalıdır"),
 });
 
 // Admin user creation schema (with auto-generated password option)

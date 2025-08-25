@@ -11,7 +11,9 @@ import {
   insertOfflineQueueSchema,
   adminCreateUserSchema,
   resetPasswordRequestSchema,
-  resetPasswordSchema
+  resetPasswordSchema,
+  insertLocationSchema,
+  Location
 } from "@shared/schema";
 import { ReactPdfService } from "./pdfService";
 // Template sistemi geçici olarak devre dışı
@@ -885,6 +887,104 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("PDF generation error:", error);
       res.status(500).json({ message: "PDF oluşturulurken hata oluştu" });
+    }
+  });
+
+  // Hospital Management API Endpoints
+  // Get all hospitals - Central Admin only
+  app.get('/api/admin/hospitals', authenticateToken, requireCentralManagement, async (req, res) => {
+    try {
+      const hospitals = await storage.getAllLocations();
+      res.json(hospitals);
+    } catch (error) {
+      console.error('Get hospitals error:', error);
+      res.status(500).json({ message: 'Hastaneler alınırken hata oluştu' });
+    }
+  });
+
+  // Create new hospital - Central Admin only
+  app.post('/api/admin/hospitals', authenticateToken, requireCentralManagement, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      const validatedData = insertLocationSchema.parse(req.body);
+      
+      const newHospital = await storage.createLocation({
+        ...validatedData,
+        createdBy: user.id
+      });
+      
+      res.status(201).json(newHospital);
+    } catch (error) {
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: 'Geçersiz hastane bilgileri', errors: error.errors });
+      }
+      console.error('Create hospital error:', error);
+      res.status(500).json({ message: 'Hastane oluşturulurken hata oluştu' });
+    }
+  });
+
+  // Update hospital - Central Admin only
+  app.put('/api/admin/hospitals/:id', authenticateToken, requireCentralManagement, async (req, res) => {
+    try {
+      const hospitalId = req.params.id;
+      const validatedData = insertLocationSchema.partial().parse(req.body);
+      
+      const updatedHospital = await storage.updateLocation(hospitalId, validatedData);
+      
+      if (!updatedHospital) {
+        return res.status(404).json({ message: 'Hastane bulunamadı' });
+      }
+      
+      res.json(updatedHospital);
+    } catch (error) {
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: 'Geçersiz hastane bilgileri', errors: error.errors });
+      }
+      console.error('Update hospital error:', error);
+      res.status(500).json({ message: 'Hastane güncellenirken hata oluştu' });
+    }
+  });
+
+  // Delete hospital - Central Admin only
+  app.delete('/api/admin/hospitals/:id', authenticateToken, requireCentralManagement, async (req, res) => {
+    try {
+      const hospitalId = req.params.id;
+      
+      // Check if hospital has users
+      const users = await storage.getUsersByLocationId(hospitalId);
+      if (users && users.length > 0) {
+        return res.status(400).json({ 
+          message: 'Bu hastanede kullanıcılar bulunmaktadır. Önce kullanıcıları başka hastaneye taşıyın.' 
+        });
+      }
+      
+      const deleted = await storage.deleteLocation(hospitalId);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: 'Hastane bulunamadı' });
+      }
+      
+      res.json({ message: 'Hastane başarıyla silindi' });
+    } catch (error) {
+      console.error('Delete hospital error:', error);
+      res.status(500).json({ message: 'Hastane silinirken hata oluştu' });
+    }
+  });
+
+  // Get hospital by ID - Central Admin only
+  app.get('/api/admin/hospitals/:id', authenticateToken, requireCentralManagement, async (req, res) => {
+    try {
+      const hospitalId = req.params.id;
+      const hospital = await storage.getLocationById(hospitalId);
+      
+      if (!hospital) {
+        return res.status(404).json({ message: 'Hastane bulunamadı' });
+      }
+      
+      res.json(hospital);
+    } catch (error) {
+      console.error('Get hospital error:', error);
+      res.status(500).json({ message: 'Hastane alınırken hata oluştu' });
     }
   });
 

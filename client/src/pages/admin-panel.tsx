@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Users, UserPlus, Edit, Trash2, Shield, MapPin, Key } from "lucide-react";
+import { Users, UserPlus, Edit, Trash2, Shield, MapPin, Key, Building2, Phone, Mail, Plus } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -42,11 +42,37 @@ interface User {
   id: string;
   username: string;
   fullName: string;
+  email: string;
+  phone: string;
+  profileImage?: string;
   role: 'central_admin' | 'safety_specialist' | 'occupational_physician' | 'responsible_manager' | 'user';
   position?: string;
+  department?: string;
   location?: string;
   locationId?: string;
   firstLogin: boolean;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Location type from shared schema
+interface Location {
+  id: string;
+  name: string;
+  shortName?: string;
+  logo?: string;
+  type: 'hospital' | 'medical_center' | 'clinic' | 'office';
+  phone: string;
+  email: string;
+  website?: string;
+  address: string;
+  district: string;
+  city: string;
+  postalCode?: string;
+  country: string;
+  taxNumber?: string;
+  legalRepresentative?: string;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -67,27 +93,65 @@ const createUserSchema = z.object({
 const editUserSchema = z.object({
   username: z.string().min(3, "Kullanıcı adı en az 3 karakter olmalıdır"),
   fullName: z.string().min(2, "Ad soyad en az 2 karakter olmalıdır"),
+  email: z.string().email("Geçerli bir e-posta adresi giriniz"),
+  phone: z.string().min(10, "Telefon numarası en az 10 karakter olmalıdır"),
   role: z.enum(['central_admin', 'safety_specialist', 'occupational_physician', 'responsible_manager', 'user'], 
     { required_error: "Rol seçiniz" }),
   position: z.string().optional(),
+  department: z.string().optional(),
   location: z.string().optional(),
   locationId: z.string().optional(),
   isActive: z.boolean()
 });
 
+// Hospital schemas
+const createHospitalSchema = z.object({
+  name: z.string().min(2, "Hastane adı en az 2 karakter olmalıdır"),
+  shortName: z.string().optional(),
+  type: z.enum(['hospital', 'medical_center', 'clinic', 'office'], 
+    { required_error: "Hastane tipi seçiniz" }),
+  phone: z.string().min(10, "Telefon numarası en az 10 karakter olmalıdır"),
+  email: z.string().email("Geçerli bir e-posta adresi giriniz"),
+  website: z.string().url("Geçerli bir website adresi giriniz").optional().or(z.literal("")),
+  address: z.string().min(5, "Adres en az 5 karakter olmalıdır"),
+  district: z.string().min(2, "İlçe adı en az 2 karakter olmalıdır"),
+  city: z.string().min(2, "Şehir adı en az 2 karakter olmalıdır"),
+  postalCode: z.string().optional(),
+  country: z.string().default("Türkiye"),
+  taxNumber: z.string().optional(),
+  legalRepresentative: z.string().optional()
+});
+
+const editHospitalSchema = createHospitalSchema.extend({
+  isActive: z.boolean()
+});
+
 type CreateUserForm = z.infer<typeof createUserSchema>;
 type EditUserForm = z.infer<typeof editUserSchema>;
+type CreateHospitalForm = z.infer<typeof createHospitalSchema>;
+type EditHospitalForm = z.infer<typeof editHospitalSchema>;
 
 export default function AdminPanel() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  
+  // Hospital state
+  const [isCreateHospitalDialogOpen, setIsCreateHospitalDialogOpen] = useState(false);
+  const [isEditHospitalDialogOpen, setIsEditHospitalDialogOpen] = useState(false);
+  const [editingHospital, setEditingHospital] = useState<Location | null>(null);
+  
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   // Fetch users
   const { data: users, isLoading, error } = useQuery<User[]>({
     queryKey: ['/api/admin/users'],
+  });
+
+  // Fetch hospitals
+  const { data: hospitals, isLoading: isHospitalsLoading, error: hospitalsError } = useQuery<Location[]>({
+    queryKey: ['/api/admin/hospitals'],
   });
 
   // Create user mutation
@@ -255,6 +319,10 @@ export default function AdminPanel() {
           <TabsTrigger value="users" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
             Kullanıcı Yönetimi
+          </TabsTrigger>
+          <TabsTrigger value="hospitals" className="flex items-center gap-2">
+            <Building2 className="h-4 w-4" />
+            Hastane Yönetimi
           </TabsTrigger>
         </TabsList>
 
@@ -562,6 +630,213 @@ export default function AdminPanel() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="hospitals" className="space-y-6">
+          {/* Hospitals Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center gap-4">
+                  <Building2 className="h-8 w-8 text-blue-600" />
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Toplam Hastane</p>
+                    <p className="text-2xl font-bold" data-testid="text-total-hospitals">
+                      {hospitals?.length || 0}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center gap-4">
+                  <Building2 className="h-8 w-8 text-green-600" />
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Aktif Hastane</p>
+                    <p className="text-2xl font-bold" data-testid="text-active-hospitals">
+                      {hospitals?.filter(h => h.isActive).length || 0}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center gap-4">
+                  <MapPin className="h-8 w-8 text-orange-600" />
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Şehir Sayısı</p>
+                    <p className="text-2xl font-bold" data-testid="text-city-count">
+                      {hospitals ? new Set(hospitals.map(h => h.city)).size : 0}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Hospitals Actions */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Hastane Yönetimi</CardTitle>
+                  <CardDescription>
+                    Sistem hastanelerini ve sağlık tesislerini yönetin
+                  </CardDescription>
+                </div>
+                <Button 
+                  onClick={() => setIsCreateHospitalDialogOpen(true)}
+                  className="flex items-center gap-2"
+                  data-testid="button-add-hospital"
+                >
+                  <Plus className="h-4 w-4" />
+                  Yeni Hastane
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {/* Hospitals Loading State */}
+              {isHospitalsLoading && (
+                <div className="text-center py-8">
+                  <p>Hastaneler yükleniyor...</p>
+                </div>
+              )}
+
+              {/* Hospitals Error State */}
+              {hospitalsError && (
+                <div className="text-center py-8 text-red-600">
+                  <p>Hastaneler yüklenirken hata oluştu.</p>
+                </div>
+              )}
+
+              {/* Hospitals Table */}
+              {hospitals && hospitals.length > 0 && (
+                <div className="rounded-md border">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b bg-muted/50">
+                        <th className="p-3 text-left font-medium">Hastane Adı</th>
+                        <th className="p-3 text-left font-medium">Tür</th>
+                        <th className="p-3 text-left font-medium">Şehir</th>
+                        <th className="p-3 text-left font-medium">İletişim</th>
+                        <th className="p-3 text-left font-medium">Durum</th>
+                        <th className="p-3 text-center font-medium">İşlemler</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {hospitals.map((hospital) => (
+                        <tr key={hospital.id} className="border-b">
+                          <td className="p-3">
+                            <div>
+                              <p className="font-medium" data-testid={`text-hospital-name-${hospital.id}`}>
+                                {hospital.name}
+                              </p>
+                              {hospital.shortName && (
+                                <p className="text-sm text-muted-foreground">
+                                  {hospital.shortName}
+                                </p>
+                              )}
+                            </div>
+                          </td>
+                          <td className="p-3">
+                            <Badge variant="secondary">
+                              {hospital.type === 'hospital' ? 'Hastane' :
+                               hospital.type === 'medical_center' ? 'Tıp Merkezi' :
+                               hospital.type === 'clinic' ? 'Klinik' : 'Ofis'}
+                            </Badge>
+                          </td>
+                          <td className="p-3">
+                            <div>
+                              <p className="font-medium">{hospital.city}</p>
+                              <p className="text-sm text-muted-foreground">{hospital.district}</p>
+                            </div>
+                          </td>
+                          <td className="p-3">
+                            <div className="flex flex-col gap-1">
+                              <div className="flex items-center gap-2">
+                                <Phone className="h-3 w-3" />
+                                <span className="text-sm">{hospital.phone}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Mail className="h-3 w-3" />
+                                <span className="text-sm">{hospital.email}</span>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="p-3">
+                            <Badge variant={hospital.isActive ? "default" : "secondary"}>
+                              {hospital.isActive ? "Aktif" : "Pasif"}
+                            </Badge>
+                          </td>
+                          <td className="p-3">
+                            <div className="flex items-center justify-center gap-2">
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => {/* TODO: handleEditHospital(hospital) */}}
+                                data-testid={`button-edit-hospital-${hospital.id}`}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    className="text-red-600 hover:text-red-700"
+                                    data-testid={`button-delete-hospital-${hospital.id}`}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Hastaneyi Sil</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      "{hospital.name}" hastanesini silmek istediğinizden emin misiniz?
+                                      Bu işlem geri alınamaz ve bu hastaneye bağlı kullanıcılar etkilenebilir.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>İptal</AlertDialogCancel>
+                                    <AlertDialogAction 
+                                      onClick={() => {/* TODO: handleDeleteHospital(hospital.id) */}}
+                                      className="bg-red-600 hover:bg-red-700"
+                                    >
+                                      Sil
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* No Hospitals */}
+              {hospitals && hospitals.length === 0 && (
+                <div className="text-center py-8">
+                  <Building2 className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">Henüz hastane eklenmemiş</p>
+                  <Button 
+                    onClick={() => setIsCreateHospitalDialogOpen(true)}
+                    className="mt-4"
+                  >
+                    İlk Hastaneyi Ekle
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Hospital Create Dialog Placeholder */}
+          {/* TODO: Add Hospital Create/Edit Forms */}
         </TabsContent>
       </Tabs>
 

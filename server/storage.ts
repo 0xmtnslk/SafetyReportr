@@ -1,4 +1,4 @@
-import { reports, findings, users, offlineQueue, type User, type InsertUser, type Report, type InsertReport, type Finding, type InsertFinding, type OfflineQueueItem, type InsertOfflineQueueItem } from "@shared/schema";
+import { reports, findings, users, offlineQueue, locations, type User, type InsertUser, type Report, type InsertReport, type Finding, type InsertFinding, type OfflineQueueItem, type InsertOfflineQueueItem, type Location, type InsertLocation } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, inArray, sql, gt, or } from "drizzle-orm";
 import bcrypt from "bcrypt";
@@ -74,6 +74,14 @@ export interface IStorage {
     completedFindings: number;
     completedReports: number;
   }>;
+
+  // Location/Hospital operations
+  getAllLocations(): Promise<Location[]>;
+  getLocationById(id: string): Promise<Location | undefined>;
+  createLocation(location: InsertLocation & { createdBy: string }): Promise<Location>;
+  updateLocation(id: string, location: Partial<InsertLocation>): Promise<Location | null>;
+  deleteLocation(id: string): Promise<boolean>;
+  getUsersByLocationId(locationId: string): Promise<User[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -593,6 +601,42 @@ export class DatabaseStorage implements IStorage {
       completedFindings,
       completedReports,
     };
+  }
+
+  // Hospital/Location Management Operations
+  async getAllLocations(): Promise<Location[]> {
+    return await db.select().from(locations).orderBy(desc(locations.createdAt));
+  }
+
+  async getLocationById(id: string): Promise<Location | undefined> {
+    const [location] = await db.select().from(locations).where(eq(locations.id, id));
+    return location || undefined;
+  }
+
+  async createLocation(location: InsertLocation & { createdBy: string }): Promise<Location> {
+    const [newLocation] = await db.insert(locations).values(location).returning();
+    return newLocation;
+  }
+
+  async updateLocation(id: string, location: Partial<InsertLocation>): Promise<Location | null> {
+    const [updatedLocation] = await db
+      .update(locations)
+      .set({ 
+        ...location, 
+        updatedAt: new Date() 
+      })
+      .where(eq(locations.id, id))
+      .returning();
+    return updatedLocation || null;
+  }
+
+  async deleteLocation(id: string): Promise<boolean> {
+    const result = await db.delete(locations).where(eq(locations.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  async getUsersByLocationId(locationId: string): Promise<User[]> {
+    return await db.select().from(users).where(eq(users.locationId, locationId));
   }
 }
 
