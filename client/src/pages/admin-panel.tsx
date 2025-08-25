@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Users, UserPlus, Edit, Trash2, Shield, MapPin, Key, Building2, Phone, Mail, Plus, Search, X, Upload, Camera, User, Copy } from "lucide-react";
+import { Users, UserPlus, Edit, Trash2, Shield, MapPin, Key, Building2, Phone, Mail, Plus, Search, X, Upload, Camera, User, Copy, Grid3X3, List, Image } from "lucide-react";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -31,6 +31,29 @@ const getRoleDisplayName = (role: string) => {
     'user': 'Normal Kullanıcı'
   };
   return roleNames[role] || role;
+};
+
+// Helper function to get location display text
+const getLocationDisplayName = (hospital: Location | undefined) => {
+  if (!hospital) return "Bilinmeyen Lokasyon";
+  if (hospital.shortName) return hospital.shortName;
+  return `${hospital.city}, ${hospital.district}`;
+};
+
+// Helper function to get profile image or default
+const getProfileImageOrDefault = (profileImage?: string) => {
+  if (profileImage && profileImage.startsWith('/objects/')) {
+    return profileImage;
+  }
+  return "/src/assets/mlp-logo.png"; // Default medicalisg logo
+};
+
+// Helper function to get hospital logo or default
+const getHospitalLogoOrDefault = (logo?: string) => {
+  if (logo && logo.startsWith('/objects/')) {
+    return logo;
+  }
+  return "/src/assets/mlp-logo.png"; // Default medicalisg logo
 };
 
 // Örnek lokasyonlar (placeholder için)
@@ -307,6 +330,10 @@ export default function AdminPanel() {
   const [isCreateHospitalDialogOpen, setIsCreateHospitalDialogOpen] = useState(false);
   const [isEditHospitalDialogOpen, setIsEditHospitalDialogOpen] = useState(false);
   const [editingHospital, setEditingHospital] = useState<Location | null>(null);
+  
+  // View mode states
+  const [userViewMode, setUserViewMode] = useState<'list' | 'card'>('card');
+  const [hospitalViewMode, setHospitalViewMode] = useState<'list' | 'card'>('card');
   
   // City/District state  
   const [selectedCreateCity, setSelectedCreateCity] = useState<string>("");
@@ -725,7 +752,32 @@ export default function AdminPanel() {
 
           {/* User Management Header and Search */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <h2 className="text-xl font-semibold">Kullanıcılar ({filteredUsers?.length || 0})</h2>
+            <div className="flex items-center gap-4">
+              <h2 className="text-xl font-semibold">Kullanıcılar ({filteredUsers?.length || 0})</h2>
+              
+              {/* View Mode Toggle */}
+              <div className="flex items-center bg-muted rounded-lg p-1">
+                <Button
+                  variant={userViewMode === 'card' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setUserViewMode('card')}
+                  className="h-7 px-2"
+                  data-testid="button-card-view"
+                >
+                  <Grid3X3 className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={userViewMode === 'list' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setUserViewMode('list')}
+                  className="h-7 px-2"
+                  data-testid="button-list-view"
+                >
+                  <List className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            
             <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
               <SearchInput
                 placeholder="Kullanıcı, email, telefon veya rol ara..."
@@ -1115,7 +1167,7 @@ export default function AdminPanel() {
               </div>
             </div>
 
-          {/* Users Table */}
+          {/* Users Display */}
           <Card>
             <CardContent className="p-6">
               {isLoading ? (
@@ -1124,91 +1176,254 @@ export default function AdminPanel() {
                 </div>
               ) : filteredUsers?.length === 0 ? (
                 <div className="text-center py-8">
+                  <Users className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
                   <p className="text-muted-foreground">Hiç kullanıcı bulunamadı.</p>
+                  <Button 
+                    onClick={() => setIsCreateDialogOpen(true)}
+                    className="mt-4"
+                  >
+                    İlk Kullanıcıyı Ekle
+                  </Button>
                 </div>
               ) : (
-                <div className="space-y-4">
-                  {filteredUsers?.map((user) => (
-                    <div 
-                      key={user.id}
-                      className="flex items-center justify-between p-4 border rounded-lg"
-                      data-testid={`user-card-${user.id}`}
-                    >
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h3 className="font-semibold" data-testid={`text-username-${user.id}`}>
-                            {user.fullName}
-                          </h3>
-                          <Badge variant={['central_admin', 'location_manager', 'safety_specialist'].includes(user.role) ? 'default' : 'secondary'}>
-                            {getRoleDisplayName(user.role)}
-                          </Badge>
-                          {user.firstLogin && (
-                            <Badge variant="outline" className="text-amber-600">
-                              İlk Giriş
-                            </Badge>
-                          )}
-                          {!user.isActive && (
-                            <Badge variant="destructive">
-                              Pasif
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <span data-testid={`text-login-${user.id}`}>@{user.username}</span>
-                          <span className="flex items-center gap-1">
-                            <MapPin className="h-3 w-3" />
-                            {user.location || 'Lokasyon belirtilmemiş'}
-                          </span>
-                          {user.position && (
-                            <span className="text-sm text-blue-600">
-                              {user.position}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => handleEditUser(user)}
-                          data-testid={`button-edit-${user.id}`}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              data-testid={`button-delete-${user.id}`}
-                            >
-                              <Trash2 className="h-4 w-4 text-red-600" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Kullanıcı Sil</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                {user.fullName} kullanıcısını sistemden silmek istediğinizden emin misiniz? 
-                                Bu işlem geri alınamaz.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>İptal</AlertDialogCancel>
-                              <AlertDialogAction 
-                                onClick={() => handleDeleteUser(user.id)}
-                                className="bg-red-600 hover:bg-red-700"
-                                data-testid={`button-confirm-delete-${user.id}`}
+                <>
+                  {/* Card View */}
+                  {userViewMode === 'card' && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {filteredUsers?.map((user) => {
+                        const userHospital = hospitals?.find(h => h.id === user.locationId);
+                        return (
+                          <div 
+                            key={user.id}
+                            className="border rounded-lg p-4 hover:shadow-md transition-shadow bg-card"
+                            data-testid={`user-card-${user.id}`}
+                          >
+                            {/* User Header with Avatar */}
+                            <div className="flex items-start gap-3 mb-3">
+                              <div className="w-12 h-12 rounded-full overflow-hidden bg-muted flex items-center justify-center">
+                                {user.profileImage ? (
+                                  <img 
+                                    src={getProfileImageOrDefault(user.profileImage)} 
+                                    alt={user.fullName}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <img 
+                                    src={getProfileImageOrDefault()} 
+                                    alt="Default"
+                                    className="w-8 h-8 object-contain opacity-50"
+                                  />
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <h3 className="font-semibold text-sm truncate" data-testid={`text-fullname-${user.id}`}>
+                                  {user.fullName}
+                                </h3>
+                                <p className="text-xs text-muted-foreground truncate" data-testid={`text-username-${user.id}`}>
+                                  @{user.username}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Role and Status Badges */}
+                            <div className="flex flex-wrap gap-1 mb-3">
+                              <Badge variant={['central_admin', 'safety_specialist', 'occupational_physician'].includes(user.role) ? 'default' : 'secondary'} className="text-xs">
+                                {getRoleDisplayName(user.role)}
+                              </Badge>
+                              {user.firstLogin && (
+                                <Badge variant="outline" className="text-amber-600 text-xs">
+                                  İlk Giriş
+                                </Badge>
+                              )}
+                              {!user.isActive && (
+                                <Badge variant="destructive" className="text-xs">
+                                  Pasif
+                                </Badge>
+                              )}
+                            </div>
+
+                            {/* User Details */}
+                            <div className="space-y-2 text-xs text-muted-foreground mb-4">
+                              <div className="flex items-center gap-1">
+                                <MapPin className="h-3 w-3 flex-shrink-0" />
+                                <span className="truncate">
+                                  {getLocationDisplayName(userHospital)}
+                                </span>
+                              </div>
+                              {user.position && (
+                                <div className="flex items-center gap-1">
+                                  <User className="h-3 w-3 flex-shrink-0" />
+                                  <span className="truncate text-blue-600">
+                                    {user.position}
+                                  </span>
+                                </div>
+                              )}
+                              {user.email && (
+                                <div className="flex items-center gap-1">
+                                  <Mail className="h-3 w-3 flex-shrink-0" />
+                                  <span className="truncate">
+                                    {user.email}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex gap-2">
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => handleEditUser(user)}
+                                data-testid={`button-edit-${user.id}`}
+                                className="flex-1"
                               >
-                                Sil
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
+                                <Edit className="h-3 w-3 mr-1" />
+                                Düzenle
+                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    data-testid={`button-delete-${user.id}`}
+                                    className="px-3"
+                                  >
+                                    <Trash2 className="h-3 w-3 text-red-600" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Kullanıcı Sil</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      {user.fullName} kullanıcısını sistemden silmek istediğinizden emin misiniz? 
+                                      Bu işlem geri alınamaz.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>İptal</AlertDialogCancel>
+                                    <AlertDialogAction 
+                                      onClick={() => handleDeleteUser(user.id)}
+                                      className="bg-red-600 hover:bg-red-700"
+                                      data-testid={`button-confirm-delete-${user.id}`}
+                                    >
+                                      Sil
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                  ))}
-                </div>
+                  )}
+
+                  {/* List View */}
+                  {userViewMode === 'list' && (
+                    <div className="space-y-2">
+                      {filteredUsers?.map((user) => {
+                        const userHospital = hospitals?.find(h => h.id === user.locationId);
+                        return (
+                          <div 
+                            key={user.id}
+                            className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50"
+                            data-testid={`user-row-${user.id}`}
+                          >
+                            <div className="flex items-center gap-3 flex-1">
+                              <div className="w-8 h-8 rounded-full overflow-hidden bg-muted flex items-center justify-center flex-shrink-0">
+                                {user.profileImage ? (
+                                  <img 
+                                    src={getProfileImageOrDefault(user.profileImage)} 
+                                    alt={user.fullName}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <img 
+                                    src={getProfileImageOrDefault()} 
+                                    alt="Default"
+                                    className="w-6 h-6 object-contain opacity-50"
+                                  />
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <h3 className="font-semibold truncate" data-testid={`text-fullname-${user.id}`}>
+                                    {user.fullName}
+                                  </h3>
+                                  <Badge variant={['central_admin', 'safety_specialist', 'occupational_physician'].includes(user.role) ? 'default' : 'secondary'} className="text-xs">
+                                    {getRoleDisplayName(user.role)}
+                                  </Badge>
+                                  {user.firstLogin && (
+                                    <Badge variant="outline" className="text-amber-600 text-xs">
+                                      İlk Giriş
+                                    </Badge>
+                                  )}
+                                  {!user.isActive && (
+                                    <Badge variant="destructive" className="text-xs">
+                                      Pasif
+                                    </Badge>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                  <span data-testid={`text-username-${user.id}`}>@{user.username}</span>
+                                  <span className="flex items-center gap-1">
+                                    <MapPin className="h-3 w-3" />
+                                    {getLocationDisplayName(userHospital)}
+                                  </span>
+                                  {user.position && (
+                                    <span className="text-blue-600">
+                                      {user.position}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => handleEditUser(user)}
+                                data-testid={`button-edit-${user.id}`}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    data-testid={`button-delete-${user.id}`}
+                                  >
+                                    <Trash2 className="h-4 w-4 text-red-600" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Kullanıcı Sil</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      {user.fullName} kullanıcısını sistemden silmek istediğinizden emin misiniz? 
+                                      Bu işlem geri alınamaz.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>İptal</AlertDialogCancel>
+                                    <AlertDialogAction 
+                                      onClick={() => handleDeleteUser(user.id)}
+                                      className="bg-red-600 hover:bg-red-700"
+                                      data-testid={`button-confirm-delete-${user.id}`}
+                                    >
+                                      Sil
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </>
               )}
             </CardContent>
           </Card>
@@ -1258,11 +1473,36 @@ export default function AdminPanel() {
             </Card>
           </div>
 
-          {/* Hospitals Actions */}
+          {/* Hospital Management Header */}
           <Card>
             <CardHeader>
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <div className="flex items-center gap-4">
+                    <h2 className="text-xl font-semibold">Hastaneler ({hospitals?.length || 0})</h2>
+                    
+                    {/* View Mode Toggle */}
+                    <div className="flex items-center bg-muted rounded-lg p-1">
+                      <Button
+                        variant={hospitalViewMode === 'card' ? 'default' : 'ghost'}
+                        size="sm"
+                        onClick={() => setHospitalViewMode('card')}
+                        className="h-7 px-2"
+                        data-testid="button-hospital-card-view"
+                      >
+                        <Grid3X3 className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant={hospitalViewMode === 'list' ? 'default' : 'ghost'}
+                        size="sm"
+                        onClick={() => setHospitalViewMode('list')}
+                        className="h-7 px-2"
+                        data-testid="button-hospital-list-view"
+                      >
+                        <List className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
                   <div>
                     <CardTitle>Hastane Yönetimi</CardTitle>
                     <CardDescription>
@@ -1314,112 +1554,213 @@ export default function AdminPanel() {
                 </div>
               )}
 
-              {/* Hospitals Table */}
+              {/* Hospitals Display */}
               {filteredHospitals && filteredHospitals.length > 0 && (
-                <div className="rounded-md border">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b bg-muted/50">
-                        <th className="p-3 text-left font-medium">Hastane Adı</th>
-                        <th className="p-3 text-left font-medium">Tür</th>
-                        <th className="p-3 text-left font-medium">Şehir</th>
-                        <th className="p-3 text-left font-medium">İletişim</th>
-                        <th className="p-3 text-left font-medium">Durum</th>
-                        <th className="p-3 text-center font-medium">İşlemler</th>
-                      </tr>
-                    </thead>
-                    <tbody>
+                <>
+                  {/* Card View */}
+                  {hospitalViewMode === 'card' && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {filteredHospitals.map((hospital) => (
-                        <tr key={hospital.id} className="border-b">
-                          <td className="p-3">
-                            <div>
-                              <p className="font-medium" data-testid={`text-hospital-name-${hospital.id}`}>
+                        <div 
+                          key={hospital.id}
+                          className="border rounded-lg p-4 hover:shadow-md transition-shadow bg-card"
+                          data-testid={`hospital-card-${hospital.id}`}
+                        >
+                          {/* Hospital Header with Logo */}
+                          <div className="flex items-start gap-3 mb-3">
+                            <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted flex items-center justify-center">
+                              <img 
+                                src={getHospitalLogoOrDefault(hospital.logo)} 
+                                alt={hospital.name}
+                                className="w-8 h-8 object-contain"
+                              />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-semibold text-sm truncate" data-testid={`text-hospital-name-${hospital.id}`}>
                                 {hospital.name}
-                              </p>
+                              </h3>
                               {hospital.shortName && (
-                                <p className="text-sm text-muted-foreground">
+                                <p className="text-xs text-muted-foreground truncate">
                                   {hospital.shortName}
                                 </p>
                               )}
                             </div>
-                          </td>
-                          <td className="p-3">
-                            <Badge variant="secondary">
+                          </div>
+
+                          {/* Type and Status Badges */}
+                          <div className="flex flex-wrap gap-1 mb-3">
+                            <Badge variant="secondary" className="text-xs">
                               {hospital.type === 'hospital' ? 'Hastane' :
                                hospital.type === 'medical_center' ? 'Tıp Merkezi' :
                                hospital.type === 'clinic' ? 'Klinik' : 'Ofis'}
                             </Badge>
-                          </td>
-                          <td className="p-3">
-                            <div>
-                              <p className="font-medium">{hospital.city}</p>
-                              <p className="text-sm text-muted-foreground">{hospital.district}</p>
-                            </div>
-                          </td>
-                          <td className="p-3">
-                            <div className="flex flex-col gap-1">
-                              <div className="flex items-center gap-2">
-                                <Phone className="h-3 w-3" />
-                                <span className="text-sm">{hospital.phone}</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Mail className="h-3 w-3" />
-                                <span className="text-sm">{hospital.email}</span>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="p-3">
-                            <Badge variant={hospital.isActive ? "default" : "secondary"}>
+                            <Badge variant={hospital.isActive ? "default" : "destructive"} className="text-xs">
                               {hospital.isActive ? "Aktif" : "Pasif"}
                             </Badge>
-                          </td>
-                          <td className="p-3">
-                            <div className="flex items-center justify-center gap-2">
-                              <Button 
-                                variant="ghost" 
-                                size="sm"
-                                onClick={() => handleEditHospital(hospital)}
-                                data-testid={`button-edit-hospital-${hospital.id}`}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm"
-                                    className="text-red-600 hover:text-red-700"
-                                    data-testid={`button-delete-hospital-${hospital.id}`}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>Hastaneyi Sil</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      "{hospital.name}" hastanesini silmek istediğinizden emin misiniz?
-                                      Bu işlem geri alınamaz ve bu hastaneye bağlı kullanıcılar etkilenebilir.
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>İptal</AlertDialogCancel>
-                                    <AlertDialogAction 
-                                      onClick={() => {/* TODO: handleDeleteHospital(hospital.id) */}}
-                                      className="bg-red-600 hover:bg-red-700"
-                                    >
-                                      Sil
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
+                          </div>
+
+                          {/* Hospital Details */}
+                          <div className="space-y-2 text-xs text-muted-foreground mb-4">
+                            <div className="flex items-center gap-1">
+                              <MapPin className="h-3 w-3 flex-shrink-0" />
+                              <span className="truncate">
+                                {hospital.city}, {hospital.district}
+                              </span>
                             </div>
-                          </td>
-                        </tr>
+                            <div className="flex items-center gap-1">
+                              <Phone className="h-3 w-3 flex-shrink-0" />
+                              <span className="truncate">
+                                {hospital.phone}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Mail className="h-3 w-3 flex-shrink-0" />
+                              <span className="truncate">
+                                {hospital.email}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Action Buttons */}
+                          <div className="flex gap-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => handleEditHospital(hospital)}
+                              data-testid={`button-edit-hospital-${hospital.id}`}
+                              className="flex-1"
+                            >
+                              <Edit className="h-3 w-3 mr-1" />
+                              Düzenle
+                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  data-testid={`button-delete-hospital-${hospital.id}`}
+                                  className="px-3"
+                                >
+                                  <Trash2 className="h-3 w-3 text-red-600" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Hastaneyi Sil</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    "{hospital.name}" hastanesini silmek istediğinizden emin misiniz?
+                                    Bu işlem geri alınamaz ve bu hastaneye bağlı kullanıcılar etkilenebilir.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>İptal</AlertDialogCancel>
+                                  <AlertDialogAction 
+                                    onClick={() => handleDeleteHospital(hospital.id)}
+                                    className="bg-red-600 hover:bg-red-700"
+                                  >
+                                    Sil
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </div>
                       ))}
-                    </tbody>
-                  </table>
-                </div>
+                    </div>
+                  )}
+
+                  {/* List View */}
+                  {hospitalViewMode === 'list' && (
+                    <div className="space-y-2">
+                      {filteredHospitals.map((hospital) => (
+                        <div 
+                          key={hospital.id}
+                          className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50"
+                          data-testid={`hospital-row-${hospital.id}`}
+                        >
+                          <div className="flex items-center gap-3 flex-1">
+                            <div className="w-8 h-8 rounded-lg overflow-hidden bg-muted flex items-center justify-center flex-shrink-0">
+                              <img 
+                                src={getHospitalLogoOrDefault(hospital.logo)} 
+                                alt={hospital.name}
+                                className="w-6 h-6 object-contain"
+                              />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <h3 className="font-semibold truncate" data-testid={`text-hospital-name-${hospital.id}`}>
+                                  {hospital.name}
+                                </h3>
+                                <Badge variant="secondary" className="text-xs">
+                                  {hospital.type === 'hospital' ? 'Hastane' :
+                                   hospital.type === 'medical_center' ? 'Tıp Merkezi' :
+                                   hospital.type === 'clinic' ? 'Klinik' : 'Ofis'}
+                                </Badge>
+                                <Badge variant={hospital.isActive ? "default" : "destructive"} className="text-xs">
+                                  {hospital.isActive ? "Aktif" : "Pasif"}
+                                </Badge>
+                              </div>
+                              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                <span className="flex items-center gap-1">
+                                  <MapPin className="h-3 w-3" />
+                                  {hospital.city}, {hospital.district}
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <Phone className="h-3 w-3" />
+                                  {hospital.phone}
+                                </span>
+                                {hospital.shortName && (
+                                  <span className="text-blue-600">
+                                    {hospital.shortName}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleEditHospital(hospital)}
+                              data-testid={`button-edit-hospital-${hospital.id}`}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm"
+                                  data-testid={`button-delete-hospital-${hospital.id}`}
+                                >
+                                  <Trash2 className="h-4 w-4 text-red-600" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Hastaneyi Sil</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    "{hospital.name}" hastanesini silmek istediğinizden emin misiniz?
+                                    Bu işlem geri alınamaz ve bu hastaneye bağlı kullanıcılar etkilenebilir.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>İptal</AlertDialogCancel>
+                                  <AlertDialogAction 
+                                    onClick={() => handleDeleteHospital(hospital.id)}
+                                    className="bg-red-600 hover:bg-red-700"
+                                  >
+                                    Sil
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
               )}
 
               {/* No Hospitals */}
