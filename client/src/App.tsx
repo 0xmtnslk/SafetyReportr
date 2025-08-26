@@ -70,12 +70,7 @@ function Router() {
             </Route>
             <Route path="/admin" component={AdminPanel} />
             <Route path="/change-password" component={ChangePassword} />
-            <Route path="/checklist">
-              {() => <div className="p-8">
-                <h1 className="text-2xl font-bold">Kontrol Listesi Test Sayfası</h1>
-                <p>Bu sayfa çalışıyor! Route problemi yok.</p>
-              </div>}
-            </Route>
+            <Route path="/checklist" component={ChecklistDashboard} />
             <Route component={() => <div className="p-8"><div>404 - Page Not Found</div></div>} />
           </Switch>
         </Navigation>
@@ -99,12 +94,7 @@ function Router() {
         </Route>
         <Route path="/admin" component={user ? AdminPanel : Login} />
         <Route path="/change-password" component={user ? ChangePassword : Login} />
-        <Route path="/checklist">
-          {() => user ? <div className="p-8">
-            <h1 className="text-2xl font-bold">Kontrol Listesi Test Sayfası</h1>
-            <p>Bu sayfa çalışıyor! Route problemi yok.</p>
-          </div> : <Login />}
-        </Route>
+        <Route path="/checklist" component={user ? ChecklistDashboard : Login} />
         <Route component={() => <div>404 - Page Not Found</div>} />
       </Switch>
     </div>

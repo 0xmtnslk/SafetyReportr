@@ -9,12 +9,12 @@ export default function ChecklistDashboard() {
   const [, setLocation] = useLocation();
 
   // Fetch checklist templates
-  const { data: templates = [], isLoading: templatesLoading } = useQuery({
+  const { data: templates = [], isLoading: templatesLoading } = useQuery<any[]>({
     queryKey: ["/api/checklist/templates"],
   });
 
   // Fetch recent inspections
-  const { data: inspections = [], isLoading: inspectionsLoading } = useQuery({
+  const { data: inspections = [], isLoading: inspectionsLoading } = useQuery<any[]>({
     queryKey: ["/api/checklist/inspections"],
   });
 
