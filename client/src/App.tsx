@@ -84,8 +84,12 @@ function Router() {
             <Route path="/reports/:id">
               {(params) => <ViewReport id={params.id} />}
             </Route>
-            <Route path="/admin" component={AdminPanel} />
-            <Route path="/admin/create-assignment" component={CreateAssignment} />
+            <Route path="/admin">
+              {() => ['central_admin', 'admin'].includes(user?.role || '') ? <AdminPanel /> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
+            </Route>
+            <Route path="/admin/create-assignment">
+              {() => ['central_admin', 'admin'].includes(user?.role || '') ? <CreateAssignment /> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
+            </Route>
             <Route path="/change-password" component={ChangePassword} />
             <Route path="/checklist" component={ChecklistDashboard} />
             <Route path="/checklist/create-inspection" component={CreateInspection} />
@@ -124,7 +128,9 @@ function Router() {
             </Route>
             <Route path="/checklist/live" component={LiveChecklist} />
             <Route path="/live-checklist" component={LiveChecklist} />
-            <Route path="/admin/inspections/create" component={InspectionCreatePage} />
+            <Route path="/admin/inspections/create">
+              {() => ['central_admin', 'admin'].includes(user?.role || '') ? <InspectionCreatePage /> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
+            </Route>
             <Route component={() => <div className="p-8"><div>404 - Page Not Found</div></div>} />
           </Switch>
         </Navigation>
