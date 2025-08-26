@@ -42,12 +42,12 @@ export default function Navigation({ children }: NavigationProps) {
     baseItems.push({ path: "/reports", label: "Raporlar", icon: FileText });
     
     // Checklist system for safety specialists, occupational physicians and admin
-    if (['central_admin', 'safety_specialist', 'occupational_physician'].includes(user?.role || '')) {
+    if (['central_admin', 'admin', 'safety_specialist', 'occupational_physician'].includes(user?.role || '')) {
       baseItems.push({ path: "/checklist", label: "Kontrol Listeleri", icon: CheckSquare });
     }
     
     // Admin, safety specialists and occupational physicians can access admin panel
-    if (['central_admin', 'safety_specialist', 'occupational_physician'].includes(user?.role || '')) {
+    if (['central_admin', 'admin', 'safety_specialist', 'occupational_physician'].includes(user?.role || '')) {
       baseItems.push({ path: "/admin", label: "Yönetim Panel", icon: Shield });
     }
     
