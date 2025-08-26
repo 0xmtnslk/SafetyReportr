@@ -166,23 +166,17 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
   };
 
   const addFileToAnswer = (questionId: string, fileUrl: string) => {
-    console.log('🔧 addFileToAnswer çağrıldı:', { questionId, fileUrl });
-    setAnswers(prev => {
-      const newAnswer = {
+    setAnswers(prev => ({
+      ...prev,
+      [questionId]: {
         ...prev[questionId],
         questionId,
         answer: prev[questionId]?.answer || 'compliant',
         tw_score: prev[questionId]?.tw_score || 0,
         notes: prev[questionId]?.notes || '',
         files: [...(prev[questionId]?.files || []), fileUrl]
-      };
-      console.log('🔧 Yeni answer state:', newAnswer);
-      console.log('🔧 Files array:', newAnswer.files);
-      return {
-        ...prev,
-        [questionId]: newAnswer
-      };
-    });
+      }
+    }));
   };
 
   const getAnswerLabel = (value: string) => {
@@ -497,23 +491,16 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
                           };
                         }}
                         onComplete={(result) => {
-                          console.log('📸 Upload result:', result);
                           if (result.successful && result.successful.length > 0) {
                             result.successful.forEach((file: any) => {
-                              console.log('📸 Processing file:', file);
                               if (file.uploadURL) {
-                                console.log('📸 Adding file to answer:', file.uploadURL);
                                 addFileToAnswer(question.id, file.uploadURL);
                                 toast({
                                   title: "Dosya Yüklendi",
                                   description: "Dosya başarıyla yüklendi.",
                                 });
-                              } else {
-                                console.warn('📸 File.uploadURL missing:', file);
                               }
                             });
-                          } else {
-                            console.warn('📸 No successful uploads or result.successful is empty');
                           }
                         }}
                         buttonClassName="h-10 md:h-9 w-full text-sm"
@@ -528,13 +515,11 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
                 {/* Image Thumbnails - Compact */}
                 {answer?.files && answer.files.length > 0 && (
                   <div className="flex flex-wrap gap-1">
-                    {console.log('🖼️ Rendering thumbnails for question:', question.id, 'files:', answer.files) || null}
                     {answer.files.map((fileUrl, fileIndex) => (
                       <div key={fileIndex} className="relative group">
                         <div 
                           className="w-12 h-12 bg-gray-100 rounded border cursor-pointer overflow-hidden hover:border-blue-400 transition-colors"
                           onClick={() => {
-                            console.log('🖼️ Thumbnail clicked:', fileUrl);
                             setSelectedImage(fileUrl);
                           }}
                         >
@@ -625,13 +610,13 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
         </CardContent>
       </Card>
 
-      {/* Image Modal - Using Working Dialog Component */}
-      <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh] p-2">
-          <DialogHeader>
-            <DialogTitle>Fotoğraf Ön İzlemesi</DialogTitle>
-          </DialogHeader>
-          {selectedImage && (
+      {/* Image Modal - Working Dialog Component */}
+      {selectedImage && (
+        <Dialog open={true} onOpenChange={() => setSelectedImage(null)}>
+          <DialogContent className="max-w-4xl max-h-[90vh] p-2">
+            <DialogHeader>
+              <DialogTitle>Fotoğraf Ön İzlemesi</DialogTitle>
+            </DialogHeader>
             <div className="flex justify-center items-center max-h-[80vh] overflow-auto">
               <img
                 src={selectedImage}
@@ -644,9 +629,9 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
                 onLoad={() => console.log('Resim başarıyla yüklendi:', selectedImage)}
               />
             </div>
-          )}
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
