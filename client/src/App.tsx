@@ -22,6 +22,8 @@ import TemplateEdit from "@/pages/template-edit";
 import CreateTemplate from "@/pages/create-template";
 import SectionEdit from "@/pages/section-edit";
 import AddQuestion from "@/pages/add-question";
+import QuestionEdit from "@/pages/question-edit";
+import LiveChecklist from "@/pages/live-checklist";
 import Navigation from "@/components/navigation";
 import OfflineIndicator from "@/components/offline-indicator";
 import { useOfflineSync } from "./hooks/useOfflineSync";
@@ -97,6 +99,10 @@ function Router() {
             <Route path="/checklist/sections/:id/add-question">
               {(params) => <AddQuestion sectionId={params.id} />}
             </Route>
+            <Route path="/checklist/questions/:id/edit">
+              {(params) => <QuestionEdit questionId={params.id} />}
+            </Route>
+            <Route path="/checklist/live" component={LiveChecklist} />
             <Route component={() => <div className="p-8"><div>404 - Page Not Found</div></div>} />
           </Switch>
         </Navigation>
@@ -139,6 +145,10 @@ function Router() {
         <Route path="/checklist/sections/:id/add-question">
           {(params) => user ? <AddQuestion sectionId={params.id} /> : <Login />}
         </Route>
+        <Route path="/checklist/questions/:id/edit">
+          {(params) => user ? <QuestionEdit questionId={params.id} /> : <Login />}
+        </Route>
+        <Route path="/checklist/live" component={user ? LiveChecklist : Login} />
         <Route component={() => <div>404 - Page Not Found</div>} />
       </Switch>
     </div>
