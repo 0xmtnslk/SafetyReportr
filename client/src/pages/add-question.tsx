@@ -5,23 +5,75 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Plus } from "lucide-react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
+import { CHECKLIST_CATEGORIES } from "@shared/schema";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 interface AddQuestionProps {
   sectionId: string;
+  templateId?: string;
 }
 
-export default function AddQuestion({ sectionId }: AddQuestionProps) {
+export default function AddQuestion({ sectionId, templateId }: AddQuestionProps) {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const [formData, setFormData] = useState({
     questionText: "",
+    category: "Genel",
+    twScore: 1,
     isRequired: true,
     allowPhoto: true,
     allowDocument: true
+  });
+
+  // Create question mutation
+  const createQuestion = useMutation({
+    mutationFn: async (data: any) => {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/checklist/questions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          ...data,
+          sectionId,
+          orderIndex: 1 // Default order
+        })
+      });
+      if (!response.ok) throw new Error('Failed to create question');
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Soru Eklendi",
+        description: "Yeni soru başarıyla eklendi.",
+      });
+      // Invalidate the questions cache for this section
+      queryClient.invalidateQueries({ queryKey: ['/api/checklist/sections', sectionId, 'questions'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/checklist/sections/questions'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/checklist'] });
+      
+      // Redirect back to template
+      if (templateId) {
+        setLocation(`/checklist/templates/${templateId}`);
+      } else {
+        setLocation('/checklist/templates');
+      }
+    },
+    onError: (error) => {
+      toast({
+        title: "Hata",
+        description: "Soru eklenirken bir hata oluştu.",
+        variant: "destructive"
+      });
+    }
   });
 
   const handleAdd = () => {
@@ -34,11 +86,7 @@ export default function AddQuestion({ sectionId }: AddQuestionProps) {
       return;
     }
 
-    toast({
-      title: "Soru Eklendi",
-      description: "Yeni soru başarıyla eklendi.",
-    });
-    setLocation('/checklist');
+    createQuestion.mutate(formData);
   };
 
   return (
@@ -48,7 +96,7 @@ export default function AddQuestion({ sectionId }: AddQuestionProps) {
         <div className="flex items-center gap-4">
           <Button 
             variant="outline" 
-            onClick={() => setLocation('/checklist')}
+            onClick={() => templateId ? setLocation(`/checklist/templates/${templateId}`) : setLocation('/checklist/templates')}
           >
             <ArrowLeft size={16} className="mr-2" />
             Geri
@@ -80,6 +128,40 @@ export default function AddQuestion({ sectionId }: AddQuestionProps) {
               placeholder="Örnek: Alan girişinde uygun nitelikli sağlık ve güvenlik işaretleri bulunmalıdır."
               rows={3}
             />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <Label htmlFor="category">Kategori *</Label>
+              <Select
+                value={formData.category}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
+              >
+                <SelectTrigger id="category">
+                  <SelectValue placeholder="Kategori seçin" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CHECKLIST_CATEGORIES.map((category) => (
+                    <SelectItem key={category} value={category}>
+                      {category}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="twScore">TW Skoru (1-10) *</Label>
+              <Input
+                id="twScore"
+                type="number"
+                min="1"
+                max="10"
+                value={formData.twScore}
+                onChange={(e) => setFormData(prev => ({ ...prev, twScore: parseInt(e.target.value) || 1 }))}
+                placeholder="1-10 arası skor"
+              />
+            </div>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -114,18 +196,21 @@ export default function AddQuestion({ sectionId }: AddQuestionProps) {
           <div className="bg-blue-50 p-4 rounded-lg">
             <h4 className="font-medium text-blue-900 mb-2">Bilgi</h4>
             <ul className="text-sm text-blue-800 space-y-1">
-              <li>• Her soru için TW skoru (1-10) değerlendirme sırasında girilecek</li>
-              <li>• Kategori seçimi değerlendirme sırasında yapılacak</li>
+              <li>• TW skoru (1-10): Sorunun tehlike ağırlık skorunu belirler</li>
+              <li>• Kategori: Sorunun hangi güvenlik alanına ait olduğunu gösterir</li>
               <li>• "Karşılamıyor" seçilirse fotoğraf/doküman zorunlu olacak</li>
             </ul>
           </div>
 
           <div className="flex justify-end space-x-4">
-            <Button variant="outline" onClick={() => setLocation('/checklist')}>
+            <Button variant="outline" onClick={() => templateId ? setLocation(`/checklist/templates/${templateId}`) : setLocation('/checklist/templates')}>
               İptal
             </Button>
-            <Button onClick={handleAdd}>
-              Soru Ekle
+            <Button 
+              onClick={handleAdd}
+              disabled={createQuestion.isPending}
+            >
+              {createQuestion.isPending ? "Ekleniyor..." : "Soru Ekle"}
             </Button>
           </div>
         </CardContent>

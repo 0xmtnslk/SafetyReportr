@@ -57,10 +57,20 @@ export default function QuestionEdit({ questionId }: QuestionEditProps) {
         title: "Soru Güncellendi",
         description: "Soru başarıyla güncellendi.",
       });
+      // Invalidate all related queries to refresh the cache
       queryClient.invalidateQueries({ queryKey: ['/api/checklist'] });
-      // Get section ID to redirect back to template
-      if (question && (question as any).sectionId) {
-        setLocation(`/checklist/templates`);
+      queryClient.invalidateQueries({ queryKey: ['/api/checklist/sections'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/checklist/templates'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/checklist/questions'] });
+      
+      // Get referrer from URL params or localStorage to redirect back properly
+      const urlParams = new URLSearchParams(window.location.search);
+      const referrer = urlParams.get('from');
+      if (referrer && referrer.includes('templates')) {
+        setLocation(referrer);
+      } else if (question && (question as any).sectionId) {
+        // Try to go back to template list if we don't have specific template ID
+        setLocation('/checklist/templates');
       } else {
         setLocation('/checklist');
       }
@@ -108,7 +118,15 @@ export default function QuestionEdit({ questionId }: QuestionEditProps) {
         <div className="flex items-center gap-4">
           <Button 
             variant="outline" 
-            onClick={() => setLocation('/checklist')}
+            onClick={() => {
+              const urlParams = new URLSearchParams(window.location.search);
+              const referrer = urlParams.get('from');
+              if (referrer) {
+                setLocation(referrer);
+              } else {
+                setLocation('/checklist/templates');
+              }
+            }}
           >
             <ArrowLeft size={16} className="mr-2" />
             Geri
@@ -206,7 +224,15 @@ export default function QuestionEdit({ questionId }: QuestionEditProps) {
           </div>
 
           <div className="flex justify-end space-x-4">
-            <Button variant="outline" onClick={() => setLocation('/checklist')}>
+            <Button variant="outline" onClick={() => {
+              const urlParams = new URLSearchParams(window.location.search);
+              const referrer = urlParams.get('from');
+              if (referrer) {
+                setLocation(referrer);
+              } else {
+                setLocation('/checklist/templates');
+              }
+            }}>
               İptal
             </Button>
             <Button 

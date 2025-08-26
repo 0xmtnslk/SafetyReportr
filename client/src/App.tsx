@@ -97,7 +97,11 @@ function Router() {
               {(params) => <SectionEdit sectionId={params.id} />}
             </Route>
             <Route path="/checklist/sections/:id/add-question">
-              {(params) => <AddQuestion sectionId={params.id} />}
+              {(params) => {
+                const urlParams = new URLSearchParams(window.location.search);
+                const templateId = urlParams.get('templateId');
+                return <AddQuestion sectionId={params.id} templateId={templateId || undefined} />;
+              }}
             </Route>
             <Route path="/checklist/questions/:id/edit">
               {(params) => <QuestionEdit questionId={params.id} />}
@@ -143,7 +147,12 @@ function Router() {
           {(params) => user ? <SectionEdit sectionId={params.id} /> : <Login />}
         </Route>
         <Route path="/checklist/sections/:id/add-question">
-          {(params) => user ? <AddQuestion sectionId={params.id} /> : <Login />}
+          {(params) => {
+            if (!user) return <Login />;
+            const urlParams = new URLSearchParams(window.location.search);
+            const templateId = urlParams.get('templateId');
+            return <AddQuestion sectionId={params.id} templateId={templateId || undefined} />;
+          }}
         </Route>
         <Route path="/checklist/questions/:id/edit">
           {(params) => user ? <QuestionEdit questionId={params.id} /> : <Login />}

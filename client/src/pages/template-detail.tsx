@@ -118,7 +118,7 @@ export default function TemplateDetail({ templateId }: TemplateDetailProps) {
             Geri
           </Button>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">{template.name}</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Şablon Düzenle: {template.name}</h1>
             <p className="text-gray-600 mt-1">{template.description}</p>
           </div>
         </div>
@@ -211,7 +211,7 @@ export default function TemplateDetail({ templateId }: TemplateDetailProps) {
                     {isAdmin && (
                       <Button 
                         size="sm"
-                        onClick={() => setLocation(`/checklist/sections/${section.id}/add-question`)}
+                        onClick={() => setLocation(`/checklist/sections/${section.id}/add-question?templateId=${templateId}`)}
                       >
                         <Plus size={14} className="mr-1" />
                         İlk Soruyu Ekle
@@ -246,7 +246,7 @@ export default function TemplateDetail({ templateId }: TemplateDetailProps) {
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                onClick={() => setLocation(`/checklist/questions/${question.id}/edit`)}
+                                onClick={() => setLocation(`/checklist/questions/${question.id}/edit?from=/checklist/templates/${templateId}`)}
                               >
                                 <Edit size={12} />
                               </Button>
@@ -267,7 +267,7 @@ export default function TemplateDetail({ templateId }: TemplateDetailProps) {
                       <div className="text-center pt-4">
                         <Button 
                           variant="outline"
-                          onClick={() => setLocation(`/checklist/sections/${section.id}/add-question`)}
+                          onClick={() => setLocation(`/checklist/sections/${section.id}/add-question?templateId=${templateId}`)}
                         >
                           <Plus size={16} className="mr-2" />
                           Yeni Soru Ekle
