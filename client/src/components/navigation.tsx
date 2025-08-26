@@ -47,8 +47,8 @@ export default function Navigation({ children }: NavigationProps) {
       baseItems.push({ path: "/checklist", label: "Kontrol Listeleri", icon: CheckSquare });
     }
     
-    // Admin, safety specialists and occupational physicians can access admin panel
-    if (['central_admin', 'admin', 'safety_specialist', 'occupational_physician'].includes(user?.role || '')) {
+    // Only admin users can access admin panel
+    if (['central_admin', 'admin'].includes(user?.role || '')) {
       baseItems.push({ path: "/admin", label: "Yönetim Panel", icon: Shield });
     }
     

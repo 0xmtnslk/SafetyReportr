@@ -1742,14 +1742,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create new inspection (Central Admin only)
   app.post('/api/inspections', authenticateToken, requireCentralManagement, async (req: Request, res: Response) => {
     try {
-      const validatedData = insertInspectionSchema.parse(req.body);
+      const { assignments, ...inspectionData } = req.body;
+      const validatedData = insertInspectionSchema.parse(inspectionData);
       const user = (req as any).user;
+      
       const inspection = await storage.createInspection({
         ...validatedData,
         createdBy: user.id
       });
+
+      // Create assignments for all selected hospitals
+      const assignmentPromises = assignments.map((assignmentData: any) => 
+        storage.createInspectionAssignment({
+          inspectionId: inspection.id,
+          locationId: assignmentData.locationId,
+          assignedUserId: assignmentData.assignedUserId,
+          totalQuestions: assignmentData.totalQuestions,
+          totalPossibleScore: assignmentData.totalPossibleScore || (assignmentData.totalQuestions * 10),
+          status: 'pending'
+        })
+      );
       
-      res.status(201).json(inspection);
+      const createdAssignments = await Promise.all(assignmentPromises);
+
+      // Create notifications for assigned users
+      for (const assignment of createdAssignments) {
+        try {
+          await createNotificationForUser(
+            assignment.assignedUserId,
+            'inspection_assigned',
+            'Yeni Denetim Atandı',
+            `"${inspection.title}" denetimi size atanmıştır. Son tarih: ${new Date(inspection.dueDate).toLocaleDateString('tr-TR')}`,
+            inspection.id,
+            'inspection'
+          );
+        } catch (notifError) {
+          console.error('Error creating notification:', notifError);
+        }
+      }
+
+      res.status(201).json({ 
+        inspection,
+        assignments: createdAssignments
+      });
     } catch (error) {
       console.error('Error creating inspection:', error);
       res.status(500).json({ error: 'Error creating inspection' });
