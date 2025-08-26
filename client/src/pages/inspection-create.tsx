@@ -133,11 +133,20 @@ export default function InspectionCreatePage() {
         templateId: selectedTemplate.id,
         title,
         description: description || `${selectedTemplate.name} için otomatik denetim`,
-        startDate: new Date(),
-        dueDate: dueDateTime,
-        assignmentType: 'hospital_based',
+        startDate: new Date().toISOString(),
+        dueDate: dueDateTime.toISOString(),
+        assignmentType: 'hospital_based' as const,
         targetLocationIds: selectedHospitals,
-        totalAssignments: selectedHospitalDetails.reduce((total, hd) => total + hd.specialists.length, 0),
+        status: 'pending' as const,
+        isActive: true,
+        assignments: selectedHospitalDetails.flatMap(({ hospital, specialists }) =>
+          specialists.map(specialist => ({
+            locationId: hospital.id,
+            assignedUserId: specialist.id,
+            totalQuestions: totalQuestions || 0,
+            totalPossibleScore: (totalQuestions || 0) * 10,
+          }))
+        ),
       };
 
       await apiRequest("/api/inspections", "POST", inspectionData);
