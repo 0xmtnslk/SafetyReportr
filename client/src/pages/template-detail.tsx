@@ -29,27 +29,48 @@ export default function TemplateDetail({ templateId }: TemplateDetailProps) {
     queryKey: ["/api/checklist/templates", templateId, "sections"],
   });
 
-  // Fetch questions for each section
-  const { data: questionsData = {} } = useQuery<Record<string, any[]>>({
-    queryKey: ["/api/checklist/sections/questions", templateId],
+  // Fetch questions for each section - with better error handling
+  const { data: questionsData = {}, isLoading: questionsLoading } = useQuery<Record<string, any[]>>({
+    queryKey: ["/api/checklist/sections/questions", templateId, sections.map(s => s?.id).join(',')],
     queryFn: async () => {
+      console.log('Loading questions for sections:', sections);
+      
+      if (!sections || sections.length === 0) {
+        return {};
+      }
+
       const questionPromises = sections.map(async (section) => {
-        const response = await fetch(`/api/checklist/sections/${section.id}/questions`, {
-          headers: {
-            "Authorization": `Bearer ${localStorage.getItem("token")}`,
-          },
-        });
-        const questions = await response.json();
-        return { sectionId: section.id, questions };
+        try {
+          const response = await fetch(`/api/checklist/sections/${section.id}/questions`, {
+            headers: {
+              "Authorization": `Bearer ${localStorage.getItem("token")}`,
+            },
+          });
+          
+          if (!response.ok) {
+            console.error(`Failed to fetch questions for section ${section.id}:`, response.status);
+            return { sectionId: section.id, questions: [] };
+          }
+          
+          const questions = await response.json();
+          console.log(`Loaded ${Array.isArray(questions) ? questions.length : 0} questions for section ${section.id}`);
+          return { sectionId: section.id, questions: Array.isArray(questions) ? questions : [] };
+        } catch (error) {
+          console.error(`Error fetching questions for section ${section.id}:`, error);
+          return { sectionId: section.id, questions: [] };
+        }
       });
       
       const results = await Promise.all(questionPromises);
-      return results.reduce((acc, { sectionId, questions }) => {
-        acc[sectionId] = Array.isArray(questions) ? questions : [];
+      const questionsMap = results.reduce((acc, { sectionId, questions }) => {
+        acc[sectionId] = questions;
         return acc;
       }, {} as Record<string, any[]>);
+      
+      console.log('Final questions data:', questionsMap);
+      return questionsMap;
     },
-    enabled: sections.length > 0,
+    enabled: sections.length > 0 && !sectionsLoading,
   });
 
   if (templateLoading || sectionsLoading) {

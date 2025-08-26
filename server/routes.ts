@@ -1038,7 +1038,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get upload URL for documents and checklist files
   app.post("/api/objects/upload", authenticateToken, async (req, res) => {
     try {
-      const uploadURL = await objectStorageService.getObjectEntityUploadURL();
+      const uploadURL = await objectStorageService.getUploadURL('profiles'); // Using existing method
       res.json({ uploadURL });
     } catch (error: any) {
       console.error("Error getting upload URL:", error);
