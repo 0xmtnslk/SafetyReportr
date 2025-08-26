@@ -166,17 +166,28 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
   };
 
   const addFileToAnswer = (questionId: string, fileUrl: string) => {
-    setAnswers(prev => ({
-      ...prev,
-      [questionId]: {
-        ...prev[questionId],
+    console.log('🔧 addFileToAnswer called with:', { questionId, fileUrl });
+    setAnswers(prev => {
+      const currentAnswer = prev[questionId];
+      const newFiles = [...(currentAnswer?.files || []), fileUrl];
+      const newAnswer = {
+        ...currentAnswer,
         questionId,
-        answer: prev[questionId]?.answer || 'compliant',
-        tw_score: prev[questionId]?.tw_score || 0,
-        notes: prev[questionId]?.notes || '',
-        files: [...(prev[questionId]?.files || []), fileUrl]
-      }
-    }));
+        answer: currentAnswer?.answer || 'compliant',
+        tw_score: currentAnswer?.tw_score || 0,
+        notes: currentAnswer?.notes || '',
+        files: newFiles
+      };
+      console.log('🔧 New answer created:', newAnswer);
+      console.log('🔧 New files array:', newFiles);
+      
+      const newState = {
+        ...prev,
+        [questionId]: newAnswer
+      };
+      console.log('🔧 Updated answers state:', newState);
+      return newState;
+    });
   };
 
   const getAnswerLabel = (value: string) => {
@@ -491,16 +502,30 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
                           };
                         }}
                         onComplete={(result) => {
+                          console.log('🔧 ObjectUploader result:', result);
+                          console.log('🔧 Result successful:', result.successful);
                           if (result.successful && result.successful.length > 0) {
                             result.successful.forEach((file: any) => {
-                              if (file.uploadURL) {
-                                addFileToAnswer(question.id, file.uploadURL);
+                              console.log('🔧 Processing file:', file);
+                              console.log('🔧 File keys:', Object.keys(file));
+                              
+                              // Try different possible URL properties
+                              const fileUrl = file.uploadURL || file.url || file.response?.url || file.source;
+                              console.log('🔧 Found fileUrl:', fileUrl);
+                              
+                              if (fileUrl) {
+                                console.log('🔧 Adding to answers:', question.id, fileUrl);
+                                addFileToAnswer(question.id, fileUrl);
                                 toast({
                                   title: "Dosya Yüklendi",
                                   description: "Dosya başarıyla yüklendi.",
                                 });
+                              } else {
+                                console.error('🔧 No valid URL found in file object:', file);
                               }
                             });
+                          } else {
+                            console.error('🔧 No successful uploads:', result);
                           }
                         }}
                         buttonClassName="h-10 md:h-9 w-full text-sm"
@@ -513,8 +538,12 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
                 </div>
 
                 {/* Image Thumbnails - Compact */}
+                {console.log('🖼️ Rendering thumbnails for question:', question.id, 'Answer:', answer, 'Files:', answer?.files) || null}
                 {answer?.files && answer.files.length > 0 && (
                   <div className="flex flex-wrap gap-1">
+                    <div className="text-xs text-gray-500 w-full mb-1">
+                      {answer.files.length} dosya yüklendi
+                    </div>
                     {answer.files.map((fileUrl, fileIndex) => (
                       <div key={fileIndex} className="relative group">
                         <div 
