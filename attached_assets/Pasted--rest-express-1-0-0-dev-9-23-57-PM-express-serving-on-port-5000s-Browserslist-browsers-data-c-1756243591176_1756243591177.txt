@@ -1,0 +1,66 @@
+> rest-express@1.0.0 dev
+9:23:57 PM [express] serving on port 5000s
+Browserslist: browsers data (caniuse-lite) is 10 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+9:25:20 PM [express] GET /api/assignments/d60f5ac9-563f-4f1c-8a6d-afe299bd87f0 304 in 633ms :: {"id"…
+9:25:20 PM [express] GET /api/checklist/templates/bac1e1ac-9d4b-4a72-ba38-f1e8931e08c2 304 in 53ms :…
+9:25:21 PM [express] GET /api/checklist/templates/7c39d8c0-7ff5-47ad-84f0-cd04de8bfd2a 304 in 1262ms…
+Error fetching notification count: error: syntax error at or near "="
+    at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async NeonPreparedQuery.execute (/home/runner/workspace/node_modules/src/neon-serverless/session.ts:102:18)
+    at async DatabaseStorage.getNotificationCount (/home/runner/workspace/server/storage.ts:1456:22)
+    at async <anonymous> (/home/runner/workspace/server/routes.ts:1900:21) {
+  length: 90,
+  severity: 'ERROR',
+  code: '42601',
+  detail: undefined,
+  hint: undefined,
+  position: '46',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'scan.l',
+  line: '1244',
+  routine: 'scanner_yyerror'
+}
+9:25:21 PM [express] GET /api/notifications/count 500 in 2274ms :: {"error":"Error fetching notifica…
+9:25:22 PM [express] GET /api/checklist/templates/7c39d8c0-7ff5-47ad-84f0-cd04de8bfd2a/sections 304 …
+9:25:22 PM [express] GET /api/checklist/templates/bac1e1ac-9d4b-4a72-ba38-f1e8931e08c2/sections 304 …
+9:25:22 PM [express] GET /api/checklist/sections/8886dcae-05cb-41e7-b371-348a29398ba2/questions 304 …
+9:25:32 PM [express] GET /api/reports 304 in 196ms :: [{"id":"aa6c52e8-ecd3-49f7-9580-670a94ee4ed9",…
+9:25:32 PM [express] GET /api/stats 304 in 215ms :: {"totalReports":3,"highRiskFindings":0,"mediumRi…
+9:25:32 PM [express] GET /api/user/assignments 304 in 319ms :: [{"id":"d60f5ac9-563f-4f1c-8a6d-afe29…
+9:25:40 PM [express] POST /api/objects/upload 200 in 234ms :: {"uploadURL":"https://storage.googleap…
+Error fetching notification count: error: syntax error at or near "="
+    at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async NeonPreparedQuery.execute (/home/runner/workspace/node_modules/src/neon-serverless/session.ts:102:18)
+    at async DatabaseStorage.getNotificationCount (/home/runner/workspace/server/storage.ts:1456:22)
+    at async <anonymous> (/home/runner/workspace/server/routes.ts:1900:21) {
+  length: 90,
+  severity: 'ERROR',
+  code: '42601',
+  detail: undefined,
+  hint: undefined,
+  position: '46',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'scan.l',
+  line: '1244',
+  routine: 'scanner_yyerror'
+}
+9:25:52 PM [express] GET /api/notifications/count 500 in 149ms :: {"error":"Error fetching notificat…
+^C

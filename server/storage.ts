@@ -1453,14 +1453,19 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getNotificationCount(userId: string): Promise<number> {
-    const [result] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(notifications)
-      .where(and(
-        eq(notifications.user_id, userId),
-        eq(notifications.is_read, false)
-      ));
-    return result?.count || 0;
+    try {
+      const [result] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(notifications)
+        .where(and(
+          eq(notifications.user_id, userId),
+          eq(notifications.is_read, false)
+        ));
+      return result?.count || 0;
+    } catch (error) {
+      console.error('Error fetching notification count:', error);
+      return 0;
+    }
   }
 }
 
