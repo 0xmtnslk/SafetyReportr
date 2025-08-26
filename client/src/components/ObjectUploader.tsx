@@ -11,7 +11,8 @@ import { Button } from "@/components/ui/button";
 interface ObjectUploaderProps {
   maxNumberOfFiles?: number;
   maxFileSize?: number;
-  folder?: 'profiles' | 'logos';
+  folder?: 'profiles' | 'logos' | 'documents';
+  allowedFileTypes?: string[];
   onGetUploadParameters: () => Promise<{
     method: "PUT";
     url: string;
@@ -53,8 +54,9 @@ interface ObjectUploaderProps {
  */
 export function ObjectUploader({
   maxNumberOfFiles = 1,
-  maxFileSize = 5242880, // 5MB default for images
-  folder = 'profiles',
+  maxFileSize = 10485760, // 10MB default
+  folder = 'documents',
+  allowedFileTypes = ['image/*', '.pdf', '.doc', '.docx', '.txt', '.jpg', '.jpeg', '.png', '.gif'],
   onGetUploadParameters,
   onComplete,
   buttonClassName,
@@ -66,7 +68,7 @@ export function ObjectUploader({
       restrictions: {
         maxNumberOfFiles,
         maxFileSize,
-        allowedFileTypes: ['image/*'], // Only allow images for profiles and logos
+        allowedFileTypes: folder === 'profiles' || folder === 'logos' ? ['image/*'] : allowedFileTypes,
       },
       autoProceed: false,
     })

@@ -1035,6 +1035,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get upload URL for documents and checklist files
+  app.post("/api/objects/upload", authenticateToken, async (req, res) => {
+    try {
+      const uploadURL = await objectStorageService.getObjectEntityUploadURL();
+      res.json({ uploadURL });
+    } catch (error: any) {
+      console.error("Error getting upload URL:", error);
+      res.status(500).json({ error: "Error getting upload URL" });
+    }
+  });
+
   // Serve objects (profiles and logos)
   app.get("/objects/:objectPath(*)", async (req, res) => {
     try {

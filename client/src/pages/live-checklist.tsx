@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -6,19 +6,31 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
 import { 
-  CheckSquare, Save, ArrowLeft, Camera, FileText, AlertTriangle, Plus
+  CheckSquare, Save, ArrowLeft, Camera, FileText, AlertTriangle, Plus, ChevronRight, ChevronLeft
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
-import { CHECKLIST_CATEGORIES } from "@shared/schema";
+import { useQuery } from "@tanstack/react-query";
+import { ObjectUploader } from "@/components/ObjectUploader";
 
 interface Question {
   id: string;
   text: string;
+  description?: string;
   category: string;
   tw_score: number;
   requires_file?: boolean;
+  allowPhoto?: boolean;
+  allowDocument?: boolean;
+}
+
+interface Section {
+  id: string;
+  name: string;
+  description?: string;
+  questions: Question[];
 }
 
 interface Answer {
@@ -26,67 +38,95 @@ interface Answer {
   answer: 'compliant' | 'partially_compliant' | 'non_compliant' | 'not_applicable';
   tw_score: number;
   notes: string;
-  files: File[];
+  files: string[]; // File URLs
 }
 
-export default function LiveChecklist() {
+interface LiveChecklistProps {
+  templateId?: string;
+}
+
+export default function LiveChecklist({ templateId = "7c39d8c0-7ff5-47ad-84f0-cd04de8bfd2a" }: LiveChecklistProps) {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
-  // State for category filter
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  // State for current section and progress
+  const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
   
-  // Sample questions with real categories (in real app, fetch from API)
-  const [questions] = useState<Question[]>([
-    {
-      id: "1",
-      text: "ADP alanına tüm yetkisiz girişler engellenmiş olmalı, alan kilit altında tutulmalıdır",
-      category: "Güvenlik",
-      tw_score: 8,
-      requires_file: true
-    },
-    {
-      id: "2", 
-      text: "Alan girişinde uygun nitelikli sağlık ve güvenlik işaretleri bulunmalıdır",
-      category: "Emniyet",
-      tw_score: 7
-    },
-    {
-      id: "3",
-      text: "Alanda uygun nitelikte yangın algılama sistemi bulunmalıdır",
-      category: "Yangın Güvenliği", 
-      tw_score: 9,
-      requires_file: true
-    },
-    {
-      id: "4",
-      text: "UPS sisteminin batarya seviyelerinin normal aralıkta olması",
-      category: "Altyapı",
-      tw_score: 8,
-      requires_file: true
-    },
-    {
-      id: "5",
-      text: "Jeneratör yakıt seviyesinin minimum %75 olması",
-      category: "Afet ve Acil Durum Yönetimi",
-      tw_score: 10,
-      requires_file: true
-    },
-    {
-      id: "6",
-      text: "Alanda yeterli havalandırma sağlanıyor olmalıdır", 
-      category: "Altyapı",
-      tw_score: 8
-    }
-  ]);
-
   // State for answers
   const [answers, setAnswers] = useState<Record<string, Answer>>({});
 
-  // Filter questions by category
-  const filteredQuestions = selectedCategory === "all" 
-    ? questions 
-    : questions.filter(q => q.category === selectedCategory);
+  // Fetch template sections and questions
+  const { data: template } = useQuery({
+    queryKey: ["/api/checklist/templates", templateId],
+  });
+
+  const { data: sectionsData = [] } = useQuery<any[]>({
+    queryKey: ["/api/checklist/templates", templateId, "sections"],
+  });
+
+  const { data: questionsData = {} } = useQuery<Record<string, any[]>>({
+    queryKey: ["/api/checklist/sections/questions", templateId],
+    queryFn: async () => {
+      const questionPromises = sectionsData.map(async (section: any) => {
+        const response = await fetch(`/api/checklist/sections/${section.id}/questions`, {
+          headers: {
+            "Authorization": `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
+        const questions = await response.json();
+        return { sectionId: section.id, questions };
+      });
+      
+      const results = await Promise.all(questionPromises);
+      return results.reduce((acc: Record<string, any[]>, { sectionId, questions }: { sectionId: string, questions: any[] }) => {
+        acc[sectionId] = Array.isArray(questions) ? questions : [];
+        return acc;
+      }, {} as Record<string, any[]>);
+    },
+    enabled: sectionsData.length > 0,
+  });
+
+  // Process sections with questions
+  const sections: Section[] = sectionsData.map((section: any) => ({
+    id: section.id,
+    name: section.name,
+    description: section.description,
+    questions: questionsData[section.id] || []
+  }));
+
+  const currentSection = sections[currentSectionIndex];
+  const totalSections = sections.length;
+
+  // Progress calculation
+  const getCurrentSectionProgress = () => {
+    if (!currentSection) return 0;
+    const answeredQuestions = currentSection.questions.filter(q => answers[q.id]?.answer);
+    return currentSection.questions.length > 0 ? (answeredQuestions.length / currentSection.questions.length) * 100 : 0;
+  };
+
+  const isCurrentSectionComplete = () => {
+    if (!currentSection) return false;
+    return currentSection.questions.every(q => answers[q.id]?.answer);
+  };
+
+  const getTotalProgress = () => {
+    const totalQuestions = sections.reduce((total, section) => total + section.questions.length, 0);
+    const answeredQuestions = Object.keys(answers).length;
+    return totalQuestions > 0 ? (answeredQuestions / totalQuestions) * 100 : 0;
+  };
+
+  // Navigation handlers
+  const goToNextSection = () => {
+    if (currentSectionIndex < totalSections - 1 && isCurrentSectionComplete()) {
+      setCurrentSectionIndex(prev => prev + 1);
+    }
+  };
+
+  const goToPreviousSection = () => {
+    if (currentSectionIndex > 0) {
+      setCurrentSectionIndex(prev => prev - 1);
+    }
+  };
 
   // Answer handlers
   const updateAnswer = (questionId: string, field: keyof Answer, value: any) => {
@@ -100,6 +140,20 @@ export default function LiveChecklist() {
         notes: prev[questionId]?.notes || '',
         files: prev[questionId]?.files || [],
         [field]: value
+      }
+    }));
+  };
+
+  const addFileToAnswer = (questionId: string, fileUrl: string) => {
+    setAnswers(prev => ({
+      ...prev,
+      [questionId]: {
+        ...prev[questionId],
+        questionId,
+        answer: prev[questionId]?.answer || 'compliant',
+        tw_score: prev[questionId]?.tw_score || 0,
+        notes: prev[questionId]?.notes || '',
+        files: [...(prev[questionId]?.files || []), fileUrl]
       }
     }));
   };
@@ -135,14 +189,16 @@ export default function LiveChecklist() {
   };
 
   const getTotalScore = () => {
-    return filteredQuestions.reduce((total, question) => {
+    const allQuestions = sections.flatMap(section => section.questions);
+    return allQuestions.reduce((total, question) => {
       const answer = answers[question.id];
       return total + (answer ? calculateScore(answer, question) : 0);
     }, 0);
   };
 
   const getMaxPossibleScore = () => {
-    return filteredQuestions.reduce((total, question) => {
+    const allQuestions = sections.flatMap(section => section.questions);
+    return allQuestions.reduce((total, question) => {
       const answer = answers[question.id];
       if (answer?.answer === 'not_applicable') return total;
       return total + question.tw_score;
@@ -169,8 +225,8 @@ export default function LiveChecklist() {
             Geri
           </Button>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">İSG Teknik Alanlar Kontrol Listesi</h1>
-            <p className="text-gray-600 mt-1">Hastane teknik altyapı sistemlerinin güvenlik denetimi</p>
+            <h1 className="text-3xl font-bold text-gray-900">{(template as any)?.name || "Kontrol Listesi"}</h1>
+            <p className="text-gray-600 mt-1">{(template as any)?.description || "İSG denetim kontrol listesi"}</p>
           </div>
         </div>
         
@@ -180,26 +236,40 @@ export default function LiveChecklist() {
         </Button>
       </div>
 
-      {/* Category Filter & Score Display */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+      {/* Progress & Navigation */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <Card>
           <CardHeader>
-            <CardTitle>Kategori Filtresi</CardTitle>
+            <CardTitle>Genel İlerleme</CardTitle>
           </CardHeader>
           <CardContent>
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger>
-                <SelectValue placeholder="Kategori seçin" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tüm Kategoriler</SelectItem>
-                {CHECKLIST_CATEGORIES.map((category) => (
-                  <SelectItem key={category} value={category}>
-                    {category}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="space-y-3">
+              <Progress value={getTotalProgress()} className="w-full" />
+              <div className="text-sm text-gray-600">
+                {Math.round(getTotalProgress())}% tamamlandı
+              </div>
+              <div className="text-sm">
+                Bölüm {currentSectionIndex + 1} / {totalSections}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Mevcut Bölüm</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <h3 className="font-semibold">{currentSection?.name}</h3>
+              <Progress value={getCurrentSectionProgress()} className="w-full" />
+              <div className="text-sm text-gray-600">
+                {Math.round(getCurrentSectionProgress())}% tamamlandı
+              </div>
+              <div className="text-sm">
+                {currentSection?.questions.length || 0} soru
+              </div>
+            </div>
           </CardContent>
         </Card>
 
@@ -230,9 +300,50 @@ export default function LiveChecklist() {
         </Card>
       </div>
 
+      {/* Current Section Questions */}
+      {currentSection && (
+        <Card className="mb-6">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-3">
+                  <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+                    Bölüm {currentSectionIndex + 1}
+                  </span>
+                  {currentSection.name}
+                </CardTitle>
+                {currentSection.description && (
+                  <p className="text-gray-600 text-sm mt-2">{currentSection.description}</p>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={goToPreviousSection}
+                  disabled={currentSectionIndex === 0}
+                >
+                  <ChevronLeft size={16} className="mr-1" />
+                  Önceki
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={goToNextSection}
+                  disabled={currentSectionIndex === totalSections - 1 || !isCurrentSectionComplete()}
+                >
+                  Sonraki
+                  <ChevronRight size={16} className="ml-1" />
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+        </Card>
+      )}
+
       {/* Questions */}
       <div className="space-y-6">
-        {filteredQuestions.map((question, index) => {
+        {currentSection?.questions.map((question, index) => {
           const answer = answers[question.id];
           const score = answer ? calculateScore(answer, question) : 0;
           
@@ -251,10 +362,10 @@ export default function LiveChecklist() {
                       <Badge variant="outline">{question.category}</Badge>
                       <span>TW Skoru: {question.tw_score}</span>
                       <span>Puan: {score}</span>
-                      {question.requires_file && (
+                      {(question.allowPhoto || question.allowDocument) && (
                         <Badge className="bg-orange-100 text-orange-800">
                           <Camera size={12} className="mr-1" />
-                          Fotoğraf Gerekli
+                          Dosya Gerekli
                         </Badge>
                       )}
                     </div>
@@ -305,21 +416,77 @@ export default function LiveChecklist() {
                   <div className="space-y-4">
                     <div>
                       <Label>Fotoğraf/Doküman Yükleme</Label>
-                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                        <div className="flex flex-col items-center space-y-2">
-                          <div className="flex space-x-2">
-                            <Camera size={24} className="text-gray-400" />
-                            <FileText size={24} className="text-gray-400" />
-                          </div>
-                          <p className="text-sm text-gray-600">
-                            Fotoğraf veya doküman yüklemek için tıklayın
-                          </p>
-                          <Button variant="outline" size="sm">
-                            Dosya Seç
-                          </Button>
+                      {(question.allowPhoto || question.allowDocument) ? (
+                        <div className="space-y-3">
+                          <ObjectUploader
+                            maxNumberOfFiles={5}
+                            maxFileSize={10485760}
+                            onGetUploadParameters={async () => {
+                              const response = await fetch('/api/objects/upload', {
+                                method: 'POST',
+                                headers: {
+                                  'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                                  'Content-Type': 'application/json'
+                                }
+                              });
+                              const data = await response.json();
+                              return {
+                                method: 'PUT' as const,
+                                url: data.uploadURL
+                              };
+                            }}
+                            onComplete={(result) => {
+                              if (result.successful) {
+                                result.successful.forEach((file: any) => {
+                                  if (file.uploadURL) {
+                                    addFileToAnswer(question.id, file.uploadURL);
+                                    toast({
+                                      title: "Dosya Yüklendi",
+                                      description: "Dosya başarıyla yüklendi.",
+                                    });
+                                  }
+                                });
+                              }
+                            }}
+                            buttonClassName="w-full"
+                          >
+                            <div className="flex items-center justify-center gap-2">
+                              <Camera size={16} />
+                              <FileText size={16} />
+                              <span>Dosya Yükle</span>
+                            </div>
+                          </ObjectUploader>
+                          
+                          {/* Show uploaded files */}
+                          {answer?.files && answer.files.length > 0 && (
+                            <div className="space-y-2">
+                              <Label className="text-sm">Yüklenen Dosyalar:</Label>
+                              <div className="space-y-1">
+                                {answer.files.map((fileUrl, fileIndex) => (
+                                  <div key={fileIndex} className="flex items-center gap-2 p-2 bg-gray-50 rounded text-sm">
+                                    <FileText size={14} />
+                                    <span>Dosya {fileIndex + 1}</span>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => window.open(fileUrl, '_blank')}
+                                      className="ml-auto"
+                                    >
+                                      Görüntüle
+                                    </Button>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
-                      </div>
-                      {question.requires_file && answer?.answer === 'non_compliant' && (
+                      ) : (
+                        <div className="border-2 border-dashed border-gray-200 rounded-lg p-6 text-center text-gray-400">
+                          <p className="text-sm">Bu soru için dosya yükleme gerekli değil</p>
+                        </div>
+                      )}
+                      
+                      {(question.allowPhoto || question.allowDocument) && answer?.answer === 'non_compliant' && (!answer.files || answer.files.length === 0) && (
                         <div className="flex items-center gap-2 mt-2 text-red-600 text-sm">
                           <AlertTriangle size={16} />
                           <span>Bu madde için fotoğraf/doküman yükleme zorunludur</span>
@@ -334,13 +501,39 @@ export default function LiveChecklist() {
         })}
       </div>
 
-      {/* Add Question Button */}
+      {/* Section Navigation */}
       <Card className="mt-6">
-        <CardContent className="text-center py-8">
-          <Button variant="outline" size="lg">
-            <Plus size={20} className="mr-2" />
-            Yeni Soru Ekle
-          </Button>
+        <CardContent className="py-6">
+          <div className="flex items-center justify-between">
+            <Button
+              variant="outline"
+              onClick={goToPreviousSection}
+              disabled={currentSectionIndex === 0}
+            >
+              <ChevronLeft size={16} className="mr-2" />
+              Önceki Bölüm
+            </Button>
+            
+            <div className="text-center">
+              <p className="text-sm text-gray-600">
+                Bölüm {currentSectionIndex + 1} / {totalSections}
+              </p>
+              {!isCurrentSectionComplete() && (
+                <p className="text-xs text-red-600 mt-1">
+                  Sonraki bölüme geçmek için tüm soruları cevaplayın
+                </p>
+              )}
+            </div>
+            
+            <Button
+              onClick={goToNextSection}
+              disabled={currentSectionIndex === totalSections - 1 || !isCurrentSectionComplete()}
+              className={isCurrentSectionComplete() ? "bg-green-600 hover:bg-green-700" : ""}
+            >
+              Sonraki Bölüm
+              <ChevronRight size={16} className="ml-2" />
+            </Button>
+          </div>
         </CardContent>
       </Card>
 

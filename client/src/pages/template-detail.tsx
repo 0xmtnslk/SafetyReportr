@@ -6,6 +6,7 @@ import {
   CheckSquare, ArrowLeft, Edit, Plus, Trash2, Settings
 } from "lucide-react";
 import { useLocation } from "wouter";
+import { useAuth } from "@/hooks/useAuth";
 
 interface TemplateDetailProps {
   templateId: string;
@@ -13,6 +14,10 @@ interface TemplateDetailProps {
 
 export default function TemplateDetail({ templateId }: TemplateDetailProps) {
   const [, setLocation] = useLocation();
+  const { user } = useAuth();
+  
+  // Check if user is admin (only admins can add/edit questions)
+  const isAdmin = user?.role === 'central_admin';
 
   // Fetch template details
   const { data: template, isLoading: templateLoading } = useQuery<any>({
@@ -93,13 +98,15 @@ export default function TemplateDetail({ templateId }: TemplateDetailProps) {
         </div>
         
         <div className="flex gap-2">
-          <Button 
-            onClick={() => setLocation(`/checklist/templates/${templateId}/edit`)}
-            className="bg-primary hover:bg-primary/90"
-          >
-            <Edit size={16} className="mr-2" />
-            Şablonu Düzenle
-          </Button>
+          {isAdmin && (
+            <Button 
+              onClick={() => setLocation(`/checklist/templates/${templateId}/edit`)}
+              className="bg-primary hover:bg-primary/90"
+            >
+              <Edit size={16} className="mr-2" />
+              Şablonu Düzenle
+            </Button>
+          )}
         </div>
       </div>
 
@@ -151,14 +158,16 @@ export default function TemplateDetail({ templateId }: TemplateDetailProps) {
                     <Badge variant="outline">
                       {sectionQuestions.length} Soru
                     </Badge>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setLocation(`/checklist/sections/${section.id}/edit`)}
-                    >
-                      <Edit size={14} className="mr-1" />
-                      Düzenle
-                    </Button>
+                    {isAdmin && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setLocation(`/checklist/sections/${section.id}/edit`)}
+                      >
+                        <Edit size={14} className="mr-1" />
+                        Düzenle
+                      </Button>
+                    )}
                   </div>
                 </div>
                 {section.description && (
@@ -170,13 +179,15 @@ export default function TemplateDetail({ templateId }: TemplateDetailProps) {
                 {sectionQuestions.length === 0 ? (
                   <div className="text-center py-8">
                     <p className="text-gray-500 mb-4">Bu bölümde henüz soru yok</p>
-                    <Button 
-                      size="sm"
-                      onClick={() => setLocation(`/checklist/sections/${section.id}/add-question`)}
-                    >
-                      <Plus size={14} className="mr-1" />
-                      İlk Soruyu Ekle
-                    </Button>
+                    {isAdmin && (
+                      <Button 
+                        size="sm"
+                        onClick={() => setLocation(`/checklist/sections/${section.id}/add-question`)}
+                      >
+                        <Plus size={14} className="mr-1" />
+                        İlk Soruyu Ekle
+                      </Button>
+                    )}
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -200,35 +211,39 @@ export default function TemplateDetail({ templateId }: TemplateDetailProps) {
                               )}
                             </div>
                           </div>
-                          <div className="flex gap-1">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => setLocation(`/checklist/questions/${question.id}/edit`)}
-                            >
-                              <Edit size={12} />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="text-red-600 hover:text-red-700"
-                            >
-                              <Trash2 size={12} />
-                            </Button>
-                          </div>
+                          {isAdmin && (
+                            <div className="flex gap-1">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => setLocation(`/checklist/questions/${question.id}/edit`)}
+                              >
+                                <Edit size={12} />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 size={12} />
+                              </Button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     ))}
                     
-                    <div className="text-center pt-4">
-                      <Button 
-                        variant="outline"
-                        onClick={() => setLocation(`/checklist/sections/${section.id}/add-question`)}
-                      >
-                        <Plus size={16} className="mr-2" />
-                        Yeni Soru Ekle
-                      </Button>
-                    </div>
+                    {isAdmin && (
+                      <div className="text-center pt-4">
+                        <Button 
+                          variant="outline"
+                          onClick={() => setLocation(`/checklist/sections/${section.id}/add-question`)}
+                        >
+                          <Plus size={16} className="mr-2" />
+                          Yeni Soru Ekle
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 )}
               </CardContent>
@@ -238,18 +253,20 @@ export default function TemplateDetail({ templateId }: TemplateDetailProps) {
       </div>
 
       {/* Add Section Button */}
-      <Card className="mt-6">
-        <CardContent className="text-center py-8">
-          <Button 
-            onClick={() => setLocation(`/checklist/templates/${templateId}/add-section`)}
-            variant="outline"
-            size="lg"
-          >
-            <Plus size={20} className="mr-2" />
-            Yeni Bölüm Ekle
-          </Button>
-        </CardContent>
-      </Card>
+      {isAdmin && (
+        <Card className="mt-6">
+          <CardContent className="text-center py-8">
+            <Button 
+              onClick={() => setLocation(`/checklist/templates/${templateId}/add-section`)}
+              variant="outline"
+              size="lg"
+            >
+              <Plus size={20} className="mr-2" />
+              Yeni Bölüm Ekle
+            </Button>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
