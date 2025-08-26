@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 
 interface TemplateDetailProps {
   templateId: string;
@@ -15,6 +16,8 @@ interface TemplateDetailProps {
 export default function TemplateDetail({ templateId }: TemplateDetailProps) {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   // Check if user is admin (only admins can add/edit questions)
   const isAdmin = user?.role === 'central_admin';
@@ -30,7 +33,7 @@ export default function TemplateDetail({ templateId }: TemplateDetailProps) {
   });
 
   // Fetch questions for each section - with better error handling
-  const { data: questionsData = {}, isLoading: questionsLoading } = useQuery<Record<string, any[]>>({
+  const { data: questionsData = {}, isLoading: questionsLoading, refetch: refetchQuestions } = useQuery<Record<string, any[]>>({
     queryKey: ["/api/checklist/sections/questions", templateId, sections.map(s => s?.id).join(',')],
     queryFn: async () => {
       console.log('Loading questions for sections:', sections);
@@ -71,6 +74,51 @@ export default function TemplateDetail({ templateId }: TemplateDetailProps) {
       return questionsMap;
     },
     enabled: sections.length > 0 && !sectionsLoading,
+    refetchInterval: false, // Disable automatic refetching
+    staleTime: 0, // Consider data stale immediately
+  });
+
+  // Delete question mutation
+  const deleteQuestion = useMutation({
+    mutationFn: async (questionId: string) => {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/checklist/questions/${questionId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (!response.ok) throw new Error('Failed to delete question');
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Soru Silindi",
+        description: "Soru başarıyla silindi.",
+      });
+      
+      // Aggressively invalidate and refetch all related caches
+      queryClient.invalidateQueries({ queryKey: ['/api/checklist'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/checklist/sections'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/checklist/templates'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/checklist/questions'] });
+      
+      // Force immediate refetch of questions
+      refetchQuestions();
+      
+      // Also invalidate specific section queries
+      sections.forEach(section => {
+        queryClient.invalidateQueries({ queryKey: ['/api/checklist/sections', section.id, 'questions'] });
+        queryClient.refetchQueries({ queryKey: ['/api/checklist/sections', section.id, 'questions'] });
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Hata",
+        description: "Soru silinirken bir hata oluştu.",
+        variant: "destructive"
+      });
+    }
   });
 
   if (templateLoading || sectionsLoading || questionsLoading) {
@@ -254,6 +302,12 @@ export default function TemplateDetail({ templateId }: TemplateDetailProps) {
                                 size="sm"
                                 variant="ghost"
                                 className="text-red-600 hover:text-red-700"
+                                onClick={() => {
+                                  if (window.confirm('Bu soruyu silmek istediğinizden emin misiniz?')) {
+                                    deleteQuestion.mutate(question.id);
+                                  }
+                                }}
+                                disabled={deleteQuestion.isPending}
                               >
                                 <Trash2 size={12} />
                               </Button>

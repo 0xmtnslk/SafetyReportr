@@ -57,17 +57,36 @@ export default function QuestionEdit({ questionId }: QuestionEditProps) {
         title: "Soru Güncellendi",
         description: "Soru başarıyla güncellendi.",
       });
-      // Invalidate and refetch all related queries to refresh the cache immediately
+      // Aggressively invalidate and force refetch all related queries
       queryClient.invalidateQueries({ queryKey: ['/api/checklist'] });
       queryClient.invalidateQueries({ queryKey: ['/api/checklist/sections'] });
       queryClient.invalidateQueries({ queryKey: ['/api/checklist/templates'] });
       queryClient.invalidateQueries({ queryKey: ['/api/checklist/questions'] });
       
-      // Force refetch specific queries for immediate UI update
+      // Force immediate refetch of all section questions
       if (question && (question as any).sectionId) {
-        queryClient.refetchQueries({ queryKey: ['/api/checklist/sections', (question as any).sectionId, 'questions'] });
+        const sectionId = (question as any).sectionId;
+        
+        // Invalidate and refetch section-specific queries
+        queryClient.invalidateQueries({ queryKey: ['/api/checklist/sections', sectionId, 'questions'] });
+        queryClient.refetchQueries({ queryKey: ['/api/checklist/sections', sectionId, 'questions'] });
+        
+        // Also invalidate the main sections/questions query used in template detail
+        queryClient.invalidateQueries({ queryKey: ['/api/checklist/sections/questions'] });
         queryClient.refetchQueries({ queryKey: ['/api/checklist/sections/questions'] });
+        
+        // Find and refetch template-specific queries
+        const urlParams = new URLSearchParams(window.location.search);
+        const referrer = urlParams.get('from');
+        if (referrer && referrer.includes('templates/')) {
+          const templateId = referrer.split('templates/')[1];
+          queryClient.invalidateQueries({ queryKey: ['/api/checklist/sections/questions', templateId] });
+          queryClient.refetchQueries({ queryKey: ['/api/checklist/sections/questions', templateId] });
+        }
       }
+      
+      // Force refetch all cached queries to ensure immediate UI update
+      queryClient.refetchQueries();
       
       // Get referrer from URL params or localStorage to redirect back properly
       const urlParams = new URLSearchParams(window.location.search);
