@@ -265,60 +265,95 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
         </Button>
       </div>
 
-      {/* Progress & Navigation */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Genel İlerleme</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <Progress value={getTotalProgress()} className="w-full" />
-              <div className="text-sm text-gray-600">
-                {Math.round(getTotalProgress())}% tamamlandı
+      {/* Modern Progress Dashboard */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
+        {/* Genel İlerleme */}
+        <Card className="lg:col-span-1">
+          <CardContent className="p-6">
+            <div className="text-center">
+              <div className="relative inline-flex items-center justify-center w-20 h-20 mb-4">
+                <svg className="w-20 h-20 transform -rotate-90" viewBox="0 0 36 36">
+                  <path
+                    className="text-gray-200"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    fill="none"
+                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                  />
+                  <path
+                    className="text-blue-600"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    strokeDasharray={`${getTotalProgress()}, 100`}
+                    strokeLinecap="round"
+                    fill="none"
+                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                  />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-xl font-bold text-blue-600">
+                    {Math.round(getTotalProgress())}%
+                  </span>
+                </div>
               </div>
-              <div className="text-sm">
+              <h3 className="font-semibold text-gray-700">Genel İlerleme</h3>
+              <p className="text-sm text-gray-500">
                 Bölüm {currentSectionIndex + 1} / {totalSections}
-              </div>
+              </p>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Mevcut Bölüm</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <h3 className="font-semibold">{currentSection?.name}</h3>
-              <Progress value={getCurrentSectionProgress()} className="w-full" />
-              <div className="text-sm text-gray-600">
-                {Math.round(getCurrentSectionProgress())}% tamamlandı
-              </div>
-              <div className="text-sm">
-                {currentSection?.questions.length || 0} soru
+        {/* Değerlendirme Özeti - Grafik */}
+        <Card className="lg:col-span-3">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-gray-700">Değerlendirme Özeti</h3>
+              <div className="text-right">
+                <div className="text-sm text-gray-600">Toplam Skor</div>
+                <div className="text-xl font-bold text-blue-600">
+                  {getTotalScore()} / {getMaxPossibleScore()}
+                </div>
               </div>
             </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Skor Durumu</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span>Mevcut Skor:</span>
-                <span className="font-bold">{getTotalScore()}</span>
+            <div className="grid grid-cols-4 gap-4 mb-4">
+              <div className="text-center">
+                <div className="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <span className="text-2xl font-bold text-green-600">
+                    {Object.values(answers).filter(a => a.answer === 'compliant').length}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-600">✅ Karşılıyor</p>
               </div>
-              <div className="flex justify-between">
-                <span>Maksimum Skor:</span>
-                <span className="font-bold">{getMaxPossibleScore()}</span>
+              <div className="text-center">
+                <div className="bg-yellow-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <span className="text-2xl font-bold text-yellow-600">
+                    {Object.values(answers).filter(a => a.answer === 'partially_compliant').length}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-600">⚠️ Kısmen</p>
               </div>
-              <div className="flex justify-between border-t pt-2">
-                <span>Başarı Oranı:</span>
-                <span className="font-bold">
+              <div className="text-center">
+                <div className="bg-red-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <span className="text-2xl font-bold text-red-600">
+                    {Object.values(answers).filter(a => a.answer === 'non_compliant').length}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-600">❌ Karşılamıyor</p>
+              </div>
+              <div className="text-center">
+                <div className="bg-gray-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <span className="text-2xl font-bold text-gray-600">
+                    {Object.values(answers).filter(a => a.answer === 'not_applicable').length}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-600">➖ Kapsam Dışı</p>
+              </div>
+            </div>
+            <div className="bg-gray-50 rounded-lg p-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">Başarı Oranı</span>
+                <span className="text-lg font-bold text-blue-600">
                   {getMaxPossibleScore() > 0 
                     ? Math.round((getTotalScore() / getMaxPossibleScore()) * 100) 
                     : 0}%
@@ -370,92 +405,69 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
         </Card>
       )}
 
-      {/* Questions */}
-      <div className="space-y-6">
+      {/* Questions - Modern Grid Layout */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {currentSection?.questions.map((question, index) => {
           const answer = answers[question.id];
           const score = answer ? calculateScore(answer, question) : 0;
           
           return (
-            <Card key={question.id} className="border-l-4 border-l-blue-500">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <CardTitle className="flex items-center gap-3 mb-2">
-                      <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm font-medium">
-                        {index + 1}
-                      </span>
-                      <span>{question.questionText || question.text || 'Soru metni yok'}</span>
-                    </CardTitle>
-                    <div className="flex items-center gap-4 text-sm text-gray-600">
-                      <Badge variant="outline">{question.category || 'Genel'}</Badge>
-                      <span>TW Skoru: {question.twScore || question.tw_score || 'Belirtilmemiş'}</span>
-                      <span>Puan: {score}</span>
-                      {(question.allowPhoto || question.allowDocument) && (
-                        <Badge className="bg-orange-100 text-orange-800">
-                          <Camera size={12} className="mr-1" />
-                          Dosya Gerekli
-                        </Badge>
-                      )}
-                    </div>
+            <Card key={question.id} className="border-l-4 border-l-blue-500 h-fit">
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm font-medium">
+                      {index + 1}
+                    </span>
+                    {answer && (
+                      <Badge className={getAnswerColor(answer.answer)} variant="secondary">
+                        {getAnswerLabel(answer.answer)}
+                      </Badge>
+                    )}
                   </div>
-                  {answer && (
-                    <Badge className={getAnswerColor(answer.answer)}>
-                      {getAnswerLabel(answer.answer)}
+                  <div className="text-right text-xs text-gray-500">
+                    TW: {question.twScore || question.tw_score || '1'} | Puan: {score}
+                  </div>
+                </div>
+                <CardTitle className="text-base leading-6">
+                  {question.questionText || question.text || 'Soru metni yok'}
+                </CardTitle>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-xs">{question.category || 'Genel'}</Badge>
+                  {(question.allowPhoto || question.allowDocument) && (
+                    <Badge className="bg-orange-100 text-orange-800 text-xs">
+                      <Camera size={10} className="mr-1" />
+                      Dosya
                     </Badge>
                   )}
                 </div>
               </CardHeader>
               
-              <CardContent className="space-y-4">
-                {/* Compact Evaluation Buttons */}
-                <div>
-                  <Label className="text-sm font-medium mb-2 block">Değerlendirme</Label>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                    <Button
-                      variant={answer?.answer === 'compliant' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => updateAnswer(question.id, 'answer', 'compliant')}
-                      className={`h-12 flex flex-col gap-1 ${answer?.answer === 'compliant' ? 'bg-green-600 hover:bg-green-700' : ''}`}
+              <CardContent className="space-y-3">
+                {/* Elegant Dropdown Evaluation */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="col-span-2">
+                    <Label className="text-sm font-medium mb-1 block">Değerlendirme</Label>
+                    <Select
+                      value={answer?.answer || ''}
+                      onValueChange={(value) => updateAnswer(question.id, 'answer', value)}
                     >
-                      <span className="text-lg">✅</span>
-                      <span className="text-xs">Karşılıyor</span>
-                    </Button>
-                    <Button
-                      variant={answer?.answer === 'partially_compliant' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => updateAnswer(question.id, 'answer', 'partially_compliant')}
-                      className={`h-12 flex flex-col gap-1 ${answer?.answer === 'partially_compliant' ? 'bg-yellow-600 hover:bg-yellow-700' : ''}`}
-                    >
-                      <span className="text-lg">⚠️</span>
-                      <span className="text-xs">Kısmen</span>
-                    </Button>
-                    <Button
-                      variant={answer?.answer === 'non_compliant' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => updateAnswer(question.id, 'answer', 'non_compliant')}
-                      className={`h-12 flex flex-col gap-1 ${answer?.answer === 'non_compliant' ? 'bg-red-600 hover:bg-red-700' : ''}`}
-                    >
-                      <span className="text-lg">❌</span>
-                      <span className="text-xs">Karşılamıyor</span>
-                    </Button>
-                    <Button
-                      variant={answer?.answer === 'not_applicable' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => updateAnswer(question.id, 'answer', 'not_applicable')}
-                      className={`h-12 flex flex-col gap-1 ${answer?.answer === 'not_applicable' ? 'bg-gray-600 hover:bg-gray-700' : ''}`}
-                    >
-                      <span className="text-lg">➖</span>
-                      <span className="text-xs">Kapsam Dışı</span>
-                    </Button>
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="Seçiniz..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="compliant">✅ Karşılıyor</SelectItem>
+                        <SelectItem value="partially_compliant">⚠️ Kısmen Karşılıyor</SelectItem>
+                        <SelectItem value="non_compliant">❌ Karşılamıyor</SelectItem>
+                        <SelectItem value="not_applicable">➖ Kapsam Dışı</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                </div>
 
-                {/* Compact File Section */}
-                {(question.allowPhoto || question.allowDocument) && (
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <Label className="text-sm font-medium">Fotoğraf/Doküman</Label>
+                  {/* Compact File Upload */}
+                  {(question.allowPhoto || question.allowDocument) && (
+                    <div>
+                      <Label className="text-sm font-medium mb-1 block">Dosya</Label>
                       <ObjectUploader
                         maxNumberOfFiles={5}
                         maxFileSize={10485760}
@@ -486,72 +498,71 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
                             });
                           }
                         }}
-                        buttonClassName="h-8 px-3 text-xs"
+                        buttonClassName="h-9 w-full text-xs"
                       >
-                        <Camera size={14} className="mr-1" />
-                        Ekle
+                        <Camera size={12} />
                       </ObjectUploader>
                     </div>
-                    
-                    {/* Image Thumbnails */}
-                    {answer?.files && answer.files.length > 0 && (
-                      <div className="flex flex-wrap gap-2">
-                        {answer.files.map((fileUrl, fileIndex) => (
-                          <div key={fileIndex} className="relative group">
-                            <div 
-                              className="w-16 h-16 bg-gray-100 rounded-lg border-2 border-gray-200 cursor-pointer overflow-hidden hover:border-blue-400 transition-colors"
-                              onClick={() => {
-                                setSelectedImage(fileUrl);
-                                setImageModalOpen(true);
-                              }}
-                            >
-                              {fileUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
-                                <img 
-                                  src={fileUrl} 
-                                  alt={`Uploaded file ${fileIndex + 1}`}
-                                  className="w-full h-full object-cover"
-                                />
-                              ) : (
-                                <div className="w-full h-full flex items-center justify-center">
-                                  <FileText size={20} className="text-gray-400" />
-                                </div>
-                              )}
-                              <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
-                                <ZoomIn size={16} className="text-white" />
-                              </div>
+                  )}
+                </div>
+
+                {/* Image Thumbnails - Compact */}
+                {answer?.files && answer.files.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {answer.files.map((fileUrl, fileIndex) => (
+                      <div key={fileIndex} className="relative group">
+                        <div 
+                          className="w-12 h-12 bg-gray-100 rounded border cursor-pointer overflow-hidden hover:border-blue-400 transition-colors"
+                          onClick={() => {
+                            setSelectedImage(fileUrl);
+                            setImageModalOpen(true);
+                          }}
+                        >
+                          {fileUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                            <img 
+                              src={fileUrl} 
+                              alt={`File ${fileIndex + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <FileText size={16} className="text-gray-400" />
                             </div>
+                          )}
+                          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
+                            <Eye size={12} className="text-white" />
                           </div>
-                        ))}
+                        </div>
                       </div>
-                    )}
-                    
-                    {answer?.answer === 'non_compliant' && (!answer.files || answer.files.length === 0) && (
-                      <div className="flex items-center gap-2 text-red-600 text-xs mt-1">
-                        <AlertTriangle size={12} />
-                        <span>Bu madde için fotoğraf/doküman yükleme zorunludur</span>
-                      </div>
-                    )}
+                    ))}
                   </div>
                 )}
 
-                {/* Notes Section - Collapsible */}
+                {/* Notes - Compact */}
                 <div>
-                  <Label className="text-sm font-medium mb-2 block">Notlar</Label>
                   <Textarea
-                    placeholder="Değerlendirme notlarınızı yazın..."
+                    placeholder="Notlar..."
                     value={answer?.notes || ''}
                     onChange={(e) => updateAnswer(question.id, 'notes', e.target.value)}
                     rows={2}
-                    className="text-sm"
+                    className="text-sm resize-none"
                   />
                 </div>
+
+                {/* Validation Warning */}
+                {answer?.answer === 'non_compliant' && (question.allowPhoto || question.allowDocument) && (!answer.files || answer.files.length === 0) && (
+                  <div className="flex items-center gap-1 text-red-600 text-xs">
+                    <AlertTriangle size={10} />
+                    <span>Dosya gerekli</span>
+                  </div>
+                )}
               </CardContent>
             </Card>
           );
         })}
       </div>
 
-      {/* Section Navigation */}
+      {/* Section Navigation & Save */}
       <Card className="mt-6">
         <CardContent className="py-6">
           <div className="flex items-center justify-between">
@@ -564,15 +575,22 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
               Önceki Bölüm
             </Button>
             
-            <div className="text-center">
-              <p className="text-sm text-gray-600">
-                Bölüm {currentSectionIndex + 1} / {totalSections}
-              </p>
-              {!isCurrentSectionComplete() && (
-                <p className="text-xs text-red-600 mt-1">
-                  Sonraki bölüme geçmek için tüm soruları cevaplayın
+            <div className="flex items-center gap-4">
+              <div className="text-center">
+                <p className="text-sm text-gray-600">
+                  Bölüm {currentSectionIndex + 1} / {totalSections}
                 </p>
-              )}
+                {!isCurrentSectionComplete() && (
+                  <p className="text-xs text-red-600 mt-1">
+                    Sonraki bölüme geçmek için tüm soruları cevaplayın
+                  </p>
+                )}
+              </div>
+              
+              <Button onClick={handleSave} variant="outline" className="bg-blue-50 hover:bg-blue-100">
+                <Save size={16} className="mr-2" />
+                Kaydet
+              </Button>
             </div>
             
             <Button
@@ -583,41 +601,6 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
               Sonraki Bölüm
               <ChevronRight size={16} className="ml-2" />
             </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Summary */}
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle>Değerlendirme Özeti</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-            <div>
-              <div className="text-2xl font-bold text-green-600">
-                {Object.values(answers).filter(a => a.answer === 'compliant').length}
-              </div>
-              <div className="text-sm text-gray-600">Karşılıyor</div>
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-yellow-600">
-                {Object.values(answers).filter(a => a.answer === 'partially_compliant').length}
-              </div>
-              <div className="text-sm text-gray-600">Kısmen Karşılıyor</div>
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-red-600">
-                {Object.values(answers).filter(a => a.answer === 'non_compliant').length}
-              </div>
-              <div className="text-sm text-gray-600">Karşılamıyor</div>
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-gray-600">
-                {Object.values(answers).filter(a => a.answer === 'not_applicable').length}
-              </div>
-              <div className="text-sm text-gray-600">Kapsam Dışı</div>
-            </div>
           </div>
         </CardContent>
       </Card>
