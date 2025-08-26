@@ -14,6 +14,7 @@ import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { ObjectUploader } from "@/components/ObjectUploader";
+import { useAuth } from "@/hooks/useAuth";
 
 interface Question {
   id: string;
@@ -51,6 +52,7 @@ interface LiveChecklistProps {
 export default function LiveChecklist({ templateId }: LiveChecklistProps) {
   const [location, setLocation] = useLocation();
   const { toast } = useToast();
+  const { user } = useAuth();
   
   // Get assignmentId from URL params
   const urlParams = new URLSearchParams(window.location.search);
@@ -64,6 +66,14 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
   
   // Use templateId from assignment or prop  
   const currentTemplateId = assignment?.inspection?.checklistTemplateId || templateId || "7c39d8c0-7ff5-47ad-84f0-cd04de8bfd2a";
+  
+  // Debug: Log the template selection
+  console.log('🔍 Live Checklist Debug:', {
+    assignmentId,
+    assignment: assignment?.inspection,
+    currentTemplateId,
+    assignmentTemplateId: assignment?.inspection?.checklistTemplateId
+  });
 
   // State for current section and progress
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
@@ -236,7 +246,14 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
         <div className="flex items-center gap-4">
           <Button 
             variant="outline" 
-            onClick={() => setLocation('/checklist')}
+            onClick={() => {
+              // Safety specialists go to dashboard, admins go to checklist
+              if (['safety_specialist', 'occupational_physician'].includes(user?.role || '')) {
+                setLocation('/dashboard');
+              } else {
+                setLocation('/checklist');
+              }
+            }}
           >
             <ArrowLeft size={16} className="mr-2" />
             Geri

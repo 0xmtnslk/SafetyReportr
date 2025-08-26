@@ -1424,7 +1424,7 @@ export class DatabaseStorage implements IStorage {
           readAt: new Date() 
         })
         .where(and(
-          eq(notifications.userId, userId),
+          eq(notifications.user_id, userId),
           eq(notifications.isRead, false)
         ));
       return true;
@@ -1439,7 +1439,7 @@ export class DatabaseStorage implements IStorage {
       .select({ count: sql<number>`count(*)` })
       .from(notifications)
       .where(and(
-        eq(notifications.userId, userId),
+        eq(notifications.user_id, userId),
         eq(notifications.isRead, false)
       ));
     return result?.count || 0;
