@@ -34,7 +34,9 @@ export default function QuestionEdit({ questionId }: QuestionEditProps) {
   // Fetch question data
   const { data: question, isLoading } = useQuery({
     queryKey: ['/api/checklist/questions', questionId],
-    enabled: !!questionId
+    enabled: !!questionId,
+    staleTime: 0, // Always fetch fresh data
+    refetchOnMount: true
   });
 
   // Update question mutation
@@ -112,10 +114,11 @@ export default function QuestionEdit({ questionId }: QuestionEditProps) {
   // Update form data when question is loaded
   useEffect(() => {
     if (question) {
+      console.log('Loading question data into form:', question);
       setFormData({
-        questionText: (question as any)?.questionText || "",
+        questionText: (question as any)?.questionText || (question as any)?.text || "",
         category: (question as any)?.category || "Genel",
-        twScore: (question as any)?.twScore || 1,
+        twScore: (question as any)?.twScore || (question as any)?.tw_score || 1,
         isRequired: (question as any)?.isRequired ?? true,
         allowPhoto: (question as any)?.allowPhoto ?? true,
         allowDocument: (question as any)?.allowDocument ?? true
