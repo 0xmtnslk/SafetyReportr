@@ -26,6 +26,7 @@ import QuestionEdit from "@/pages/question-edit";
 import AddSection from "@/pages/add-section";
 import SectionDetail from "@/pages/section-detail";
 import LiveChecklist from "@/pages/live-checklist";
+import InspectionCreatePage from "@/pages/inspection-create";
 import Navigation from "@/components/navigation";
 import OfflineIndicator from "@/components/offline-indicator";
 import { useOfflineSync } from "./hooks/useOfflineSync";
@@ -119,6 +120,7 @@ function Router() {
               }}
             </Route>
             <Route path="/checklist/live" component={LiveChecklist} />
+            <Route path="/admin/inspections/create" component={InspectionCreatePage} />
             <Route component={() => <div className="p-8"><div>404 - Page Not Found</div></div>} />
           </Switch>
         </Navigation>

@@ -1705,7 +1705,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // NEW: Inspection Management System Routes
 
   // Get all inspections (Admin only)
-  app.get('/api/inspections', authenticateToken, requireCentralAdmin, async (req: Request, res: Response) => {
+  app.get('/api/inspections', authenticateToken, requireCentralManagement, async (req: Request, res: Response) => {
     try {
       const inspections = await storage.getAllInspections();
       res.json(inspections);
@@ -1716,7 +1716,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create new inspection (Central Admin only)
-  app.post('/api/inspections', authenticateToken, requireCentralAdmin, async (req: Request, res: Response) => {
+  app.post('/api/inspections', authenticateToken, requireCentralManagement, async (req: Request, res: Response) => {
     try {
       const validatedData = insertInspectionSchema.parse(req.body);
       const user = (req as any).user;
