@@ -1,0 +1,80 @@
+İSG Teknik Alanlar Denetim Kontrol Listesi
+
+Bölüm: ADP Kontrol Listesi
+1) ADP alanına tüm yetkisiz girişler engellenmiş olmalı, alan kilit altında tutulmalıdır.										
+2) Alan girişinde uygun nitelikli sağlık ve güvenlik işaretleri (yetkisiz giriş yasaktır, elektrik tehlikesi vb.) bulunmalıdır.						
+3) Alan girişinde uygun nitelikli kişisel koruyucu ekipmanlar bulunmalıdır.							
+4) Alan girişinde acil durumda veya ihtiyaç halinde iletişime geçilecek birimin iletişim numarası bulunmalıdır.	
+5) Alanda uygun nitelikte, çalışır halde, engellenmemiş ve alanın tamamını kapsayan bir yangın algılama sistemi bulunmalıdır.
+6) Yangın algılama sistemi bileşenleri (ısı dedektörleri, duman dedektörleri, multi dedektörler gibi) bulunduğu alan kolayca tespit edilebilecek şekilde tanımlanmış, numaralandırılmış ve yangın algılama sistemi üzerinden takip edilebilir halde olmalıdır.
+7) ADP alanlarında öncelikli olarak otomatik gazlı söndürme sistemleri tercih edilir. Alanda otomatik gazlı söndürme sistemi bulunuyor ise sulu söndürme sistemi aktif halde tutulmamalı, su akışı kesilmiş olmalıdır.
+8) ADP alanlarında otomatik gazlı söndürme sistemi bulunmuyor ve sulu söndürme sistemi kullanılıyorsa, bu sistemin ön tepkimeli (pre-action) söndürme sistemi olması sağlanmalıdır.					
+9) Alanda otomatik gazlı söndürme sistemi bulunuyor ise, bu sisteme ait alarm ve arıza bilgileri, hastanenin merkezi yangın algılama sistemine entegre edilmiş ve izlenebilir olmalıdır.								
+10) Alanda otomatik gazlı söndürme sistemi bulunuyor ise, bu sisteme ait kumanda paneli ve gaz tüpleri alanın dışında güvenli, yetkisiz müdahaleden ve dış etkenlerden korunacak şekilde konumlandırılmış olmalıdır.										
+
+Bölüm:UPS Kontrol Listesi
+1) UPS alanına tüm yetkisiz girişler engellenmiş olmalı, alan kilit altında tutulmalıdır.									
+2) Alan girişinde uygun nitelikli sağlık ve güvenlik işaretleri (yetkisiz giriş yasaktır, elektrik tehlikesi vb.) bulunmalıdır.
+3) Alan girişinde uygun nitelikli kişisel koruyucu ekipmanlar bulunmalıdır.
+4) Alan girişinde acil durumda veya ihtiyaç halinde iletişime geçilecek birimin iletişim numarası bulunmalıdır.
+5) Alanda uygun nitelikte, çalışır halde, engellenmemiş ve alanın tamamını kapsayan bir yangın algılama sistemi bulunmalıdır.
+6) Yangın algılama sistemi bileşenleri (ısı dedektörleri, duman dedektörleri, multi dedektörler gibi) bulunduğu alan kolayca tespit edilebilecek şekilde tanımlanmış, numaralandırılmış ve yangın algılama sistemi üzerinden takip edilebilir halde olmalıdır.
+7) UPS alanlarında öncelikli olarak otomatik gazlı söndürme sistemleri tercih edilir. Alanda otomatik gazlı söndürme sistemi bulunuyor ise sulu söndürme sistemi aktif halde tutulmamalı, su akışı kesilmiş olmalıdır.
+8) UPS alanlarında otomatik gazlı söndürme sistemi bulunmuyor ve sulu söndürme sistemi kullanılıyorsa, bu sistemin ön tepkimeli (pre-action) söndürme sistemi olması sağlanmalıdır.					
+9) Alanda otomatik gazlı söndürme sistemi bulunuyor ise, bu sisteme ait alarm ve arıza bilgileri, hastanenin merkezi yangın algılama sistemine entegre edilmiş ve izlenebilir olmalıdır.								
+10) Alanda otomatik gazlı söndürme sistemi bulunuyor ise, bu sisteme ait kumanda paneli ve gaz tüpleri alanın dışında güvenli, yetkisiz müdahaleden ve dış etkenlerden korunacak şekilde konumlandırılmış olmalıdır.
+
+Bölüm: Jeneratör Kontrol Listesi
+1) Jeneratör alanına tüm yetkisiz girişler engellenmiş olmalı (açık alanlar için çevre çiti, kilitli tel kafes veya kilitli konteyner vb. önlemler alınmalı), alan kilit altında tutulmalıdır.
+2) Alan girişinde uygun nitelikli sağlık ve güvenlik işaretleri (yetkisiz giriş yasaktır, elektrik tehlikesi vb.) bulunmalıdır.	
+3) Alan girişinde uygun nitelikli kişisel koruyucu ekipmanlar bulunmalıdır.
+4) Alan girişinde acil durumda veya ihtiyaç halinde iletişime geçilecek birimin iletişim numarası bulunmalıdır.
+5) Kapalı alanda bulunan jenetör mahalleri için; alanda uygun nitelikte, çalışır halde, engellenmemiş ve alanın tamamını kapsayan yangın algılama sistemi bulunmalıdır.
+6) Kapalı alanda bulunan jenetör mahalleri için; uygun nitelikli bir söndürme sistemi bulunmalıdır.			
+7) Kapalı alanda bulunan jenetör mahalleri için; olası yangın durumunda yangın algılama sistemi ile entegre çalışan havalandırmayı kesme, yangın damperlerini kapatma gibi otomasyon kontrolleri tanımlanmış ve test edilmiş olmalıdır.
+8) Kapalı alanda bulunan jenetör mahalleri için; alanda yeterli havalandırma (doğal veya mekanik yollarla) sağlanıyor olmalıdır.
+9) Kapalı alanda bulunan jenetör mahalleri için; havalandırmanın mekanik yolla sağlandığı durumlarda havalandırma sistemi jeneratör çalışırken otomatik devreye girecek şekilde tasarlanmış olmalıdır.
+10) Kapalı alanda bulunan jenetör mahalleri için; egzoz gazının alana yayılması engellenerek uygun şekilde dışarı atılıyor olmalıdır.
+
+
+Her bölümde bu şekilde sorular olacak. Dilerse + ekleyerek soru adedini arttıracak. Arttığı maddeleri o kontrol listesinde ve bölümde sonraki aylarda raporu tekrarlamasını istediğinde son eklenmiş haliyle gelecek ve eklemek istediği yeni soruları eklediğinde hep eklenmiş son haliyle kontrol listesi oluşturulacak.
+
+Bu listenin yanına Yöntem kısmı var buraya iki tür seçenek gelecek. Fotograf ve doküman yükleme. O madde için ister birini seçebilecek isterse ikisini seçebilecek. Kullanıcı yani raporu dolduran kişi bu yöntemden ikisini (foto veya doküman) yada birini, veya hiç eklemeden devam edebilecek. Yöntemde foto veya doküman eklemede zorunlu istenecek tek istisnayı şimdi yazacağım.
+
+Değerlendirme:
+Karşılıyor
+Kısmen karşılıyor
+Karşılamıyor
+Kapsam Dışı
+dropdown şeklinde olacak ve kullanıcı bu maddelerden birini seçecek eğer karşılamıyor seçerse doküman yada fotoğraf eklemek zorunda.
+
+Kategori:
+Afet ve Acil Durum Yönetimi
+Altyapı
+Emniyet
+Güvenlik
+Tıbbi Cihaz Yönetimi
+Malzeme-Cihaz Yönetimi
+Tehlikeli Madde Yönetimi
+Atık Yönetimi
+Yangın Güvenliği
+
+Bu kısım her bir madde kategori olarak seçilecek. Bu kısımda dropdown olarak gelecek ve kullanıcı madde karşılığında ilgili madde'ye hangisine uygun ise onu seçebilmesini sağlamalısın. Bu kategori seçilmeden raporu kayıt edemesin.
+TW
+Bu skoru raporu oluşturan kişi girmesi gerekiyor. Bu skor o liste için değeri saklanmalı. TW skoru 1-10 arasında olacak.
+Skor
+Bu bölümde excelde kullandığım formülü ekliyorum. 
+verilen TW skoruna göre bu şekilde bir sonuç çıkıyor.
+=EĞER(EBOŞSA(R24);"";EĞER(R24="Kapsam Dışı";"NA";EĞER(R24="Karşılamıyor";ÇARPIM(-1;V24);EĞER(R24="Kısmen Karşılıyor";ÇARPIM(0,5;V24);EĞER(R24="Karşılıyor";ÇARPIM(1;V24))))))
+ona göre bir formül olmalı ve skor yerinde görünmeli.
+
+Her bölümün sonunda verilen TW skoruna göre ve Skor sonuçlarındaki en yüksek puana göre bir Maks Puan hesaplanmalı.
+Alınan Puan bölümü ise Değerlendirme ve formüldeki sonuçlara göre hesaplanmalı.
+Sonrasında Maks Puan ve aldığı Puan oranlanarak Yüzdelik başarısı belirlenmeli.
+Başarı Oranına göre de aşağıdaki formüle göre Harfler verilmeli.
+
+=EĞER(T92="-";"-";EĞER(T92>=90%;"A";EĞER(VE(T92>=75%;T92<90%);"B";EĞER(VE(T92>=50%;T92<75%);"C";EĞER(VE(T92>=25%;T92<50%);"D";EĞER(VE(T92>=0%;T92<25%);"E";""))))))
+
+Bir de raporun toplam sonucu var. Onu da bölümlere ve kategorilere göre hesaplamak gerekiyor.
+
+onun için ayrıntılı bir formüller ve yapı vereceğim ilk olarak bu şekilde başlasak olur mu? Seninde fikrini merak ediyorum.

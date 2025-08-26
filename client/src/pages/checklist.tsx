@@ -87,10 +87,6 @@ export default function ChecklistDashboard() {
     );
   }
 
-  // Debug: Log user info and assignments
-  console.log("🔍 DEBUG - User info:", userInfo);
-  console.log("🔍 DEBUG - Is Admin:", isAdmin);
-  console.log("🔍 DEBUG - Assignments:", assignments);
 
   // Calculate statistics
   const totalAssignments = assignments.length;

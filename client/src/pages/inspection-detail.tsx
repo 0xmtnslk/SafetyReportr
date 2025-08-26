@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, CheckSquare, AlertTriangle, Upload, Save, BarChart3 } from "lucide-react";
+import { ArrowLeft, CheckSquare, AlertTriangle, Upload, Save, BarChart3, Plus } from "lucide-react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
@@ -40,6 +40,9 @@ export default function InspectionDetail({ inspectionId }: InspectionDetailProps
   const { toast } = useToast();
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [currentScore, setCurrentScore] = useState({ total: 0, max: 0, percentage: 0, grade: "E" });
+  const [sectionScores, setSectionScores] = useState<Record<string, any>>({});
+  const [showAddQuestionForm, setShowAddQuestionForm] = useState<string | null>(null);
+  const [newQuestionText, setNewQuestionText] = useState("");
 
   // Fetch inspection details
   const { data: inspection, isLoading: inspectionLoading } = useQuery<any>({
@@ -120,32 +123,56 @@ export default function InspectionDetail({ inspectionId }: InspectionDetailProps
     if (sections.length > 0) {
       let totalScore = 0;
       let maxPossibleScore = 0;
+      const sectionScoresMap: Record<string, any> = {};
       
       sections.forEach((section: any) => {
+        let sectionScore = 0;
+        let sectionMaxScore = 0;
+        
         section.questions?.forEach((question: any) => {
           const answer = answers[question.id];
           if (answer) {
             const twScore = parseInt(answer.twScore) || 1;
+            sectionMaxScore += twScore;
             maxPossibleScore += twScore;
             
             // Excel formulas: Meets=1×TW, Partially=0.5×TW, Doesn't Meet=-1×TW, Out of Scope=NA
             switch (answer.evaluation) {
               case "Karşılıyor":
+                sectionScore += 1 * twScore;
                 totalScore += 1 * twScore;
                 break;
               case "Kısmen Karşılıyor":
+                sectionScore += 0.5 * twScore;
                 totalScore += 0.5 * twScore;
                 break;
               case "Karşılamıyor":
+                sectionScore += -1 * twScore;
                 totalScore += -1 * twScore;
                 break;
               case "Kapsam Dışı":
                 // Don't add to max possible score for out of scope
+                sectionMaxScore -= twScore;
                 maxPossibleScore -= twScore;
                 break;
             }
           }
         });
+        
+        // Calculate section percentage and grade
+        const sectionPercentage = sectionMaxScore > 0 ? Math.max(0, Math.round((sectionScore / sectionMaxScore) * 100)) : 0;
+        let sectionGrade = "E";
+        if (sectionPercentage >= 90) sectionGrade = "A";
+        else if (sectionPercentage >= 75) sectionGrade = "B";
+        else if (sectionPercentage >= 50) sectionGrade = "C";
+        else if (sectionPercentage >= 25) sectionGrade = "D";
+        
+        sectionScoresMap[section.id] = {
+          score: sectionScore,
+          maxScore: sectionMaxScore,
+          percentage: sectionPercentage,
+          grade: sectionGrade
+        };
       });
       
       const percentage = maxPossibleScore > 0 ? Math.max(0, Math.round((totalScore / maxPossibleScore) * 100)) : 0;
@@ -156,6 +183,7 @@ export default function InspectionDetail({ inspectionId }: InspectionDetailProps
       else if (percentage >= 25) grade = "D";
       
       setCurrentScore({ total: totalScore, max: maxPossibleScore, percentage, grade });
+      setSectionScores(sectionScoresMap);
     }
   }, [answers, sections]);
 
@@ -217,6 +245,106 @@ export default function InspectionDetail({ inspectionId }: InspectionDetailProps
       setLocation('/checklist');
     },
   });
+
+  // Add new question mutation
+  const addQuestion = useMutation({
+    mutationFn: async (data: { sectionId: string; questionText: string }) => {
+      // Get max order index for this section
+      const currentSection = sections.find(s => s.id === data.sectionId);
+      const maxOrderIndex = Math.max(0, ...(currentSection?.questions?.map(q => q.orderIndex) || [0]));
+      
+      const response = await fetch(`/api/checklist/questions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({
+          sectionId: data.sectionId,
+          questionText: data.questionText,
+          orderIndex: maxOrderIndex + 1,
+          isRequired: true,
+          allowPhoto: true,
+          allowDocument: true,
+          isActive: true,
+        }),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Soru eklenemedi");
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/checklist/sections", "questions"] });
+      setShowAddQuestionForm(null);
+      setNewQuestionText("");
+      toast({
+        title: "Soru Eklendi",
+        description: "Yeni soru başarıyla eklendi.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Hata",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // File upload handler
+  const handleFileUpload = async (questionId: string, type: 'photo' | 'document', file?: File) => {
+    if (!file) return;
+
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const response = await fetch('/api/upload-image', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Dosya yüklenemedi');
+      }
+
+      const result = await response.json();
+      
+      // Update answer with uploaded file
+      setAnswers(prev => {
+        const currentAnswer = prev[questionId] || {};
+        const currentFiles = type === 'photo' ? (currentAnswer.photos || []) : (currentAnswer.documents || []);
+        
+        return {
+          ...prev,
+          [questionId]: {
+            ...currentAnswer,
+            [type === 'photo' ? 'photos' : 'documents']: [...currentFiles, result.originalName]
+          }
+        };
+      });
+
+      toast({
+        title: "Dosya Yüklendi",
+        description: `${result.originalName} başarıyla yüklendi.`,
+      });
+
+    } catch (error: any) {
+      toast({
+        title: "Yükleme Hatası",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
 
   const updateAnswer = (questionId: string, field: string, value: any) => {
     setAnswers(prev => ({
@@ -368,17 +496,38 @@ export default function InspectionDetail({ inspectionId }: InspectionDetailProps
       </Card>
 
       {/* Questions by Section */}
-      {sections.map((section: any, sectionIndex: number) => (
-        <Card key={section.id} className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CheckSquare size={20} />
-              {section.name}
-            </CardTitle>
-            {section.description && (
-              <p className="text-gray-600">{section.description}</p>
-            )}
-          </CardHeader>
+      {sections.map((section: any, sectionIndex: number) => {
+        const sectionScore = sectionScores[section.id] || { score: 0, maxScore: 0, percentage: 0, grade: "E" };
+        
+        return (
+          <Card key={section.id} className="mb-6">
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <CheckSquare size={20} />
+                  {section.name}
+                </div>
+                <div className="flex items-center gap-4 text-sm">
+                  <span className="text-gray-600">
+                    {sectionScore.score}/{sectionScore.maxScore} puan
+                  </span>
+                  <span className="text-gray-600">
+                    %{sectionScore.percentage}
+                  </span>
+                  <Badge variant={
+                    sectionScore.grade === 'A' ? 'default' :
+                    sectionScore.grade === 'B' ? 'secondary' :
+                    sectionScore.grade === 'C' ? 'outline' :
+                    'destructive'
+                  } className="font-bold">
+                    {sectionScore.grade}
+                  </Badge>
+                </div>
+              </CardTitle>
+              {section.description && (
+                <p className="text-gray-600">{section.description}</p>
+              )}
+            </CardHeader>
           <CardContent>
             <div className="space-y-8">
               {section.questions?.map((question: any, questionIndex: number) => {
@@ -478,23 +627,57 @@ export default function InspectionDetail({ inspectionId }: InspectionDetailProps
                           "Karşılamıyor" seçimi için fotoğraf veya doküman yüklemek zorunludur.
                         </p>
                         <div className="mt-3 flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => alert('Fotoğraf yükleme özelliği hazırlanıyor')}
-                          >
-                            <Upload size={14} className="mr-1" />
-                            Fotoğraf Yükle
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => alert('Doküman yükleme özelliği hazırlanıyor')}
-                          >
-                            <Upload size={14} className="mr-1" />
-                            Doküman Yükle
-                          </Button>
+                          <div>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => handleFileUpload(question.id, 'photo', e.target.files?.[0])}
+                              style={{ display: 'none' }}
+                              id={`photo-${question.id}`}
+                            />
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => document.getElementById(`photo-${question.id}`)?.click()}
+                            >
+                              <Upload size={14} className="mr-1" />
+                              Fotoğraf Yükle
+                            </Button>
+                          </div>
+                          <div>
+                            <input
+                              type="file"
+                              accept=".pdf,.doc,.docx,.txt"
+                              onChange={(e) => handleFileUpload(question.id, 'document', e.target.files?.[0])}
+                              style={{ display: 'none' }}
+                              id={`document-${question.id}`}
+                            />
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => document.getElementById(`document-${question.id}`)?.click()}
+                            >
+                              <Upload size={14} className="mr-1" />
+                              Doküman Yükle
+                            </Button>
+                          </div>
                         </div>
+                        
+                        {/* Display uploaded files */}
+                        {(answer.photos?.length > 0 || answer.documents?.length > 0) && (
+                          <div className="mt-2 p-2 bg-gray-100 rounded">
+                            {answer.photos?.map((photo: string, index: number) => (
+                              <div key={index} className="flex items-center gap-2 text-sm text-green-600">
+                                📷 {photo}
+                              </div>
+                            ))}
+                            {answer.documents?.map((doc: string, index: number) => (
+                              <div key={index} className="flex items-center gap-2 text-sm text-blue-600">
+                                📄 {doc}
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -512,10 +695,67 @@ export default function InspectionDetail({ inspectionId }: InspectionDetailProps
                   </div>
                 );
               })}
+              
+              {/* Add Question Button */}
+              {showAddQuestionForm === section.id ? (
+                <div className="border-2 border-dashed border-blue-300 p-6 rounded-lg bg-blue-50">
+                  <h4 className="font-medium text-lg mb-4">Yeni Soru Ekle</h4>
+                  <div className="space-y-4">
+                    <div>
+                      <Label>Soru Metni *</Label>
+                      <Textarea
+                        value={newQuestionText}
+                        onChange={(e) => setNewQuestionText(e.target.value)}
+                        placeholder="Yeni soru metnini yazın..."
+                        rows={3}
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => {
+                          if (newQuestionText.trim()) {
+                            addQuestion.mutate({
+                              sectionId: section.id,
+                              questionText: newQuestionText.trim(),
+                            });
+                          }
+                        }}
+                        disabled={!newQuestionText.trim() || addQuestion.isPending}
+                        size="sm"
+                      >
+                        {addQuestion.isPending ? "Ekleniyor..." : "Soruyu Ekle"}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setShowAddQuestionForm(null);
+                          setNewQuestionText("");
+                        }}
+                        size="sm"
+                      >
+                        İptal
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowAddQuestionForm(section.id)}
+                    className="flex items-center gap-2"
+                  >
+                    <Plus size={16} />
+                    Soru Ekle
+                  </Button>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
-      ))}
+        );
+      })}
 
       {/* Complete Inspection */}
       {inspection.status !== 'completed' && (
