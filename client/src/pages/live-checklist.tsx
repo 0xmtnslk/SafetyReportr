@@ -235,12 +235,13 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
   };
 
   return (
-    <div className="container mx-auto p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-4">
+    <div className="container mx-auto p-4 md:p-6">
+      {/* Header - Mobile Responsive */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6 md:mb-8">
+        <div className="flex items-center gap-3 md:gap-4">
           <Button 
             variant="outline" 
+            size="sm"
             onClick={() => {
               // Safety specialists go to dashboard, admins go to checklist
               if (['safety_specialist', 'occupational_physician'].includes(user?.role || '')) {
@@ -250,23 +251,27 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
               }
             }}
           >
-            <ArrowLeft size={16} className="mr-2" />
-            Geri
+            <ArrowLeft size={16} className="mr-1 md:mr-2" />
+            <span className="hidden sm:inline">Geri</span>
           </Button>
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">{(template as any)?.name || "Kontrol Listesi"}</h1>
-            <p className="text-gray-600 mt-1">{(template as any)?.description || "İSG denetim kontrol listesi"}</p>
+          <div className="min-w-0 flex-1">
+            <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 truncate">
+              {(template as any)?.name || "Kontrol Listesi"}
+            </h1>
+            <p className="text-sm md:text-base text-gray-600 mt-1 line-clamp-2">
+              {(template as any)?.description || "İSG denetim kontrol listesi"}
+            </p>
           </div>
         </div>
         
-        <Button onClick={handleSave} className="bg-primary hover:bg-primary/90">
+        <Button onClick={handleSave} className="bg-primary hover:bg-primary/90 w-full lg:w-auto">
           <Save size={16} className="mr-2" />
           Kaydet
         </Button>
       </div>
 
       {/* Modern Progress Dashboard */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
         {/* Genel İlerleme */}
         <Card className="lg:col-span-1">
           <CardContent className="p-6">
@@ -405,8 +410,8 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
         </Card>
       )}
 
-      {/* Questions - Modern Grid Layout */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+      {/* Questions - Responsive Grid Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
         {currentSection?.questions.map((question, index) => {
           const answer = answers[question.id];
           const score = answer ? calculateScore(answer, question) : 0;
@@ -415,7 +420,7 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
             <Card key={question.id} className="border-l-4 border-l-blue-500 h-fit">
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between mb-2">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm font-medium">
                       {index + 1}
                     </span>
@@ -425,14 +430,14 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
                       </Badge>
                     )}
                   </div>
-                  <div className="text-right text-xs text-gray-500">
+                  <div className="text-right text-xs text-gray-500 whitespace-nowrap">
                     TW: {question.twScore || question.tw_score || '1'} | Puan: {score}
                   </div>
                 </div>
-                <CardTitle className="text-base leading-6">
+                <CardTitle className="text-sm md:text-base leading-5 md:leading-6">
                   {question.questionText || question.text || 'Soru metni yok'}
                 </CardTitle>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <Badge variant="outline" className="text-xs">{question.category || 'Genel'}</Badge>
                   {(question.allowPhoto || question.allowDocument) && (
                     <Badge className="bg-orange-100 text-orange-800 text-xs">
@@ -444,15 +449,15 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
               </CardHeader>
               
               <CardContent className="space-y-3">
-                {/* Elegant Dropdown Evaluation */}
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="col-span-2">
+                {/* Mobile-First Evaluation Layout */}
+                <div className="space-y-3">
+                  <div>
                     <Label className="text-sm font-medium mb-1 block">Değerlendirme</Label>
                     <Select
                       value={answer?.answer || ''}
                       onValueChange={(value) => updateAnswer(question.id, 'answer', value)}
                     >
-                      <SelectTrigger className="h-9">
+                      <SelectTrigger className="h-10 md:h-9">
                         <SelectValue placeholder="Seçiniz..." />
                       </SelectTrigger>
                       <SelectContent>
@@ -464,10 +469,10 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
                     </Select>
                   </div>
 
-                  {/* Compact File Upload */}
+                  {/* Mobile File Upload */}
                   {(question.allowPhoto || question.allowDocument) && (
                     <div>
-                      <Label className="text-sm font-medium mb-1 block">Dosya</Label>
+                      <Label className="text-sm font-medium mb-1 block">Dosya Yükle</Label>
                       <ObjectUploader
                         maxNumberOfFiles={5}
                         maxFileSize={10485760}
@@ -498,9 +503,10 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
                             });
                           }
                         }}
-                        buttonClassName="h-9 w-full text-xs"
+                        buttonClassName="h-10 md:h-9 w-full text-sm"
                       >
-                        <Camera size={12} />
+                        <Camera size={14} className="mr-2" />
+                        Fotoğraf/Doküman Ekle
                       </ObjectUploader>
                     </div>
                   )}
@@ -607,8 +613,14 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
 
       {/* Image Modal */}
       {imageModalOpen && selectedImage && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
-          <div className="relative max-w-4xl max-h-full">
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
+          onClick={() => {
+            setImageModalOpen(false);
+            setSelectedImage(null);
+          }}
+        >
+          <div className="relative max-w-4xl max-h-full" onClick={(e) => e.stopPropagation()}>
             <Button
               variant="ghost"
               size="sm"
@@ -616,14 +628,20 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
                 setImageModalOpen(false);
                 setSelectedImage(null);
               }}
-              className="absolute -top-12 right-0 text-white hover:bg-white hover:bg-opacity-20"
+              className="absolute -top-12 right-0 text-white hover:bg-white hover:bg-opacity-20 z-10"
             >
               <X size={20} />
             </Button>
             <img 
               src={selectedImage} 
-              alt="Enlarged view"
-              className="max-w-full max-h-full object-contain rounded-lg"
+              alt="Büyütülmüş görünüm"
+              className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
+              onError={(e) => {
+                console.error('Resim yüklenemedi:', selectedImage);
+                setImageModalOpen(false);
+                setSelectedImage(null);
+              }}
+              onLoad={() => console.log('Resim başarıyla yüklendi:', selectedImage)}
             />
           </div>
         </div>
