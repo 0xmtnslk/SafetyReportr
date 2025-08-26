@@ -137,8 +137,8 @@ export default function ChecklistDashboard() {
                     onClick={() => setLocation(`/checklist/templates/${template.id}`)}
                     className="bg-primary hover:bg-primary/90"
                   >
-                    <Eye size={16} className="mr-2" />
-                    Şablonu Görüntüle
+                    <Edit size={16} className="mr-2" />
+                    Şablon Düzenle
                   </Button>
                   
                   <Button

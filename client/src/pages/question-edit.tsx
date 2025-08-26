@@ -57,11 +57,17 @@ export default function QuestionEdit({ questionId }: QuestionEditProps) {
         title: "Soru Güncellendi",
         description: "Soru başarıyla güncellendi.",
       });
-      // Invalidate all related queries to refresh the cache
+      // Invalidate and refetch all related queries to refresh the cache immediately
       queryClient.invalidateQueries({ queryKey: ['/api/checklist'] });
       queryClient.invalidateQueries({ queryKey: ['/api/checklist/sections'] });
       queryClient.invalidateQueries({ queryKey: ['/api/checklist/templates'] });
       queryClient.invalidateQueries({ queryKey: ['/api/checklist/questions'] });
+      
+      // Force refetch specific queries for immediate UI update
+      if (question && (question as any).sectionId) {
+        queryClient.refetchQueries({ queryKey: ['/api/checklist/sections', (question as any).sectionId, 'questions'] });
+        queryClient.refetchQueries({ queryKey: ['/api/checklist/sections/questions'] });
+      }
       
       // Get referrer from URL params or localStorage to redirect back properly
       const urlParams = new URLSearchParams(window.location.search);

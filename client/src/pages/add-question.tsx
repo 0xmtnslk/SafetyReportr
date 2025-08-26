@@ -10,7 +10,7 @@ import { ArrowLeft, Plus } from "lucide-react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { CHECKLIST_CATEGORIES } from "@shared/schema";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 
 interface AddQuestionProps {
   sectionId: string;
@@ -31,9 +31,21 @@ export default function AddQuestion({ sectionId, templateId }: AddQuestionProps)
     allowDocument: true
   });
 
+  // Fetch existing questions to get next order index
+  const { data: existingQuestions = [] } = useQuery({
+    queryKey: ['/api/checklist/sections', sectionId, 'questions'],
+    enabled: !!sectionId
+  });
+
   // Create question mutation
   const createQuestion = useMutation({
     mutationFn: async (data: any) => {
+      // Calculate next order index
+      const maxOrder = existingQuestions.length > 0 
+        ? Math.max(...existingQuestions.map((q: any) => q.orderIndex || 0))
+        : 0;
+      const nextOrderIndex = maxOrder + 1;
+
       const token = localStorage.getItem('token');
       const response = await fetch('/api/checklist/questions', {
         method: 'POST',
@@ -44,7 +56,7 @@ export default function AddQuestion({ sectionId, templateId }: AddQuestionProps)
         body: JSON.stringify({
           ...data,
           sectionId,
-          orderIndex: 1 // Default order
+          orderIndex: nextOrderIndex
         })
       });
       if (!response.ok) throw new Error('Failed to create question');
@@ -55,10 +67,15 @@ export default function AddQuestion({ sectionId, templateId }: AddQuestionProps)
         title: "Soru Eklendi",
         description: "Yeni soru başarıyla eklendi.",
       });
-      // Invalidate the questions cache for this section
+      
+      // Invalidate and refetch relevant queries
       queryClient.invalidateQueries({ queryKey: ['/api/checklist/sections', sectionId, 'questions'] });
       queryClient.invalidateQueries({ queryKey: ['/api/checklist/sections/questions'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/checklist/sections/questions', templateId] });
       queryClient.invalidateQueries({ queryKey: ['/api/checklist'] });
+      
+      // Force refetch of the specific section questions
+      queryClient.refetchQueries({ queryKey: ['/api/checklist/sections', sectionId, 'questions'] });
       
       // Redirect back to template
       if (templateId) {
