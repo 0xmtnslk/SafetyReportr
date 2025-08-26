@@ -31,9 +31,28 @@ export default function QuestionEdit({ questionId }: QuestionEditProps) {
     allowDocument: true
   });
 
-  // Fetch question data
-  const { data: question, isLoading } = useQuery({
+  // Fetch question data - using manual fetch instead of default fetcher
+  const { data: question, isLoading, error } = useQuery({
     queryKey: ['/api/checklist/questions', questionId],
+    queryFn: async () => {
+      console.log('Fetching question data for ID:', questionId);
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/checklist/questions/${questionId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      console.log('Question fetch response status:', response.status);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch question: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('Fetched question data:', data);
+      return data;
+    },
     enabled: !!questionId,
     staleTime: 0, // Always fetch fresh data
     refetchOnMount: true

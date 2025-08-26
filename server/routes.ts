@@ -1348,6 +1348,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get single question by ID for editing
+  app.get("/api/checklist/questions/:id", authenticateToken, async (req, res) => {
+    try {
+      console.log('Fetching question by ID:', req.params.id);
+      const question = await storage.getChecklistQuestion(req.params.id);
+      if (!question) {
+        return res.status(404).json({ error: "Question not found" });
+      }
+      console.log('Found question:', question);
+      res.json(question);
+    } catch (error: any) {
+      console.error("Error fetching checklist question:", error);
+      res.status(500).json({ error: "Error fetching checklist question" });
+    }
+  });
+
   app.put("/api/checklist/questions/:id", authenticateToken, requireCentralManagement, async (req, res) => {
     try {
       console.log('Updating question:', req.params.id, 'with data:', req.body);
