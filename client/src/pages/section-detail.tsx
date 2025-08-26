@@ -171,7 +171,7 @@ export default function SectionDetail({ sectionId, templateId }: SectionDetailPr
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => setLocation(`/checklist/questions/${question.id}/edit?from=/checklist/sections/${sectionId}/detail&templateId=${templateId}`)}
+                        onClick={() => setLocation(`/checklist/questions/${question.id}/edit?templateId=${templateId}`)}
                       >
                         <Edit size={16} className="mr-1" />
                         Düzenle

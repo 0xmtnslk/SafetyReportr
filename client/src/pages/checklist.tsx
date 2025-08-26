@@ -93,14 +93,15 @@ export default function ChecklistDashboard() {
       if (!template) throw new Error('Template not found');
 
       const token = localStorage.getItem('token');
+      const timestamp = Date.now().toString().slice(-6);
       const newTemplateData = {
-        name: `${template.name} - Kopya`,
+        name: `${template.name} - Kopya (${timestamp})`,
         description: template.description,
         category: template.category,
         type: template.type,
         version: '1.0',
         isActive: false, // Start as inactive
-        templateNumber: `TMP-${Date.now().toString().slice(-6)}`
+        templateNumber: `TMP-${timestamp}`
       };
 
       const response = await fetch('/api/checklist/templates', {

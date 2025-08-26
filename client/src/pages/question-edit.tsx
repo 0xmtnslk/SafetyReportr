@@ -109,14 +109,20 @@ export default function QuestionEdit({ questionId }: QuestionEditProps) {
       // Force refetch all cached queries to ensure immediate UI update
       queryClient.refetchQueries();
       
-      // Get referrer from URL params or localStorage to redirect back properly
+      // Navigate back to section detail
       const urlParams = new URLSearchParams(window.location.search);
       const referrer = urlParams.get('from');
-      if (referrer && referrer.includes('templates')) {
+      const templateId = urlParams.get('templateId');
+      
+      if (question && (question as any).sectionId) {
+        const sectionId = (question as any).sectionId;
+        if (templateId) {
+          setLocation(`/checklist/sections/${sectionId}/detail?templateId=${templateId}`);
+        } else {
+          setLocation(`/checklist/sections/${sectionId}/detail`);
+        }
+      } else if (referrer) {
         setLocation(referrer);
-      } else if (question && (question as any).sectionId) {
-        // Try to go back to template list if we don't have specific template ID
-        setLocation('/checklist/templates');
       } else {
         setLocation('/checklist');
       }
@@ -184,16 +190,22 @@ export default function QuestionEdit({ questionId }: QuestionEditProps) {
             variant="outline" 
             onClick={() => {
               const urlParams = new URLSearchParams(window.location.search);
-              const referrer = urlParams.get('from');
-              if (referrer) {
-                setLocation(referrer);
+              const templateId = urlParams.get('templateId');
+              
+              if (question && (question as any).sectionId) {
+                const sectionId = (question as any).sectionId;
+                if (templateId) {
+                  setLocation(`/checklist/sections/${sectionId}/detail?templateId=${templateId}`);
+                } else {
+                  setLocation(`/checklist/sections/${sectionId}/detail`);
+                }
               } else {
-                setLocation('/checklist/templates');
+                setLocation('/checklist');
               }
             }}
           >
             <ArrowLeft size={16} className="mr-2" />
-            Geri
+            Bölüme Dön
           </Button>
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Soru Düzenle</h1>

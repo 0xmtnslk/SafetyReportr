@@ -77,11 +77,11 @@ export default function AddQuestion({ sectionId, templateId }: AddQuestionProps)
       // Force refetch of the specific section questions
       queryClient.refetchQueries({ queryKey: ['/api/checklist/sections', sectionId, 'questions'] });
       
-      // Redirect back to template
+      // Redirect back to section detail
       if (templateId) {
-        setLocation(`/checklist/templates/${templateId}`);
+        setLocation(`/checklist/sections/${sectionId}/detail?templateId=${templateId}`);
       } else {
-        setLocation('/checklist/templates');
+        setLocation(`/checklist/sections/${sectionId}/detail`);
       }
     },
     onError: (error) => {
@@ -113,10 +113,10 @@ export default function AddQuestion({ sectionId, templateId }: AddQuestionProps)
         <div className="flex items-center gap-4">
           <Button 
             variant="outline" 
-            onClick={() => templateId ? setLocation(`/checklist/templates/${templateId}`) : setLocation('/checklist/templates')}
+            onClick={() => templateId ? setLocation(`/checklist/sections/${sectionId}/detail?templateId=${templateId}`) : setLocation(`/checklist/sections/${sectionId}/detail`)}
           >
             <ArrowLeft size={16} className="mr-2" />
-            Geri
+            Bölüme Dön
           </Button>
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Yeni Soru Ekle</h1>
