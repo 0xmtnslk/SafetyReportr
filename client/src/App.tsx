@@ -24,6 +24,7 @@ import SectionEdit from "@/pages/section-edit";
 import AddQuestion from "@/pages/add-question";
 import QuestionEdit from "@/pages/question-edit";
 import AddSection from "@/pages/add-section";
+import SectionDetail from "@/pages/section-detail";
 import LiveChecklist from "@/pages/live-checklist";
 import Navigation from "@/components/navigation";
 import OfflineIndicator from "@/components/offline-indicator";
@@ -110,6 +111,13 @@ function Router() {
             <Route path="/checklist/templates/:id/add-section">
               {(params) => <AddSection templateId={params.id} />}
             </Route>
+            <Route path="/checklist/sections/:id/detail">
+              {(params) => {
+                const urlParams = new URLSearchParams(window.location.search);
+                const templateId = urlParams.get('templateId');
+                return <SectionDetail sectionId={params.id} templateId={templateId || undefined} />;
+              }}
+            </Route>
             <Route path="/checklist/live" component={LiveChecklist} />
             <Route component={() => <div className="p-8"><div>404 - Page Not Found</div></div>} />
           </Switch>
@@ -163,6 +171,14 @@ function Router() {
         </Route>
         <Route path="/checklist/templates/:id/add-section">
           {(params) => user ? <AddSection templateId={params.id} /> : <Login />}
+        </Route>
+        <Route path="/checklist/sections/:id/detail">
+          {(params) => {
+            if (!user) return <Login />;
+            const urlParams = new URLSearchParams(window.location.search);
+            const templateId = urlParams.get('templateId');
+            return <SectionDetail sectionId={params.id} templateId={templateId || undefined} />;
+          }}
         </Route>
         <Route path="/checklist/live" component={user ? LiveChecklist : Login} />
         <Route component={() => <div>404 - Page Not Found</div>} />
