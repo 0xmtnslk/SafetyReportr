@@ -92,7 +92,7 @@ export default function CreateAssignment() {
         createAssignment.mutateAsync({
           templateId: selectedTemplate,
           assignedToHospital: hospitalId,
-          assignedToUser: selectedUser || undefined,
+          assignedToUser: selectedUser === "all_users" ? undefined : selectedUser || undefined,
           title,
           description: description || undefined,
           dueDate: new Date(dueDate).toISOString(),
@@ -261,7 +261,7 @@ export default function CreateAssignment() {
                     <SelectValue placeholder="Belirli bir kullanıcıya atamak isterseniz seçin" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Tüm hastane uzmanları</SelectItem>
+                    <SelectItem value="all_users">Tüm hastane uzmanları</SelectItem>
                     {users.map((user) => (
                       <SelectItem key={user.id} value={user.id}>
                         {user.fullName} ({user.username})
