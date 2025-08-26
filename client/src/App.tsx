@@ -23,6 +23,7 @@ import CreateTemplate from "@/pages/create-template";
 import SectionEdit from "@/pages/section-edit";
 import AddQuestion from "@/pages/add-question";
 import QuestionEdit from "@/pages/question-edit";
+import AddSection from "@/pages/add-section";
 import LiveChecklist from "@/pages/live-checklist";
 import Navigation from "@/components/navigation";
 import OfflineIndicator from "@/components/offline-indicator";
@@ -106,6 +107,9 @@ function Router() {
             <Route path="/checklist/questions/:id/edit">
               {(params) => <QuestionEdit questionId={params.id} />}
             </Route>
+            <Route path="/checklist/templates/:id/add-section">
+              {(params) => <AddSection templateId={params.id} />}
+            </Route>
             <Route path="/checklist/live" component={LiveChecklist} />
             <Route component={() => <div className="p-8"><div>404 - Page Not Found</div></div>} />
           </Switch>
@@ -156,6 +160,9 @@ function Router() {
         </Route>
         <Route path="/checklist/questions/:id/edit">
           {(params) => user ? <QuestionEdit questionId={params.id} /> : <Login />}
+        </Route>
+        <Route path="/checklist/templates/:id/add-section">
+          {(params) => user ? <AddSection templateId={params.id} /> : <Login />}
         </Route>
         <Route path="/checklist/live" component={user ? LiveChecklist : Login} />
         <Route component={() => <div>404 - Page Not Found</div>} />
