@@ -64,15 +64,17 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
     enabled: !!assignmentId,
   });
   
-  // Use templateId from assignment or prop  
-  const currentTemplateId = assignment?.inspection?.checklistTemplateId || templateId || "7c39d8c0-7ff5-47ad-84f0-cd04de8bfd2a";
+  // Use templateId from assignment or prop (note: database field is template_id, not checklistTemplateId)
+  const currentTemplateId = assignment?.inspection?.templateId || assignment?.inspection?.template_id || templateId || "7c39d8c0-7ff5-47ad-84f0-cd04de8bfd2a";
   
   // Debug: Log the template selection
   console.log('🔍 Live Checklist Debug:', {
     assignmentId,
     assignment: assignment?.inspection,
     currentTemplateId,
-    assignmentTemplateId: assignment?.inspection?.checklistTemplateId
+    assignmentTemplateId: assignment?.inspection?.templateId,
+    dbTemplateId: assignment?.inspection?.template_id,
+    fallbackUsed: !assignment?.inspection?.templateId && !assignment?.inspection?.template_id
   });
 
   // State for current section and progress

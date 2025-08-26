@@ -1213,7 +1213,25 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(inspectionAssignments)
       .where(eq(inspectionAssignments.id, id));
-    return assignment;
+    
+    if (!assignment) return undefined;
+    
+    // Join inspection data to get template information
+    const [location] = await db
+      .select()
+      .from(locations)
+      .where(eq(locations.id, assignment.locationId));
+
+    const [inspection] = await db
+      .select()
+      .from(inspections)
+      .where(eq(inspections.id, assignment.inspectionId));
+
+    return {
+      ...assignment,
+      location: location || null,
+      inspection: inspection || null,
+    };
   }
 
   async getUserAssignments(userId: string): Promise<InspectionAssignment[]> {
