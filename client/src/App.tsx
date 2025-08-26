@@ -81,6 +81,9 @@ function Router() {
             <Route path="/view-report/:id">
               {(params) => <ViewReport id={params.id} />}
             </Route>
+            <Route path="/reports/:id">
+              {(params) => <ViewReport id={params.id} />}
+            </Route>
             <Route path="/admin" component={AdminPanel} />
             <Route path="/admin/create-assignment" component={CreateAssignment} />
             <Route path="/change-password" component={ChangePassword} />
@@ -141,6 +144,9 @@ function Router() {
         <Route path="/reports" component={user ? Reports : Login} />
         <Route path="/edit-report/:id" component={user ? EditReport : Login} />
         <Route path="/view-report/:id">
+          {(params) => user ? <ViewReport id={params.id} /> : <Login />}
+        </Route>
+        <Route path="/reports/:id">
           {(params) => user ? <ViewReport id={params.id} /> : <Login />}
         </Route>
         <Route path="/admin" component={user ? AdminPanel : Login} />

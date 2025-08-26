@@ -1218,8 +1218,64 @@ export class DatabaseStorage implements IStorage {
 
   async getUserAssignments(userId: string): Promise<InspectionAssignment[]> {
     return await db
-      .select()
+      .select({
+        id: inspectionAssignments.id,
+        inspectionId: inspectionAssignments.inspectionId,
+        locationId: inspectionAssignments.locationId,
+        assignedUserId: inspectionAssignments.assignedUserId,
+        status: inspectionAssignments.status,
+        assignedAt: inspectionAssignments.assignedAt,
+        startedAt: inspectionAssignments.startedAt,
+        completedAt: inspectionAssignments.completedAt,
+        totalQuestions: inspectionAssignments.totalQuestions,
+        answeredQuestions: inspectionAssignments.answeredQuestions,
+        progressPercentage: inspectionAssignments.progressPercentage,
+        totalPossibleScore: inspectionAssignments.totalPossibleScore,
+        actualScore: inspectionAssignments.actualScore,
+        scorePercentage: inspectionAssignments.scorePercentage,
+        letterGrade: inspectionAssignments.letterGrade,
+        notes: inspectionAssignments.notes,
+        createdAt: inspectionAssignments.createdAt,
+        updatedAt: inspectionAssignments.updatedAt,
+        location: {
+          id: locations.id,
+          name: locations.name,
+          shortName: locations.shortName,
+          logo: locations.logo,
+          type: locations.type,
+          phone: locations.phone,
+          email: locations.email,
+          website: locations.website,
+          address: locations.address,
+          district: locations.district,
+          city: locations.city,
+          postalCode: locations.postalCode,
+          country: locations.country,
+          taxNumber: locations.taxNumber,
+          legalRepresentative: locations.legalRepresentative,
+          isActive: locations.isActive,
+          createdAt: locations.createdAt,
+          updatedAt: locations.updatedAt,
+        },
+        inspection: {
+          id: inspections.id,
+          title: inspections.title,
+          description: inspections.description,
+          dueDate: inspections.dueDate,
+          checklistTemplateId: inspections.checklistTemplateId,
+          status: inspections.status,
+          totalAssignments: inspections.totalAssignments,
+          completedAssignments: inspections.completedAssignments,
+          overdueAssignments: inspections.overdueAssignments,
+          isActive: inspections.isActive,
+          createdBy: inspections.createdBy,
+          createdAt: inspections.createdAt,
+          updatedAt: inspections.updatedAt,
+        }
+      })
       .from(inspectionAssignments)
+      .leftJoin(locations, eq(inspectionAssignments.locationId, locations.id))
+      .leftJoin(inspections, eq(inspectionAssignments.inspectionId, inspections.id))
       .where(eq(inspectionAssignments.assignedUserId, userId))
       .orderBy(desc(inspectionAssignments.assignedAt));
   }

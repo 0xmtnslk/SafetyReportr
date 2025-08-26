@@ -62,8 +62,8 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
     enabled: !!assignmentId,
   });
   
-  // Use templateId from assignment or prop
-  const currentTemplateId = assignment?.inspection?.templateId || templateId || "7c39d8c0-7ff5-47ad-84f0-cd04de8bfd2a";
+  // Use templateId from assignment or prop  
+  const currentTemplateId = assignment?.inspection?.checklistTemplateId || templateId || "7c39d8c0-7ff5-47ad-84f0-cd04de8bfd2a";
 
   // State for current section and progress
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
@@ -81,7 +81,7 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
   });
 
   const { data: questionsData = {} } = useQuery<Record<string, any[]>>({
-    queryKey: ["/api/checklist/sections/questions", templateId],
+    queryKey: ["/api/checklist/sections/questions", currentTemplateId],
     queryFn: async () => {
       const questionPromises = sectionsData.map(async (section: any) => {
         const response = await fetch(`/api/checklist/sections/${section.id}/questions`, {
