@@ -50,7 +50,7 @@ function Router() {
   }
 
   // Protected routes - require authentication
-  const protectedRoutes = ['/dashboard', '/create-report', '/reports', '/edit-report', '/view-report', '/admin', '/change-password', '/checklist'];
+  const protectedRoutes = ['/dashboard', '/create-report', '/reports', '/edit-report', '/view-report', '/admin', '/change-password', '/checklist', '/live-checklist'];
   const isProtectedRoute = protectedRoutes.some(route => location.startsWith(route));
 
   if (isProtectedRoute && !user) {
@@ -120,6 +120,7 @@ function Router() {
               }}
             </Route>
             <Route path="/checklist/live" component={LiveChecklist} />
+            <Route path="/live-checklist" component={LiveChecklist} />
             <Route path="/admin/inspections/create" component={InspectionCreatePage} />
             <Route component={() => <div className="p-8"><div>404 - Page Not Found</div></div>} />
           </Switch>
@@ -183,6 +184,7 @@ function Router() {
           }}
         </Route>
         <Route path="/checklist/live" component={user ? LiveChecklist : Login} />
+        <Route path="/live-checklist" component={user ? LiveChecklist : Login} />
         <Route component={() => <div>404 - Page Not Found</div>} />
       </Switch>
     </div>

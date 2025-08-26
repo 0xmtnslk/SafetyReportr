@@ -122,21 +122,87 @@ export default function Dashboard() {
     );
   }
 
-  // Safety specialists see assignments instead of regular reports
+  // Safety specialists see both their reports and assigned inspections
   if (['safety_specialist', 'occupational_physician'].includes(user?.role || '')) {
+    // Calculate time remaining for assignments
+    const calculateTimeRemaining = (dueDate: string) => {
+      const now = new Date();
+      const due = new Date(dueDate);
+      const diff = due.getTime() - now.getTime();
+      
+      if (diff <= 0) return "Süre dolmuş";
+      
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      
+      return `${days} gün ${hours} saat`;
+    };
+
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            Atanmış Denetimler
-          </h1>
-          <p className="text-gray-600">
-            Size atanmış denetimleri görüntüleyebilir ve başlatabilirsiniz.
-          </p>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        {/* My Reports Section */}
+        <div>
+          <div className="mb-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-2">
+              Hazırladığım Raporlar
+            </h2>
+            <p className="text-gray-600">
+              Tarafınızca oluşturulan güvenlik raporları.
+            </p>
+          </div>
+          
+          <div className="space-y-4">
+            {recentReportsData.length === 0 ? (
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    Henüz Rapor Oluşturulmamış
+                  </h3>
+                  <p className="text-gray-500">
+                    İlk güvenlik raporunuzu oluşturmak için "Yeni Rapor" butonunu kullanın.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              recentReportsData.slice(0, 5).map((report: any) => (
+                <Card key={report.id} className="hover:shadow-md transition-shadow">
+                  <CardContent className="p-4">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h4 className="font-semibold text-gray-900">{report.reportNumber}</h4>
+                        <p className="text-sm text-gray-600">{report.location}</p>
+                        <p className="text-xs text-gray-500">
+                          {new Date(report.reportDate).toLocaleDateString('tr-TR')}
+                        </p>
+                      </div>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => setLocation(`/reports/${report.id}`)}
+                      >
+                        Görüntüle
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
         </div>
 
-        {/* User Assignments */}
-        <div className="space-y-6">
+        {/* Assigned Inspections Section */}
+        <div>
+          <div className="mb-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-2">
+              Atanmış Denetimler
+            </h2>
+            <p className="text-gray-600">
+              Size atanmış denetimleri görüntüleyebilir ve başlatabilirsiniz.
+            </p>
+          </div>
+
+          <div className="space-y-6">
           {userAssignments.length === 0 ? (
             <Card>
               <CardContent className="p-8 text-center">
@@ -181,9 +247,15 @@ export default function Dashboard() {
                       <span className="text-gray-500">Son Tarih:</span>
                       <div className="font-medium">
                         {assignment.inspection?.dueDate 
-                          ? new Date(assignment.inspection.dueDate).toLocaleDateString('tr-TR')
+                          ? new Date(assignment.inspection.dueDate).toLocaleDateString('tr-TR') + ' ' + 
+                            new Date(assignment.inspection.dueDate).toLocaleTimeString('tr-TR', {hour: '2-digit', minute: '2-digit'})
                           : 'Belirtilmemiş'}
                       </div>
+                      {assignment.inspection?.dueDate && (
+                        <div className="text-sm text-orange-600 font-medium mt-1">
+                          Kalan süre: {calculateTimeRemaining(assignment.inspection.dueDate)}
+                        </div>
+                      )}
                     </div>
                     <div>
                       <span className="text-gray-500">Soru Sayısı:</span>
@@ -198,7 +270,7 @@ export default function Dashboard() {
                         : 'Bilinmiyor'}
                     </div>
                     <Button 
-                      onClick={() => setLocation(`/checklist/live/${assignment.id}`)}
+                      onClick={() => setLocation(`/live-checklist?assignmentId=${assignment.id}`)}
                       disabled={assignment.status === 'completed'}
                       className="bg-primary hover:bg-primary/90"
                     >
@@ -210,6 +282,7 @@ export default function Dashboard() {
               </Card>
             ))
           )}
+        </div>
         </div>
       </div>
     );

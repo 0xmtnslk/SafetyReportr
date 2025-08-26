@@ -48,9 +48,22 @@ interface LiveChecklistProps {
   templateId?: string;
 }
 
-export default function LiveChecklist({ templateId = "7c39d8c0-7ff5-47ad-84f0-cd04de8bfd2a" }: LiveChecklistProps) {
-  const [, setLocation] = useLocation();
+export default function LiveChecklist({ templateId }: LiveChecklistProps) {
+  const [location, setLocation] = useLocation();
   const { toast } = useToast();
+  
+  // Get assignmentId from URL params
+  const urlParams = new URLSearchParams(window.location.search);
+  const assignmentId = urlParams.get('assignmentId');
+  
+  // Fetch assignment details if assignmentId is provided
+  const { data: assignment } = useQuery({
+    queryKey: ["/api/assignments", assignmentId],
+    enabled: !!assignmentId,
+  });
+  
+  // Use templateId from assignment or prop
+  const currentTemplateId = assignment?.inspection?.templateId || templateId || "7c39d8c0-7ff5-47ad-84f0-cd04de8bfd2a";
 
   // State for current section and progress
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
@@ -60,11 +73,11 @@ export default function LiveChecklist({ templateId = "7c39d8c0-7ff5-47ad-84f0-cd
 
   // Fetch template sections and questions
   const { data: template } = useQuery({
-    queryKey: ["/api/checklist/templates", templateId],
+    queryKey: ["/api/checklist/templates", currentTemplateId],
   });
 
   const { data: sectionsData = [] } = useQuery<any[]>({
-    queryKey: ["/api/checklist/templates", templateId, "sections"],
+    queryKey: ["/api/checklist/templates", currentTemplateId, "sections"],
   });
 
   const { data: questionsData = {} } = useQuery<Record<string, any[]>>({

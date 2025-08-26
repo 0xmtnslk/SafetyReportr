@@ -1743,9 +1743,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/inspections', authenticateToken, requireCentralManagement, async (req: Request, res: Response) => {
     try {
       const { assignments, ...inspectionData } = req.body;
-      console.log('🔍 DEBUG - Received assignments:', assignments);
-      console.log('🔍 DEBUG - Assignments count:', assignments?.length || 0);
-      
       const validatedData = insertInspectionSchema.parse(inspectionData);
       const user = (req as any).user;
       
@@ -1806,6 +1803,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get assignment details (for assigned user)
+  app.get('/api/assignments/:id', authenticateToken, async (req: Request, res: Response) => {
+    try {
+      const assignmentId = req.params.id;
+      const assignment = await storage.getInspectionAssignment(assignmentId);
+      
+      if (!assignment) {
+        return res.status(404).json({ error: 'Assignment not found' });
+      }
+      
+      res.json(assignment);
+    } catch (error) {
+      console.error('Error fetching assignment:', error);
+      res.status(500).json({ error: 'Error fetching assignment' });
+    }
+  });
+
   // Start inspection (for assigned user)
   app.post('/api/assignments/:id/start', authenticateToken, async (req: Request, res: Response) => {
     try {
@@ -1861,7 +1875,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/notifications', authenticateToken, async (req, res) => {
     try {
       const user = (req as any).user;
-      const notifications = await storage.getUserNotifications(user.userId);
+      const notifications = await storage.getUserNotifications(user.id);
       res.json(notifications);
     } catch (error) {
       console.error('Error fetching notifications:', error);
@@ -1872,7 +1886,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/notifications/unread', authenticateToken, async (req, res) => {
     try {
       const user = (req as any).user;
-      const notifications = await storage.getUnreadNotifications(user.userId);
+      const notifications = await storage.getUnreadNotifications(user.id);
       res.json(notifications);
     } catch (error) {
       console.error('Error fetching unread notifications:', error);
@@ -1883,7 +1897,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/notifications/count', authenticateToken, async (req, res) => {
     try {
       const user = (req as any).user;
-      const count = await storage.getNotificationCount(user.userId);
+      const count = await storage.getNotificationCount(user.id);
       res.json({ count });
     } catch (error) {
       console.error('Error fetching notification count:', error);
@@ -1894,7 +1908,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/notifications/:id/read', authenticateToken, async (req, res) => {
     try {
       const user = (req as any).user;
-      const success = await storage.markNotificationAsRead(req.params.id, user.userId);
+      const success = await storage.markNotificationAsRead(req.params.id, user.id);
       if (success) {
         res.json({ success: true });
       } else {
@@ -1909,7 +1923,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/notifications/read-all', authenticateToken, async (req, res) => {
     try {
       const user = (req as any).user;
-      const success = await storage.markAllNotificationsAsRead(user.userId);
+      const success = await storage.markAllNotificationsAsRead(user.id);
       res.json({ success });
     } catch (error) {
       console.error('Error marking all notifications as read:', error);
