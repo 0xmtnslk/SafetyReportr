@@ -699,6 +699,13 @@ export default function AdminPanel() {
             <p className="text-muted-foreground">Kullanıcı yönetimi ve sistem ayarları</p>
           </div>
         </div>
+        <Button
+          onClick={() => setLocation('/admin/create-assignment')}
+          className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
+        >
+          <CheckSquare size={16} />
+          Kontrol Listesi Görevi Ata
+        </Button>
       </div>
 
       <Tabs defaultValue="users" className="space-y-6">

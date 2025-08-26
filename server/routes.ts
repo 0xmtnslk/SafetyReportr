@@ -18,6 +18,8 @@ import {
   insertChecklistQuestionSchema,
   insertChecklistInspectionSchema,
   insertChecklistAnswerSchema,
+  insertChecklistAssignmentSchema,
+  insertChecklistSubmissionSchema,
   CHECKLIST_CATEGORIES,
   EVALUATION_OPTIONS,
   Location
@@ -1441,6 +1443,154 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error calculating inspection score:", error);
       res.status(500).json({ error: "Error calculating inspection score" });
+    }
+  });
+
+  // Checklist Assignment System - Admin assigns tasks to hospitals
+  app.get("/api/checklist/assignments", authenticateToken, async (req, res) => {
+    try {
+      const assignments = await storage.getChecklistAssignments();
+      res.json(assignments);
+    } catch (error: any) {
+      console.error("Error fetching checklist assignments:", error);
+      res.status(500).json({ error: "Error fetching checklist assignments" });
+    }
+  });
+
+  app.get("/api/checklist/assignments/hospital/:hospitalId", authenticateToken, async (req, res) => {
+    try {
+      const assignments = await storage.getAssignmentsForHospital(req.params.hospitalId);
+      res.json(assignments);
+    } catch (error: any) {
+      console.error("Error fetching hospital assignments:", error);
+      res.status(500).json({ error: "Error fetching hospital assignments" });
+    }
+  });
+
+  app.get("/api/checklist/assignments/user/:userId", authenticateToken, async (req, res) => {
+    try {
+      const assignments = await storage.getAssignmentsForUser(req.params.userId);
+      res.json(assignments);
+    } catch (error: any) {
+      console.error("Error fetching user assignments:", error);
+      res.status(500).json({ error: "Error fetching user assignments" });
+    }
+  });
+
+  app.post("/api/checklist/assignments", authenticateToken, requireCentralManagement, async (req, res) => {
+    try {
+      const validatedData = insertChecklistAssignmentSchema.parse(req.body);
+      const assignment = await storage.createChecklistAssignment({
+        ...validatedData,
+        assignedBy: (req as any).user.id
+      });
+      res.status(201).json(assignment);
+    } catch (error: any) {
+      console.error("Error creating checklist assignment:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ error: error.errors });
+      }
+      res.status(500).json({ error: "Error creating checklist assignment" });
+    }
+  });
+
+  app.patch("/api/checklist/assignments/:id/status", authenticateToken, async (req, res) => {
+    try {
+      const { status } = req.body;
+      const assignment = await storage.updateAssignmentStatus(req.params.id, status);
+      res.json(assignment);
+    } catch (error: any) {
+      console.error("Error updating assignment status:", error);
+      res.status(500).json({ error: "Error updating assignment status" });
+    }
+  });
+
+  app.delete("/api/checklist/assignments/:id", authenticateToken, requireCentralManagement, async (req, res) => {
+    try {
+      const success = await storage.deleteChecklistAssignment(req.params.id);
+      if (!success) {
+        return res.status(404).json({ error: "Assignment not found" });
+      }
+      res.json({ message: "Assignment deleted successfully" });
+    } catch (error: any) {
+      console.error("Error deleting checklist assignment:", error);
+      res.status(500).json({ error: "Error deleting checklist assignment" });
+    }
+  });
+
+  // Create inspection from assignment
+  app.post("/api/checklist/assignments/:assignmentId/create-inspection", authenticateToken, async (req, res) => {
+    try {
+      const { assignmentId } = req.params;
+      const userId = req.user.id;
+      
+      // Get assignment
+      const assignment = await storage.getChecklistAssignmentById(assignmentId);
+      if (!assignment) {
+        return res.status(404).json({ message: 'Assignment not found' });
+      }
+      
+      // Check if user has permission
+      if (assignment.assignedToUser && assignment.assignedToUser !== userId) {
+        return res.status(403).json({ message: 'Not authorized for this assignment' });
+      }
+      
+      if (assignment.assignedToHospital !== req.user.locationId) {
+        return res.status(403).json({ message: 'Not authorized for this hospital' });
+      }
+      
+      // Check if inspection already exists
+      const existingInspection = await storage.getInspectionByAssignmentId(assignmentId);
+      if (existingInspection) {
+        return res.json(existingInspection);
+      }
+      
+      // Create new inspection
+      const inspection = await storage.createInspectionFromAssignment({
+        assignmentId,
+        templateId: assignment.templateId,
+        inspectorId: userId,
+        locationId: assignment.assignedToHospital,
+        title: assignment.title,
+        description: assignment.description || '',
+        dueDate: assignment.dueDate
+      });
+      
+      // Update assignment status
+      await storage.updateChecklistAssignment(assignmentId, { status: 'in_progress' });
+      
+      res.json(inspection);
+    } catch (error) {
+      console.error('Error creating inspection from assignment:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
+  // Assignment submissions
+  app.get("/api/checklist/assignments/:id/submissions", authenticateToken, async (req, res) => {
+    try {
+      const submissions = await storage.getAssignmentSubmissions(req.params.id);
+      res.json(submissions);
+    } catch (error: any) {
+      console.error("Error fetching assignment submissions:", error);
+      res.status(500).json({ error: "Error fetching assignment submissions" });
+    }
+  });
+
+  app.post("/api/checklist/submissions", authenticateToken, async (req, res) => {
+    try {
+      const validatedData = insertChecklistSubmissionSchema.parse(req.body);
+      const submission = await storage.createChecklistSubmission({
+        ...validatedData,
+        submittedBy: (req as any).user.id
+      });
+      res.status(201).json(submission);
+    } catch (error: any) {
+      console.error("Error creating checklist submission:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ error: error.errors });
+      }
+      res.status(500).json({ error: "Error creating checklist submission" });
     }
   });
 

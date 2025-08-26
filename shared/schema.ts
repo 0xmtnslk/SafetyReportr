@@ -535,3 +535,62 @@ export const insertChecklistAnswerSchema = createInsertSchema(checklistAnswers).
   ]),
   twScore: z.number().min(1).max(10),
 });
+
+// Checklist Assignment System - Admin assigns checklists to hospitals
+export const checklistAssignments = pgTable("checklist_assignments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  templateId: varchar("template_id").references(() => checklistTemplates.id).notNull(),
+  assignedBy: varchar("assigned_by").references(() => users.id).notNull(), // Admin who assigned
+  assignedToHospital: varchar("assigned_to_hospital").references(() => locations.id).notNull(),
+  assignedToUser: varchar("assigned_to_user").references(() => users.id), // Optional specific user
+  title: text("title").notNull(), // Assignment title/description
+  description: text("description"), // Optional assignment instructions
+  dueDate: timestamp("due_date").notNull(), // Deadline for completion
+  priority: text("priority").notNull().default("medium"), // low, medium, high, urgent
+  status: text("status").notNull().default("assigned"), // assigned, in_progress, completed, overdue
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  completedAt: timestamp("completed_at"),
+  notes: text("notes"), // Assignment notes from admin
+});
+
+// Links assignments to actual inspections when hospital starts working
+export const checklistSubmissions = pgTable("checklist_submissions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  assignmentId: varchar("assignment_id").references(() => checklistAssignments.id).notNull(),
+  inspectionId: varchar("inspection_id").references(() => checklistInspections.id).notNull(),
+  submittedBy: varchar("submitted_by").references(() => users.id).notNull(),
+  submittedAt: timestamp("submitted_at").defaultNow().notNull(),
+  status: text("status").notNull().default("submitted"), // submitted, reviewed, approved
+  reviewedBy: varchar("reviewed_by").references(() => users.id),
+  reviewedAt: timestamp("reviewed_at"),
+  reviewNotes: text("review_notes"),
+});
+
+export type ChecklistAssignment = typeof checklistAssignments.$inferSelect;
+export type InsertChecklistAssignment = z.infer<typeof insertChecklistAssignmentSchema>;
+
+export type ChecklistSubmission = typeof checklistSubmissions.$inferSelect;
+export type InsertChecklistSubmission = z.infer<typeof insertChecklistSubmissionSchema>;
+
+export const insertChecklistAssignmentSchema = createInsertSchema(checklistAssignments).pick({
+  templateId: true,
+  assignedToHospital: true,
+  assignedToUser: true,
+  title: true,
+  description: true,
+  dueDate: true,
+  priority: true,
+  notes: true,
+}).extend({
+  dueDate: z.union([
+    z.string().transform((str) => new Date(str)),
+    z.date()
+  ]),
+  priority: z.enum(["low", "medium", "high", "urgent"]),
+});
+
+export const insertChecklistSubmissionSchema = createInsertSchema(checklistSubmissions).pick({
+  assignmentId: true,
+  inspectionId: true,
+});

@@ -16,6 +16,7 @@ import LandingPage from "@/pages/landing-page";
 import ChecklistDashboard from "@/pages/checklist";
 import CreateInspection from "@/pages/create-inspection";
 import InspectionDetail from "@/pages/inspection-detail";
+import CreateAssignment from "@/pages/create-assignment";
 import Navigation from "@/components/navigation";
 import OfflineIndicator from "@/components/offline-indicator";
 import { useOfflineSync } from "./hooks/useOfflineSync";
@@ -71,6 +72,7 @@ function Router() {
               {(params) => <ViewReport id={params.id} />}
             </Route>
             <Route path="/admin" component={AdminPanel} />
+            <Route path="/admin/create-assignment" component={CreateAssignment} />
             <Route path="/change-password" component={ChangePassword} />
             <Route path="/checklist" component={ChecklistDashboard} />
             <Route path="/checklist/create-inspection" component={CreateInspection} />
@@ -99,6 +101,7 @@ function Router() {
           {(params) => user ? <ViewReport id={params.id} /> : <Login />}
         </Route>
         <Route path="/admin" component={user ? AdminPanel : Login} />
+        <Route path="/admin/create-assignment" component={user ? CreateAssignment : Login} />
         <Route path="/change-password" component={user ? ChangePassword : Login} />
         <Route path="/checklist" component={user ? ChecklistDashboard : Login} />
         <Route path="/checklist/create-inspection" component={user ? CreateInspection : Login} />

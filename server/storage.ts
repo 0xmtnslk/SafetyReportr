@@ -1,14 +1,15 @@
 import { 
   reports, findings, users, offlineQueue, locations,
-  checklistTemplates, checklistSections, checklistQuestions, checklistInspections, checklistAnswers,
+  checklistTemplates, checklistSections, checklistQuestions, checklistInspections, checklistAnswers, checklistAssignments, checklistSubmissions,
   type User, type InsertUser, type Report, type InsertReport, type Finding, type InsertFinding, 
   type OfflineQueueItem, type InsertOfflineQueueItem, type Location, type InsertLocation,
   type ChecklistTemplate, type InsertChecklistTemplate, type ChecklistSection, type InsertChecklistSection,
   type ChecklistQuestion, type InsertChecklistQuestion, type ChecklistInspection, type InsertChecklistInspection,
-  type ChecklistAnswer, type InsertChecklistAnswer, calculateQuestionScore, calculateLetterGrade
+  type ChecklistAnswer, type InsertChecklistAnswer, type ChecklistAssignment, type InsertChecklistAssignment,
+  type ChecklistSubmission, type InsertChecklistSubmission, calculateQuestionScore, calculateLetterGrade
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, inArray, sql, gt, or } from "drizzle-orm";
+import { eq, desc, and, inArray, sql, gt, or, isNull } from "drizzle-orm";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
 
@@ -133,6 +134,32 @@ export interface IStorage {
     successPercentage: number;
     letterGrade: string;
   }>;
+  
+  // Assignment system
+  createChecklistAssignment(assignment: InsertChecklistAssignment & { assignedBy: string }): Promise<ChecklistAssignment>;
+  getChecklistAssignments(): Promise<ChecklistAssignment[]>;
+  getChecklistAssignmentById(id: string): Promise<ChecklistAssignment | null>;
+  getAssignmentsForHospital(hospitalId: string): Promise<ChecklistAssignment[]>;
+  getAssignmentsForUser(userId: string): Promise<ChecklistAssignment[]>;
+  updateChecklistAssignment(id: string, updates: Partial<InsertChecklistAssignment>): Promise<ChecklistAssignment | null>;
+  updateAssignmentStatus(assignmentId: string, status: string): Promise<ChecklistAssignment>;
+  deleteChecklistAssignment(assignmentId: string): Promise<boolean>;
+  
+  // Assignment to Inspection operations
+  getInspectionByAssignmentId(assignmentId: string): Promise<ChecklistInspection | null>;
+  createInspectionFromAssignment(data: {
+    assignmentId: string;
+    templateId: string;
+    inspectorId: string;
+    locationId: string;
+    title: string;
+    description: string;
+    dueDate: string;
+  }): Promise<ChecklistInspection>;
+  
+  // Submission system
+  createChecklistSubmission(submission: InsertChecklistSubmission & { submittedBy: string }): Promise<ChecklistSubmission>;
+  getAssignmentSubmissions(assignmentId: string): Promise<ChecklistSubmission[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -960,6 +987,127 @@ export class DatabaseStorage implements IStorage {
         updatedAt: new Date()
       })
       .where(eq(checklistInspections.id, inspectionId));
+  }
+
+  // Assignment system implementation
+  async createChecklistAssignment(assignment: InsertChecklistAssignment & { assignedBy: string }): Promise<ChecklistAssignment> {
+    const [newAssignment] = await db.insert(checklistAssignments)
+      .values(assignment)
+      .returning();
+    return newAssignment;
+  }
+
+  async getChecklistAssignments(): Promise<ChecklistAssignment[]> {
+    return await db.select().from(checklistAssignments)
+      .orderBy(desc(checklistAssignments.createdAt));
+  }
+
+  async getChecklistAssignmentById(id: string): Promise<ChecklistAssignment | null> {
+    const [assignment] = await db.select().from(checklistAssignments)
+      .where(eq(checklistAssignments.id, id));
+    return assignment || null;
+  }
+
+  async getAssignmentsForHospital(hospitalId: string): Promise<ChecklistAssignment[]> {
+    return await db.select().from(checklistAssignments)
+      .where(eq(checklistAssignments.assignedToHospital, hospitalId))
+      .orderBy(desc(checklistAssignments.createdAt));
+  }
+
+  async getAssignmentsForUser(userId: string): Promise<ChecklistAssignment[]> {
+    return await db.select().from(checklistAssignments)
+      .where(
+        or(
+          eq(checklistAssignments.assignedToUser, userId),
+          // Also include assignments for user's hospital
+          and(
+            isNull(checklistAssignments.assignedToUser),
+            eq(checklistAssignments.assignedToHospital, 
+              sql`(SELECT location_id FROM users WHERE id = ${userId})`)
+          )
+        )
+      )
+      .orderBy(desc(checklistAssignments.createdAt));
+  }
+
+  async updateChecklistAssignment(id: string, updates: Partial<InsertChecklistAssignment>): Promise<ChecklistAssignment | null> {
+    const [updatedAssignment] = await db.update(checklistAssignments)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(checklistAssignments.id, id))
+      .returning();
+    return updatedAssignment || null;
+  }
+
+  async updateAssignmentStatus(assignmentId: string, status: string): Promise<ChecklistAssignment> {
+    const updateData: any = { 
+      status, 
+      updatedAt: new Date() 
+    };
+    
+    if (status === 'completed') {
+      updateData.completedAt = new Date();
+    }
+
+    const [updatedAssignment] = await db.update(checklistAssignments)
+      .set(updateData)
+      .where(eq(checklistAssignments.id, assignmentId))
+      .returning();
+    return updatedAssignment;
+  }
+
+  async deleteChecklistAssignment(assignmentId: string): Promise<boolean> {
+    const result = await db.delete(checklistAssignments)
+      .where(eq(checklistAssignments.id, assignmentId));
+    return (result.rowCount || 0) > 0;
+  }
+
+  // Assignment to Inspection operations
+  async getInspectionByAssignmentId(assignmentId: string): Promise<ChecklistInspection | null> {
+    const [inspection] = await db.select().from(checklistInspections)
+      .where(eq(checklistInspections.assignmentId, assignmentId));
+    return inspection || null;
+  }
+
+  async createInspectionFromAssignment(data: {
+    assignmentId: string;
+    templateId: string;
+    inspectorId: string;
+    locationId: string;
+    title: string;
+    description: string;
+    dueDate: string;
+  }): Promise<ChecklistInspection> {
+    const [newInspection] = await db.insert(checklistInspections)
+      .values({
+        assignmentId: data.assignmentId,
+        templateId: data.templateId,
+        inspectorId: data.inspectorId,
+        locationId: data.locationId,
+        title: data.title,
+        description: data.description,
+        dueDate: new Date(data.dueDate),
+        status: 'draft',
+        totalScore: 0,
+        maxPossibleScore: 0,
+        successPercentage: 0,
+        letterGrade: 'E'
+      })
+      .returning();
+    return newInspection;
+  }
+
+  // Submission system implementation
+  async createChecklistSubmission(submission: InsertChecklistSubmission & { submittedBy: string }): Promise<ChecklistSubmission> {
+    const [newSubmission] = await db.insert(checklistSubmissions)
+      .values(submission)
+      .returning();
+    return newSubmission;
+  }
+
+  async getAssignmentSubmissions(assignmentId: string): Promise<ChecklistSubmission[]> {
+    return await db.select().from(checklistSubmissions)
+      .where(eq(checklistSubmissions.assignmentId, assignmentId))
+      .orderBy(desc(checklistSubmissions.submittedAt));
   }
 }
 
