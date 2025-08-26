@@ -1046,14 +1046,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Serve objects (profiles and logos)
+  // Serve objects (profiles, logos, and all uploaded files)
   app.get("/objects/:objectPath(*)", async (req, res) => {
     try {
-      const objectFile = await objectStorageService.getImageFile(`/${req.params.objectPath}`);
-      if (!objectFile) {
+      const objectPath = req.params.objectPath;
+      console.log('Serving object:', objectPath);
+      
+      // Try to get the file directly from private storage
+      const privateObjectDir = process.env.PRIVATE_OBJECT_DIR || '';
+      const fullPath = `${privateObjectDir}/${objectPath}`;
+      
+      console.log('Looking for file at:', fullPath);
+      
+      // Parse the path and get the file
+      const pathParts = fullPath.split('/');
+      if (pathParts.length < 3) {
+        return res.status(404).json({ error: "Invalid file path" });
+      }
+
+      const bucketName = pathParts[1];
+      const objectName = pathParts.slice(2).join('/');
+      
+      console.log('Bucket:', bucketName, 'Object:', objectName);
+      
+      const { Storage } = require('@google-cloud/storage');
+      const storage = new Storage({
+        credentials: {
+          audience: "replit",
+          subject_token_type: "access_token",
+          token_url: `http://127.0.0.1:1106/token`,
+          type: "external_account",
+          credential_source: {
+            url: `http://127.0.0.1:1106/credential`,
+            format: {
+              type: "json",
+              subject_token_field_name: "access_token",
+            },
+          },
+          universe_domain: "googleapis.com",
+        },
+        projectId: "",
+      });
+      
+      const bucket = storage.bucket(bucketName);
+      const file = bucket.file(objectName);
+
+      const [exists] = await file.exists();
+      if (!exists) {
         return res.status(404).json({ error: "File not found" });
       }
-      await objectStorageService.downloadObject(objectFile, res);
+
+      // Get file metadata
+      const [metadata] = await file.getMetadata();
+      
+      // Set appropriate headers
+      res.set({
+        "Content-Type": metadata.contentType || "application/octet-stream",
+        "Content-Length": metadata.size,
+        "Cache-Control": "public, max-age=3600",
+      });
+
+      // Stream the file to the response
+      const stream = file.createReadStream();
+
+      stream.on("error", (err) => {
+        console.error("Stream error:", err);
+        if (!res.headersSent) {
+          res.status(500).json({ error: "Error streaming file" });
+        }
+      });
+
+      stream.pipe(res);
+      
     } catch (error: any) {
       console.error("Error serving object:", error);
       if (!res.headersSent) {

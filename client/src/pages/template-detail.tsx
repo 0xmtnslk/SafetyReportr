@@ -73,11 +73,16 @@ export default function TemplateDetail({ templateId }: TemplateDetailProps) {
     enabled: sections.length > 0 && !sectionsLoading,
   });
 
-  if (templateLoading || sectionsLoading) {
+  if (templateLoading || sectionsLoading || questionsLoading) {
     return (
       <div className="container mx-auto p-6">
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent"></div>
+          <p className="ml-4 text-gray-600">
+            {templateLoading && "Şablon yükleniyor..."}
+            {sectionsLoading && "Bölümler yükleniyor..."}
+            {questionsLoading && "Sorular yükleniyor..."}
+          </p>
         </div>
       </div>
     );
@@ -161,11 +166,30 @@ export default function TemplateDetail({ templateId }: TemplateDetailProps) {
         </CardContent>
       </Card>
 
+      {/* Debug Info */}
+      {isAdmin && (
+        <Card className="mb-4 bg-yellow-50 border-yellow-200">
+          <CardContent className="py-4">
+            <p className="text-sm text-yellow-800">
+              <strong>Debug Info:</strong> Sections: {sections.length}, Questions: {Object.keys(questionsData).length}, Loading: {questionsLoading ? 'Yes' : 'No'}
+            </p>
+            <details className="mt-2">
+              <summary className="text-sm text-yellow-700 cursor-pointer">Questions Data</summary>
+              <pre className="text-xs mt-2 bg-white p-2 rounded border overflow-auto max-h-32">
+                {JSON.stringify(questionsData, null, 2)}
+              </pre>
+            </details>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Sections */}
       <div className="space-y-6">
         {sections.map((section, index) => {
           const sectionQuestions = Array.isArray(questionsData[section.id]) ? questionsData[section.id] : [];
           const sectionColors = ['border-l-red-500', 'border-l-blue-500', 'border-l-green-500'];
+          
+          console.log(`Section ${section.name} (${section.id}):`, sectionQuestions.length, 'questions');
           
           return (
             <Card key={section.id} className={`border-l-4 ${sectionColors[index % 3]}`}>
