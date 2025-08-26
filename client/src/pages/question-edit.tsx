@@ -1,13 +1,17 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Save } from "lucide-react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
+import { CHECKLIST_CATEGORIES } from "@shared/schema";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 
 interface QuestionEditProps {
   questionId: string;
@@ -16,20 +20,80 @@ interface QuestionEditProps {
 export default function QuestionEdit({ questionId }: QuestionEditProps) {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const [formData, setFormData] = useState({
     questionText: "ADP alanına tüm yetkisiz girişler engellenmiş olmalı, alan kilit altında tutulmalıdır.",
+    category: "Güvenlik",
+    twScore: 8,
     isRequired: true,
     allowPhoto: true,
     allowDocument: true
   });
 
+  // Fetch question data
+  const { data: question, isLoading } = useQuery({
+    queryKey: ['/api/checklist/questions', questionId],
+    enabled: !!questionId
+  });
+
+  // Update question mutation
+  const updateQuestion = useMutation({
+    mutationFn: async (data: any) => {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/checklist/questions/${questionId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(data)
+      });
+      if (!response.ok) throw new Error('Failed to update question');
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Soru Güncellendi",
+        description: "Soru başarıyla güncellendi.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/checklist'] });
+      setLocation('/checklist');
+    },
+    onError: (error) => {
+      toast({
+        title: "Hata",
+        description: "Soru güncellenirken bir hata oluştu.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Update form data when question is loaded
+  useEffect(() => {
+    if (question) {
+      setFormData({
+        questionText: (question as any)?.questionText || "ADP alanına tüm yetkisiz girişler engellenmiş olmalı, alan kilit altında tutulmalıdır.",
+        category: "Güvenlik",
+        twScore: 8,
+        isRequired: (question as any)?.isRequired ?? true,
+        allowPhoto: (question as any)?.allowPhoto ?? true,
+        allowDocument: (question as any)?.allowDocument ?? true
+      });
+    }
+  }, [question]);
+
   const handleSave = () => {
-    toast({
-      title: "Soru Güncellendi",
-      description: "Soru başarıyla güncellendi.",
-    });
-    setLocation('/checklist');
+    if (!formData.questionText.trim()) {
+      toast({
+        title: "Hata",
+        description: "Soru metni gereklidir.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    updateQuestion.mutate(formData);
   };
 
   return (
@@ -72,6 +136,40 @@ export default function QuestionEdit({ questionId }: QuestionEditProps) {
               rows={3}
             />
           </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <Label htmlFor="category">Kategori *</Label>
+              <Select
+                value={formData.category}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
+              >
+                <SelectTrigger id="category">
+                  <SelectValue placeholder="Kategori seçin" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CHECKLIST_CATEGORIES.map((category) => (
+                    <SelectItem key={category} value={category}>
+                      {category}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="twScore">TW Skoru (1-10) *</Label>
+              <Input
+                id="twScore"
+                type="number"
+                min="1"
+                max="10"
+                value={formData.twScore}
+                onChange={(e) => setFormData(prev => ({ ...prev, twScore: parseInt(e.target.value) || 1 }))}
+                placeholder="1-10 arası skor"
+              />
+            </div>
+          </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="flex items-center space-x-2">
@@ -106,8 +204,11 @@ export default function QuestionEdit({ questionId }: QuestionEditProps) {
             <Button variant="outline" onClick={() => setLocation('/checklist')}>
               İptal
             </Button>
-            <Button onClick={handleSave}>
-              Kaydet
+            <Button 
+              onClick={handleSave}
+              disabled={updateQuestion.isPending}
+            >
+              {updateQuestion.isPending ? "Kaydediliyor..." : "Kaydet"}
             </Button>
           </div>
         </CardContent>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,8 @@ import { Switch } from "@/components/ui/switch";
 import { ArrowLeft, Save } from "lucide-react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 
 interface TemplateEditProps {
   templateId: string;
@@ -16,6 +18,7 @@ interface TemplateEditProps {
 export default function TemplateEdit({ templateId }: TemplateEditProps) {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const [formData, setFormData] = useState({
     name: "İSG Teknik Alanlar Denetim Kontrol Listesi",
@@ -24,12 +27,67 @@ export default function TemplateEdit({ templateId }: TemplateEditProps) {
     isActive: true
   });
 
+  // Fetch template data
+  const { data: template, isLoading } = useQuery({
+    queryKey: ['/api/checklist/templates', templateId],
+    enabled: !!templateId
+  });
+
+  // Update template mutation
+  const updateTemplate = useMutation({
+    mutationFn: async (data: any) => {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/checklist/templates/${templateId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(data)
+      });
+      if (!response.ok) throw new Error('Failed to update template');
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Şablon Güncellendi",
+        description: "Şablon başarıyla güncellendi.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/checklist'] });
+      setLocation(`/checklist/templates/${templateId}`);
+    },
+    onError: (error) => {
+      toast({
+        title: "Hata",
+        description: "Şablon güncellenirken bir hata oluştu.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Update form data when template is loaded
+  useEffect(() => {
+    if (template) {
+      setFormData({
+        name: template.name || "İSG Teknik Alanlar Denetim Kontrol Listesi",
+        description: template.description || "Hastane teknik altyapı sistemlerinin güvenlik ve uygunluk denetimi için kapsamlı kontrol listesi",
+        version: template.version || "1.0",
+        isActive: template.isActive ?? true
+      });
+    }
+  }, [template]);
+
   const handleSave = () => {
-    toast({
-      title: "Şablon Güncellendi",
-      description: "Şablon başarıyla güncellendi.",
-    });
-    setLocation(`/checklist/templates/${templateId}`);
+    if (!formData.name.trim()) {
+      toast({
+        title: "Hata",
+        description: "Şablon adı gereklidir.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    updateTemplate.mutate(formData);
   };
 
   return (
@@ -108,8 +166,11 @@ export default function TemplateEdit({ templateId }: TemplateEditProps) {
             <Button variant="outline" onClick={() => setLocation(`/checklist/templates/${templateId}`)}>
               İptal
             </Button>
-            <Button onClick={handleSave}>
-              Kaydet
+            <Button 
+              onClick={handleSave}
+              disabled={updateTemplate.isPending}
+            >
+              {updateTemplate.isPending ? "Kaydediliyor..." : "Kaydet"}
             </Button>
           </div>
         </CardContent>

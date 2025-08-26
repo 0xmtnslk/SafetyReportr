@@ -1287,6 +1287,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put("/api/checklist/questions/:id", authenticateToken, requireCentralManagement, async (req, res) => {
+    try {
+      const validatedData = insertChecklistQuestionSchema.partial().parse(req.body);
+      const question = await storage.updateChecklistQuestion(req.params.id, validatedData);
+      res.json(question);
+    } catch (error: any) {
+      console.error("Error updating checklist question:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ error: error.errors });
+      }
+      res.status(500).json({ error: "Error updating checklist question" });
+    }
+  });
+
   app.delete("/api/checklist/questions/:id", authenticateToken, requireCentralManagement, async (req, res) => {
     try {
       const success = await storage.deleteChecklistQuestion(req.params.id);
