@@ -56,7 +56,7 @@ export default function ChecklistDashboard() {
             Denetimleri Görüntüle
           </Button>
           <Button
-            onClick={() => alert('Yeni denetim özelliği henüz hazır değil')}
+            onClick={() => setLocation('/checklist/create-inspection')}
             className="flex items-center gap-2"
           >
             <Plus size={16} />

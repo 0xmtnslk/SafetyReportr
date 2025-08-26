@@ -14,6 +14,7 @@ import AdminPanel from "@/pages/admin-panel";
 import ChangePassword from "@/pages/change-password";
 import LandingPage from "@/pages/landing-page";
 import ChecklistDashboard from "@/pages/checklist";
+import CreateInspection from "@/pages/create-inspection";
 import Navigation from "@/components/navigation";
 import OfflineIndicator from "@/components/offline-indicator";
 import { useOfflineSync } from "./hooks/useOfflineSync";
@@ -71,6 +72,7 @@ function Router() {
             <Route path="/admin" component={AdminPanel} />
             <Route path="/change-password" component={ChangePassword} />
             <Route path="/checklist" component={ChecklistDashboard} />
+            <Route path="/checklist/create-inspection" component={CreateInspection} />
             <Route component={() => <div className="p-8"><div>404 - Page Not Found</div></div>} />
           </Switch>
         </Navigation>
@@ -95,6 +97,7 @@ function Router() {
         <Route path="/admin" component={user ? AdminPanel : Login} />
         <Route path="/change-password" component={user ? ChangePassword : Login} />
         <Route path="/checklist" component={user ? ChecklistDashboard : Login} />
+        <Route path="/checklist/create-inspection" component={user ? CreateInspection : Login} />
         <Route component={() => <div>404 - Page Not Found</div>} />
       </Switch>
     </div>
