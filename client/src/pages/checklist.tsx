@@ -22,8 +22,8 @@ export default function ChecklistDashboard() {
   const { data: assignments = [], isLoading: assignmentsLoading } = useQuery<any[]>({
     queryKey: isAdmin 
       ? ["/api/checklist/assignments"] 
-      : ["/api/checklist/assignments/user", userInfo?.id],
-    enabled: !!userInfo?.id,
+      : ["/api/checklist/assignments/hospital", userInfo?.locationId],
+    enabled: !!userInfo?.locationId || isAdmin,
   });
 
   // Fetch hospital information
@@ -53,7 +53,7 @@ export default function ChecklistDashboard() {
       queryClient.invalidateQueries({ 
         queryKey: isAdmin 
           ? ["/api/checklist/assignments"] 
-          : ["/api/checklist/assignments/user", userInfo?.id]
+          : ["/api/checklist/assignments/hospital", userInfo?.locationId]
       });
       toast({
         title: "Denetim Oluşturuldu",
@@ -86,6 +86,11 @@ export default function ChecklistDashboard() {
       </div>
     );
   }
+
+  // Debug: Log user info and assignments
+  console.log("🔍 DEBUG - User info:", userInfo);
+  console.log("🔍 DEBUG - Is Admin:", isAdmin);
+  console.log("🔍 DEBUG - Assignments:", assignments);
 
   // Calculate statistics
   const totalAssignments = assignments.length;
