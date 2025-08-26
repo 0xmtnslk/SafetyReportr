@@ -1,37 +1,45 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckSquare, Play, FileText, Calendar } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { 
+  CheckSquare, Calendar, Clock, AlertTriangle, CheckCircle, 
+  Settings, MapPin, User, Eye, Play, Plus
+} from "lucide-react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
+import { queryClient } from "@/lib/queryClient";
 
 export default function ChecklistDashboard() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
-  // Fetch the main template
-  const { data: template, isLoading: templateLoading } = useQuery<any>({
-    queryKey: ["/api/checklist/templates"],
-    select: (data) => data?.[0] // Get first template (İSG Teknik Alanlar)
+  // Get current user info
+  const userInfo = JSON.parse(localStorage.getItem('user') || '{}');
+  const isAdmin = ['central_admin', 'location_manager'].includes(userInfo?.role);
+
+  // Fetch assignments based on user role
+  const { data: assignments = [], isLoading: assignmentsLoading } = useQuery<any[]>({
+    queryKey: isAdmin 
+      ? ["/api/checklist/assignments"] 
+      : ["/api/checklist/assignments/hospital", userInfo?.locationId],
+    enabled: !!userInfo?.locationId || isAdmin,
   });
 
-  // Create new inspection mutation (direct)
-  const createNewInspection = useMutation({
-    mutationFn: async () => {
-      if (!template) throw new Error("Template bulunamadı");
-      
-      const response = await fetch(`/api/checklist/inspections`, {
-        method: "POST", 
+  // Fetch hospital information
+  const { data: hospitals = [] } = useQuery<any[]>({
+    queryKey: ["/api/admin/hospitals"],
+  });
+
+  // Create inspection from assignment mutation
+  const createInspectionFromAssignment = useMutation({
+    mutationFn: async (assignmentId: string) => {
+      const response = await fetch(`/api/checklist/assignments/${assignmentId}/create-inspection`, {
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${localStorage.getItem("token")}`,
         },
-        body: JSON.stringify({
-          templateId: template.id,
-          locationId: "cc12b0d8-01d8-41b5-aba0-82754e4a5a1a", // MLPCARE Merkez
-          inspectionDate: new Date().toISOString(),
-          notes: "Direkt kontrol listesi denetimi",
-        }),
       });
       
       if (!response.ok) {
@@ -42,22 +50,53 @@ export default function ChecklistDashboard() {
       return response.json();
     },
     onSuccess: (inspection) => {
+      queryClient.invalidateQueries({ 
+        queryKey: isAdmin 
+          ? ["/api/checklist/assignments"] 
+          : ["/api/checklist/assignments/hospital", userInfo?.locationId]
+      });
       toast({
-        title: "Kontrol Listesi Açıldı",
-        description: "İSG Teknik Alanlar kontrol listesine yönlendiriliyorsunuz...",
+        title: "Denetim Oluşturuldu",
+        description: "Kontrol listesi formuna yönlendiriliyorsunuz...",
       });
       setLocation(`/checklist/inspections/${inspection.id}`);
     },
     onError: (error: any) => {
       toast({
-        title: "Hata", 
+        title: "Hata",
         description: error.message,
         variant: "destructive",
       });
     },
   });
 
-  if (templateLoading) {
+  const getStatusBadge = (status: string) => {
+    const statusConfig = {
+      'assigned': { color: 'bg-blue-100 text-blue-800', text: 'Atanmış' },
+      'in_progress': { color: 'bg-yellow-100 text-yellow-800', text: 'Devam Ediyor' },
+      'completed': { color: 'bg-green-100 text-green-800', text: 'Tamamlandı' },
+      'overdue': { color: 'bg-red-100 text-red-800', text: 'Süresi Geçmiş' }
+    };
+    
+    return statusConfig[status as keyof typeof statusConfig] || statusConfig.assigned;
+  };
+
+  const getPriorityBadge = (priority: string) => {
+    const priorityConfig = {
+      'low': { color: 'bg-gray-100 text-gray-800', text: 'Düşük' },
+      'medium': { color: 'bg-blue-100 text-blue-800', text: 'Orta' },
+      'high': { color: 'bg-red-100 text-red-800', text: 'Yüksek' }
+    };
+    
+    return priorityConfig[priority as keyof typeof priorityConfig] || priorityConfig.medium;
+  };
+
+  const getHospitalName = (hospitalId: string) => {
+    const hospital = hospitals.find(h => h.id === hospitalId);
+    return hospital?.name || 'Bilinmiyor';
+  };
+
+  if (assignmentsLoading) {
     return (
       <div className="container mx-auto p-6">
         <div className="flex items-center justify-center min-h-[400px]">
@@ -68,96 +107,135 @@ export default function ChecklistDashboard() {
   }
 
   return (
-    <div className="container mx-auto p-6 max-w-4xl">
+    <div className="container mx-auto p-6">
       {/* Header */}
-      <div className="mb-8 text-center">
-        <h1 className="text-4xl font-bold text-gray-900 mb-2">
-          İSG Teknik Alanlar Kontrol Listesi
-        </h1>
-        <p className="text-gray-600 text-lg">
-          Hastane teknik altyapı sistemlerinin güvenlik ve uygunluk denetimi
-        </p>
+      <div className="flex justify-between items-center mb-8">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">
+            {isAdmin ? 'Kontrol Listesi Yönetimi' : 'Atanmış Kontrol Listeleri'}
+          </h1>
+          <p className="text-gray-600 mt-2">
+            {isAdmin 
+              ? 'Hastanelere atanan kontrol listelerini görüntüleyin ve yönetin' 
+              : 'Size atanan kontrol listelerini tamamlayın'
+            }
+          </p>
+        </div>
+        
+        {isAdmin && (
+          <Button 
+            onClick={() => setLocation('/admin/create-assignment')}
+            className="bg-primary hover:bg-primary/90"
+          >
+            <Plus size={20} className="mr-2" />
+            Yeni Atama Oluştur
+          </Button>
+        )}
       </div>
 
-      {/* Template Info Card */}
-      {template && (
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText size={24} />
-              {template.name}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <h3 className="font-semibold mb-2">Kontrol Alanları:</h3>
-                <ul className="space-y-1 text-gray-600">
-                  <li>• ADP (Yangın Algılama) Sistemleri - 10 kontrol maddesi</li>
-                  <li>• UPS (Kesintisiz Güç) Sistemleri - 10 kontrol maddesi</li>
-                  <li>• Jeneratör Sistemleri - 10 kontrol maddesi</li>
-                </ul>
-              </div>
-              <div>
-                <h3 className="font-semibold mb-2">Özellikler:</h3>
-                <ul className="space-y-1 text-gray-600">
-                  <li>• TW Skorları (1-10 arası değerlendirme)</li>
-                  <li>• Excel formülleri ile otomatik hesaplama</li>
-                  <li>• Fotoğraf ve doküman yükleme</li>
-                  <li>• Dinamik soru ekleme (+ butonu)</li>
-                  <li>• Bölüm bazlı skorlama ve harf notları</li>
-                </ul>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Start Button */}
-      <div className="text-center">
-        <Card className="inline-block">
-          <CardContent className="pt-6">
-            <div className="space-y-4">
-              <div className="flex items-center justify-center mb-4">
-                <div className="bg-primary/10 p-4 rounded-full">
-                  <CheckSquare size={48} className="text-primary" />
-                </div>
-              </div>
-              <h2 className="text-2xl font-bold">Kontrol Listesini Başlat</h2>
-              <p className="text-gray-600 max-w-md">
-                Yeni bir İSG teknik alanlar denetimi başlatın. 
-                Tüm kontrol maddelerini değerlendirin ve skorlama yapın.
-              </p>
-              <div className="flex items-center justify-center gap-2 text-sm text-gray-500 mb-4">
-                <Calendar size={16} />
-                <span>{new Date().toLocaleDateString('tr-TR', { 
-                  weekday: 'long', 
-                  year: 'numeric', 
-                  month: 'long', 
-                  day: 'numeric' 
-                })}</span>
-              </div>
-              <Button
-                onClick={() => createNewInspection.mutate()}
-                disabled={createNewInspection.isPending || !template}
-                size="lg"
-                className="min-w-[200px]"
-              >
-                <Play size={20} className="mr-2" />
-                {createNewInspection.isPending ? "Başlatılıyor..." : "Kontrol Listesini Başlat"}
+      {/* Assignments Grid */}
+      {assignments.length === 0 ? (
+        <Card>
+          <CardContent className="text-center py-12">
+            <CheckSquare size={64} className="mx-auto text-gray-400 mb-4" />
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+              {isAdmin ? 'Henüz Atama Yok' : 'Size Atanmış Kontrol Listesi Yok'}
+            </h3>
+            <p className="text-gray-600 mb-6">
+              {isAdmin 
+                ? 'Hastanelere kontrol listesi atamak için yeni atama oluşturun.' 
+                : 'Şu anda size atanmış bir kontrol listesi bulunmuyor.'
+              }
+            </p>
+            {isAdmin && (
+              <Button onClick={() => setLocation('/admin/create-assignment')}>
+                <Plus size={20} className="mr-2" />
+                İlk Atamayı Oluştur
               </Button>
-            </div>
+            )}
           </CardContent>
         </Card>
-      </div>
-
-      {/* Info Footer */}
-      <div className="mt-12 text-center text-gray-500 text-sm">
-        <p>
-          Kontrol listesi sisteminde her madde için değerlendirme yapacak, 
-          TW skorları girecek ve gerektiğinde fotoğraf/doküman yükleyeceksiniz.
-        </p>
-      </div>
+      ) : (
+        <div className="grid gap-6">
+          {assignments.map((assignment) => {
+            const status = getStatusBadge(assignment.status);
+            const priority = getPriorityBadge(assignment.priority);
+            const isOverdue = new Date(assignment.due_date) < new Date() && assignment.status !== 'completed';
+            
+            return (
+              <Card key={assignment.id} className="hover:shadow-md transition-shadow">
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <CardTitle className="flex items-center gap-2 mb-2">
+                        <CheckSquare size={20} />
+                        {assignment.title}
+                      </CardTitle>
+                      {assignment.description && (
+                        <p className="text-gray-600 text-sm">{assignment.description}</p>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <Badge className={priority.color}>{priority.text}</Badge>
+                      <Badge className={isOverdue ? 'bg-red-100 text-red-800' : status.color}>
+                        {isOverdue ? 'Süresi Geçmiş' : status.text}
+                      </Badge>
+                    </div>
+                  </div>
+                </CardHeader>
+                
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <MapPin size={16} />
+                      <span>{getHospitalName(assignment.assigned_to_hospital)}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <Calendar size={16} />
+                      <span>Son Tarih: {new Date(assignment.due_date).toLocaleDateString('tr-TR')}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <Clock size={16} />
+                      <span>
+                        Oluşturulma: {new Date(assignment.created_at).toLocaleDateString('tr-TR')}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {assignment.notes && (
+                    <div className="bg-gray-50 p-3 rounded-lg mb-4">
+                      <p className="text-sm text-gray-700">{assignment.notes}</p>
+                    </div>
+                  )}
+                  
+                  <div className="flex gap-2">
+                    {assignment.status === 'assigned' && !isAdmin && (
+                      <Button
+                        onClick={() => createInspectionFromAssignment.mutate(assignment.id)}
+                        disabled={createInspectionFromAssignment.isPending}
+                        className="bg-primary hover:bg-primary/90"
+                      >
+                        <Play size={16} className="mr-2" />
+                        {createInspectionFromAssignment.isPending ? 'Başlatılıyor...' : 'Denetimi Başlat'}
+                      </Button>
+                    )}
+                    
+                    {isAdmin && (
+                      <Button
+                        variant="outline"
+                        onClick={() => setLocation(`/checklist/assignments/${assignment.id}`)}
+                      >
+                        <Eye size={16} className="mr-2" />
+                        Detayları Görüntüle
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
