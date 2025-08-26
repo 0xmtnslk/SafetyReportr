@@ -28,6 +28,7 @@ export default function ChecklistDashboard() {
         },
         body: JSON.stringify({
           templateId: template.id,
+          locationId: "cc12b0d8-01d8-41b5-aba0-82754e4a5a1a", // MLPCARE Merkez
           inspectionDate: new Date().toISOString(),
           notes: "Direkt kontrol listesi denetimi",
         }),
