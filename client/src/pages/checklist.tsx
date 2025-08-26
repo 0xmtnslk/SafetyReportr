@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { 
-  CheckSquare, FileText, Eye, Edit, Plus, Settings, Copy, Search, Filter, Grid3X3, List, Users
+  CheckSquare, FileText, Eye, Edit, Plus, Settings, Copy, Search, Filter, Grid3X3, List, Users, PlayIcon
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
@@ -323,14 +323,17 @@ export default function ChecklistDashboard() {
                     </>
                   )}
                   
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setLocation(`/checklist/create-inspection?templateId=${template.id}`)}
-                  >
-                    <Users size={14} className="mr-1" />
-                    Denetim
-                  </Button>
+                  {isAdmin && (
+                    <Button
+                      size="sm"
+                      variant="default"
+                      onClick={() => setLocation(`/admin/inspections/create?templateId=${template.id}`)}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      <PlayIcon size={14} className="mr-1" />
+                      Denetim Başlat
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>

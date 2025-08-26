@@ -1,12 +1,13 @@
 import { 
-  reports, findings, users, offlineQueue, locations,
+  reports, findings, users, offlineQueue, locations, notifications,
   checklistTemplates, checklistSections, checklistQuestions, inspections, inspectionAssignments, inspectionResponses,
   type User, type InsertUser, type Report, type InsertReport, type Finding, type InsertFinding, 
   type OfflineQueueItem, type InsertOfflineQueueItem, type Location, type InsertLocation,
   type ChecklistTemplate, type InsertChecklistTemplate, type ChecklistSection, type InsertChecklistSection,
   type ChecklistQuestion, type InsertChecklistQuestion, 
   type Inspection, type InsertInspection, type InspectionAssignment, type InsertInspectionAssignment,
-  type InspectionResponse, type InsertInspectionResponse, calculateQuestionScore, calculateLetterGrade
+  type InspectionResponse, type InsertInspectionResponse, type Notification, type InsertNotification,
+  calculateQuestionScore, calculateLetterGrade
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, inArray, sql, gt, or, isNull } from "drizzle-orm";
@@ -186,6 +187,14 @@ export interface IStorage {
   startInspection(assignmentId: string, userId: string): Promise<boolean>;
   submitInspectionResponse(assignmentId: string, questionId: string, response: InsertInspectionResponse): Promise<InspectionResponse>;
   completeInspection(assignmentId: string, userId: string): Promise<boolean>;
+  
+  // Notification operations
+  createNotification(notification: InsertNotification): Promise<Notification>;
+  getUserNotifications(userId: string): Promise<Notification[]>;
+  getUnreadNotifications(userId: string): Promise<Notification[]>;
+  markNotificationAsRead(notificationId: string, userId: string): Promise<boolean>;
+  markAllNotificationsAsRead(userId: string): Promise<boolean>;
+  getNotificationCount(userId: string): Promise<number>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1333,6 +1342,84 @@ export class DatabaseStorage implements IStorage {
         )
       );
     return result.rowCount > 0;
+  }
+
+  // Notification operations
+  async createNotification(notification: InsertNotification): Promise<Notification> {
+    const [created] = await db
+      .insert(notifications)
+      .values(notification)
+      .returning();
+    return created;
+  }
+
+  async getUserNotifications(userId: string): Promise<Notification[]> {
+    return await db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.userId, userId))
+      .orderBy(desc(notifications.createdAt));
+  }
+
+  async getUnreadNotifications(userId: string): Promise<Notification[]> {
+    return await db
+      .select()
+      .from(notifications)
+      .where(and(
+        eq(notifications.userId, userId),
+        eq(notifications.isRead, false)
+      ))
+      .orderBy(desc(notifications.createdAt));
+  }
+
+  async markNotificationAsRead(notificationId: string, userId: string): Promise<boolean> {
+    try {
+      const [updated] = await db
+        .update(notifications)
+        .set({ 
+          isRead: true, 
+          readAt: new Date() 
+        })
+        .where(and(
+          eq(notifications.id, notificationId),
+          eq(notifications.userId, userId)
+        ))
+        .returning();
+      return !!updated;
+    } catch (error) {
+      console.error('Failed to mark notification as read:', error);
+      return false;
+    }
+  }
+
+  async markAllNotificationsAsRead(userId: string): Promise<boolean> {
+    try {
+      await db
+        .update(notifications)
+        .set({ 
+          isRead: true, 
+          readAt: new Date() 
+        })
+        .where(and(
+          eq(notifications.userId, userId),
+          eq(notifications.isRead, false)
+        ));
+      return true;
+    } catch (error) {
+      console.error('Failed to mark all notifications as read:', error);
+      return false;
+    }
+  }
+
+  async getNotificationCount(userId: string): Promise<number> {
+    const [result] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(notifications)
+      .where(and(
+        eq(notifications.userId, userId),
+        eq(notifications.isRead, false)
+      ));
+    return result?.count || 0;
   }
 }
 

@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
-  CheckSquare, ArrowLeft, Plus, Eye, Users
+  CheckSquare, ArrowLeft, Plus, Eye, Users, PlayIcon
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
@@ -62,15 +62,27 @@ export default function TemplateDetail({ templateId }: TemplateDetailProps) {
           </div>
         </div>
         
-        {isAdmin && (
-          <Button 
-            onClick={() => setLocation(`/checklist/templates/${templateId}/add-section`)}
-            className="bg-primary hover:bg-primary/90"
-          >
-            <Plus size={16} className="mr-2" />
-            Yeni Bölüm Ekle
-          </Button>
-        )}
+        <div className="flex gap-3">
+          {isAdmin && (
+            <>
+              <Button 
+                onClick={() => setLocation(`/admin/inspections/create?templateId=${templateId}`)}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                <PlayIcon size={16} className="mr-2" />
+                Denetim Başlat
+              </Button>
+              <Button 
+                onClick={() => setLocation(`/checklist/templates/${templateId}/add-section`)}
+                className="bg-primary hover:bg-primary/90"
+                variant="outline"
+              >
+                <Plus size={16} className="mr-2" />
+                Yeni Bölüm Ekle
+              </Button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Template Info */}

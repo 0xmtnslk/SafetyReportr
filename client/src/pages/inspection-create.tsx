@@ -24,6 +24,10 @@ export default function InspectionCreatePage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
+  // Get templateId from URL if provided
+  const urlParams = new URLSearchParams(window.location.search);
+  const preselectedTemplateId = urlParams.get('templateId');
+
   // Form states
   const [selectedTemplate, setSelectedTemplate] = useState<ChecklistTemplate | null>(null);
   const [selectedHospitals, setSelectedHospitals] = useState<string[]>([]);
@@ -52,6 +56,17 @@ export default function InspectionCreatePage() {
       setSelectedHospitals(hospitals.map(h => h.id));
     }
   }, [hospitals]);
+
+  // Auto-select template if provided in URL
+  useEffect(() => {
+    if (preselectedTemplateId && templates.length > 0 && !selectedTemplate) {
+      const template = templates.find(t => t.id === preselectedTemplateId);
+      if (template) {
+        setSelectedTemplate(template);
+        setTitle(`${template.name} Denetimi`);
+      }
+    }
+  }, [preselectedTemplateId, templates, selectedTemplate]);
 
   // Get selected hospital details with assigned specialists
   const selectedHospitalDetails: SelectedHospital[] = selectedHospitals

@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { HardHat, Home, Plus, FileText, LogOut, Shield, Menu, X, CheckSquare } from "lucide-react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
+import NotificationDropdown from "./NotificationDropdown";
 
 // Helper function to get role display names
 const getRoleDisplayName = (role?: string) => {
@@ -116,6 +117,7 @@ export default function Navigation({ children }: NavigationProps) {
                   </span>
                 </div>
               </div>
+              <NotificationDropdown />
             </div>
             <Button
               variant="ghost"
@@ -149,6 +151,7 @@ export default function Navigation({ children }: NavigationProps) {
           </div>
           
           <div className="flex items-center space-x-2">
+            <NotificationDropdown />
             <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
               <span className="text-white text-sm font-bold">
                 {(user?.fullName || user?.username || 'U').charAt(0).toUpperCase()}

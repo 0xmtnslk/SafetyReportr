@@ -19,6 +19,7 @@ import {
   insertInspectionSchema,
   insertInspectionAssignmentSchema,
   insertInspectionResponseSchema,
+  insertNotificationSchema,
   CHECKLIST_CATEGORIES,
   EVALUATION_OPTIONS,
   Location
@@ -1779,6 +1780,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error submitting inspection response:', error);
       res.status(500).json({ error: 'Error submitting inspection response' });
+    }
+  });
+
+  // Helper function to create notifications
+  const createNotificationForUser = async (userId: string, type: string, title: string, message: string, relatedId?: string, relatedType?: string) => {
+    try {
+      await storage.createNotification({
+        userId,
+        type,
+        title,
+        message,
+        relatedId,
+        relatedType,
+      });
+    } catch (error) {
+      console.error('Error creating notification:', error);
+    }
+  };
+
+  // Notification routes
+  app.get('/api/notifications', authenticateToken, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      const notifications = await storage.getUserNotifications(user.userId);
+      res.json(notifications);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+      res.status(500).json({ error: 'Error fetching notifications' });
+    }
+  });
+
+  app.get('/api/notifications/unread', authenticateToken, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      const notifications = await storage.getUnreadNotifications(user.userId);
+      res.json(notifications);
+    } catch (error) {
+      console.error('Error fetching unread notifications:', error);
+      res.status(500).json({ error: 'Error fetching unread notifications' });
+    }
+  });
+
+  app.get('/api/notifications/count', authenticateToken, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      const count = await storage.getNotificationCount(user.userId);
+      res.json({ count });
+    } catch (error) {
+      console.error('Error fetching notification count:', error);
+      res.status(500).json({ error: 'Error fetching notification count' });
+    }
+  });
+
+  app.put('/api/notifications/:id/read', authenticateToken, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      const success = await storage.markNotificationAsRead(req.params.id, user.userId);
+      if (success) {
+        res.json({ success: true });
+      } else {
+        res.status(404).json({ error: 'Notification not found or not accessible' });
+      }
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+      res.status(500).json({ error: 'Error marking notification as read' });
+    }
+  });
+
+  app.put('/api/notifications/read-all', authenticateToken, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      const success = await storage.markAllNotificationsAsRead(user.userId);
+      res.json({ success });
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+      res.status(500).json({ error: 'Error marking all notifications as read' });
     }
   });
 

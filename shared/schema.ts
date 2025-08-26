@@ -99,6 +99,20 @@ export const offlineQueue = pgTable("offline_queue", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Notification System
+export const notifications = pgTable("notifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  type: text("type").notNull(), // 'inspection_assigned', 'inspection_completed', 'inspection_overdue', etc.
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  relatedId: varchar("related_id"), // ID of inspection/assignment/etc.
+  relatedType: text("related_type"), // 'inspection', 'assignment', etc.
+  isRead: boolean("is_read").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  readAt: timestamp("read_at"),
+});
+
 // Checklist System Tables
 export const checklistTemplates = pgTable("checklist_templates", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -321,6 +335,15 @@ export const insertFindingSchema = createInsertSchema(findings).pick({
   isCompleted: true,
 });
 
+export const insertNotificationSchema = createInsertSchema(notifications).pick({
+  userId: true,
+  type: true,
+  title: true,
+  message: true,
+  relatedId: true,
+  relatedType: true,
+});
+
 export const insertOfflineQueueSchema = createInsertSchema(offlineQueue).pick({
   userId: true,
   action: true,
@@ -464,6 +487,10 @@ export type InsertInspectionAssignment = z.infer<typeof insertInspectionAssignme
 
 export type InspectionResponse = typeof inspectionResponses.$inferSelect;
 export type InsertInspectionResponse = z.infer<typeof insertInspectionResponseSchema>;
+
+// Notification types
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 
 // Utility functions
 export const calculateQuestionScore = (evaluation: string, twScore: number): number => {
