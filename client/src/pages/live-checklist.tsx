@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
+import { CHECKLIST_CATEGORIES } from "@shared/schema";
 
 interface Question {
   id: string;
@@ -35,45 +36,46 @@ export default function LiveChecklist() {
   // State for category filter
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   
-  // Sample questions (in real app, fetch from API)
+  // Sample questions with real categories (in real app, fetch from API)
   const [questions] = useState<Question[]>([
     {
       id: "1",
-      text: "ADP sistemi ana panelinde yangın detektörlerinin çalışır durumda olması",
-      category: "ADP",
+      text: "ADP alanına tüm yetkisiz girişler engellenmiş olmalı, alan kilit altında tutulmalıdır",
+      category: "Güvenlik",
       tw_score: 8,
       requires_file: true
     },
     {
       id: "2", 
-      text: "Duman dedektörlerinin temiz ve engelsiz olması",
-      category: "ADP",
+      text: "Alan girişinde uygun nitelikli sağlık ve güvenlik işaretleri bulunmalıdır",
+      category: "Emniyet",
       tw_score: 7
     },
     {
       id: "3",
-      text: "UPS sisteminin batarya seviyelerinin normal aralıkta olması",
-      category: "UPS", 
+      text: "Alanda uygun nitelikte yangın algılama sistemi bulunmalıdır",
+      category: "Yangın Güvenliği", 
       tw_score: 9,
       requires_file: true
     },
     {
       id: "4",
-      text: "UPS bypass anahtarının kapalı konumda olması",
-      category: "UPS",
-      tw_score: 8
+      text: "UPS sisteminin batarya seviyelerinin normal aralıkta olması",
+      category: "Altyapı",
+      tw_score: 8,
+      requires_file: true
     },
     {
       id: "5",
       text: "Jeneratör yakıt seviyesinin minimum %75 olması",
-      category: "Generator",
+      category: "Afet ve Acil Durum Yönetimi",
       tw_score: 10,
       requires_file: true
     },
     {
       id: "6",
-      text: "Jeneratör batarya şarj seviyesinin normal aralıkta olması", 
-      category: "Generator",
+      text: "Alanda yeterli havalandırma sağlanıyor olmalıdır", 
+      category: "Altyapı",
       tw_score: 8
     }
   ]);
@@ -191,9 +193,11 @@ export default function LiveChecklist() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tüm Kategoriler</SelectItem>
-                <SelectItem value="ADP">ADP (Yangın Algılama)</SelectItem>
-                <SelectItem value="UPS">UPS (Kesintisiz Güç)</SelectItem>
-                <SelectItem value="Generator">Jeneratör Sistemleri</SelectItem>
+                {CHECKLIST_CATEGORIES.map((category) => (
+                  <SelectItem key={category} value={category}>
+                    {category}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </CardContent>
