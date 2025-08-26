@@ -1324,6 +1324,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Checklist Questions
+  // Get single section
+  app.get("/api/checklist/sections/:id", authenticateToken, async (req, res) => {
+    try {
+      const section = await storage.getChecklistSection(req.params.id);
+      if (section) {
+        res.json(section);
+      } else {
+        res.status(404).json({ error: "Section not found" });
+      }
+    } catch (error: any) {
+      console.error("Error fetching checklist section:", error);
+      res.status(500).json({ error: "Error fetching checklist section" });
+    }
+  });
+
   app.get("/api/checklist/sections/:sectionId/questions", authenticateToken, async (req, res) => {
     try {
       const questions = await storage.getSectionQuestions(req.params.sectionId);
