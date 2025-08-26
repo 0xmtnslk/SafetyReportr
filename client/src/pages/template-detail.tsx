@@ -29,14 +29,18 @@ export default function TemplateDetail({ templateId }: TemplateDetailProps) {
     queryKey: ["/api/checklist/sections/questions", templateId],
     queryFn: async () => {
       const questionPromises = sections.map(async (section) => {
-        const response = await fetch(`/api/checklist/sections/${section.id}/questions`);
+        const response = await fetch(`/api/checklist/sections/${section.id}/questions`, {
+          headers: {
+            "Authorization": `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
         const questions = await response.json();
         return { sectionId: section.id, questions };
       });
       
       const results = await Promise.all(questionPromises);
       return results.reduce((acc, { sectionId, questions }) => {
-        acc[sectionId] = questions;
+        acc[sectionId] = Array.isArray(questions) ? questions : [];
         return acc;
       }, {} as Record<string, any[]>);
     },
@@ -132,7 +136,7 @@ export default function TemplateDetail({ templateId }: TemplateDetailProps) {
       {/* Sections */}
       <div className="space-y-6">
         {sections.map((section, index) => {
-          const sectionQuestions = questionsData[section.id] || [];
+          const sectionQuestions = Array.isArray(questionsData[section.id]) ? questionsData[section.id] : [];
           const sectionColors = ['border-l-red-500', 'border-l-blue-500', 'border-l-green-500'];
           
           return (
