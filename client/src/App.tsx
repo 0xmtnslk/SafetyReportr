@@ -18,6 +18,10 @@ import CreateInspection from "@/pages/create-inspection";
 import InspectionDetail from "@/pages/inspection-detail";
 import CreateAssignment from "@/pages/create-assignment";
 import TemplateDetail from "@/pages/template-detail";
+import TemplateEdit from "@/pages/template-edit";
+import CreateTemplate from "@/pages/create-template";
+import SectionEdit from "@/pages/section-edit";
+import AddQuestion from "@/pages/add-question";
 import Navigation from "@/components/navigation";
 import OfflineIndicator from "@/components/offline-indicator";
 import { useOfflineSync } from "./hooks/useOfflineSync";
@@ -83,6 +87,16 @@ function Router() {
             <Route path="/checklist/templates/:id">
               {(params) => <TemplateDetail templateId={params.id} />}
             </Route>
+            <Route path="/checklist/templates/:id/edit">
+              {(params) => <TemplateEdit templateId={params.id} />}
+            </Route>
+            <Route path="/checklist/create-template" component={CreateTemplate} />
+            <Route path="/checklist/sections/:id/edit">
+              {(params) => <SectionEdit sectionId={params.id} />}
+            </Route>
+            <Route path="/checklist/sections/:id/add-question">
+              {(params) => <AddQuestion sectionId={params.id} />}
+            </Route>
             <Route component={() => <div className="p-8"><div>404 - Page Not Found</div></div>} />
           </Switch>
         </Navigation>
@@ -114,6 +128,16 @@ function Router() {
         </Route>
         <Route path="/checklist/templates/:id">
           {(params) => user ? <TemplateDetail templateId={params.id} /> : <Login />}
+        </Route>
+        <Route path="/checklist/templates/:id/edit">
+          {(params) => user ? <TemplateEdit templateId={params.id} /> : <Login />}
+        </Route>
+        <Route path="/checklist/create-template" component={user ? CreateTemplate : Login} />
+        <Route path="/checklist/sections/:id/edit">
+          {(params) => user ? <SectionEdit sectionId={params.id} /> : <Login />}
+        </Route>
+        <Route path="/checklist/sections/:id/add-question">
+          {(params) => user ? <AddQuestion sectionId={params.id} /> : <Login />}
         </Route>
         <Route component={() => <div>404 - Page Not Found</div>} />
       </Switch>
