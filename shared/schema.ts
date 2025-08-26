@@ -421,6 +421,8 @@ export const checklistQuestions = pgTable("checklist_questions", {
   sectionId: varchar("section_id").references(() => checklistSections.id).notNull(),
   questionText: text("question_text").notNull(),
   orderIndex: integer("order_index").notNull(),
+  twScore: integer("tw_score").default(1),
+  category: text("category").default("Genel"),
   isRequired: boolean("is_required").default(true),
   allowPhoto: boolean("allow_photo").default(true),
   allowDocument: boolean("allow_document").default(true),

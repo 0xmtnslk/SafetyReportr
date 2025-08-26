@@ -166,22 +166,6 @@ export default function TemplateDetail({ templateId }: TemplateDetailProps) {
         </CardContent>
       </Card>
 
-      {/* Debug Info */}
-      {isAdmin && (
-        <Card className="mb-4 bg-yellow-50 border-yellow-200">
-          <CardContent className="py-4">
-            <p className="text-sm text-yellow-800">
-              <strong>Debug Info:</strong> Sections: {sections.length}, Questions: {Object.keys(questionsData).length}, Loading: {questionsLoading ? 'Yes' : 'No'}
-            </p>
-            <details className="mt-2">
-              <summary className="text-sm text-yellow-700 cursor-pointer">Questions Data</summary>
-              <pre className="text-xs mt-2 bg-white p-2 rounded border overflow-auto max-h-32">
-                {JSON.stringify(questionsData, null, 2)}
-              </pre>
-            </details>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Sections */}
       <div className="space-y-6">
@@ -241,15 +225,16 @@ export default function TemplateDetail({ templateId }: TemplateDetailProps) {
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
                             <h4 className="font-medium mb-1">
-                              {qIndex + 1}. {question.text}
+                              {qIndex + 1}. {question.questionText || question.text || 'Soru metni yok'}
                             </h4>
                             {question.description && (
                               <p className="text-sm text-gray-600">{question.description}</p>
                             )}
                             <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
-                              <span>TW Skoru: {question.tw_score}</span>
-                              <span>Kategori: {question.category}</span>
-                              {question.requires_file && (
+                              <span>TW Skoru: {question.twScore || question.tw_score || 'Belirtilmemiş'}</span>
+                              <span>Kategori: {question.category || 'Genel'}</span>
+                              <span>Sıra: {question.orderIndex}</span>
+                              {(question.allowPhoto || question.allowDocument || question.requires_file) && (
                                 <Badge variant="outline" className="text-xs">
                                   Dosya Gerekli
                                 </Badge>

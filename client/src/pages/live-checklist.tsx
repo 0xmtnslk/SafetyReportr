@@ -17,13 +17,16 @@ import { ObjectUploader } from "@/components/ObjectUploader";
 
 interface Question {
   id: string;
-  text: string;
+  text?: string;
+  questionText?: string;
   description?: string;
-  category: string;
-  tw_score: number;
+  category?: string;
+  tw_score?: number;
+  twScore?: number;
   requires_file?: boolean;
   allowPhoto?: boolean;
   allowDocument?: boolean;
+  orderIndex?: number;
 }
 
 interface Section {
@@ -179,10 +182,11 @@ export default function LiveChecklist({ templateId = "7c39d8c0-7ff5-47ad-84f0-cd
   };
 
   const calculateScore = (answer: Answer, question: Question) => {
+    const twScore = question.twScore || question.tw_score || 1;
     switch (answer.answer) {
-      case 'compliant': return question.tw_score * 1;
-      case 'partially_compliant': return question.tw_score * 0.5;
-      case 'non_compliant': return question.tw_score * -1;
+      case 'compliant': return twScore * 1;
+      case 'partially_compliant': return twScore * 0.5;
+      case 'non_compliant': return twScore * -1;
       case 'not_applicable': return 0;
       default: return 0;
     }
@@ -201,7 +205,7 @@ export default function LiveChecklist({ templateId = "7c39d8c0-7ff5-47ad-84f0-cd
     return allQuestions.reduce((total, question) => {
       const answer = answers[question.id];
       if (answer?.answer === 'not_applicable') return total;
-      return total + question.tw_score;
+      return total + (question.twScore || question.tw_score || 1);
     }, 0);
   };
 
@@ -356,11 +360,11 @@ export default function LiveChecklist({ templateId = "7c39d8c0-7ff5-47ad-84f0-cd
                       <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm font-medium">
                         {index + 1}
                       </span>
-                      <span>{question.text}</span>
+                      <span>{question.questionText || question.text || 'Soru metni yok'}</span>
                     </CardTitle>
                     <div className="flex items-center gap-4 text-sm text-gray-600">
-                      <Badge variant="outline">{question.category}</Badge>
-                      <span>TW Skoru: {question.tw_score}</span>
+                      <Badge variant="outline">{question.category || 'Genel'}</Badge>
+                      <span>TW Skoru: {question.twScore || question.tw_score || 'Belirtilmemiş'}</span>
                       <span>Puan: {score}</span>
                       {(question.allowPhoto || question.allowDocument) && (
                         <Badge className="bg-orange-100 text-orange-800">
