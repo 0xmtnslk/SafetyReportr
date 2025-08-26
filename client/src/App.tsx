@@ -17,6 +17,7 @@ import ChecklistDashboard from "@/pages/checklist";
 import CreateInspection from "@/pages/create-inspection";
 import InspectionDetail from "@/pages/inspection-detail";
 import CreateAssignment from "@/pages/create-assignment";
+import TemplateDetail from "@/pages/template-detail";
 import Navigation from "@/components/navigation";
 import OfflineIndicator from "@/components/offline-indicator";
 import { useOfflineSync } from "./hooks/useOfflineSync";
@@ -79,6 +80,9 @@ function Router() {
             <Route path="/checklist/inspections/:id">
               {(params) => <InspectionDetail inspectionId={params.id} />}
             </Route>
+            <Route path="/checklist/templates/:id">
+              {(params) => <TemplateDetail templateId={params.id} />}
+            </Route>
             <Route component={() => <div className="p-8"><div>404 - Page Not Found</div></div>} />
           </Switch>
         </Navigation>
@@ -107,6 +111,9 @@ function Router() {
         <Route path="/checklist/create-inspection" component={user ? CreateInspection : Login} />
         <Route path="/checklist/inspections/:id">
           {(params) => user ? <InspectionDetail inspectionId={params.id} /> : <Login />}
+        </Route>
+        <Route path="/checklist/templates/:id">
+          {(params) => user ? <TemplateDetail templateId={params.id} /> : <Login />}
         </Route>
         <Route component={() => <div>404 - Page Not Found</div>} />
       </Switch>

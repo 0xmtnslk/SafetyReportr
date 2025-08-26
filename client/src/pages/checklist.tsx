@@ -3,8 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
-  CheckSquare, Calendar, Clock, AlertTriangle, CheckCircle, 
-  Settings, MapPin, User, Eye, Play, Plus
+  CheckSquare, FileText, Eye, Edit, Plus, Settings, Copy
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
@@ -18,85 +17,12 @@ export default function ChecklistDashboard() {
   const userInfo = JSON.parse(localStorage.getItem('user') || '{}');
   const isAdmin = ['central_admin', 'location_manager'].includes(userInfo?.role);
 
-  // Fetch assignments based on user role
-  const { data: assignments = [], isLoading: assignmentsLoading } = useQuery<any[]>({
-    queryKey: isAdmin 
-      ? ["/api/checklist/assignments"] 
-      : ["/api/checklist/assignments/hospital", userInfo?.locationId],
-    enabled: !!userInfo?.locationId || isAdmin,
+  // Fetch all templates
+  const { data: templates = [], isLoading: templatesLoading } = useQuery<any[]>({
+    queryKey: ["/api/checklist/templates"],
   });
 
-  // Fetch hospital information
-  const { data: hospitals = [] } = useQuery<any[]>({
-    queryKey: ["/api/admin/hospitals"],
-  });
-
-  // Create inspection from assignment mutation
-  const createInspectionFromAssignment = useMutation({
-    mutationFn: async (assignmentId: string) => {
-      const response = await fetch(`/api/checklist/assignments/${assignmentId}/create-inspection`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
-      
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Denetim oluşturulamadı");
-      }
-      
-      return response.json();
-    },
-    onSuccess: (inspection) => {
-      queryClient.invalidateQueries({ 
-        queryKey: isAdmin 
-          ? ["/api/checklist/assignments"] 
-          : ["/api/checklist/assignments/hospital", userInfo?.locationId]
-      });
-      toast({
-        title: "Denetim Oluşturuldu",
-        description: "Kontrol listesi formuna yönlendiriliyorsunuz...",
-      });
-      setLocation(`/checklist/inspections/${inspection.id}`);
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Hata",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      'assigned': { color: 'bg-blue-100 text-blue-800', text: 'Atanmış' },
-      'in_progress': { color: 'bg-yellow-100 text-yellow-800', text: 'Devam Ediyor' },
-      'completed': { color: 'bg-green-100 text-green-800', text: 'Tamamlandı' },
-      'overdue': { color: 'bg-red-100 text-red-800', text: 'Süresi Geçmiş' }
-    };
-    
-    return statusConfig[status as keyof typeof statusConfig] || statusConfig.assigned;
-  };
-
-  const getPriorityBadge = (priority: string) => {
-    const priorityConfig = {
-      'low': { color: 'bg-gray-100 text-gray-800', text: 'Düşük' },
-      'medium': { color: 'bg-blue-100 text-blue-800', text: 'Orta' },
-      'high': { color: 'bg-red-100 text-red-800', text: 'Yüksek' }
-    };
-    
-    return priorityConfig[priority as keyof typeof priorityConfig] || priorityConfig.medium;
-  };
-
-  const getHospitalName = (hospitalId: string) => {
-    const hospital = hospitals.find(h => h.id === hospitalId);
-    return hospital?.name || 'Bilinmiyor';
-  };
-
-  if (assignmentsLoading) {
+  if (templatesLoading) {
     return (
       <div className="container mx-auto p-6">
         <div className="flex items-center justify-center min-h-[400px]">
@@ -112,128 +38,138 @@ export default function ChecklistDashboard() {
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">
-            {isAdmin ? 'Kontrol Listesi Yönetimi' : 'Atanmış Kontrol Listeleri'}
+            İSG Kontrol Listesi Şablonları
           </h1>
           <p className="text-gray-600 mt-2">
-            {isAdmin 
-              ? 'Hastanelere atanan kontrol listelerini görüntüleyin ve yönetin' 
-              : 'Size atanan kontrol listelerini tamamlayın'
-            }
+            Kontrol listesi şablonlarını görüntüleyin, düzenleyin ve yeni şablonlar oluşturun
           </p>
         </div>
         
-        {isAdmin && (
-          <Button 
-            onClick={() => setLocation('/admin/create-assignment')}
-            className="bg-primary hover:bg-primary/90"
-          >
-            <Plus size={20} className="mr-2" />
-            Yeni Atama Oluştur
-          </Button>
-        )}
+        <Button 
+          onClick={() => setLocation('/checklist/create-template')}
+          className="bg-primary hover:bg-primary/90"
+        >
+          <Plus size={20} className="mr-2" />
+          Yeni Şablon Oluştur
+        </Button>
       </div>
 
-      {/* Assignments Grid */}
-      {assignments.length === 0 ? (
+      {/* Templates Grid */}
+      {templates.length === 0 ? (
         <Card>
           <CardContent className="text-center py-12">
-            <CheckSquare size={64} className="mx-auto text-gray-400 mb-4" />
+            <FileText size={64} className="mx-auto text-gray-400 mb-4" />
             <h3 className="text-xl font-semibold text-gray-900 mb-2">
-              {isAdmin ? 'Henüz Atama Yok' : 'Size Atanmış Kontrol Listesi Yok'}
+              Henüz Şablon Yok
             </h3>
             <p className="text-gray-600 mb-6">
-              {isAdmin 
-                ? 'Hastanelere kontrol listesi atamak için yeni atama oluşturun.' 
-                : 'Şu anda size atanmış bir kontrol listesi bulunmuyor.'
-              }
+              İlk kontrol listesi şablonunuzu oluşturun.
             </p>
-            {isAdmin && (
-              <Button onClick={() => setLocation('/admin/create-assignment')}>
-                <Plus size={20} className="mr-2" />
-                İlk Atamayı Oluştur
-              </Button>
-            )}
+            <Button onClick={() => setLocation('/checklist/create-template')}>
+              <Plus size={20} className="mr-2" />
+              İlk Şablonu Oluştur
+            </Button>
           </CardContent>
         </Card>
       ) : (
         <div className="grid gap-6">
-          {assignments.map((assignment) => {
-            const status = getStatusBadge(assignment.status);
-            const priority = getPriorityBadge(assignment.priority);
-            const isOverdue = new Date(assignment.due_date) < new Date() && assignment.status !== 'completed';
-            
-            return (
-              <Card key={assignment.id} className="hover:shadow-md transition-shadow">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <CardTitle className="flex items-center gap-2 mb-2">
-                        <CheckSquare size={20} />
-                        {assignment.title}
-                      </CardTitle>
-                      {assignment.description && (
-                        <p className="text-gray-600 text-sm">{assignment.description}</p>
-                      )}
+          {templates.map((template) => (
+            <Card key={template.id} className="hover:shadow-md transition-shadow">
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <CardTitle className="flex items-center gap-3 mb-3">
+                      <div className="bg-primary/10 p-2 rounded-lg">
+                        <CheckSquare size={24} className="text-primary" />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-semibold">{template.name}</h3>
+                        <p className="text-sm text-gray-500 font-normal">
+                          Oluşturulma: {new Date(template.created_at).toLocaleDateString('tr-TR')}
+                        </p>
+                      </div>
+                    </CardTitle>
+                    {template.description && (
+                      <p className="text-gray-600 text-sm ml-14">{template.description}</p>
+                    )}
+                  </div>
+                  <Badge className="bg-blue-100 text-blue-800">
+                    {template.type === 'hospital_technical' ? 'Hastane Teknik' : template.type}
+                  </Badge>
+                </div>
+              </CardHeader>
+              
+              <CardContent>
+                {/* Sections Preview */}
+                <div className="bg-gray-50 p-4 rounded-lg mb-4">
+                  <h4 className="font-semibold mb-3">Kontrol Alanları:</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                      <span className="text-sm">ADP (Yangın Algılama) - 10 madde</span>
                     </div>
-                    <div className="flex gap-2">
-                      <Badge className={priority.color}>{priority.text}</Badge>
-                      <Badge className={isOverdue ? 'bg-red-100 text-red-800' : status.color}>
-                        {isOverdue ? 'Süresi Geçmiş' : status.text}
-                      </Badge>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                      <span className="text-sm">UPS (Kesintisiz Güç) - 10 madde</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <span className="text-sm">Jeneratör Sistemleri - 10 madde</span>
                     </div>
                   </div>
-                </CardHeader>
+                </div>
+
+                {/* Features */}
+                <div className="mb-4">
+                  <h4 className="font-semibold mb-2">Özellikler:</h4>
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="outline" className="text-xs">TW Skorları (1-10)</Badge>
+                    <Badge variant="outline" className="text-xs">Excel Formülleri</Badge>
+                    <Badge variant="outline" className="text-xs">Fotoğraf/Doküman</Badge>
+                    <Badge variant="outline" className="text-xs">Dinamik Sorular (+)</Badge>
+                    <Badge variant="outline" className="text-xs">Harf Notları (A-E)</Badge>
+                  </div>
+                </div>
                 
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <MapPin size={16} />
-                      <span>{getHospitalName(assignment.assigned_to_hospital)}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <Calendar size={16} />
-                      <span>Son Tarih: {new Date(assignment.due_date).toLocaleDateString('tr-TR')}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <Clock size={16} />
-                      <span>
-                        Oluşturulma: {new Date(assignment.created_at).toLocaleDateString('tr-TR')}
-                      </span>
-                    </div>
-                  </div>
+                {/* Action Buttons */}
+                <div className="flex gap-2 flex-wrap">
+                  <Button
+                    onClick={() => setLocation(`/checklist/templates/${template.id}`)}
+                    className="bg-primary hover:bg-primary/90"
+                  >
+                    <Eye size={16} className="mr-2" />
+                    Şablonu Görüntüle
+                  </Button>
                   
-                  {assignment.notes && (
-                    <div className="bg-gray-50 p-3 rounded-lg mb-4">
-                      <p className="text-sm text-gray-700">{assignment.notes}</p>
-                    </div>
+                  <Button
+                    variant="outline"
+                    onClick={() => setLocation(`/checklist/templates/${template.id}/edit`)}
+                  >
+                    <Edit size={16} className="mr-2" />
+                    Düzenle
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    onClick={() => setLocation(`/checklist/templates/${template.id}/copy`)}
+                  >
+                    <Copy size={16} className="mr-2" />
+                    Kopyala
+                  </Button>
+
+                  {isAdmin && (
+                    <Button
+                      variant="outline"
+                      onClick={() => setLocation(`/checklist/templates/${template.id}/settings`)}
+                    >
+                      <Settings size={16} className="mr-2" />
+                      Ayarlar
+                    </Button>
                   )}
-                  
-                  <div className="flex gap-2">
-                    {assignment.status === 'assigned' && !isAdmin && (
-                      <Button
-                        onClick={() => createInspectionFromAssignment.mutate(assignment.id)}
-                        disabled={createInspectionFromAssignment.isPending}
-                        className="bg-primary hover:bg-primary/90"
-                      >
-                        <Play size={16} className="mr-2" />
-                        {createInspectionFromAssignment.isPending ? 'Başlatılıyor...' : 'Denetimi Başlat'}
-                      </Button>
-                    )}
-                    
-                    {isAdmin && (
-                      <Button
-                        variant="outline"
-                        onClick={() => setLocation(`/checklist/assignments/${assignment.id}`)}
-                      >
-                        <Eye size={16} className="mr-2" />
-                        Detayları Görüntüle
-                      </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       )}
     </div>
