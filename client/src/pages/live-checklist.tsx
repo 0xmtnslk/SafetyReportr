@@ -10,6 +10,7 @@ import { Progress } from "@/components/ui/progress";
 import { 
   CheckSquare, Save, ArrowLeft, Camera, FileText, AlertTriangle, Plus, ChevronRight, ChevronLeft, X, ZoomIn, Eye
 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
@@ -53,7 +54,6 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
   const [location, setLocation] = useLocation();
   const { toast } = useToast();
   const { user } = useAuth();
-  const [imageModalOpen, setImageModalOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   
   // Get assignmentId from URL params
@@ -521,7 +521,6 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
                           className="w-12 h-12 bg-gray-100 rounded border cursor-pointer overflow-hidden hover:border-blue-400 transition-colors"
                           onClick={() => {
                             setSelectedImage(fileUrl);
-                            setImageModalOpen(true);
                           }}
                         >
                           {fileUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
@@ -611,41 +610,28 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
         </CardContent>
       </Card>
 
-      {/* Image Modal */}
-      {imageModalOpen && selectedImage && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
-          onClick={() => {
-            setImageModalOpen(false);
-            setSelectedImage(null);
-          }}
-        >
-          <div className="relative max-w-4xl max-h-full" onClick={(e) => e.stopPropagation()}>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setImageModalOpen(false);
-                setSelectedImage(null);
-              }}
-              className="absolute -top-12 right-0 text-white hover:bg-white hover:bg-opacity-20 z-10"
-            >
-              <X size={20} />
-            </Button>
-            <img 
-              src={selectedImage} 
-              alt="Büyütülmüş görünüm"
-              className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
-              onError={(e) => {
-                console.error('Resim yüklenemedi:', selectedImage);
-                setImageModalOpen(false);
-                setSelectedImage(null);
-              }}
-              onLoad={() => console.log('Resim başarıyla yüklendi:', selectedImage)}
-            />
-          </div>
-        </div>
-      )}
+      {/* Image Modal - Using Working Dialog Component */}
+      <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] p-2">
+          <DialogHeader>
+            <DialogTitle>Fotoğraf Ön İzlemesi</DialogTitle>
+          </DialogHeader>
+          {selectedImage && (
+            <div className="flex justify-center items-center max-h-[80vh] overflow-auto">
+              <img
+                src={selectedImage}
+                alt="Tam Boyut Önizleme"
+                className="max-w-full max-h-full object-contain rounded-lg"
+                onError={(e) => {
+                  console.error('Resim yüklenemedi:', selectedImage);
+                  setSelectedImage(null);
+                }}
+                onLoad={() => console.log('Resim başarıyla yüklendi:', selectedImage)}
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
