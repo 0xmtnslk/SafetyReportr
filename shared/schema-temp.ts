@@ -140,7 +140,7 @@ export const checklistQuestions = pgTable("checklist_questions", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// NEW: Inspection Management System
+// NEW: Inspection System Tables
 export const inspections = pgTable("inspections", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   inspectionNumber: text("inspection_number").notNull().unique(), // INS-123456
@@ -221,6 +221,35 @@ export const inspectionResponses = pgTable("inspection_responses", {
   
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// PDF Template System
+export const pdfTemplates = pgTable("pdf_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull().unique(),
+  displayName: text("display_name").notNull(),
+  description: text("description"),
+  templateType: text("template_type").notNull(), // 'isg_report', 'technical_findings', 'inspection', etc.
+  version: text("version").notNull().default("1.0.0"),
+  isActive: boolean("is_active").default(true),
+  config: jsonb("config").$type<TemplateConfig>().notNull(),
+  sections: jsonb("sections").$type<TemplateSection[]>().notNull(),
+  styles: jsonb("styles").$type<TemplateStyles>().notNull(),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const pdfTemplateFields = pgTable("pdf_template_fields", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  templateId: varchar("template_id").references(() => pdfTemplates.id).notNull(),
+  fieldKey: text("field_key").notNull(), // 'reportNumber', 'findings.title', etc.
+  fieldLabel: text("field_label").notNull(), // 'Rapor Numarası', 'Bulgu Başlığı'
+  fieldType: text("field_type").notNull(), // 'text', 'date', 'image', 'table', 'list'
+  isRequired: boolean("is_required").default(false),
+  validation: jsonb("validation").$type<FieldValidation>(),
+  defaultValue: text("default_value"),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 // Insert schemas  
@@ -322,119 +351,44 @@ export const insertFindingSchema = createInsertSchema(findings).pick({
 });
 
 export const insertOfflineQueueSchema = createInsertSchema(offlineQueue).pick({
-  userId: true,
   action: true,
   entityType: true,
   entityId: true,
   data: true,
 });
 
-// Checklist insert schemas
-export const insertChecklistTemplateSchema = createInsertSchema(checklistTemplates).pick({
+export const insertPdfTemplateSchema = createInsertSchema(pdfTemplates).pick({
   name: true,
+  displayName: true,
   description: true,
-  templateNumber: true,
-  category: true,
-  type: true,
+  templateType: true,
   version: true,
   isActive: true,
+  config: true,
+  sections: true,
+  styles: true,
 });
 
-export const insertChecklistSectionSchema = createInsertSchema(checklistSections).pick({
+export const insertPdfTemplateFieldSchema = createInsertSchema(pdfTemplateFields).pick({
   templateId: true,
-  name: true,
-  description: true,
-  orderIndex: true,
-  isActive: true,
-});
-
-export const insertChecklistQuestionSchema = createInsertSchema(checklistQuestions).pick({
-  sectionId: true,
-  questionText: true,
-  orderIndex: true,
-  twScore: true,
-  category: true,
+  fieldKey: true,
+  fieldLabel: true,
+  fieldType: true,
   isRequired: true,
-  allowPhoto: true,
-  allowDocument: true,
-  isActive: true,
-}).extend({
-  twScore: z.number().min(1).max(10),
-  category: z.enum([
-    "Afet ve Acil Durum Yönetimi",
-    "Altyapı", 
-    "Emniyet",
-    "Güvenlik",
-    "Tıbbi Cihaz Yönetimi",
-    "Malzeme-Cihaz Yönetimi",
-    "Tehlikeli Madde Yönetimi",
-    "Atık Yönetimi",
-    "Yangın Güvenliği",
-    "Elektrik",
-    "Genel"
-  ]),
-});
-
-// Inspection insert schemas
-export const insertInspectionSchema = createInsertSchema(inspections).pick({
-  templateId: true,
-  title: true,
-  description: true,
-  startDate: true,
-  dueDate: true,
-  extendedDueDate: true,
-  assignmentType: true,
-  targetLocationIds: true,
-  status: true,
-  isActive: true,
-}).extend({
-  startDate: z.union([
-    z.string().transform((str) => new Date(str)),
-    z.date()
-  ]),
-  dueDate: z.union([
-    z.string().transform((str) => new Date(str)),
-    z.date()
-  ]),
-  extendedDueDate: z.union([
-    z.string().transform((str) => new Date(str)),
-    z.date()
-  ]).optional(),
-});
-
-export const insertInspectionAssignmentSchema = createInsertSchema(inspectionAssignments).pick({
-  inspectionId: true,
-  locationId: true,
-  assignedUserId: true,
-  status: true,
-  totalQuestions: true,
-  answeredQuestions: true,
-  progressPercentage: true,
-  totalPossibleScore: true,
-  actualScore: true,
-  scorePercentage: true,
-  letterGrade: true,
-  notes: true,
-});
-
-export const insertInspectionResponseSchema = createInsertSchema(inspectionResponses).pick({
-  assignmentId: true,
-  questionId: true,
-  answer: true,
-  score: true,
-  notes: true,
-  photos: true,
-  documents: true,
-}).extend({
-  answer: z.enum(["Karşılıyor", "Kısmen Karşılıyor", "Karşılamıyor", "Kapsam Dışı"]),
+  validation: true,
+  defaultValue: true,
 });
 
 // Types
-export type User = typeof users.$inferSelect;
-export type InsertUser = z.infer<typeof insertUserSchema>;
-
 export type Location = typeof locations.$inferSelect;
 export type InsertLocation = z.infer<typeof insertLocationSchema>;
+
+export type User = typeof users.$inferSelect;
+export type InsertUser = z.infer<typeof insertUserSchema>;
+export type AdminCreateUser = z.infer<typeof adminCreateUserSchema>;
+export type ChangePassword = z.infer<typeof changePasswordSchema>;
+export type ResetPasswordRequest = z.infer<typeof resetPasswordRequestSchema>;
+export type ResetPassword = z.infer<typeof resetPasswordSchema>;
 
 export type Report = typeof reports.$inferSelect;
 export type InsertReport = z.infer<typeof insertReportSchema>;
@@ -444,61 +398,3 @@ export type InsertFinding = z.infer<typeof insertFindingSchema>;
 
 export type OfflineQueueItem = typeof offlineQueue.$inferSelect;
 export type InsertOfflineQueueItem = z.infer<typeof insertOfflineQueueSchema>;
-
-// Checklist types
-export type ChecklistTemplate = typeof checklistTemplates.$inferSelect;
-export type InsertChecklistTemplate = z.infer<typeof insertChecklistTemplateSchema>;
-
-export type ChecklistSection = typeof checklistSections.$inferSelect;
-export type InsertChecklistSection = z.infer<typeof insertChecklistSectionSchema>;
-
-export type ChecklistQuestion = typeof checklistQuestions.$inferSelect;
-export type InsertChecklistQuestion = z.infer<typeof insertChecklistQuestionSchema>;
-
-// Inspection types
-export type Inspection = typeof inspections.$inferSelect;
-export type InsertInspection = z.infer<typeof insertInspectionSchema>;
-
-export type InspectionAssignment = typeof inspectionAssignments.$inferSelect;
-export type InsertInspectionAssignment = z.infer<typeof insertInspectionAssignmentSchema>;
-
-export type InspectionResponse = typeof inspectionResponses.$inferSelect;
-export type InsertInspectionResponse = z.infer<typeof insertInspectionResponseSchema>;
-
-// Utility functions
-export const calculateQuestionScore = (evaluation: string, twScore: number): number => {
-  if (!evaluation) return 0;
-  if (evaluation === "Kapsam Dışı") return 0; // NA - not counted
-  if (evaluation === "Karşılamıyor") return -1 * twScore;
-  if (evaluation === "Kısmen Karşılıyor") return 0.5 * twScore;
-  if (evaluation === "Karşılıyor") return 1 * twScore;
-  return 0;
-};
-
-export const calculateLetterGrade = (percentage: number): string => {
-  if (percentage >= 90) return "A";
-  if (percentage >= 75) return "B";
-  if (percentage >= 50) return "C";
-  if (percentage >= 25) return "D";
-  if (percentage >= 0) return "E";
-  return "";
-};
-
-export const CHECKLIST_CATEGORIES = [
-  "Afet ve Acil Durum Yönetimi",
-  "Altyapı", 
-  "Emniyet",
-  "Güvenlik",
-  "Tıbbi Cihaz Yönetimi",
-  "Malzeme-Cihaz Yönetimi",
-  "Tehlikeli Madde Yönetimi",
-  "Atık Yönetimi",
-  "Yangın Güvenliği"
-] as const;
-
-export const EVALUATION_OPTIONS = [
-  "Karşılıyor",
-  "Kısmen Karşılıyor", 
-  "Karşılamıyor",
-  "Kapsam Dışı"
-] as const;

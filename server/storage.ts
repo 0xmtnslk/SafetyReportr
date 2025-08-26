@@ -1,12 +1,12 @@
 import { 
   reports, findings, users, offlineQueue, locations,
-  checklistTemplates, checklistSections, checklistQuestions, checklistInspections, checklistAnswers, checklistAssignments, checklistSubmissions,
+  checklistTemplates, checklistSections, checklistQuestions, inspections, inspectionAssignments, inspectionResponses,
   type User, type InsertUser, type Report, type InsertReport, type Finding, type InsertFinding, 
   type OfflineQueueItem, type InsertOfflineQueueItem, type Location, type InsertLocation,
   type ChecklistTemplate, type InsertChecklistTemplate, type ChecklistSection, type InsertChecklistSection,
-  type ChecklistQuestion, type InsertChecklistQuestion, type ChecklistInspection, type InsertChecklistInspection,
-  type ChecklistAnswer, type InsertChecklistAnswer, type ChecklistAssignment, type InsertChecklistAssignment,
-  type ChecklistSubmission, type InsertChecklistSubmission, calculateQuestionScore, calculateLetterGrade
+  type ChecklistQuestion, type InsertChecklistQuestion, 
+  type Inspection, type InsertInspection, type InspectionAssignment, type InsertInspectionAssignment,
+  type InspectionResponse, type InsertInspectionResponse, calculateQuestionScore, calculateLetterGrade
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, inArray, sql, gt, or, isNull } from "drizzle-orm";
@@ -160,6 +160,32 @@ export interface IStorage {
   // Submission system
   createChecklistSubmission(submission: InsertChecklistSubmission & { submittedBy: string }): Promise<ChecklistSubmission>;
   getAssignmentSubmissions(assignmentId: string): Promise<ChecklistSubmission[]>;
+  
+  // NEW: Inspection Management System
+  // Inspection operations
+  getAllInspections(): Promise<Inspection[]>;
+  getInspection(id: string): Promise<Inspection | undefined>;
+  createInspection(inspection: InsertInspection & { createdBy: string }): Promise<Inspection>;
+  updateInspection(id: string, inspection: Partial<InsertInspection>): Promise<Inspection>;
+  deleteInspection(id: string): Promise<boolean>;
+  
+  // Assignment operations
+  getInspectionAssignments(inspectionId: string): Promise<InspectionAssignment[]>;
+  getInspectionAssignment(id: string): Promise<InspectionAssignment | undefined>;
+  getUserAssignments(userId: string): Promise<InspectionAssignment[]>;
+  createInspectionAssignment(assignment: InsertInspectionAssignment): Promise<InspectionAssignment>;
+  updateInspectionAssignment(id: string, assignment: Partial<InsertInspectionAssignment>): Promise<InspectionAssignment>;
+  
+  // Response operations
+  getInspectionResponses(assignmentId: string): Promise<InspectionResponse[]>;
+  getInspectionResponse(assignmentId: string, questionId: string): Promise<InspectionResponse | undefined>;
+  createInspectionResponse(response: InsertInspectionResponse): Promise<InspectionResponse>;
+  updateInspectionResponse(id: string, response: Partial<InsertInspectionResponse>): Promise<InspectionResponse>;
+  
+  // Assignment workflow
+  startInspection(assignmentId: string, userId: string): Promise<boolean>;
+  submitInspectionResponse(assignmentId: string, questionId: string, response: InsertInspectionResponse): Promise<InspectionResponse>;
+  completeInspection(assignmentId: string, userId: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1108,6 +1134,205 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(checklistSubmissions)
       .where(eq(checklistSubmissions.assignmentId, assignmentId))
       .orderBy(desc(checklistSubmissions.submittedAt));
+  }
+  
+  // NEW: Inspection Management System Implementation
+  
+  // Inspection operations
+  async getAllInspections(): Promise<Inspection[]> {
+    return await db
+      .select()
+      .from(inspections)
+      .where(eq(inspections.isActive, true))
+      .orderBy(desc(inspections.createdAt));
+  }
+
+  async getInspection(id: string): Promise<Inspection | undefined> {
+    const [inspection] = await db
+      .select()
+      .from(inspections)
+      .where(and(eq(inspections.id, id), eq(inspections.isActive, true)));
+    return inspection;
+  }
+
+  async createInspection(insertInspection: InsertInspection & { createdBy: string }): Promise<Inspection> {
+    // Generate inspection number: INS-YYYYMMDD-XXXX
+    const date = new Date();
+    const dateStr = date.toISOString().slice(0, 10).replace(/-/g, '');
+    const randomNum = Math.floor(Math.random() * 9999).toString().padStart(4, '0');
+    const inspectionNumber = `INS-${dateStr}-${randomNum}`;
+
+    const [inspection] = await db
+      .insert(inspections)
+      .values({
+        ...insertInspection,
+        inspectionNumber,
+        createdBy: insertInspection.createdBy
+      })
+      .returning();
+    return inspection;
+  }
+
+  async updateInspection(id: string, inspection: Partial<InsertInspection>): Promise<Inspection> {
+    const [updated] = await db
+      .update(inspections)
+      .set({ ...inspection, updatedAt: new Date() })
+      .where(eq(inspections.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteInspection(id: string): Promise<boolean> {
+    const result = await db
+      .update(inspections)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(eq(inspections.id, id));
+    return result.rowCount > 0;
+  }
+
+  // Assignment operations
+  async getInspectionAssignments(inspectionId: string): Promise<InspectionAssignment[]> {
+    return await db
+      .select()
+      .from(inspectionAssignments)
+      .where(eq(inspectionAssignments.inspectionId, inspectionId))
+      .orderBy(desc(inspectionAssignments.assignedAt));
+  }
+
+  async getInspectionAssignment(id: string): Promise<InspectionAssignment | undefined> {
+    const [assignment] = await db
+      .select()
+      .from(inspectionAssignments)
+      .where(eq(inspectionAssignments.id, id));
+    return assignment;
+  }
+
+  async getUserAssignments(userId: string): Promise<InspectionAssignment[]> {
+    return await db
+      .select()
+      .from(inspectionAssignments)
+      .where(eq(inspectionAssignments.assignedUserId, userId))
+      .orderBy(desc(inspectionAssignments.assignedAt));
+  }
+
+  async createInspectionAssignment(assignment: InsertInspectionAssignment): Promise<InspectionAssignment> {
+    const [created] = await db
+      .insert(inspectionAssignments)
+      .values(assignment)
+      .returning();
+    return created;
+  }
+
+  async updateInspectionAssignment(id: string, assignment: Partial<InsertInspectionAssignment>): Promise<InspectionAssignment> {
+    const [updated] = await db
+      .update(inspectionAssignments)
+      .set({ ...assignment, updatedAt: new Date() })
+      .where(eq(inspectionAssignments.id, id))
+      .returning();
+    return updated;
+  }
+
+  // Response operations
+  async getInspectionResponses(assignmentId: string): Promise<InspectionResponse[]> {
+    return await db
+      .select()
+      .from(inspectionResponses)
+      .where(eq(inspectionResponses.assignmentId, assignmentId))
+      .orderBy(desc(inspectionResponses.respondedAt));
+  }
+
+  async getInspectionResponse(assignmentId: string, questionId: string): Promise<InspectionResponse | undefined> {
+    const [response] = await db
+      .select()
+      .from(inspectionResponses)
+      .where(
+        and(
+          eq(inspectionResponses.assignmentId, assignmentId),
+          eq(inspectionResponses.questionId, questionId)
+        )
+      );
+    return response;
+  }
+
+  async createInspectionResponse(response: InsertInspectionResponse): Promise<InspectionResponse> {
+    const [created] = await db
+      .insert(inspectionResponses)
+      .values(response)
+      .returning();
+    return created;
+  }
+
+  async updateInspectionResponse(id: string, response: Partial<InsertInspectionResponse>): Promise<InspectionResponse> {
+    const [updated] = await db
+      .update(inspectionResponses)
+      .set({ ...response, updatedAt: new Date() })
+      .where(eq(inspectionResponses.id, id))
+      .returning();
+    return updated;
+  }
+
+  // Assignment workflow
+  async startInspection(assignmentId: string, userId: string): Promise<boolean> {
+    const result = await db
+      .update(inspectionAssignments)
+      .set({
+        status: 'in_progress',
+        startedAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(
+        and(
+          eq(inspectionAssignments.id, assignmentId),
+          eq(inspectionAssignments.assignedUserId, userId)
+        )
+      );
+    return result.rowCount > 0;
+  }
+
+  async submitInspectionResponse(assignmentId: string, questionId: string, response: InsertInspectionResponse): Promise<InspectionResponse> {
+    // Check if response already exists
+    const existing = await this.getInspectionResponse(assignmentId, questionId);
+    
+    if (existing) {
+      // Update existing response
+      return await this.updateInspectionResponse(existing.id, response);
+    } else {
+      // Create new response
+      return await this.createInspectionResponse({
+        ...response,
+        assignmentId,
+        questionId
+      });
+    }
+  }
+
+  async completeInspection(assignmentId: string, userId: string): Promise<boolean> {
+    // Calculate final scores
+    const responses = await this.getInspectionResponses(assignmentId);
+    const totalScore = responses.reduce((sum, resp) => sum + (resp.score || 0), 0);
+    const maxPossibleScore = responses.length * 10; // Assuming max TW score is 10
+    const scorePercentage = maxPossibleScore > 0 ? Math.round((totalScore / maxPossibleScore) * 100) : 0;
+    const letterGrade = calculateLetterGrade(scorePercentage);
+
+    const result = await db
+      .update(inspectionAssignments)
+      .set({
+        status: 'completed',
+        completedAt: new Date(),
+        answeredQuestions: responses.length,
+        actualScore: totalScore,
+        scorePercentage,
+        letterGrade,
+        progressPercentage: 100,
+        updatedAt: new Date()
+      })
+      .where(
+        and(
+          eq(inspectionAssignments.id, assignmentId),
+          eq(inspectionAssignments.assignedUserId, userId)
+        )
+      );
+    return result.rowCount > 0;
   }
 }
 

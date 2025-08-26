@@ -16,10 +16,9 @@ import {
   insertChecklistTemplateSchema,
   insertChecklistSectionSchema,
   insertChecklistQuestionSchema,
-  insertChecklistInspectionSchema,
-  insertChecklistAnswerSchema,
-  insertChecklistAssignmentSchema,
-  insertChecklistSubmissionSchema,
+  insertInspectionSchema,
+  insertInspectionAssignmentSchema,
+  insertInspectionResponseSchema,
   CHECKLIST_CATEGORIES,
   EVALUATION_OPTIONS,
   Location
@@ -1700,6 +1699,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: error.errors });
       }
       res.status(500).json({ error: "Error creating checklist submission" });
+    }
+  });
+
+  // NEW: Inspection Management System Routes
+
+  // Get all inspections (Admin only)
+  app.get('/api/inspections', authenticateToken, requireCentralAdmin, async (req: Request, res: Response) => {
+    try {
+      const inspections = await storage.getAllInspections();
+      res.json(inspections);
+    } catch (error) {
+      console.error('Error fetching inspections:', error);
+      res.status(500).json({ error: 'Error fetching inspections' });
+    }
+  });
+
+  // Create new inspection (Central Admin only)
+  app.post('/api/inspections', authenticateToken, requireCentralAdmin, async (req: Request, res: Response) => {
+    try {
+      const validatedData = insertInspectionSchema.parse(req.body);
+      const user = (req as any).user;
+      const inspection = await storage.createInspection({
+        ...validatedData,
+        createdBy: user.id
+      });
+      
+      res.status(201).json(inspection);
+    } catch (error) {
+      console.error('Error creating inspection:', error);
+      res.status(500).json({ error: 'Error creating inspection' });
+    }
+  });
+
+  // Get user's assignments (for safety specialists)
+  app.get('/api/user/assignments', authenticateToken, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      const assignments = await storage.getUserAssignments(user.id);
+      res.json(assignments);
+    } catch (error) {
+      console.error('Error fetching user assignments:', error);
+      res.status(500).json({ error: 'Error fetching user assignments' });
+    }
+  });
+
+  // Start inspection (for assigned user)
+  app.post('/api/assignments/:id/start', authenticateToken, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      const success = await storage.startInspection(req.params.id, user.id);
+      if (success) {
+        res.json({ message: 'Inspection started successfully' });
+      } else {
+        res.status(400).json({ error: 'Cannot start inspection' });
+      }
+    } catch (error) {
+      console.error('Error starting inspection:', error);
+      res.status(500).json({ error: 'Error starting inspection' });
+    }
+  });
+
+  // Submit response to a question
+  app.post('/api/assignments/:assignmentId/questions/:questionId/response', authenticateToken, async (req: Request, res: Response) => {
+    try {
+      const validatedData = insertInspectionResponseSchema.parse(req.body);
+      const user = (req as any).user;
+      
+      const response = await storage.submitInspectionResponse(
+        req.params.assignmentId,
+        req.params.questionId,
+        {
+          ...validatedData,
+          respondedBy: user.id
+        }
+      );
+      
+      res.json(response);
+    } catch (error) {
+      console.error('Error submitting inspection response:', error);
+      res.status(500).json({ error: 'Error submitting inspection response' });
     }
   });
 

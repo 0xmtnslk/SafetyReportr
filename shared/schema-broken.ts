@@ -140,7 +140,7 @@ export const checklistQuestions = pgTable("checklist_questions", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// NEW: Inspection Management System
+// NEW: Inspection System Tables
 export const inspections = pgTable("inspections", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   inspectionNumber: text("inspection_number").notNull().unique(), // INS-123456
@@ -221,6 +221,35 @@ export const inspectionResponses = pgTable("inspection_responses", {
   
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// PDF Template System
+export const pdfTemplates = pgTable("pdf_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull().unique(),
+  displayName: text("display_name").notNull(),
+  description: text("description"),
+  templateType: text("template_type").notNull(), // 'isg_report', 'technical_findings', 'inspection', etc.
+  version: text("version").notNull().default("1.0.0"),
+  isActive: boolean("is_active").default(true),
+  config: jsonb("config").$type<TemplateConfig>().notNull(),
+  sections: jsonb("sections").$type<TemplateSection[]>().notNull(),
+  styles: jsonb("styles").$type<TemplateStyles>().notNull(),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const pdfTemplateFields = pgTable("pdf_template_fields", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  templateId: varchar("template_id").references(() => pdfTemplates.id).notNull(),
+  fieldKey: text("field_key").notNull(), // 'reportNumber', 'findings.title', etc.
+  fieldLabel: text("field_label").notNull(), // 'Rapor Numarası', 'Bulgu Başlığı'
+  fieldType: text("field_type").notNull(), // 'text', 'date', 'image', 'table', 'list'
+  isRequired: boolean("is_required").default(false),
+  validation: jsonb("validation").$type<FieldValidation>(),
+  defaultValue: text("default_value"),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 // Insert schemas  
@@ -322,57 +351,254 @@ export const insertFindingSchema = createInsertSchema(findings).pick({
 });
 
 export const insertOfflineQueueSchema = createInsertSchema(offlineQueue).pick({
-  userId: true,
   action: true,
   entityType: true,
   entityId: true,
   data: true,
 });
 
-// Checklist insert schemas
-export const insertChecklistTemplateSchema = createInsertSchema(checklistTemplates).pick({
+export const insertPdfTemplateSchema = createInsertSchema(pdfTemplates).pick({
   name: true,
+  displayName: true,
   description: true,
-  templateNumber: true,
-  category: true,
-  type: true,
+  templateType: true,
   version: true,
   isActive: true,
+  config: true,
+  sections: true,
+  styles: true,
 });
 
-export const insertChecklistSectionSchema = createInsertSchema(checklistSections).pick({
+export const insertPdfTemplateFieldSchema = createInsertSchema(pdfTemplateFields).pick({
   templateId: true,
-  name: true,
-  description: true,
-  orderIndex: true,
-  isActive: true,
+  fieldKey: true,
+  fieldLabel: true,
+  fieldType: true,
+  isRequired: true,
+  validation: true,
+  defaultValue: true,
 });
 
-export const insertChecklistQuestionSchema = createInsertSchema(checklistQuestions).pick({
-  sectionId: true,
-  questionText: true,
-  orderIndex: true,
-  twScore: true,
-  category: true,
-  isRequired: true,
-  allowPhoto: true,
-  allowDocument: true,
-  isActive: true,
-}).extend({
-  twScore: z.number().min(1).max(10),
-  category: z.enum([
-    "Afet ve Acil Durum Yönetimi",
-    "Altyapı", 
-    "Emniyet",
-    "Güvenlik",
-    "Tıbbi Cihaz Yönetimi",
-    "Malzeme-Cihaz Yönetimi",
-    "Tehlikeli Madde Yönetimi",
-    "Atık Yönetimi",
-    "Yangın Güvenliği",
-    "Elektrik",
-    "Genel"
-  ]),
+// Types
+export type Location = typeof locations.$inferSelect;
+export type InsertLocation = z.infer<typeof insertLocationSchema>;
+
+export type User = typeof users.$inferSelect;
+export type InsertUser = z.infer<typeof insertUserSchema>;
+export type AdminCreateUser = z.infer<typeof adminCreateUserSchema>;
+export type ChangePassword = z.infer<typeof changePasswordSchema>;
+export type ResetPasswordRequest = z.infer<typeof resetPasswordRequestSchema>;
+export type ResetPassword = z.infer<typeof resetPasswordSchema>;
+
+export type Report = typeof reports.$inferSelect;
+export type InsertReport = z.infer<typeof insertReportSchema>;
+
+export type Finding = typeof findings.$inferSelect;
+export type InsertFinding = z.infer<typeof insertFindingSchema>;
+
+export type OfflineQueueItem = typeof offlineQueue.$inferSelect;
+export type InsertOfflineQueueItem = z.infer<typeof insertOfflineQueueSchema>;
+
+export type PdfTemplate = typeof pdfTemplates.$inferSelect;
+export type InsertPdfTemplate = z.infer<typeof insertPdfTemplateSchema>;
+
+export type PdfTemplateField = typeof pdfTemplateFields.$inferSelect;
+export type InsertPdfTemplateField = z.infer<typeof insertPdfTemplateFieldSchema>;
+
+// Checklist types
+export type ChecklistTemplate = typeof checklistTemplates.$inferSelect;
+export type InsertChecklistTemplate = z.infer<typeof insertChecklistTemplateSchema>;
+
+export type ChecklistSection = typeof checklistSections.$inferSelect;
+export type InsertChecklistSection = z.infer<typeof insertChecklistSectionSchema>;
+
+export type ChecklistQuestion = typeof checklistQuestions.$inferSelect;
+export type InsertChecklistQuestion = z.infer<typeof insertChecklistQuestionSchema>;
+
+export type ChecklistInspection = typeof checklistInspections.$inferSelect;
+export type InsertChecklistInspection = z.infer<typeof insertChecklistInspectionSchema>;
+
+export type ChecklistAnswer = typeof checklistAnswers.$inferSelect;
+export type InsertChecklistAnswer = z.infer<typeof insertChecklistAnswerSchema>;
+
+// Template Configuration Types
+export interface TemplateConfig {
+  pageSize: 'A4' | 'A3' | 'Letter';
+  orientation: 'portrait' | 'landscape';
+  margins: { top: number; right: number; bottom: number; left: number };
+  fonts: {
+    primary: string;
+    secondary?: string;
+    sizes: { [key: string]: number };
+  };
+  colors: { [key: string]: string };
+  logo?: {
+    url: string;
+    width: number;
+    height: number;
+    position: { x: number; y: number };
+  };
+}
+
+export interface TemplateSection {
+  id: string;
+  name: string;
+  type: 'header' | 'content' | 'table' | 'image' | 'footer' | 'custom';
+  position: { x: number; y: number };
+  dimensions: { width: number; height: number };
+  style: { [key: string]: any };
+  dataBinding: string; // JSON path to data field
+  components: TemplateComponent[];
+  isRepeatable?: boolean; // For arrays like findings
+  conditions?: { field: string; operator: string; value: any }[]; // Show/hide conditions
+}
+
+export interface TemplateComponent {
+  id: string;
+  type: 'text' | 'image' | 'table' | 'line' | 'rectangle' | 'chart';
+  content: string | { [key: string]: any };
+  position: { x: number; y: number };
+  dimensions?: { width: number; height: number };
+  style: { [key: string]: any };
+  dataBinding?: string;
+  conditions?: { field: string; operator: string; value: any }[]; // Show/hide conditions
+}
+
+export interface TemplateStyles {
+  fonts: { [key: string]: { family: string; size: number; weight?: string; color?: string } };
+  colors: { [key: string]: string };
+  spacing: { [key: string]: number };
+  borders: { [key: string]: { width: number; color: string; style: string } };
+}
+
+export interface FieldValidation {
+  required?: boolean;
+  minLength?: number;
+  maxLength?: number;
+  pattern?: string;
+  format?: 'email' | 'phone' | 'date' | 'url';
+}
+
+// Checklist utility functions
+export const calculateQuestionScore = (evaluation: string, twScore: number): number => {
+  if (!evaluation) return 0;
+  if (evaluation === "Kapsam Dışı") return 0; // NA - not counted
+  if (evaluation === "Karşılamıyor") return -1 * twScore;
+  if (evaluation === "Kısmen Karşılıyor") return 0.5 * twScore;
+  if (evaluation === "Karşılıyor") return 1 * twScore;
+  return 0;
+};
+
+export const calculateLetterGrade = (percentage: number): string => {
+  if (percentage >= 90) return "A";
+  if (percentage >= 75) return "B";
+  if (percentage >= 50) return "C";
+  if (percentage >= 25) return "D";
+  if (percentage >= 0) return "E";
+  return "";
+};
+
+export const CHECKLIST_CATEGORIES = [
+  "Afet ve Acil Durum Yönetimi",
+  "Altyapı", 
+  "Emniyet",
+  "Güvenlik",
+  "Tıbbi Cihaz Yönetimi",
+  "Malzeme-Cihaz Yönetimi",
+  "Tehlikeli Madde Yönetimi",
+  "Atık Yönetimi",
+  "Yangın Güvenliği"
+] as const;
+
+export const EVALUATION_OPTIONS = [
+  "Karşılıyor",
+  "Kısmen Karşılıyor", 
+  "Karşılamıyor",
+  "Kapsam Dışı"
+] as const;
+
+// Technical Inspection Checklist System
+// New Inspection System Tables - append to main schema
+export const inspections = pgTable("inspections", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  inspectionNumber: text("inspection_number").notNull().unique(), // INS-123456
+  templateId: varchar("template_id").references(() => checklistTemplates.id).notNull(),
+  title: text("title").notNull(), // e.g., "Ocak 2025 Teknik Denetim"
+  description: text("description"),
+  
+  // Timing
+  startDate: timestamp("start_date").notNull(), // When inspection starts
+  dueDate: timestamp("due_date").notNull(), // Original deadline
+  extendedDueDate: timestamp("extended_due_date"), // Admin can extend
+  completedAt: timestamp("completed_at"), // When all responses are submitted
+  
+  // Assignment scope
+  assignmentType: text("assignment_type").notNull(), // "all_hospitals", "selected_hospitals"
+  targetLocationIds: jsonb("target_location_ids").$type<string[]>().default([]), // If selected_hospitals
+  
+  // Status tracking
+  status: text("status").notNull().default("active"), // active, completed, overdue, cancelled
+  totalAssignments: integer("total_assignments").default(0),
+  completedAssignments: integer("completed_assignments").default(0),
+  overdueAssignments: integer("overdue_assignments").default(0),
+  
+  // Admin controls
+  isActive: boolean("is_active").default(true),
+  createdBy: varchar("created_by").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const inspectionAssignments = pgTable("inspection_assignments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  inspectionId: varchar("inspection_id").references(() => inspections.id).notNull(),
+  locationId: varchar("location_id").references(() => locations.id).notNull(),
+  assignedUserId: varchar("assigned_user_id").references(() => users.id).notNull(), // Safety specialist
+  
+  // Status
+  status: text("status").notNull().default("pending"), // pending, in_progress, completed, overdue
+  assignedAt: timestamp("assigned_at").defaultNow(),
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  
+  // Progress tracking
+  totalQuestions: integer("total_questions").default(0),
+  answeredQuestions: integer("answered_questions").default(0),
+  progressPercentage: integer("progress_percentage").default(0),
+  
+  // Scoring
+  totalPossibleScore: integer("total_possible_score").default(0),
+  actualScore: integer("actual_score").default(0),
+  scorePercentage: integer("score_percentage").default(0),
+  letterGrade: text("letter_grade"), // A, B, C, D, E
+  
+  // Notes
+  notes: text("notes"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const inspectionResponses = pgTable("inspection_responses", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  assignmentId: varchar("assignment_id").references(() => inspectionAssignments.id).notNull(),
+  questionId: varchar("question_id").references(() => checklistQuestions.id).notNull(),
+  
+  // Response data
+  answer: text("answer").notNull(), // "Karşılıyor", "Kısmen Karşılıyor", "Karşılamıyor", "Kapsam Dışı"
+  score: integer("score").default(0), // Calculated score based on TW and answer
+  notes: text("notes"),
+  
+  // Attachments
+  photos: jsonb("photos").$type<string[]>().default([]), // Photo URLs
+  documents: jsonb("documents").$type<string[]>().default([]), // Document URLs
+  
+  // Response tracking
+  respondedBy: varchar("responded_by").references(() => users.id).notNull(),
+  respondedAt: timestamp("responded_at").defaultNow(),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // Inspection insert schemas
@@ -430,32 +656,6 @@ export const insertInspectionResponseSchema = createInsertSchema(inspectionRespo
 });
 
 // Types
-export type User = typeof users.$inferSelect;
-export type InsertUser = z.infer<typeof insertUserSchema>;
-
-export type Location = typeof locations.$inferSelect;
-export type InsertLocation = z.infer<typeof insertLocationSchema>;
-
-export type Report = typeof reports.$inferSelect;
-export type InsertReport = z.infer<typeof insertReportSchema>;
-
-export type Finding = typeof findings.$inferSelect;
-export type InsertFinding = z.infer<typeof insertFindingSchema>;
-
-export type OfflineQueueItem = typeof offlineQueue.$inferSelect;
-export type InsertOfflineQueueItem = z.infer<typeof insertOfflineQueueSchema>;
-
-// Checklist types
-export type ChecklistTemplate = typeof checklistTemplates.$inferSelect;
-export type InsertChecklistTemplate = z.infer<typeof insertChecklistTemplateSchema>;
-
-export type ChecklistSection = typeof checklistSections.$inferSelect;
-export type InsertChecklistSection = z.infer<typeof insertChecklistSectionSchema>;
-
-export type ChecklistQuestion = typeof checklistQuestions.$inferSelect;
-export type InsertChecklistQuestion = z.infer<typeof insertChecklistQuestionSchema>;
-
-// Inspection types
 export type Inspection = typeof inspections.$inferSelect;
 export type InsertInspection = z.infer<typeof insertInspectionSchema>;
 
@@ -464,41 +664,3 @@ export type InsertInspectionAssignment = z.infer<typeof insertInspectionAssignme
 
 export type InspectionResponse = typeof inspectionResponses.$inferSelect;
 export type InsertInspectionResponse = z.infer<typeof insertInspectionResponseSchema>;
-
-// Utility functions
-export const calculateQuestionScore = (evaluation: string, twScore: number): number => {
-  if (!evaluation) return 0;
-  if (evaluation === "Kapsam Dışı") return 0; // NA - not counted
-  if (evaluation === "Karşılamıyor") return -1 * twScore;
-  if (evaluation === "Kısmen Karşılıyor") return 0.5 * twScore;
-  if (evaluation === "Karşılıyor") return 1 * twScore;
-  return 0;
-};
-
-export const calculateLetterGrade = (percentage: number): string => {
-  if (percentage >= 90) return "A";
-  if (percentage >= 75) return "B";
-  if (percentage >= 50) return "C";
-  if (percentage >= 25) return "D";
-  if (percentage >= 0) return "E";
-  return "";
-};
-
-export const CHECKLIST_CATEGORIES = [
-  "Afet ve Acil Durum Yönetimi",
-  "Altyapı", 
-  "Emniyet",
-  "Güvenlik",
-  "Tıbbi Cihaz Yönetimi",
-  "Malzeme-Cihaz Yönetimi",
-  "Tehlikeli Madde Yönetimi",
-  "Atık Yönetimi",
-  "Yangın Güvenliği"
-] as const;
-
-export const EVALUATION_OPTIONS = [
-  "Karşılıyor",
-  "Kısmen Karşılıyor", 
-  "Karşılamıyor",
-  "Kapsam Dışı"
-] as const;
