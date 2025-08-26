@@ -139,49 +139,144 @@ export default function Dashboard() {
     };
 
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        {/* My Reports Section */}
-        <div>
-          <div className="mb-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-2">
-              Hazırladığım Raporlar
-            </h2>
-            <p className="text-gray-600">
-              Tarafınızca oluşturulan güvenlik raporları.
-            </p>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 h-full">
+          {/* Left Column: My Reports Section */}
+          <div className="flex flex-col">
+            <div className="mb-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-2">
+                Hazırladığım Raporlar
+              </h2>
+              <p className="text-gray-600">
+                Tarafınızca oluşturulan güvenlik raporları.
+              </p>
+            </div>
+            
+            <div className="flex-1 space-y-4 overflow-y-auto">
+              {recentReportsData.length === 0 ? (
+                <Card>
+                  <CardContent className="p-8 text-center">
+                    <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                      Henüz Rapor Oluşturulmamış
+                    </h3>
+                    <p className="text-gray-500">
+                      İlk güvenlik raporunuzu oluşturmak için "Yeni Rapor" butonunu kullanın.
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                recentReportsData.slice(0, 5).map((report: any) => (
+                  <Card key={report.id} className="hover:shadow-md transition-shadow">
+                    <CardContent className="p-4">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h4 className="font-semibold text-gray-900">{report.reportNumber}</h4>
+                          <p className="text-sm text-gray-600">{report.location}</p>
+                          <p className="text-xs text-gray-500">
+                            {new Date(report.reportDate).toLocaleDateString('tr-TR')}
+                          </p>
+                        </div>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => setLocation(`/reports/${report.id}`)}
+                        >
+                          Görüntüle
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </div>
           </div>
-          
-          <div className="space-y-4">
-            {recentReportsData.length === 0 ? (
+
+          {/* Right Column: Assigned Inspections Section */}
+          <div className="flex flex-col">
+            <div className="mb-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-2">
+                Atanmış Denetimler
+              </h2>
+              <p className="text-gray-600">
+                Size atanmış denetimleri görüntüleyebilir ve başlatabilirsiniz.
+              </p>
+            </div>
+
+            <div className="flex-1 space-y-6 overflow-y-auto">
+            {userAssignments.length === 0 ? (
               <Card>
                 <CardContent className="p-8 text-center">
-                  <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-gray-900 mb-2">
-                    Henüz Rapor Oluşturulmamış
+                    Henüz Atanmış Denetim Yok
                   </h3>
                   <p className="text-gray-500">
-                    İlk güvenlik raporunuzu oluşturmak için "Yeni Rapor" butonunu kullanın.
+                    Size atanmış bir denetim bulunmuyor. Yeni atamalar için yöneticilerle iletişim kurun.
                   </p>
                 </CardContent>
               </Card>
             ) : (
-              recentReportsData.slice(0, 5).map((report: any) => (
-                <Card key={report.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-4">
-                    <div className="flex justify-between items-start">
+              userAssignments.map((assignment: any) => (
+                <Card key={assignment.id} className="hover:shadow-md transition-shadow">
+                  <CardContent className="p-6">
+                    <div className="flex justify-between items-start mb-4">
                       <div>
-                        <h4 className="font-semibold text-gray-900">{report.reportNumber}</h4>
-                        <p className="text-sm text-gray-600">{report.location}</p>
-                        <p className="text-xs text-gray-500">
-                          {new Date(report.reportDate).toLocaleDateString('tr-TR')}
+                        <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                          {assignment.inspection?.title || 'Denetim'}
+                        </h3>
+                        <p className="text-sm text-gray-600">
+                          📍 {assignment.location?.name || 'Konum belirtilmemiş'}
                         </p>
                       </div>
+                      <div className="text-right">
+                        <div className={`inline-flex px-2 py-1 text-xs rounded-full ${
+                          assignment.status === 'pending' 
+                            ? 'bg-yellow-100 text-yellow-800' 
+                            : assignment.status === 'in_progress'
+                            ? 'bg-blue-100 text-blue-800'
+                            : 'bg-green-100 text-green-800'
+                        }`}>
+                          {assignment.status === 'pending' ? 'Beklemede' : 
+                           assignment.status === 'in_progress' ? 'Devam Ediyor' : 'Tamamlandı'}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
+                      <div>
+                        <span className="text-gray-500">Son Tarih:</span>
+                        <div className="font-medium">
+                          {assignment.inspection?.dueDate 
+                            ? new Date(assignment.inspection.dueDate).toLocaleDateString('tr-TR') + ' ' + 
+                              new Date(assignment.inspection.dueDate).toLocaleTimeString('tr-TR', {hour: '2-digit', minute: '2-digit'})
+                            : 'Belirtilmemiş'}
+                        </div>
+                        {assignment.inspection?.dueDate && (
+                          <div className="text-sm text-orange-600 font-medium mt-1">
+                            Kalan süre: {calculateTimeRemaining(assignment.inspection.dueDate)}
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Soru Sayısı:</span>
+                        <div className="font-medium">{assignment.totalQuestions || 0} soru</div>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between items-center">
+                      <div className="text-sm text-gray-600">
+                        Atanma: {assignment.createdAt 
+                          ? new Date(assignment.createdAt).toLocaleDateString('tr-TR')
+                          : 'Bilinmiyor'}
+                      </div>
                       <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => setLocation(`/reports/${report.id}`)}
+                        onClick={() => setLocation(`/live-checklist?assignmentId=${assignment.id}`)}
+                        disabled={assignment.status === 'completed'}
+                        className="bg-primary hover:bg-primary/90"
                       >
-                        Görüntüle
+                        {assignment.status === 'pending' ? 'Denetime Başla' : 
+                         assignment.status === 'in_progress' ? 'Devam Et' : 'Tamamlandı'}
                       </Button>
                     </div>
                   </CardContent>
@@ -189,100 +284,7 @@ export default function Dashboard() {
               ))
             )}
           </div>
-        </div>
-
-        {/* Assigned Inspections Section */}
-        <div>
-          <div className="mb-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-2">
-              Atanmış Denetimler
-            </h2>
-            <p className="text-gray-600">
-              Size atanmış denetimleri görüntüleyebilir ve başlatabilirsiniz.
-            </p>
           </div>
-
-          <div className="space-y-6">
-          {userAssignments.length === 0 ? (
-            <Card>
-              <CardContent className="p-8 text-center">
-                <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  Henüz Atanmış Denetim Yok
-                </h3>
-                <p className="text-gray-500">
-                  Size atanmış bir denetim bulunmuyor. Yeni atamalar için yöneticilerle iletişim kurun.
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            userAssignments.map((assignment: any) => (
-              <Card key={assignment.id} className="hover:shadow-md transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                        {assignment.inspection?.title || 'Denetim'}
-                      </h3>
-                      <p className="text-sm text-gray-600">
-                        📍 {assignment.location?.name || 'Konum belirtilmemiş'}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <div className={`inline-flex px-2 py-1 text-xs rounded-full ${
-                        assignment.status === 'pending' 
-                          ? 'bg-yellow-100 text-yellow-800' 
-                          : assignment.status === 'in_progress'
-                          ? 'bg-blue-100 text-blue-800'
-                          : 'bg-green-100 text-green-800'
-                      }`}>
-                        {assignment.status === 'pending' ? 'Beklemede' : 
-                         assignment.status === 'in_progress' ? 'Devam Ediyor' : 'Tamamlandı'}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
-                    <div>
-                      <span className="text-gray-500">Son Tarih:</span>
-                      <div className="font-medium">
-                        {assignment.inspection?.dueDate 
-                          ? new Date(assignment.inspection.dueDate).toLocaleDateString('tr-TR') + ' ' + 
-                            new Date(assignment.inspection.dueDate).toLocaleTimeString('tr-TR', {hour: '2-digit', minute: '2-digit'})
-                          : 'Belirtilmemiş'}
-                      </div>
-                      {assignment.inspection?.dueDate && (
-                        <div className="text-sm text-orange-600 font-medium mt-1">
-                          Kalan süre: {calculateTimeRemaining(assignment.inspection.dueDate)}
-                        </div>
-                      )}
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Soru Sayısı:</span>
-                      <div className="font-medium">{assignment.totalQuestions || 0} soru</div>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-between items-center">
-                    <div className="text-sm text-gray-600">
-                      Atanma: {assignment.createdAt 
-                        ? new Date(assignment.createdAt).toLocaleDateString('tr-TR')
-                        : 'Bilinmiyor'}
-                    </div>
-                    <Button 
-                      onClick={() => setLocation(`/live-checklist?assignmentId=${assignment.id}`)}
-                      disabled={assignment.status === 'completed'}
-                      className="bg-primary hover:bg-primary/90"
-                    >
-                      {assignment.status === 'pending' ? 'Denetime Başla' : 
-                       assignment.status === 'in_progress' ? 'Devam Et' : 'Tamamlandı'}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
-          )}
-        </div>
         </div>
       </div>
     );

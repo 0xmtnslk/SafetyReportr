@@ -15,6 +15,7 @@ import { Bell, BellDot, CheckCheck, Eye } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { formatDistanceToNow } from "date-fns";
 import { tr } from "date-fns/locale";
+import { useLocation } from "wouter";
 
 interface Notification {
   id: string;
@@ -31,6 +32,7 @@ interface Notification {
 export default function NotificationDropdown() {
   const [isOpen, setIsOpen] = useState(false);
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
 
   // Fetch unread notification count
   const { data: countData } = useQuery<{ count: number }>({
@@ -160,9 +162,35 @@ export default function NotificationDropdown() {
                 className={`flex flex-col items-start p-3 cursor-pointer ${
                   !notification.isRead ? 'bg-blue-50' : ''
                 }`}
-                onClick={() => {
+                onClick={async () => {
+                  // Mark as read if unread
                   if (!notification.isRead) {
                     markAsReadMutation.mutate(notification.id);
+                  }
+                  
+                  // Navigate to inspection if it's an inspection-related notification
+                  if (notification.type === 'inspection_assigned' && notification.relatedId) {
+                    // Find the assignment related to this inspection
+                    try {
+                      // Get user assignments to find the specific assignment for this inspection
+                      const response = await fetch('/api/user/assignments', {
+                        headers: {
+                          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                        },
+                      });
+                      
+                      if (response.ok) {
+                        const assignments = await response.json();
+                        const assignment = assignments.find((a: any) => a.inspectionId === notification.relatedId);
+                        
+                        if (assignment) {
+                          setLocation(`/live-checklist?assignmentId=${assignment.id}`);
+                          setIsOpen(false);
+                        }
+                      }
+                    } catch (error) {
+                      console.error('Error navigating to inspection:', error);
+                    }
                   }
                 }}
                 data-testid={`notification-item-${notification.id}`}
