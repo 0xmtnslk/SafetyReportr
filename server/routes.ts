@@ -1282,6 +1282,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get template question count
+  app.get("/api/checklist/templates/:templateId/question-count", authenticateToken, async (req, res) => {
+    try {
+      const sections = await storage.getTemplateSections(req.params.templateId);
+      let totalQuestions = 0;
+      
+      // Get questions for each section and count them
+      for (const section of sections) {
+        const questions = await storage.getSectionQuestions(section.id);
+        totalQuestions += questions.length;
+      }
+      
+      res.json({ count: totalQuestions });
+    } catch (error: any) {
+      console.error("Error fetching template question count:", error);
+      res.status(500).json({ error: "Error fetching template question count" });
+    }
+  });
+
   app.post("/api/checklist/sections", authenticateToken, requireCentralManagement, async (req, res) => {
     try {
       const validatedData = insertChecklistSectionSchema.parse(req.body);

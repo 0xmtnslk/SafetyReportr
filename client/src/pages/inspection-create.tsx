@@ -83,15 +83,13 @@ export default function InspectionCreatePage() {
     })
     .filter(Boolean) as SelectedHospital[];
 
-  // Get template sections and questions count
-  const { data: templateSections = [] } = useQuery<any[]>({
-    queryKey: ["/api/checklist/templates", selectedTemplate?.id, "sections"],
+  // Get template question count
+  const { data: questionCountData } = useQuery<{count: number}>({
+    queryKey: ["/api/checklist/templates", selectedTemplate?.id, "question-count"],
     enabled: !!selectedTemplate?.id,
   });
 
-  const totalQuestions = templateSections.reduce((total: number, section: any) => {
-    return total + (section.questions?.length || 0);
-  }, 0);
+  const totalQuestions = questionCountData?.count || 0;
 
   const handleTemplateSelect = (templateId: string) => {
     const template = templates.find(t => t.id === templateId);
