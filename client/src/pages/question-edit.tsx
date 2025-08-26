@@ -23,9 +23,9 @@ export default function QuestionEdit({ questionId }: QuestionEditProps) {
   const queryClient = useQueryClient();
 
   const [formData, setFormData] = useState({
-    questionText: "ADP alanına tüm yetkisiz girişler engellenmiş olmalı, alan kilit altında tutulmalıdır.",
-    category: "Güvenlik",
-    twScore: 8,
+    questionText: "",
+    category: "Genel",
+    twScore: 1,
     isRequired: true,
     allowPhoto: true,
     allowDocument: true
@@ -58,7 +58,12 @@ export default function QuestionEdit({ questionId }: QuestionEditProps) {
         description: "Soru başarıyla güncellendi.",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/checklist'] });
-      setLocation('/checklist');
+      // Get section ID to redirect back to template
+      if (question && (question as any).sectionId) {
+        setLocation(`/checklist/templates`);
+      } else {
+        setLocation('/checklist');
+      }
     },
     onError: (error) => {
       toast({
@@ -73,9 +78,9 @@ export default function QuestionEdit({ questionId }: QuestionEditProps) {
   useEffect(() => {
     if (question) {
       setFormData({
-        questionText: (question as any)?.questionText || "ADP alanına tüm yetkisiz girişler engellenmiş olmalı, alan kilit altında tutulmalıdır.",
-        category: "Güvenlik",
-        twScore: 8,
+        questionText: (question as any)?.questionText || "",
+        category: (question as any)?.category || "Genel",
+        twScore: (question as any)?.twScore || 1,
         isRequired: (question as any)?.isRequired ?? true,
         allowPhoto: (question as any)?.allowPhoto ?? true,
         allowDocument: (question as any)?.allowDocument ?? true

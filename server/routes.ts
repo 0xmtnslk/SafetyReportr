@@ -1350,22 +1350,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/checklist/questions/:id", authenticateToken, requireCentralManagement, async (req, res) => {
     try {
+      console.log('Updating question:', req.params.id, 'with data:', req.body);
       const validatedData = insertChecklistQuestionSchema.partial().parse(req.body);
+      console.log('Validated data:', validatedData);
       const question = await storage.updateChecklistQuestion(req.params.id, validatedData);
-      res.json(question);
-    } catch (error: any) {
-      console.error("Error updating checklist question:", error);
-      if (error.name === 'ZodError') {
-        return res.status(400).json({ error: error.errors });
-      }
-      res.status(500).json({ error: "Error updating checklist question" });
-    }
-  });
-
-  app.put("/api/checklist/questions/:id", authenticateToken, requireCentralManagement, async (req, res) => {
-    try {
-      const validatedData = insertChecklistQuestionSchema.partial().parse(req.body);
-      const question = await storage.updateChecklistQuestion(req.params.id, validatedData);
+      console.log('Updated question:', question);
       res.json(question);
     } catch (error: any) {
       console.error("Error updating checklist question:", error);

@@ -485,10 +485,27 @@ export const insertChecklistQuestionSchema = createInsertSchema(checklistQuestio
   sectionId: true,
   questionText: true,
   orderIndex: true,
+  twScore: true,
+  category: true,
   isRequired: true,
   allowPhoto: true,
   allowDocument: true,
   isActive: true,
+}).extend({
+  twScore: z.number().min(1).max(10),
+  category: z.enum([
+    "Afet ve Acil Durum Yönetimi",
+    "Altyapı", 
+    "Emniyet",
+    "Güvenlik",
+    "Tıbbi Cihaz Yönetimi",
+    "Malzeme-Cihaz Yönetimi",
+    "Tehlikeli Madde Yönetimi",
+    "Atık Yönetimi",
+    "Yangın Güvenliği",
+    "Elektrik",
+    "Genel"
+  ]),
 });
 
 export const insertChecklistInspectionSchema = createInsertSchema(checklistInspections).pick({
