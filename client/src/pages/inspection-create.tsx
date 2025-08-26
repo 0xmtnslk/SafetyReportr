@@ -149,7 +149,7 @@ export default function InspectionCreatePage() {
         ),
       };
 
-      await apiRequest("/api/inspections", "POST", inspectionData);
+      await apiRequest("POST", "/api/inspections", inspectionData);
 
       toast({
         title: "Denetim Başarıyla Oluşturuldu",
