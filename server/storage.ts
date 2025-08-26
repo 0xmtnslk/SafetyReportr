@@ -1,4 +1,12 @@
-import { reports, findings, users, offlineQueue, locations, type User, type InsertUser, type Report, type InsertReport, type Finding, type InsertFinding, type OfflineQueueItem, type InsertOfflineQueueItem, type Location, type InsertLocation } from "@shared/schema";
+import { 
+  reports, findings, users, offlineQueue, locations,
+  checklistTemplates, checklistSections, checklistQuestions, checklistInspections, checklistAnswers,
+  type User, type InsertUser, type Report, type InsertReport, type Finding, type InsertFinding, 
+  type OfflineQueueItem, type InsertOfflineQueueItem, type Location, type InsertLocation,
+  type ChecklistTemplate, type InsertChecklistTemplate, type ChecklistSection, type InsertChecklistSection,
+  type ChecklistQuestion, type InsertChecklistQuestion, type ChecklistInspection, type InsertChecklistInspection,
+  type ChecklistAnswer, type InsertChecklistAnswer, calculateQuestionScore, calculateLetterGrade
+} from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, inArray, sql, gt, or } from "drizzle-orm";
 import bcrypt from "bcrypt";
@@ -82,6 +90,49 @@ export interface IStorage {
   updateLocation(id: string, location: Partial<InsertLocation>): Promise<Location | null>;
   deleteLocation(id: string): Promise<boolean>;
   getUsersByLocationId(locationId: string): Promise<User[]>;
+
+  // Checklist Template operations
+  getAllChecklistTemplates(): Promise<ChecklistTemplate[]>;
+  getChecklistTemplate(id: string): Promise<ChecklistTemplate | undefined>;
+  createChecklistTemplate(template: InsertChecklistTemplate & { createdBy: string }): Promise<ChecklistTemplate>;
+  updateChecklistTemplate(id: string, template: Partial<InsertChecklistTemplate>): Promise<ChecklistTemplate>;
+  deleteChecklistTemplate(id: string): Promise<boolean>;
+
+  // Checklist Section operations
+  getTemplateSections(templateId: string): Promise<ChecklistSection[]>;
+  getChecklistSection(id: string): Promise<ChecklistSection | undefined>;
+  createChecklistSection(section: InsertChecklistSection): Promise<ChecklistSection>;
+  updateChecklistSection(id: string, section: Partial<InsertChecklistSection>): Promise<ChecklistSection>;
+  deleteChecklistSection(id: string): Promise<boolean>;
+
+  // Checklist Question operations
+  getSectionQuestions(sectionId: string): Promise<ChecklistQuestion[]>;
+  getChecklistQuestion(id: string): Promise<ChecklistQuestion | undefined>;
+  createChecklistQuestion(question: InsertChecklistQuestion): Promise<ChecklistQuestion>;
+  updateChecklistQuestion(id: string, question: Partial<InsertChecklistQuestion>): Promise<ChecklistQuestion>;
+  deleteChecklistQuestion(id: string): Promise<boolean>;
+
+  // Checklist Inspection operations
+  getAllChecklistInspections(): Promise<ChecklistInspection[]>;
+  getChecklistInspection(id: string): Promise<ChecklistInspection | undefined>;
+  getLocationInspections(locationId: string): Promise<ChecklistInspection[]>;
+  getInspectorInspections(inspectorId: string): Promise<ChecklistInspection[]>;
+  createChecklistInspection(inspection: InsertChecklistInspection & { inspectorId: string }): Promise<ChecklistInspection>;
+  updateChecklistInspection(id: string, inspection: Partial<InsertChecklistInspection>): Promise<ChecklistInspection>;
+  deleteChecklistInspection(id: string): Promise<boolean>;
+
+  // Checklist Answer operations
+  getInspectionAnswers(inspectionId: string): Promise<ChecklistAnswer[]>;
+  getChecklistAnswer(id: string): Promise<ChecklistAnswer | undefined>;
+  createChecklistAnswer(answer: InsertChecklistAnswer): Promise<ChecklistAnswer>;
+  updateChecklistAnswer(id: string, answer: Partial<InsertChecklistAnswer>): Promise<ChecklistAnswer>;
+  deleteChecklistAnswer(id: string): Promise<boolean>;
+  calculateInspectionScore(inspectionId: string): Promise<{
+    totalScore: number;
+    maxPossibleScore: number;
+    successPercentage: number;
+    letterGrade: string;
+  }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -637,6 +688,278 @@ export class DatabaseStorage implements IStorage {
 
   async getUsersByLocationId(locationId: string): Promise<User[]> {
     return await db.select().from(users).where(eq(users.locationId, locationId));
+  }
+
+  // Checklist Template operations
+  async getAllChecklistTemplates(): Promise<ChecklistTemplate[]> {
+    return await db.select().from(checklistTemplates)
+      .where(eq(checklistTemplates.isActive, true))
+      .orderBy(desc(checklistTemplates.createdAt));
+  }
+
+  async getChecklistTemplate(id: string): Promise<ChecklistTemplate | undefined> {
+    const [template] = await db.select().from(checklistTemplates).where(eq(checklistTemplates.id, id));
+    return template;
+  }
+
+  async createChecklistTemplate(template: InsertChecklistTemplate & { createdBy: string }): Promise<ChecklistTemplate> {
+    const [newTemplate] = await db.insert(checklistTemplates)
+      .values(template)
+      .returning();
+    return newTemplate;
+  }
+
+  async updateChecklistTemplate(id: string, template: Partial<InsertChecklistTemplate>): Promise<ChecklistTemplate> {
+    const [updatedTemplate] = await db.update(checklistTemplates)
+      .set({ ...template, updatedAt: new Date() })
+      .where(eq(checklistTemplates.id, id))
+      .returning();
+    return updatedTemplate;
+  }
+
+  async deleteChecklistTemplate(id: string): Promise<boolean> {
+    const result = await db.delete(checklistTemplates).where(eq(checklistTemplates.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  // Checklist Section operations
+  async getTemplateSections(templateId: string): Promise<ChecklistSection[]> {
+    return await db.select().from(checklistSections)
+      .where(and(
+        eq(checklistSections.templateId, templateId),
+        eq(checklistSections.isActive, true)
+      ))
+      .orderBy(checklistSections.orderIndex);
+  }
+
+  async getChecklistSection(id: string): Promise<ChecklistSection | undefined> {
+    const [section] = await db.select().from(checklistSections).where(eq(checklistSections.id, id));
+    return section;
+  }
+
+  async createChecklistSection(section: InsertChecklistSection): Promise<ChecklistSection> {
+    const [newSection] = await db.insert(checklistSections)
+      .values(section)
+      .returning();
+    return newSection;
+  }
+
+  async updateChecklistSection(id: string, section: Partial<InsertChecklistSection>): Promise<ChecklistSection> {
+    const [updatedSection] = await db.update(checklistSections)
+      .set({ ...section, updatedAt: new Date() })
+      .where(eq(checklistSections.id, id))
+      .returning();
+    return updatedSection;
+  }
+
+  async deleteChecklistSection(id: string): Promise<boolean> {
+    const result = await db.delete(checklistSections).where(eq(checklistSections.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  // Checklist Question operations
+  async getSectionQuestions(sectionId: string): Promise<ChecklistQuestion[]> {
+    return await db.select().from(checklistQuestions)
+      .where(and(
+        eq(checklistQuestions.sectionId, sectionId),
+        eq(checklistQuestions.isActive, true)
+      ))
+      .orderBy(checklistQuestions.orderIndex);
+  }
+
+  async getChecklistQuestion(id: string): Promise<ChecklistQuestion | undefined> {
+    const [question] = await db.select().from(checklistQuestions).where(eq(checklistQuestions.id, id));
+    return question;
+  }
+
+  async createChecklistQuestion(question: InsertChecklistQuestion): Promise<ChecklistQuestion> {
+    const [newQuestion] = await db.insert(checklistQuestions)
+      .values(question)
+      .returning();
+    return newQuestion;
+  }
+
+  async updateChecklistQuestion(id: string, question: Partial<InsertChecklistQuestion>): Promise<ChecklistQuestion> {
+    const [updatedQuestion] = await db.update(checklistQuestions)
+      .set({ ...question, updatedAt: new Date() })
+      .where(eq(checklistQuestions.id, id))
+      .returning();
+    return updatedQuestion;
+  }
+
+  async deleteChecklistQuestion(id: string): Promise<boolean> {
+    const result = await db.delete(checklistQuestions).where(eq(checklistQuestions.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  // Checklist Inspection operations
+  async getAllChecklistInspections(): Promise<ChecklistInspection[]> {
+    return await db.select().from(checklistInspections)
+      .orderBy(desc(checklistInspections.createdAt));
+  }
+
+  async getChecklistInspection(id: string): Promise<ChecklistInspection | undefined> {
+    const [inspection] = await db.select().from(checklistInspections).where(eq(checklistInspections.id, id));
+    return inspection;
+  }
+
+  async getLocationInspections(locationId: string): Promise<ChecklistInspection[]> {
+    return await db.select().from(checklistInspections)
+      .where(eq(checklistInspections.locationId, locationId))
+      .orderBy(desc(checklistInspections.createdAt));
+  }
+
+  async getInspectorInspections(inspectorId: string): Promise<ChecklistInspection[]> {
+    return await db.select().from(checklistInspections)
+      .where(eq(checklistInspections.inspectorId, inspectorId))
+      .orderBy(desc(checklistInspections.createdAt));
+  }
+
+  async createChecklistInspection(inspection: InsertChecklistInspection & { inspectorId: string }): Promise<ChecklistInspection> {
+    const [newInspection] = await db.insert(checklistInspections)
+      .values(inspection)
+      .returning();
+    return newInspection;
+  }
+
+  async updateChecklistInspection(id: string, inspection: Partial<InsertChecklistInspection>): Promise<ChecklistInspection> {
+    const [updatedInspection] = await db.update(checklistInspections)
+      .set({ ...inspection, updatedAt: new Date() })
+      .where(eq(checklistInspections.id, id))
+      .returning();
+    return updatedInspection;
+  }
+
+  async deleteChecklistInspection(id: string): Promise<boolean> {
+    // First delete all answers for this inspection
+    await db.delete(checklistAnswers).where(eq(checklistAnswers.inspectionId, id));
+    
+    // Then delete the inspection
+    const result = await db.delete(checklistInspections).where(eq(checklistInspections.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  // Checklist Answer operations
+  async getInspectionAnswers(inspectionId: string): Promise<ChecklistAnswer[]> {
+    return await db.select().from(checklistAnswers)
+      .where(eq(checklistAnswers.inspectionId, inspectionId))
+      .orderBy(checklistAnswers.createdAt);
+  }
+
+  async getChecklistAnswer(id: string): Promise<ChecklistAnswer | undefined> {
+    const [answer] = await db.select().from(checklistAnswers).where(eq(checklistAnswers.id, id));
+    return answer;
+  }
+
+  async createChecklistAnswer(answer: InsertChecklistAnswer): Promise<ChecklistAnswer> {
+    // Calculate score based on evaluation and TW score
+    const calculatedScore = calculateQuestionScore(answer.evaluation, answer.twScore);
+    
+    const [newAnswer] = await db.insert(checklistAnswers)
+      .values({
+        ...answer,
+        calculatedScore,
+        photos: answer.photos || [],
+        documents: answer.documents || []
+      } as any)
+      .returning();
+    
+    // Recalculate inspection totals
+    await this.recalculateInspectionScore(answer.inspectionId);
+    
+    return newAnswer;
+  }
+
+  async updateChecklistAnswer(id: string, answer: Partial<InsertChecklistAnswer>): Promise<ChecklistAnswer> {
+    // Get current answer to get inspection ID
+    const currentAnswer = await this.getChecklistAnswer(id);
+    if (!currentAnswer) throw new Error("Answer not found");
+
+    // Calculate new score if evaluation or TW score changed
+    let calculatedScore = currentAnswer.calculatedScore;
+    if (answer.evaluation !== undefined || answer.twScore !== undefined) {
+      const evaluation = answer.evaluation || currentAnswer.evaluation;
+      const twScore = answer.twScore || currentAnswer.twScore;
+      calculatedScore = calculateQuestionScore(evaluation, twScore);
+    }
+
+    const [updatedAnswer] = await db.update(checklistAnswers)
+      .set({ 
+        ...answer, 
+        calculatedScore,
+        updatedAt: new Date(),
+        photos: answer.photos ? [...answer.photos] : undefined,
+        documents: answer.documents ? [...answer.documents] : undefined
+      })
+      .where(eq(checklistAnswers.id, id))
+      .returning();
+    
+    // Recalculate inspection totals
+    await this.recalculateInspectionScore(currentAnswer.inspectionId);
+    
+    return updatedAnswer;
+  }
+
+  async deleteChecklistAnswer(id: string): Promise<boolean> {
+    // Get inspection ID before deleting
+    const answer = await this.getChecklistAnswer(id);
+    if (!answer) return false;
+
+    const result = await db.delete(checklistAnswers).where(eq(checklistAnswers.id, id));
+    const success = (result.rowCount || 0) > 0;
+    
+    if (success) {
+      // Recalculate inspection totals
+      await this.recalculateInspectionScore(answer.inspectionId);
+    }
+    
+    return success;
+  }
+
+  async calculateInspectionScore(inspectionId: string): Promise<{
+    totalScore: number;
+    maxPossibleScore: number;
+    successPercentage: number;
+    letterGrade: string;
+  }> {
+    const answers = await this.getInspectionAnswers(inspectionId);
+    
+    let totalScore = 0;
+    let maxPossibleScore = 0;
+    
+    for (const answer of answers) {
+      if (answer.evaluation !== "Kapsam Dışı") {
+        // Add TW score to max possible score
+        maxPossibleScore += answer.twScore;
+        
+        // Add calculated score to total
+        totalScore += answer.calculatedScore || 0;
+      }
+    }
+    
+    const successPercentage = maxPossibleScore > 0 ? Math.round((totalScore / maxPossibleScore) * 100) : 0;
+    const letterGrade = calculateLetterGrade(successPercentage);
+    
+    return {
+      totalScore,
+      maxPossibleScore, 
+      successPercentage,
+      letterGrade
+    };
+  }
+
+  private async recalculateInspectionScore(inspectionId: string): Promise<void> {
+    const scoreData = await this.calculateInspectionScore(inspectionId);
+    
+    await db.update(checklistInspections)
+      .set({
+        totalScore: scoreData.totalScore,
+        maxPossibleScore: scoreData.maxPossibleScore,
+        successPercentage: scoreData.successPercentage,
+        letterGrade: scoreData.letterGrade,
+        updatedAt: new Date()
+      })
+      .where(eq(checklistInspections.id, inspectionId));
   }
 }
 

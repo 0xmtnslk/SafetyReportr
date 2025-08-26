@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { HardHat, Home, Plus, FileText, LogOut, Shield, Menu, X } from "lucide-react";
+import { HardHat, Home, Plus, FileText, LogOut, Shield, Menu, X, CheckSquare } from "lucide-react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -40,6 +40,11 @@ export default function Navigation({ children }: NavigationProps) {
     
     // All authenticated users can view reports
     baseItems.push({ path: "/reports", label: "Raporlar", icon: FileText });
+    
+    // Checklist system for safety specialists, occupational physicians and admin
+    if (['central_admin', 'safety_specialist', 'occupational_physician'].includes(user?.role || '')) {
+      baseItems.push({ path: "/checklist", label: "Kontrol Listeleri", icon: CheckSquare });
+    }
     
     // Admin, safety specialists and occupational physicians can access admin panel
     if (['central_admin', 'safety_specialist', 'occupational_physician'].includes(user?.role || '')) {

@@ -13,6 +13,13 @@ import {
   resetPasswordRequestSchema,
   resetPasswordSchema,
   insertLocationSchema,
+  insertChecklistTemplateSchema,
+  insertChecklistSectionSchema,
+  insertChecklistQuestionSchema,
+  insertChecklistInspectionSchema,
+  insertChecklistAnswerSchema,
+  CHECKLIST_CATEGORIES,
+  EVALUATION_OPTIONS,
   Location
 } from "@shared/schema";
 import { ReactPdfService } from "./pdfService";
@@ -1103,6 +1110,337 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error updating hospital logo:", error);
       res.status(500).json({ error: "Error updating hospital logo" });
+    }
+  });
+
+  // CHECKLIST API ENDPOINTS
+
+  // Get categories and evaluation options
+  app.get("/api/checklist/options", (req, res) => {
+    res.json({
+      categories: CHECKLIST_CATEGORIES,
+      evaluations: EVALUATION_OPTIONS
+    });
+  });
+
+  // Checklist Templates
+  app.get("/api/checklist/templates", authenticateToken, async (req, res) => {
+    try {
+      const templates = await storage.getAllChecklistTemplates();
+      res.json(templates);
+    } catch (error: any) {
+      console.error("Error fetching checklist templates:", error);
+      res.status(500).json({ error: "Error fetching checklist templates" });
+    }
+  });
+
+  app.get("/api/checklist/templates/:id", authenticateToken, async (req, res) => {
+    try {
+      const template = await storage.getChecklistTemplate(req.params.id);
+      if (!template) {
+        return res.status(404).json({ error: "Template not found" });
+      }
+      res.json(template);
+    } catch (error: any) {
+      console.error("Error fetching checklist template:", error);
+      res.status(500).json({ error: "Error fetching checklist template" });
+    }
+  });
+
+  app.post("/api/checklist/templates", authenticateToken, requireCentralManagement, async (req, res) => {
+    try {
+      const currentUser = (req as any).user;
+      const validatedData = insertChecklistTemplateSchema.parse(req.body);
+      
+      const template = await storage.createChecklistTemplate({
+        ...validatedData,
+        createdBy: currentUser.id
+      });
+      
+      res.status(201).json(template);
+    } catch (error: any) {
+      console.error("Error creating checklist template:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ error: error.errors });
+      }
+      res.status(500).json({ error: "Error creating checklist template" });
+    }
+  });
+
+  app.put("/api/checklist/templates/:id", authenticateToken, requireCentralManagement, async (req, res) => {
+    try {
+      const validatedData = insertChecklistTemplateSchema.partial().parse(req.body);
+      const template = await storage.updateChecklistTemplate(req.params.id, validatedData);
+      res.json(template);
+    } catch (error: any) {
+      console.error("Error updating checklist template:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ error: error.errors });
+      }
+      res.status(500).json({ error: "Error updating checklist template" });
+    }
+  });
+
+  app.delete("/api/checklist/templates/:id", authenticateToken, requireCentralManagement, async (req, res) => {
+    try {
+      const success = await storage.deleteChecklistTemplate(req.params.id);
+      if (!success) {
+        return res.status(404).json({ error: "Template not found" });
+      }
+      res.json({ message: "Template deleted successfully" });
+    } catch (error: any) {
+      console.error("Error deleting checklist template:", error);
+      res.status(500).json({ error: "Error deleting checklist template" });
+    }
+  });
+
+  // Checklist Sections
+  app.get("/api/checklist/templates/:templateId/sections", authenticateToken, async (req, res) => {
+    try {
+      const sections = await storage.getTemplateSections(req.params.templateId);
+      res.json(sections);
+    } catch (error: any) {
+      console.error("Error fetching checklist sections:", error);
+      res.status(500).json({ error: "Error fetching checklist sections" });
+    }
+  });
+
+  app.post("/api/checklist/sections", authenticateToken, requireCentralManagement, async (req, res) => {
+    try {
+      const validatedData = insertChecklistSectionSchema.parse(req.body);
+      const section = await storage.createChecklistSection(validatedData);
+      res.status(201).json(section);
+    } catch (error: any) {
+      console.error("Error creating checklist section:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ error: error.errors });
+      }
+      res.status(500).json({ error: "Error creating checklist section" });
+    }
+  });
+
+  app.put("/api/checklist/sections/:id", authenticateToken, requireCentralManagement, async (req, res) => {
+    try {
+      const validatedData = insertChecklistSectionSchema.partial().parse(req.body);
+      const section = await storage.updateChecklistSection(req.params.id, validatedData);
+      res.json(section);
+    } catch (error: any) {
+      console.error("Error updating checklist section:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ error: error.errors });
+      }
+      res.status(500).json({ error: "Error updating checklist section" });
+    }
+  });
+
+  app.delete("/api/checklist/sections/:id", authenticateToken, requireCentralManagement, async (req, res) => {
+    try {
+      const success = await storage.deleteChecklistSection(req.params.id);
+      if (!success) {
+        return res.status(404).json({ error: "Section not found" });
+      }
+      res.json({ message: "Section deleted successfully" });
+    } catch (error: any) {
+      console.error("Error deleting checklist section:", error);
+      res.status(500).json({ error: "Error deleting checklist section" });
+    }
+  });
+
+  // Checklist Questions
+  app.get("/api/checklist/sections/:sectionId/questions", authenticateToken, async (req, res) => {
+    try {
+      const questions = await storage.getSectionQuestions(req.params.sectionId);
+      res.json(questions);
+    } catch (error: any) {
+      console.error("Error fetching checklist questions:", error);
+      res.status(500).json({ error: "Error fetching checklist questions" });
+    }
+  });
+
+  app.post("/api/checklist/questions", authenticateToken, requireCentralManagement, async (req, res) => {
+    try {
+      const validatedData = insertChecklistQuestionSchema.parse(req.body);
+      const question = await storage.createChecklistQuestion(validatedData);
+      res.status(201).json(question);
+    } catch (error: any) {
+      console.error("Error creating checklist question:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ error: error.errors });
+      }
+      res.status(500).json({ error: "Error creating checklist question" });
+    }
+  });
+
+  app.put("/api/checklist/questions/:id", authenticateToken, requireCentralManagement, async (req, res) => {
+    try {
+      const validatedData = insertChecklistQuestionSchema.partial().parse(req.body);
+      const question = await storage.updateChecklistQuestion(req.params.id, validatedData);
+      res.json(question);
+    } catch (error: any) {
+      console.error("Error updating checklist question:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ error: error.errors });
+      }
+      res.status(500).json({ error: "Error updating checklist question" });
+    }
+  });
+
+  app.delete("/api/checklist/questions/:id", authenticateToken, requireCentralManagement, async (req, res) => {
+    try {
+      const success = await storage.deleteChecklistQuestion(req.params.id);
+      if (!success) {
+        return res.status(404).json({ error: "Question not found" });
+      }
+      res.json({ message: "Question deleted successfully" });
+    } catch (error: any) {
+      console.error("Error deleting checklist question:", error);
+      res.status(500).json({ error: "Error deleting checklist question" });
+    }
+  });
+
+  // Checklist Inspections
+  app.get("/api/checklist/inspections", authenticateToken, async (req, res) => {
+    try {
+      const currentUser = (req as any).user;
+      let inspections;
+      
+      if (currentUser.role === 'central_admin') {
+        inspections = await storage.getAllChecklistInspections();
+      } else {
+        // Get inspections for user's location or created by user
+        if (currentUser.locationId) {
+          inspections = await storage.getLocationInspections(currentUser.locationId);
+        } else {
+          inspections = await storage.getInspectorInspections(currentUser.id);
+        }
+      }
+      
+      res.json(inspections);
+    } catch (error: any) {
+      console.error("Error fetching checklist inspections:", error);
+      res.status(500).json({ error: "Error fetching checklist inspections" });
+    }
+  });
+
+  app.get("/api/checklist/inspections/:id", authenticateToken, async (req, res) => {
+    try {
+      const inspection = await storage.getChecklistInspection(req.params.id);
+      if (!inspection) {
+        return res.status(404).json({ error: "Inspection not found" });
+      }
+      res.json(inspection);
+    } catch (error: any) {
+      console.error("Error fetching checklist inspection:", error);
+      res.status(500).json({ error: "Error fetching checklist inspection" });
+    }
+  });
+
+  app.post("/api/checklist/inspections", authenticateToken, async (req, res) => {
+    try {
+      const currentUser = (req as any).user;
+      const validatedData = insertChecklistInspectionSchema.parse(req.body);
+      
+      const inspection = await storage.createChecklistInspection({
+        ...validatedData,
+        inspectorId: currentUser.id
+      });
+      
+      res.status(201).json(inspection);
+    } catch (error: any) {
+      console.error("Error creating checklist inspection:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ error: error.errors });
+      }
+      res.status(500).json({ error: "Error creating checklist inspection" });
+    }
+  });
+
+  app.put("/api/checklist/inspections/:id", authenticateToken, async (req, res) => {
+    try {
+      const validatedData = insertChecklistInspectionSchema.partial().parse(req.body);
+      const inspection = await storage.updateChecklistInspection(req.params.id, validatedData);
+      res.json(inspection);
+    } catch (error: any) {
+      console.error("Error updating checklist inspection:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ error: error.errors });
+      }
+      res.status(500).json({ error: "Error updating checklist inspection" });
+    }
+  });
+
+  app.delete("/api/checklist/inspections/:id", authenticateToken, async (req, res) => {
+    try {
+      const success = await storage.deleteChecklistInspection(req.params.id);
+      if (!success) {
+        return res.status(404).json({ error: "Inspection not found" });
+      }
+      res.json({ message: "Inspection deleted successfully" });
+    } catch (error: any) {
+      console.error("Error deleting checklist inspection:", error);
+      res.status(500).json({ error: "Error deleting checklist inspection" });
+    }
+  });
+
+  // Checklist Answers
+  app.get("/api/checklist/inspections/:inspectionId/answers", authenticateToken, async (req, res) => {
+    try {
+      const answers = await storage.getInspectionAnswers(req.params.inspectionId);
+      res.json(answers);
+    } catch (error: any) {
+      console.error("Error fetching checklist answers:", error);
+      res.status(500).json({ error: "Error fetching checklist answers" });
+    }
+  });
+
+  app.post("/api/checklist/answers", authenticateToken, async (req, res) => {
+    try {
+      const validatedData = insertChecklistAnswerSchema.parse(req.body);
+      const answer = await storage.createChecklistAnswer(validatedData);
+      res.status(201).json(answer);
+    } catch (error: any) {
+      console.error("Error creating checklist answer:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ error: error.errors });
+      }
+      res.status(500).json({ error: "Error creating checklist answer" });
+    }
+  });
+
+  app.put("/api/checklist/answers/:id", authenticateToken, async (req, res) => {
+    try {
+      const validatedData = insertChecklistAnswerSchema.partial().parse(req.body);
+      const answer = await storage.updateChecklistAnswer(req.params.id, validatedData);
+      res.json(answer);
+    } catch (error: any) {
+      console.error("Error updating checklist answer:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ error: error.errors });
+      }
+      res.status(500).json({ error: "Error updating checklist answer" });
+    }
+  });
+
+  app.delete("/api/checklist/answers/:id", authenticateToken, async (req, res) => {
+    try {
+      const success = await storage.deleteChecklistAnswer(req.params.id);
+      if (!success) {
+        return res.status(404).json({ error: "Answer not found" });
+      }
+      res.json({ message: "Answer deleted successfully" });
+    } catch (error: any) {
+      console.error("Error deleting checklist answer:", error);
+      res.status(500).json({ error: "Error deleting checklist answer" });
+    }
+  });
+
+  app.get("/api/checklist/inspections/:id/score", authenticateToken, async (req, res) => {
+    try {
+      const scoreData = await storage.calculateInspectionScore(req.params.id);
+      res.json(scoreData);
+    } catch (error: any) {
+      console.error("Error calculating inspection score:", error);
+      res.status(500).json({ error: "Error calculating inspection score" });
     }
   });
 

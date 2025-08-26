@@ -281,6 +281,22 @@ export type InsertPdfTemplate = z.infer<typeof insertPdfTemplateSchema>;
 export type PdfTemplateField = typeof pdfTemplateFields.$inferSelect;
 export type InsertPdfTemplateField = z.infer<typeof insertPdfTemplateFieldSchema>;
 
+// Checklist types
+export type ChecklistTemplate = typeof checklistTemplates.$inferSelect;
+export type InsertChecklistTemplate = z.infer<typeof insertChecklistTemplateSchema>;
+
+export type ChecklistSection = typeof checklistSections.$inferSelect;
+export type InsertChecklistSection = z.infer<typeof insertChecklistSectionSchema>;
+
+export type ChecklistQuestion = typeof checklistQuestions.$inferSelect;
+export type InsertChecklistQuestion = z.infer<typeof insertChecklistQuestionSchema>;
+
+export type ChecklistInspection = typeof checklistInspections.$inferSelect;
+export type InsertChecklistInspection = z.infer<typeof insertChecklistInspectionSchema>;
+
+export type ChecklistAnswer = typeof checklistAnswers.$inferSelect;
+export type InsertChecklistAnswer = z.infer<typeof insertChecklistAnswerSchema>;
+
 // Template Configuration Types
 export interface TemplateConfig {
   pageSize: 'A4' | 'A3' | 'Letter';
@@ -338,3 +354,184 @@ export interface FieldValidation {
   pattern?: string;
   format?: 'email' | 'phone' | 'date' | 'url';
 }
+
+// Checklist utility functions
+export const calculateQuestionScore = (evaluation: string, twScore: number): number => {
+  if (!evaluation) return 0;
+  if (evaluation === "Kapsam Dışı") return 0; // NA - not counted
+  if (evaluation === "Karşılamıyor") return -1 * twScore;
+  if (evaluation === "Kısmen Karşılıyor") return 0.5 * twScore;
+  if (evaluation === "Karşılıyor") return 1 * twScore;
+  return 0;
+};
+
+export const calculateLetterGrade = (percentage: number): string => {
+  if (percentage >= 90) return "A";
+  if (percentage >= 75) return "B";
+  if (percentage >= 50) return "C";
+  if (percentage >= 25) return "D";
+  if (percentage >= 0) return "E";
+  return "";
+};
+
+export const CHECKLIST_CATEGORIES = [
+  "Afet ve Acil Durum Yönetimi",
+  "Altyapı", 
+  "Emniyet",
+  "Güvenlik",
+  "Tıbbi Cihaz Yönetimi",
+  "Malzeme-Cihaz Yönetimi",
+  "Tehlikeli Madde Yönetimi",
+  "Atık Yönetimi",
+  "Yangın Güvenliği"
+] as const;
+
+export const EVALUATION_OPTIONS = [
+  "Karşılıyor",
+  "Kısmen Karşılıyor", 
+  "Karşılamıyor",
+  "Kapsam Dışı"
+] as const;
+
+// Technical Inspection Checklist System
+export const checklistTemplates = pgTable("checklist_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull().unique(), // "İSG Teknik Alanlar Denetim Kontrol Listesi"
+  description: text("description"),
+  version: text("version").notNull().default("1.0"),
+  isActive: boolean("is_active").default(true),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const checklistSections = pgTable("checklist_sections", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  templateId: varchar("template_id").references(() => checklistTemplates.id).notNull(),
+  name: text("name").notNull(), // "ADP Kontrol Listesi", "UPS Kontrol Listesi"
+  description: text("description"),
+  orderIndex: integer("order_index").notNull(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const checklistQuestions = pgTable("checklist_questions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sectionId: varchar("section_id").references(() => checklistSections.id).notNull(),
+  questionText: text("question_text").notNull(),
+  orderIndex: integer("order_index").notNull(),
+  isRequired: boolean("is_required").default(true),
+  allowPhoto: boolean("allow_photo").default(true),
+  allowDocument: boolean("allow_document").default(true),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const checklistInspections = pgTable("checklist_inspections", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  templateId: varchar("template_id").references(() => checklistTemplates.id).notNull(),
+  locationId: varchar("location_id").references(() => locations.id).notNull(),
+  inspectorId: varchar("inspector_id").references(() => users.id).notNull(),
+  inspectionDate: timestamp("inspection_date").notNull(),
+  status: text("status").notNull().default("draft"), // draft, completed
+  twScore: integer("tw_score"), // TW Score for the entire inspection (1-10)
+  totalScore: integer("total_score").default(0),
+  maxPossibleScore: integer("max_possible_score").default(0),
+  successPercentage: integer("success_percentage").default(0), // 0-100
+  letterGrade: text("letter_grade"), // A, B, C, D, E
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const checklistAnswers = pgTable("checklist_answers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  inspectionId: varchar("inspection_id").references(() => checklistInspections.id).notNull(),
+  questionId: varchar("question_id").references(() => checklistQuestions.id).notNull(),
+  evaluation: text("evaluation").notNull(), // "Karşılıyor", "Kısmen Karşılıyor", "Karşılamıyor", "Kapsam Dışı"
+  category: text("category").notNull(), // One of the 9 categories
+  twScore: integer("tw_score").notNull(), // 1-10
+  calculatedScore: integer("calculated_score").default(0), // Based on formula
+  hasPhoto: boolean("has_photo").default(false),
+  hasDocument: boolean("has_document").default(false),
+  photos: jsonb("photos").$type<string[]>().default([]),
+  documents: jsonb("documents").$type<string[]>().default([]),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Checklist insert schemas
+export const insertChecklistTemplateSchema = createInsertSchema(checklistTemplates).pick({
+  name: true,
+  description: true,
+  version: true,
+  isActive: true,
+});
+
+export const insertChecklistSectionSchema = createInsertSchema(checklistSections).pick({
+  templateId: true,
+  name: true,
+  description: true,
+  orderIndex: true,
+  isActive: true,
+});
+
+export const insertChecklistQuestionSchema = createInsertSchema(checklistQuestions).pick({
+  sectionId: true,
+  questionText: true,
+  orderIndex: true,
+  isRequired: true,
+  allowPhoto: true,
+  allowDocument: true,
+  isActive: true,
+});
+
+export const insertChecklistInspectionSchema = createInsertSchema(checklistInspections).pick({
+  templateId: true,
+  locationId: true,
+  inspectionDate: true,
+  status: true,
+  twScore: true,
+  totalScore: true,
+  maxPossibleScore: true,
+  successPercentage: true,
+  letterGrade: true,
+  notes: true,
+}).extend({
+  inspectionDate: z.union([
+    z.string().transform((str) => new Date(str)),
+    z.date()
+  ]),
+  twScore: z.number().min(1).max(10).optional(),
+});
+
+export const insertChecklistAnswerSchema = createInsertSchema(checklistAnswers).pick({
+  inspectionId: true,
+  questionId: true,
+  evaluation: true,
+  category: true,
+  twScore: true,
+  calculatedScore: true,
+  hasPhoto: true,
+  hasDocument: true,
+  photos: true,
+  documents: true,
+  notes: true,
+}).extend({
+  evaluation: z.enum(["Karşılıyor", "Kısmen Karşılıyor", "Karşılamıyor", "Kapsam Dışı"]),
+  category: z.enum([
+    "Afet ve Acil Durum Yönetimi",
+    "Altyapı", 
+    "Emniyet",
+    "Güvenlik",
+    "Tıbbi Cihaz Yönetimi",
+    "Malzeme-Cihaz Yönetimi",
+    "Tehlikeli Madde Yönetimi",
+    "Atık Yönetimi",
+    "Yangın Güvenliği"
+  ]),
+  twScore: z.number().min(1).max(10),
+});

@@ -13,6 +13,7 @@ import ViewReport from "@/pages/view-report";
 import AdminPanel from "@/pages/admin-panel";
 import ChangePassword from "@/pages/change-password";
 import LandingPage from "@/pages/landing-page";
+import ChecklistDashboard from "@/pages/checklist";
 import Navigation from "@/components/navigation";
 import OfflineIndicator from "@/components/offline-indicator";
 import { useOfflineSync } from "./hooks/useOfflineSync";
@@ -36,7 +37,7 @@ function Router() {
   }
 
   // Protected routes - require authentication
-  const protectedRoutes = ['/dashboard', '/create-report', '/reports', '/edit-report', '/view-report', '/admin', '/change-password'];
+  const protectedRoutes = ['/dashboard', '/create-report', '/reports', '/edit-report', '/view-report', '/admin', '/change-password', '/checklist'];
   const isProtectedRoute = protectedRoutes.some(route => location.startsWith(route));
 
   if (isProtectedRoute && !user) {
@@ -69,6 +70,7 @@ function Router() {
             </Route>
             <Route path="/admin" component={AdminPanel} />
             <Route path="/change-password" component={ChangePassword} />
+            <Route path="/checklist" component={ChecklistDashboard} />
             <Route component={() => <div className="p-8"><div>404 - Page Not Found</div></div>} />
           </Switch>
         </Navigation>
@@ -92,6 +94,7 @@ function Router() {
         </Route>
         <Route path="/admin" component={user ? AdminPanel : Login} />
         <Route path="/change-password" component={user ? ChangePassword : Login} />
+        <Route path="/checklist" component={user ? ChecklistDashboard : Login} />
         <Route component={() => <div>404 - Page Not Found</div>} />
       </Switch>
     </div>
