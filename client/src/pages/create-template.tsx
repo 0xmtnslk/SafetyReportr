@@ -8,16 +8,62 @@ import { Switch } from "@/components/ui/switch";
 import { ArrowLeft, Plus } from "lucide-react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { insertChecklistTemplateSchema } from "@shared/schema";
 
 export default function CreateTemplate() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const [formData, setFormData] = useState({
     name: "",
     description: "",
     version: "1.0",
-    isActive: true
+    isActive: true,
+    category: "Genel",
+    type: "hospital_technical"
+  });
+
+  // Create template mutation
+  const createTemplate = useMutation({
+    mutationFn: async (data: any) => {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/checklist/templates', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          ...data,
+          // Auto-generate template number
+          templateNumber: `TMP-${Date.now().toString().slice(-6)}`
+        })
+      });
+      if (!response.ok) throw new Error('Failed to create template');
+      return response.json();
+    },
+    onSuccess: (newTemplate) => {
+      toast({
+        title: "Şablon Oluşturuldu",
+        description: `${formData.name} şablonu başarıyla oluşturuldu.`,
+      });
+      
+      // Invalidate and refetch templates
+      queryClient.invalidateQueries({ queryKey: ['/api/checklist/templates'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/checklist'] });
+      
+      // Redirect to the new template detail page
+      setLocation(`/checklist/templates/${newTemplate.id}`);
+    },
+    onError: (error) => {
+      toast({
+        title: "Hata",
+        description: "Şablon oluşturulurken bir hata oluştu.",
+        variant: "destructive"
+      });
+    }
   });
 
   const handleCreate = () => {
@@ -30,11 +76,7 @@ export default function CreateTemplate() {
       return;
     }
 
-    toast({
-      title: "Şablon Oluşturuldu",
-      description: "Yeni şablon başarıyla oluşturuldu.",
-    });
-    setLocation('/checklist');
+    createTemplate.mutate(formData);
   };
 
   return (
@@ -55,9 +97,13 @@ export default function CreateTemplate() {
           </div>
         </div>
         
-        <Button onClick={handleCreate} className="bg-primary hover:bg-primary/90">
+        <Button 
+          onClick={handleCreate} 
+          className="bg-primary hover:bg-primary/90"
+          disabled={createTemplate.isPending}
+        >
           <Plus size={16} className="mr-2" />
-          Şablon Oluştur
+          {createTemplate.isPending ? 'Oluşturuluyor...' : 'Şablon Oluştur'}
         </Button>
       </div>
 
@@ -90,6 +136,16 @@ export default function CreateTemplate() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
+              <Label htmlFor="category">Kategori</Label>
+              <Input
+                id="category"
+                value={formData.category}
+                onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
+                placeholder="Örn: Teknik Alanlar, Güvenlik, Hijyen"
+              />
+            </div>
+
+            <div>
               <Label htmlFor="version">Versiyon</Label>
               <Input
                 id="version"
@@ -98,15 +154,15 @@ export default function CreateTemplate() {
                 placeholder="Versiyon numarası"
               />
             </div>
+          </div>
 
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="isActive"
-                checked={formData.isActive}
-                onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isActive: checked }))}
-              />
-              <Label htmlFor="isActive">Aktif</Label>
-            </div>
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="isActive"
+              checked={formData.isActive}
+              onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isActive: checked }))}
+            />
+            <Label htmlFor="isActive">Şablon aktif olsun</Label>
           </div>
 
           <div className="bg-green-50 p-4 rounded-lg">
@@ -122,8 +178,11 @@ export default function CreateTemplate() {
             <Button variant="outline" onClick={() => setLocation('/checklist')}>
               İptal
             </Button>
-            <Button onClick={handleCreate}>
-              Şablon Oluştur
+            <Button 
+              onClick={handleCreate}
+              disabled={createTemplate.isPending}
+            >
+              {createTemplate.isPending ? 'Oluşturuluyor...' : 'Şablon Oluştur'}
             </Button>
           </div>
         </CardContent>
