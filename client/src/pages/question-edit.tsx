@@ -115,14 +115,16 @@ export default function QuestionEdit({ questionId }: QuestionEditProps) {
   useEffect(() => {
     if (question) {
       console.log('Loading question data into form:', question);
-      setFormData({
+      const newFormData = {
         questionText: (question as any)?.questionText || (question as any)?.text || "",
         category: (question as any)?.category || "Genel",
         twScore: (question as any)?.twScore || (question as any)?.tw_score || 1,
         isRequired: (question as any)?.isRequired ?? true,
         allowPhoto: (question as any)?.allowPhoto ?? true,
         allowDocument: (question as any)?.allowDocument ?? true
-      });
+      };
+      console.log('Setting form data to:', newFormData);
+      setFormData(newFormData);
     }
   }, [question]);
 
@@ -138,6 +140,21 @@ export default function QuestionEdit({ questionId }: QuestionEditProps) {
 
     updateQuestion.mutate(formData);
   };
+
+  // Don't render form until question data is loaded
+  if (isLoading || !question) {
+    return (
+      <div className="container mx-auto p-6">
+        <Card>
+          <CardContent className="p-6">
+            <div className="text-center">
+              {isLoading ? "Soru verileri yükleniyor..." : "Soru bulunamadı"}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto p-6">
