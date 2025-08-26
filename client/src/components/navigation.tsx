@@ -42,8 +42,8 @@ export default function Navigation({ children }: NavigationProps) {
     // All authenticated users can view reports
     baseItems.push({ path: "/reports", label: "Raporlar", icon: FileText });
     
-    // Checklist system for safety specialists, occupational physicians and admin
-    if (['central_admin', 'admin', 'safety_specialist', 'occupational_physician'].includes(user?.role || '')) {
+    // Checklist system for admin (safety specialists see their assignments in dashboard)
+    if (['central_admin', 'admin'].includes(user?.role || '')) {
       baseItems.push({ path: "/checklist", label: "Kontrol Listeleri", icon: CheckSquare });
     }
     

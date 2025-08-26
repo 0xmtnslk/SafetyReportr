@@ -1743,6 +1743,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/inspections', authenticateToken, requireCentralManagement, async (req: Request, res: Response) => {
     try {
       const { assignments, ...inspectionData } = req.body;
+      console.log('🔍 DEBUG - Received assignments:', assignments);
+      console.log('🔍 DEBUG - Assignments count:', assignments?.length || 0);
+      
       const validatedData = insertInspectionSchema.parse(inspectionData);
       const user = (req as any).user;
       
