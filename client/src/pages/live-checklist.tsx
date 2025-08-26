@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { 
-  CheckSquare, Save, ArrowLeft, Camera, FileText, AlertTriangle, Plus, ChevronRight, ChevronLeft
+  CheckSquare, Save, ArrowLeft, Camera, FileText, AlertTriangle, Plus, ChevronRight, ChevronLeft, X, ZoomIn, Eye
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
@@ -53,6 +53,8 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
   const [location, setLocation] = useLocation();
   const { toast } = useToast();
   const { user } = useAuth();
+  const [imageModalOpen, setImageModalOpen] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
   
   // Get assignmentId from URL params
   const urlParams = new URLSearchParams(window.location.search);
@@ -67,15 +69,6 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
   // Use templateId from assignment or prop (note: database field is template_id, not checklistTemplateId)
   const currentTemplateId = assignment?.inspection?.templateId || assignment?.inspection?.template_id || templateId || "7c39d8c0-7ff5-47ad-84f0-cd04de8bfd2a";
   
-  // Debug: Log the template selection
-  console.log('🔍 Live Checklist Debug:', {
-    assignmentId,
-    assignment: assignment?.inspection,
-    currentTemplateId,
-    assignmentTemplateId: assignment?.inspection?.templateId,
-    dbTemplateId: assignment?.inspection?.template_id,
-    fallbackUsed: !assignment?.inspection?.templateId && !assignment?.inspection?.template_id
-  });
 
   // State for current section and progress
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
@@ -414,122 +407,143 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
                 </div>
               </CardHeader>
               
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Evaluation */}
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor={`answer-${question.id}`}>Değerlendirme</Label>
-                      <Select
-                        value={answer?.answer || ''}
-                        onValueChange={(value) => updateAnswer(question.id, 'answer', value)}
-                      >
-                        <SelectTrigger id={`answer-${question.id}`}>
-                          <SelectValue placeholder="Değerlendirme seçin" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="compliant">✅ Karşılıyor</SelectItem>
-                          <SelectItem value="partially_compliant">⚠️ Kısmen Karşılıyor</SelectItem>
-                          <SelectItem value="non_compliant">❌ Karşılamıyor</SelectItem>
-                          <SelectItem value="not_applicable">➖ Kapsam Dışı</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div>
-                      <Label htmlFor={`notes-${question.id}`}>Notlar</Label>
-                      <Textarea
-                        id={`notes-${question.id}`}
-                        placeholder="Değerlendirme notlarınızı yazın..."
-                        value={answer?.notes || ''}
-                        onChange={(e) => updateAnswer(question.id, 'notes', e.target.value)}
-                        rows={3}
-                      />
-                    </div>
+              <CardContent className="space-y-4">
+                {/* Compact Evaluation Buttons */}
+                <div>
+                  <Label className="text-sm font-medium mb-2 block">Değerlendirme</Label>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    <Button
+                      variant={answer?.answer === 'compliant' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => updateAnswer(question.id, 'answer', 'compliant')}
+                      className={`h-12 flex flex-col gap-1 ${answer?.answer === 'compliant' ? 'bg-green-600 hover:bg-green-700' : ''}`}
+                    >
+                      <span className="text-lg">✅</span>
+                      <span className="text-xs">Karşılıyor</span>
+                    </Button>
+                    <Button
+                      variant={answer?.answer === 'partially_compliant' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => updateAnswer(question.id, 'answer', 'partially_compliant')}
+                      className={`h-12 flex flex-col gap-1 ${answer?.answer === 'partially_compliant' ? 'bg-yellow-600 hover:bg-yellow-700' : ''}`}
+                    >
+                      <span className="text-lg">⚠️</span>
+                      <span className="text-xs">Kısmen</span>
+                    </Button>
+                    <Button
+                      variant={answer?.answer === 'non_compliant' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => updateAnswer(question.id, 'answer', 'non_compliant')}
+                      className={`h-12 flex flex-col gap-1 ${answer?.answer === 'non_compliant' ? 'bg-red-600 hover:bg-red-700' : ''}`}
+                    >
+                      <span className="text-lg">❌</span>
+                      <span className="text-xs">Karşılamıyor</span>
+                    </Button>
+                    <Button
+                      variant={answer?.answer === 'not_applicable' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => updateAnswer(question.id, 'answer', 'not_applicable')}
+                      className={`h-12 flex flex-col gap-1 ${answer?.answer === 'not_applicable' ? 'bg-gray-600 hover:bg-gray-700' : ''}`}
+                    >
+                      <span className="text-lg">➖</span>
+                      <span className="text-xs">Kapsam Dışı</span>
+                    </Button>
                   </div>
+                </div>
 
-                  {/* File Upload */}
-                  <div className="space-y-4">
-                    <div>
-                      <Label>Fotoğraf/Doküman Yükleme</Label>
-                      {(question.allowPhoto || question.allowDocument) ? (
-                        <div className="space-y-3">
-                          <ObjectUploader
-                            maxNumberOfFiles={5}
-                            maxFileSize={10485760}
-                            onGetUploadParameters={async () => {
-                              const response = await fetch('/api/objects/upload', {
-                                method: 'POST',
-                                headers: {
-                                  'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                                  'Content-Type': 'application/json'
-                                }
-                              });
-                              const data = await response.json();
-                              return {
-                                method: 'PUT' as const,
-                                url: data.uploadURL
-                              };
-                            }}
-                            onComplete={(result) => {
-                              if (result.successful) {
-                                result.successful.forEach((file: any) => {
-                                  if (file.uploadURL) {
-                                    addFileToAnswer(question.id, file.uploadURL);
-                                    toast({
-                                      title: "Dosya Yüklendi",
-                                      description: "Dosya başarıyla yüklendi.",
-                                    });
-                                  }
+                {/* Compact File Section */}
+                {(question.allowPhoto || question.allowDocument) && (
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <Label className="text-sm font-medium">Fotoğraf/Doküman</Label>
+                      <ObjectUploader
+                        maxNumberOfFiles={5}
+                        maxFileSize={10485760}
+                        onGetUploadParameters={async () => {
+                          const response = await fetch('/api/objects/upload', {
+                            method: 'POST',
+                            headers: {
+                              'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                              'Content-Type': 'application/json'
+                            }
+                          });
+                          const data = await response.json();
+                          return {
+                            method: 'PUT' as const,
+                            url: data.uploadURL
+                          };
+                        }}
+                        onComplete={(result) => {
+                          if (result.successful) {
+                            result.successful.forEach((file: any) => {
+                              if (file.uploadURL) {
+                                addFileToAnswer(question.id, file.uploadURL);
+                                toast({
+                                  title: "Dosya Yüklendi",
+                                  description: "Dosya başarıyla yüklendi.",
                                 });
                               }
-                            }}
-                            buttonClassName="w-full"
-                          >
-                            <div className="flex items-center justify-center gap-2">
-                              <Camera size={16} />
-                              <FileText size={16} />
-                              <span>Dosya Yükle</span>
-                            </div>
-                          </ObjectUploader>
-                          
-                          {/* Show uploaded files */}
-                          {answer?.files && answer.files.length > 0 && (
-                            <div className="space-y-2">
-                              <Label className="text-sm">Yüklenen Dosyalar:</Label>
-                              <div className="space-y-1">
-                                {answer.files.map((fileUrl, fileIndex) => (
-                                  <div key={fileIndex} className="flex items-center gap-2 p-2 bg-gray-50 rounded text-sm">
-                                    <FileText size={14} />
-                                    <span>Dosya {fileIndex + 1}</span>
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      onClick={() => window.open(fileUrl, '_blank')}
-                                      className="ml-auto"
-                                    >
-                                      Görüntüle
-                                    </Button>
-                                  </div>
-                                ))}
+                            });
+                          }
+                        }}
+                        buttonClassName="h-8 px-3 text-xs"
+                      >
+                        <Camera size={14} className="mr-1" />
+                        Ekle
+                      </ObjectUploader>
+                    </div>
+                    
+                    {/* Image Thumbnails */}
+                    {answer?.files && answer.files.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {answer.files.map((fileUrl, fileIndex) => (
+                          <div key={fileIndex} className="relative group">
+                            <div 
+                              className="w-16 h-16 bg-gray-100 rounded-lg border-2 border-gray-200 cursor-pointer overflow-hidden hover:border-blue-400 transition-colors"
+                              onClick={() => {
+                                setSelectedImage(fileUrl);
+                                setImageModalOpen(true);
+                              }}
+                            >
+                              {fileUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                                <img 
+                                  src={fileUrl} 
+                                  alt={`Uploaded file ${fileIndex + 1}`}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center">
+                                  <FileText size={20} className="text-gray-400" />
+                                </div>
+                              )}
+                              <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                <ZoomIn size={16} className="text-white" />
                               </div>
                             </div>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="border-2 border-dashed border-gray-200 rounded-lg p-6 text-center text-gray-400">
-                          <p className="text-sm">Bu soru için dosya yükleme gerekli değil</p>
-                        </div>
-                      )}
-                      
-                      {(question.allowPhoto || question.allowDocument) && answer?.answer === 'non_compliant' && (!answer.files || answer.files.length === 0) && (
-                        <div className="flex items-center gap-2 mt-2 text-red-600 text-sm">
-                          <AlertTriangle size={16} />
-                          <span>Bu madde için fotoğraf/doküman yükleme zorunludur</span>
-                        </div>
-                      )}
-                    </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
+                    {answer?.answer === 'non_compliant' && (!answer.files || answer.files.length === 0) && (
+                      <div className="flex items-center gap-2 text-red-600 text-xs mt-1">
+                        <AlertTriangle size={12} />
+                        <span>Bu madde için fotoğraf/doküman yükleme zorunludur</span>
+                      </div>
+                    )}
                   </div>
+                )}
+
+                {/* Notes Section - Collapsible */}
+                <div>
+                  <Label className="text-sm font-medium mb-2 block">Notlar</Label>
+                  <Textarea
+                    placeholder="Değerlendirme notlarınızı yazın..."
+                    value={answer?.notes || ''}
+                    onChange={(e) => updateAnswer(question.id, 'notes', e.target.value)}
+                    rows={2}
+                    className="text-sm"
+                  />
                 </div>
               </CardContent>
             </Card>
@@ -607,6 +621,30 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
           </div>
         </CardContent>
       </Card>
+
+      {/* Image Modal */}
+      {imageModalOpen && selectedImage && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+          <div className="relative max-w-4xl max-h-full">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setImageModalOpen(false);
+                setSelectedImage(null);
+              }}
+              className="absolute -top-12 right-0 text-white hover:bg-white hover:bg-opacity-20"
+            >
+              <X size={20} />
+            </Button>
+            <img 
+              src={selectedImage} 
+              alt="Enlarged view"
+              className="max-w-full max-h-full object-contain rounded-lg"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
