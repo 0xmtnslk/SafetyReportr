@@ -31,6 +31,7 @@ import InspectionResults from "@/pages/inspection-results";
 import AdminInspections from "@/pages/admin-inspections";
 import InspectionHistory from "@/pages/inspection-history";
 import InspectionResultsAdmin from "@/pages/inspection-results-admin";
+import HospitalInspections from "@/pages/hospital-inspections";
 import Navigation from "@/components/navigation";
 import OfflineIndicator from "@/components/offline-indicator";
 import { useOfflineSync } from "./hooks/useOfflineSync";
@@ -54,7 +55,7 @@ function Router() {
   }
 
   // Protected routes - require authentication
-  const protectedRoutes = ['/dashboard', '/create-report', '/reports', '/edit-report', '/view-report', '/admin', '/change-password', '/checklist', '/live-checklist', '/inspection-results', '/admin/inspections', '/inspection-history', '/inspection-results-admin'];
+  const protectedRoutes = ['/dashboard', '/create-report', '/reports', '/edit-report', '/view-report', '/admin', '/change-password', '/checklist', '/live-checklist', '/inspection-results', '/admin/inspections', '/inspection-history', '/inspection-results-admin', '/hospital-inspections'];
   const isProtectedRoute = protectedRoutes.some(route => location.startsWith(route));
 
   if (isProtectedRoute && !user) {
@@ -147,6 +148,9 @@ function Router() {
             <Route path="/inspection-results-admin">
               {() => ['central_admin', 'admin'].includes(user?.role || '') ? <InspectionResultsAdmin /> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
             </Route>
+            <Route path="/hospital-inspections/:hospitalId">
+              {() => ['central_admin', 'admin'].includes(user?.role || '') ? <HospitalInspections /> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
+            </Route>
             <Route component={() => <div className="p-8"><div>404 - Page Not Found</div></div>} />
           </Switch>
         </Navigation>
@@ -224,6 +228,9 @@ function Router() {
         </Route>
         <Route path="/inspection-results-admin">
           {() => ['central_admin', 'admin'].includes((user as any)?.role || '') ? <InspectionResultsAdmin /> : <Login />}
+        </Route>
+        <Route path="/hospital-inspections/:hospitalId">
+          {() => ['central_admin', 'admin'].includes((user as any)?.role || '') ? <HospitalInspections /> : <Login />}
         </Route>
         <Route component={() => <div>404 - Page Not Found</div>} />
       </Switch>
