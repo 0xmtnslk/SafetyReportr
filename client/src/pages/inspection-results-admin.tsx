@@ -14,14 +14,22 @@ export default function InspectionResultsAdmin() {
   const [gradeFilter, setGradeFilter] = useState("all");
 
   // Fetch all completed inspections
-  const { data: inspections = [], isLoading } = useQuery({
+  const { data: inspections = [], isLoading: inspectionsLoading } = useQuery({
     queryKey: ["/api/admin/inspections"],
   });
+  
+  // Fetch all inspection titles (including pending)
+  const { data: inspectionTitles = [], isLoading: titlesLoading } = useQuery({
+    queryKey: ["/api/admin/inspection-titles"],
+  });
+  
+  const isLoading = inspectionsLoading || titlesLoading;
 
-  // Group inspections by hospital
+  // Group inspections by hospital (both completed and pending)
   const processInspectionsByHospital = () => {
     const hospitalMap: Record<string, any> = {};
     
+    // Process completed inspections first
     inspections.forEach((inspection: any) => {
       const locationId = inspection.location?.id || 'unknown';
       const locationName = inspection.location?.name || 'Bilinmeyen Hastane';
@@ -34,6 +42,7 @@ export default function InspectionResultsAdmin() {
           inspectionTypes: new Set(),
           inspections: [],
           totalInspections: 0,
+          pendingInspections: 0,
           averageScore: 0,
           letterGrade: 'E'
         };
@@ -42,6 +51,31 @@ export default function InspectionResultsAdmin() {
       hospitalMap[locationId].inspectionTypes.add(checklistTitle);
       hospitalMap[locationId].inspections.push(inspection);
       hospitalMap[locationId].totalInspections++;
+    });
+    
+    // Process pending inspection titles to add hospitals and count pending
+    inspectionTitles.forEach((inspectionTitle: any) => {
+      const templateName = inspectionTitle.template?.name || 'Bilinmeyen Kontrol Listesi';
+      
+      // For each hospital this inspection is assigned to
+      (inspectionTitle.targetLocationIds || []).forEach((locationId: string) => {
+        // Try to get hospital name from existing data, or create new entry
+        if (!hospitalMap[locationId]) {
+          hospitalMap[locationId] = {
+            id: locationId,
+            name: `Hastane ${locationId.substring(0, 8)}`, // Fallback name
+            inspectionTypes: new Set(),
+            inspections: [],
+            totalInspections: 0,
+            pendingInspections: 0,
+            averageScore: 0,
+            letterGrade: 'E'
+          };
+        }
+        
+        hospitalMap[locationId].inspectionTypes.add(templateName);
+        hospitalMap[locationId].pendingInspections++;
+      });
     });
     
     // Calculate statistics for each hospital
