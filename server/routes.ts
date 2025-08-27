@@ -919,15 +919,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/specialist/hospitals', authenticateToken, requireSafetySpecialist, async (req, res) => {
     try {
       const user = (req as any).user;
-      const userAssignments = await storage.getUserAssignments(user.id);
-      const userHospital = userAssignments[0]?.hospital;
       
-      if (!userHospital) {
+      // Check if user has a hospital assignment via locationId
+      if (!user.locationId) {
         return res.status(403).json({ error: 'Hastane ataması bulunamadı' });
       }
       
+      // Get user's assigned hospital
+      const hospital = await storage.getLocationById(user.locationId);
+      
+      if (!hospital) {
+        return res.status(403).json({ error: 'Hastane bilgisi bulunamadı' });
+      }
+      
       // Return only the specialist's assigned hospital
-      res.json([userHospital]);
+      res.json([hospital]);
     } catch (error) {
       console.error('Get specialist hospitals error:', error);
       res.status(500).json({ message: 'Hastane bilgileri alınırken hata oluştu' });
@@ -2298,12 +2304,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { inspectionId } = req.params;
       const user = (req as any).user;
       
-      // Get user's hospital
-      const userAssignments = await storage.getUserAssignments(user.id);
-      const userHospital = userAssignments[0]?.hospital;
+      // Check if user has a hospital assignment via locationId
+      if (!user.locationId) {
+        return res.status(403).json({ error: 'Hastane ataması bulunamadı' });
+      }
+      
+      // Get user's assigned hospital
+      const userHospital = await storage.getLocationById(user.locationId);
       
       if (!userHospital) {
-        return res.status(403).json({ error: 'Hastane ataması bulunamadı' });
+        return res.status(403).json({ error: 'Hastane bilgisi bulunamadı' });
       }
       
       // Mock comprehensive analysis data
