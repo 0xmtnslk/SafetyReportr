@@ -12,14 +12,10 @@ export default function ChecklistInspections() {
   const checklistId = params?.checklistId;
 
   // Fetch all inspection titles
-  const { data: inspectionTitles = [], isLoading: inspectionsLoading, error: inspectionsError } = useQuery({
+  const { data: inspectionTitles = [], isLoading: inspectionsLoading } = useQuery({
     queryKey: ["/api/admin/inspection-titles"],
-    staleTime: 0,
-    cacheTime: 0
   });
   
-  // Log query state
-  console.log('useQuery inspection titles:', { inspectionTitles, inspectionsLoading, inspectionsError });
   
   // Fetch all completed inspections
   const { data: completedInspections = [], isLoading: completedLoading } = useQuery({
@@ -33,21 +29,10 @@ export default function ChecklistInspections() {
 
   // Process data for this specific hospital and checklist template
   const processChecklistData = () => {
-    console.log('Debug - All inspection titles:', inspectionTitles);
-    console.log('Debug - All completed inspections:', completedInspections);
-    console.log('Debug - Looking for checklistId:', checklistId);
-    console.log('Debug - Looking for hospitalId:', hospitalId);
-    
     // Filter inspection titles for this checklist template
-    const relevantInspectionTitles = (inspectionTitles as any[]).filter((inspection: any) => {
-      console.log('Checking inspection templateId:', inspection.templateId);
-      console.log('Checking against checklistId:', checklistId);
-      console.log('Types:', typeof inspection.templateId, typeof checklistId);
-      console.log('Equality check:', inspection.templateId === checklistId);
-      return inspection.templateId === checklistId;
-    });
-    
-    console.log('Debug - Relevant inspection titles found:', relevantInspectionTitles);
+    const relevantInspectionTitles = (inspectionTitles as any[]).filter((inspection: any) => 
+      inspection.templateId === checklistId
+    );
     
     // Filter completed inspections for this hospital
     const hospitalInspections = (completedInspections as any[]).filter((inspection: any) => 

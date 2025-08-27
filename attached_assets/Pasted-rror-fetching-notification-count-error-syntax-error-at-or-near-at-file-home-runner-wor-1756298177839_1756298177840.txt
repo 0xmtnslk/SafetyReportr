@@ -1,0 +1,52 @@
+rror fetching notification count: error: syntax error at or near "="
+    at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async NeonPreparedQuery.execute (/home/runner/workspace/node_modules/src/neon-serverless/session.ts:102:18)
+    at async DatabaseStorage.getNotificationCount (/home/runner/workspace/server/storage.ts:1526:24)
+    at async <anonymous> (/home/runner/workspace/server/routes.ts:2000:21) {
+  length: 90,
+  severity: 'ERROR',
+  code: '42601',
+  detail: undefined,
+  hint: undefined,
+  position: '46',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'scan.l',
+  line: '1244',
+  routine: 'scanner_yyerror'
+}
+12:35:19 PM [express] GET /api/notifications/count 304 in 167ms :: {"count":0}
+12:35:19 PM [express] GET /api/checklist/templates 304 in 160ms :: [{"id":"bac1e1ac-9d4b-4a72-ba38-f1…
+12:35:19 PM [express] GET /api/admin/inspections 304 in 169ms :: [{"id":"6510475e-42b7-49a0-b7e9-efbe…
+Error fetching notification count: error: syntax error at or near "="
+    at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async NeonPreparedQuery.execute (/home/runner/workspace/node_modules/src/neon-serverless/session.ts:102:18)
+    at async DatabaseStorage.getNotificationCount (/home/runner/workspace/server/storage.ts:1526:24)
+    at async <anonymous> (/home/runner/workspace/server/routes.ts:2000:21) {
+  length: 90,
+  severity: 'ERROR',
+  code: '42601',
+  detail: undefined,
+  hint: undefined,
+  position: '46',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'scan.l',
+  line: '1244',
+  routine: 'scanner_yyerror'
+}
+12:36:20 PM [express] GET /api/notifications/count 304 in 172ms :: {"count":0}

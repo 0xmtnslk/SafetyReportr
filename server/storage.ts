@@ -1150,7 +1150,6 @@ export class DatabaseStorage implements IStorage {
   
   // Inspection operations
   async getAllInspections(): Promise<any[]> {
-    console.log('DB: Querying all inspections...');
     const results = await db
       .select()
       .from(inspections)
@@ -1158,10 +1157,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(inspections.isActive, true))
       .orderBy(desc(inspections.createdAt));
 
-    console.log('DB: Raw results count:', results.length);
-    console.log('DB: First raw result:', results[0]);
-
-    const mapped = results.map(result => ({
+    return results.map(result => ({
       id: result.inspections.id,
       inspectionNumber: result.inspections.inspectionNumber,
       templateId: result.inspections.templateId,
@@ -1177,10 +1173,6 @@ export class DatabaseStorage implements IStorage {
       } : null,
       createdAt: result.inspections.createdAt
     }));
-    
-    console.log('DB: Mapped results count:', mapped.length);
-    console.log('DB: First mapped result:', mapped[0]);
-    return mapped;
   }
 
   async getInspection(id: string): Promise<Inspection | undefined> {
