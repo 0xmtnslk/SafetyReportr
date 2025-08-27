@@ -29,13 +29,10 @@ export default function ChecklistInspections() {
 
   // Process data for this specific hospital and checklist template
   const processChecklistData = () => {
-    // SIMPLE: Just show all inspection titles for now, filter later
+    // Filter inspection titles for this checklist template
     const relevantInspectionTitles = (inspectionTitles as any[]).filter((inspection: any) => 
       inspection.templateId === checklistId
     );
-    
-    // TEMP: Show all if filtering fails
-    const titlesToShow = relevantInspectionTitles.length > 0 ? relevantInspectionTitles : (inspectionTitles as any[]);
     
     // Filter completed inspections for this hospital
     const hospitalInspections = (completedInspections as any[]).filter((inspection: any) => 
@@ -57,7 +54,7 @@ export default function ChecklistInspections() {
     };
     
     // Process inspection titles with their assignments
-    const inspectionTitlesList = titlesToShow.map((inspectionTitle: any) => {
+    const inspectionTitlesList = relevantInspectionTitles.map((inspectionTitle: any) => {
       // Find completed inspections for this title and hospital
       const titleAssignments = hospitalInspections.filter((comp: any) => 
         comp.inspectionId === inspectionTitle.id
