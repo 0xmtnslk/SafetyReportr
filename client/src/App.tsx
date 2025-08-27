@@ -39,6 +39,7 @@ import SpecialistDashboard from "@/pages/specialist-dashboard";
 import SpecialistChecklists from "@/pages/specialist-checklists";
 import SpecialistInspections from "@/pages/specialist-inspections";
 import SpecialistInspectionDetail from "@/pages/specialist-inspection-detail";
+import SpecialistInspectionAnalysis from "@/pages/specialist-inspection-analysis";
 import Navigation from "@/components/navigation";
 import OfflineIndicator from "@/components/offline-indicator";
 import { useOfflineSync } from "./hooks/useOfflineSync";
@@ -62,7 +63,7 @@ function Router() {
   }
 
   // Protected routes - require authentication
-  const protectedRoutes = ['/dashboard', '/create-report', '/reports', '/edit-report', '/view-report', '/admin', '/change-password', '/checklist', '/live-checklist', '/inspection-results', '/admin/inspections', '/inspection-history', '/inspection-results-admin', '/hospital-inspections', '/checklist-inspections', '/inspection-title-detail', '/inspection-analysis'];
+  const protectedRoutes = ['/dashboard', '/create-report', '/reports', '/edit-report', '/view-report', '/admin', '/change-password', '/checklist', '/live-checklist', '/inspection-results', '/admin/inspections', '/inspection-history', '/inspection-results-admin', '/hospital-inspections', '/checklist-inspections', '/inspection-title-detail', '/inspection-analysis', '/specialist'];
   const isProtectedRoute = protectedRoutes.some(route => location.startsWith(route));
 
   if (isProtectedRoute && !user) {
@@ -172,6 +173,9 @@ function Router() {
             <Route path="/specialist/checklists" component={SpecialistChecklists} />
             <Route path="/specialist/checklists/:checklistId/inspections" component={SpecialistInspections} />
             <Route path="/specialist/inspection/:inspectionId" component={SpecialistInspectionDetail} />
+            <Route path="/specialist/inspection-analysis/:checklistId/:inspectionId">
+              {() => ['safety_specialist', 'occupational_physician'].includes(user?.role || '') ? <SpecialistInspectionAnalysis /> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
+            </Route>
             <Route component={() => <div className="p-8"><div>404 - Page Not Found</div></div>} />
           </Switch>
         </Navigation>

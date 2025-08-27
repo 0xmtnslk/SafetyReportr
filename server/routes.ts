@@ -2292,6 +2292,108 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get specialist inspection analysis
+  app.get('/api/specialist/inspection/:inspectionId/analysis', authenticateToken, requireSafetySpecialist, async (req, res) => {
+    try {
+      const { inspectionId } = req.params;
+      const user = (req as any).user;
+      
+      // Get user's hospital
+      const userAssignments = await storage.getUserAssignments(user.id);
+      const userHospital = userAssignments[0]?.hospital;
+      
+      if (!userHospital) {
+        return res.status(403).json({ error: 'Hastane ataması bulunamadı' });
+      }
+      
+      // Mock comprehensive analysis data
+      const analysisData = {
+        inspection: {
+          id: inspectionId,
+          title: 'İSG Risk Değerlendirmesi Denetimi',
+          description: 'Hastane geneli iş sağlığı ve güvenliği risk değerlendirmesi',
+          status: 'completed',
+          hospital: userHospital,
+          completedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+          inspector: {
+            id: user.id,
+            fullName: user.fullName,
+            role: user.role
+          }
+        },
+        overall: {
+          totalQuestions: 45,
+          totalPossiblePoints: 450,
+          totalEarnedPoints: 383,
+          scorePercentage: 85,
+          letterGrade: 'B',
+          meetsCriteria: 32,
+          partiallyMeets: 8,
+          doesNotMeet: 3,
+          outOfScope: 2
+        },
+        sections: [
+          {
+            id: 'section-1',
+            title: 'İş Sağlığı ve Güvenliği Politikası',
+            totalQuestions: 15,
+            earnedPoints: 135,
+            maxPoints: 150,
+            successRate: 90,
+            grade: 'A',
+            meets: 12,
+            partial: 2,
+            doesNotMeet: 1,
+            outOfScope: 0,
+            findings: [
+              {
+                id: 'finding-1',
+                question: 'İSG politikası yazılı olarak belirlenmiş mi?',
+                status: 'meets',
+                points: 10,
+                maxPoints: 10,
+                notes: 'İSG politikası yazılı olarak hazırlanmış ve uygun yerlerde asılmıştır.'
+              }
+            ]
+          },
+          {
+            id: 'section-2',
+            title: 'Risk Değerlendirmesi',
+            totalQuestions: 20,
+            earnedPoints: 160,
+            maxPoints: 200,
+            successRate: 80,
+            grade: 'B',
+            meets: 14,
+            partial: 4,
+            doesNotMeet: 2,
+            outOfScope: 0,
+            findings: []
+          },
+          {
+            id: 'section-3',
+            title: 'Acil Durum Planları',
+            totalQuestions: 10,
+            earnedPoints: 88,
+            maxPoints: 100,
+            successRate: 88,
+            grade: 'B+',
+            meets: 6,
+            partial: 2,
+            doesNotMeet: 0,
+            outOfScope: 2,
+            findings: []
+          }
+        ]
+      };
+      
+      res.json(analysisData);
+    } catch (error) {
+      console.error('Error fetching specialist inspection analysis:', error);
+      res.status(500).json({ error: 'Error fetching specialist inspection analysis' });
+    }
+  });
+
   app.put('/api/notifications/:id/read', authenticateToken, async (req, res) => {
     try {
       const user = (req as any).user;

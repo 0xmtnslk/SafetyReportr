@@ -314,7 +314,7 @@ export default function InspectionHistory() {
                         className={`p-4 border-l-4 ${getStatusColor(inspection.status)} hover:bg-gray-50 transition-colors cursor-pointer`}
                         onClick={() => {
                           if (inspection.status === 'completed') {
-                            setLocation(`/inspection-analysis/${userHospital?.id}/${checklist.id}/${inspection.id}`);
+                            setLocation(`/specialist/inspection-analysis/${checklist.id}/${inspection.id}`);
                           } else {
                             setLocation(`/specialist/inspection/${inspection.id}`);
                           }
@@ -355,7 +355,7 @@ export default function InspectionHistory() {
                               onClick={(e) => {
                                 e.stopPropagation();
                                 if (inspection.status === 'completed') {
-                                  setLocation(`/inspection-analysis/${userHospital?.id}/${checklist.id}/${inspection.id}`);
+                                  setLocation(`/specialist/inspection-analysis/${checklist.id}/${inspection.id}`);
                                 } else {
                                   setLocation(`/specialist/inspection/${inspection.id}`);
                                 }
