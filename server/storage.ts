@@ -1154,7 +1154,6 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(inspections)
       .leftJoin(checklistTemplates, eq(inspections.templateId, checklistTemplates.id))
-      .where(eq(inspections.isActive, true))
       .orderBy(desc(inspections.createdAt));
 
     return results.map(result => ({
