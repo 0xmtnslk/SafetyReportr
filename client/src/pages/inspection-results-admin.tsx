@@ -19,77 +19,114 @@ export default function InspectionResultsAdmin() {
     queryKey: ["/api/admin/inspections"],
   });
 
-  // Group inspections by checklist and location
+  // Group inspections by checklist -> inspection title -> hospitals
   const processInspectionsByChecklist = () => {
     const checklistMap: Record<string, any> = {};
     
     inspections.forEach((inspection: any) => {
       const checklistId = inspection.inspection?.id || 'unknown';
       const checklistTitle = inspection.inspection?.title || 'Bilinmeyen Kontrol Listesi';
-      const locationId = inspection.location?.id || 'unknown';
+      const inspectionTitle = inspection.inspectionTitle || inspection.title || 'Belirsiz Denetim'; // Denetim başlığı
       const locationName = inspection.location?.name || 'Bilinmeyen Hastane';
-      const groupKey = `${checklistId}-${locationId}`;
       
-      if (!checklistMap[groupKey]) {
-        checklistMap[groupKey] = {
-          id: groupKey,
+      // Ana kontrol listesi grubu
+      if (!checklistMap[checklistId]) {
+        checklistMap[checklistId] = {
           checklistId,
           checklistTitle,
-          locationId,
-          locationName,
-          inspections: [],
+          inspectionGroups: {},
           totalInspections: 0,
           averageScore: 0,
-          letterGrade: 'E',
-          lastInspection: null,
-          trend: 'stable' // stable, improving, declining
+          letterGrade: 'E'
         };
       }
       
-      checklistMap[groupKey].inspections.push(inspection);
-      checklistMap[groupKey].totalInspections++;
+      // Denetim başlığı alt grubu
+      if (!checklistMap[checklistId].inspectionGroups[inspectionTitle]) {
+        checklistMap[checklistId].inspectionGroups[inspectionTitle] = {
+          inspectionTitle,
+          hospitals: [],
+          totalHospitals: 0,
+          averageScore: 0,
+          letterGrade: 'E',
+          lastInspection: null,
+          trend: 'stable'
+        };
+      }
       
-      if (!checklistMap[groupKey].lastInspection || 
-          new Date(inspection.completedAt) > new Date(checklistMap[groupKey].lastInspection.completedAt)) {
-        checklistMap[groupKey].lastInspection = inspection;
+      // Hastane sonucunu ekle
+      checklistMap[checklistId].inspectionGroups[inspectionTitle].hospitals.push({
+        locationName,
+        inspection,
+        scorePercentage: inspection.scorePercentage || 0,
+        letterGrade: inspection.letterGrade || 'E',
+        completedAt: inspection.completedAt
+      });
+      
+      checklistMap[checklistId].inspectionGroups[inspectionTitle].totalHospitals++;
+      checklistMap[checklistId].totalInspections++;
+      
+      // Son denetimi güncelle
+      if (!checklistMap[checklistId].inspectionGroups[inspectionTitle].lastInspection || 
+          new Date(inspection.completedAt) > new Date(checklistMap[checklistId].inspectionGroups[inspectionTitle].lastInspection.completedAt)) {
+        checklistMap[checklistId].inspectionGroups[inspectionTitle].lastInspection = inspection;
       }
     });
     
-    // Calculate averages, grades, and trends
-    Object.values(checklistMap).forEach((group: any) => {
-      const scores = group.inspections.map((i: any) => i.scorePercentage || 0);
-      group.averageScore = Math.round(scores.reduce((a: number, b: number) => a + b, 0) / scores.length);
-      group.letterGrade = group.averageScore >= 90 ? "A" :
-                         group.averageScore >= 75 ? "B" :
-                         group.averageScore >= 50 ? "C" :
-                         group.averageScore >= 25 ? "D" : "E";
+    // İstatistikleri hesapla
+    Object.values(checklistMap).forEach((checklist: any) => {
+      let totalScore = 0;
+      let totalCount = 0;
       
-      // Calculate trend (simple: compare first half vs second half)
-      if (scores.length >= 2) {
-        const firstHalf = scores.slice(0, Math.floor(scores.length / 2));
-        const secondHalf = scores.slice(Math.floor(scores.length / 2));
-        const firstAvg = firstHalf.reduce((a, b) => a + b, 0) / firstHalf.length;
-        const secondAvg = secondHalf.reduce((a, b) => a + b, 0) / secondHalf.length;
+      Object.values(checklist.inspectionGroups).forEach((group: any) => {
+        // Grup ortalaması
+        const scores = group.hospitals.map((h: any) => h.scorePercentage || 0);
+        group.averageScore = scores.length > 0 ? Math.round(scores.reduce((a: number, b: number) => a + b, 0) / scores.length) : 0;
+        group.letterGrade = group.averageScore >= 90 ? "A" :
+                           group.averageScore >= 75 ? "B" :
+                           group.averageScore >= 50 ? "C" :
+                           group.averageScore >= 25 ? "D" : "E";
         
-        if (secondAvg > firstAvg + 5) group.trend = 'improving';
-        else if (secondAvg < firstAvg - 5) group.trend = 'declining';
-        else group.trend = 'stable';
-      }
+        // Trend hesapla
+        if (scores.length >= 2) {
+          const sortedHospitals = group.hospitals.sort((a: any, b: any) => 
+            new Date(a.completedAt).getTime() - new Date(b.completedAt).getTime()
+          );
+          const firstHalf = sortedHospitals.slice(0, Math.floor(sortedHospitals.length / 2));
+          const secondHalf = sortedHospitals.slice(Math.floor(sortedHospitals.length / 2));
+          
+          const firstAvg = firstHalf.reduce((a, b) => a + b.scorePercentage, 0) / firstHalf.length;
+          const secondAvg = secondHalf.reduce((a, b) => a + b.scorePercentage, 0) / secondHalf.length;
+          
+          if (secondAvg > firstAvg + 5) group.trend = 'improving';
+          else if (secondAvg < firstAvg - 5) group.trend = 'declining';
+          else group.trend = 'stable';
+        }
+        
+        totalScore += group.averageScore * group.totalHospitals;
+        totalCount += group.totalHospitals;
+      });
+      
+      // Kontrol listesi genel ortalaması
+      checklist.averageScore = totalCount > 0 ? Math.round(totalScore / totalCount) : 0;
+      checklist.letterGrade = checklist.averageScore >= 90 ? "A" :
+                             checklist.averageScore >= 75 ? "B" :
+                             checklist.averageScore >= 50 ? "C" :
+                             checklist.averageScore >= 25 ? "D" : "E";
     });
     
     return Object.values(checklistMap);
   };
 
-  // Filter grouped inspections
-  const filteredGroups = processInspectionsByChecklist().filter((group: any) => {
-    const matchesSearch = group.checklistTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         group.locationName.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === "all" || 
-      (statusFilter === "recent" && group.lastInspection && 
-       new Date(group.lastInspection.completedAt) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000));
-    const matchesGrade = gradeFilter === "all" || group.letterGrade === gradeFilter;
+  // Filter grouped checklists
+  const filteredChecklists = processInspectionsByChecklist().filter((checklist: any) => {
+    const matchesSearch = checklist.checklistTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         Object.keys(checklist.inspectionGroups).some((title: string) => 
+                           title.toLowerCase().includes(searchQuery.toLowerCase())
+                         );
+    const matchesGrade = gradeFilter === "all" || checklist.letterGrade === gradeFilter;
     
-    return matchesSearch && matchesStatus && matchesGrade;
+    return matchesSearch && matchesGrade;
   }).sort((a: any, b: any) => b.averageScore - a.averageScore);
 
   const getGradeColor = (grade: string) => {
@@ -148,7 +185,7 @@ export default function InspectionResultsAdmin() {
         </div>
         
         <div className="flex items-center gap-2">
-          <Badge variant="outline">{filteredGroups.length} Grup</Badge>
+          <Badge variant="outline">{filteredChecklists.length} Kontrol Listesi</Badge>
           <Badge className="bg-blue-100 text-blue-800">
             {inspections.length} Tamamlanan Denetim
           </Badge>
@@ -208,105 +245,119 @@ export default function InspectionResultsAdmin() {
         </CardHeader>
         <CardContent className="p-0">
           <div className="divide-y">
-            {filteredGroups.map((group: any, index: number) => (
-              <div key={group.id} className="p-6 hover:bg-gray-50 transition-colors cursor-pointer">
-                <div className="flex items-center justify-between">
-                  {/* Ana Bilgiler */}
-                  <div className="flex items-center gap-4 flex-1 min-w-0">
-                    <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
-                      <Building2 className="w-5 h-5 text-blue-600" />
-                    </div>
-                    
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-3">
-                        <h3 className="font-semibold text-gray-900 truncate" title={group.locationName}>
-                          {group.locationName}
-                        </h3>
-                        <span className="text-gray-400">•</span>
-                        <p className="text-gray-600 truncate" title={group.checklistTitle}>
-                          {group.checklistTitle}
+            {filteredChecklists.map((checklist: any, index: number) => (
+              <div key={checklist.checklistId} className="">
+                {/* Kontrol Listesi Başlığı */}
+                <div className="p-6 bg-gray-50 border-l-4 border-l-blue-500">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center">
+                        <CheckSquare className="w-6 h-6 text-blue-600" />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-bold text-gray-900">{checklist.checklistTitle}</h3>
+                        <p className="text-sm text-gray-600">
+                          {Object.keys(checklist.inspectionGroups).length} Denetim Dönemi • 
+                          {checklist.totalInspections} Toplam Denetim
                         </p>
                       </div>
-                      
-                      <div className="flex items-center gap-4 mt-1">
-                        <div className="flex items-center gap-1 text-sm text-gray-500">
-                          <Users className="w-4 h-4" />
-                          <span>{group.totalInspections} Denetim</span>
+                    </div>
+                    
+                    <div className="flex items-center gap-4">
+                      <div className="text-center">
+                        <div className={`text-3xl font-bold ${getScoreColor(checklist.averageScore)}`}>
+                          {checklist.averageScore}%
+                        </div>
+                        <p className="text-xs text-gray-500">Genel Ortalama</p>
+                      </div>
+                      <div className={`px-4 py-3 rounded-xl border-2 ${getGradeColor(checklist.letterGrade)}`}>
+                        <div className="text-2xl font-bold text-center">{checklist.letterGrade}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Denetim Başlıkları */}
+                <div className="divide-y bg-white">
+                  {Object.entries(checklist.inspectionGroups).map(([inspectionTitle, group]: [string, any]) => (
+                    <div key={inspectionTitle} className="p-6 pl-20 hover:bg-gray-50 transition-colors">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3">
+                            <h4 className="font-semibold text-gray-900">{inspectionTitle}</h4>
+                            <div className="flex items-center gap-2 text-sm text-gray-500">
+                              <Building2 className="w-4 h-4" />
+                              <span>{group.totalHospitals} Hastane</span>
+                              <Calendar className="w-4 h-4 ml-2" />
+                              <span>
+                                {group.lastInspection ? 
+                                  new Date(group.lastInspection.completedAt).toLocaleDateString('tr-TR', { 
+                                    day: '2-digit', 
+                                    month: '2-digit',
+                                    year: '2-digit'
+                                  }) : 
+                                  'N/A'
+                                }
+                              </span>
+                            </div>
+                          </div>
+                          
+                          {/* Hastane Listesi */}
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {group.hospitals.map((hospital: any, idx: number) => (
+                              <div key={idx} className="inline-flex items-center gap-2 px-3 py-1 bg-gray-100 rounded-lg text-sm">
+                                <span className="text-gray-700">{hospital.locationName}</span>
+                                <span className={`font-semibold ${
+                                  hospital.scorePercentage >= 90 ? 'text-green-600' :
+                                  hospital.scorePercentage >= 75 ? 'text-blue-600' :
+                                  hospital.scorePercentage >= 50 ? 'text-yellow-600' :
+                                  hospital.scorePercentage >= 25 ? 'text-orange-600' : 'text-red-600'
+                                }`}>
+                                  {hospital.scorePercentage}%
+                                </span>
+                                <span className={`px-2 py-1 rounded text-xs font-bold ${getGradeColor(hospital.letterGrade)}`}>
+                                  {hospital.letterGrade}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                         
-                        <div className="flex items-center gap-1 text-sm text-gray-500">
-                          <Calendar className="w-4 h-4" />
-                          <span>
-                            Son: {group.lastInspection ? 
-                              new Date(group.lastInspection.completedAt).toLocaleDateString('tr-TR', { 
-                                day: '2-digit', 
-                                month: '2-digit',
-                                year: '2-digit'
-                              }) : 
-                              'N/A'
-                            }
-                          </span>
+                        <div className="flex items-center gap-4 flex-shrink-0">
+                          <div className="text-center">
+                            <div className={`text-xl font-bold ${getScoreColor(group.averageScore)}`}>
+                              {group.averageScore}%
+                            </div>
+                            <p className="text-xs text-gray-500">Ortalama</p>
+                          </div>
+                          
+                          <div className={`px-3 py-2 rounded-lg border-2 ${getGradeColor(group.letterGrade)}`}>
+                            <div className="text-lg font-bold text-center">{group.letterGrade}</div>
+                          </div>
+                          
+                          <div className="flex items-center gap-2">
+                            {getTrendIcon(group.trend)}
+                            <span className={`text-sm font-medium ${
+                              group.trend === 'improving' ? 'text-green-600' : 
+                              group.trend === 'declining' ? 'text-red-600' : 'text-gray-600'
+                            }`}>
+                              {group.trend === 'improving' ? 'Gelişiyor' : 
+                               group.trend === 'declining' ? 'Düşüyor' : 'Sabit'}
+                            </span>
+                          </div>
+                          
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => alert(`${inspectionTitle} detayları geliştiriliyor...`)}
+                          >
+                            <TrendingUp size={14} className="mr-1" />
+                            Analiz
+                          </Button>
                         </div>
                       </div>
                     </div>
-                  </div>
-                  
-                  {/* Sağ Taraf: Puan, Not ve Trend */}
-                  <div className="flex items-center gap-6 flex-shrink-0">
-                    {/* Ortalama Puan */}
-                    <div className="text-center">
-                      <div className={`text-2xl font-bold ${getScoreColor(group.averageScore)}`}>
-                        {group.averageScore}%
-                      </div>
-                      <p className="text-xs text-gray-500">Ortalama</p>
-                    </div>
-                    
-                    {/* Harf Notu */}
-                    <div className={`px-4 py-2 rounded-lg border-2 ${getGradeColor(group.letterGrade)}`}>
-                      <div className="text-xl font-bold text-center">{group.letterGrade}</div>
-                    </div>
-                    
-                    {/* Trend */}
-                    <div className="flex items-center gap-2">
-                      {getTrendIcon(group.trend)}
-                      <span className={`text-sm font-medium ${
-                        group.trend === 'improving' ? 'text-green-600' : 
-                        group.trend === 'declining' ? 'text-red-600' : 'text-gray-600'
-                      }`}>
-                        {group.trend === 'improving' ? 'Gelişiyor' : 
-                         group.trend === 'declining' ? 'Düşüyor' : 'Sabit'}
-                      </span>
-                    </div>
-                    
-                    {/* Aksiyon Butonları */}
-                    <div className="flex items-center gap-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setLocation(`/inspection-results/${group.lastInspection?.id}`);
-                        }}
-                      >
-                        <Eye size={14} className="mr-1" />
-                        Son Sonuç
-                      </Button>
-                      
-                      <Button 
-                        size="sm" 
-                        className="bg-blue-600 hover:bg-blue-700"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          alert(`${group.checklistTitle} - ${group.locationName} için detaylı trend analizi geliştiriliyor...`);
-                        }}
-                      >
-                        <TrendingUp size={14} className="mr-1" />
-                        Trend Analizi
-                      </Button>
-                      
-                      <ChevronRight className="w-5 h-5 text-gray-400" />
-                    </div>
-                  </div>
+                  ))}
                 </div>
               </div>
             ))}
@@ -315,15 +366,15 @@ export default function InspectionResultsAdmin() {
       </Card>
 
       {/* Empty State */}
-      {filteredGroups.length === 0 && (
+      {filteredChecklists.length === 0 && (
         <Card>
           <CardContent className="p-12 text-center">
             <CheckSquare className="w-16 h-16 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              Denetim Bulunamadı
+              Kontrol Listesi Bulunamadı
             </h3>
             <p className="text-gray-600">
-              Arama kriterlerinize uygun denetim sonucu bulunamadı.
+              Arama kriterlerinize uygun kontrol listesi sonucu bulunamadı.
             </p>
           </CardContent>
         </Card>
