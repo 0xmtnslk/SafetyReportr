@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, Building2, CheckSquare, Award, TrendingUp, AlertTriangle, Target, BarChart3, PieChart, FileText, Calendar, User } from "lucide-react";
+import { ArrowLeft, Building2, CheckSquare, Award, TrendingUp, AlertTriangle, Target, BarChart3, PieChart, FileText, Calendar, User, Clock } from "lucide-react";
 import { useLocation, useRoute } from "wouter";
 
 export default function InspectionAnalysis() {
@@ -34,12 +34,12 @@ export default function InspectionAnalysis() {
   const isLoading = assignmentsLoading || sectionsLoading || templatesLoading || hospitalsLoading;
 
   // Get hospital and template info
-  const hospital = hospitals.find((h: any) => h.id === hospitalId);
-  const template = checklistTemplates.find((t: any) => t.id === checklistId);
+  const hospital = (hospitals as any[]).find((h: any) => h.id === hospitalId);
+  const template = (checklistTemplates as any[]).find((t: any) => t.id === checklistId);
 
   // Process detailed analysis data
   const processDetailedAnalysis = () => {
-    if (!checklistSections.length) return null;
+    if (!(checklistSections as any[]).length) return null;
 
     const analysisData: any = {
       sections: [],
@@ -55,11 +55,11 @@ export default function InspectionAnalysis() {
     };
 
     // Process each section
-    checklistSections.forEach((section: any) => {
+    (checklistSections as any[]).forEach((section: any) => {
       const sectionData = {
         id: section.id,
         title: section.name,
-        questions: [],
+        questions: [] as any[],
         summary: {
           total: 0,
           meets: 0,
@@ -375,169 +375,199 @@ export default function InspectionAnalysis() {
         </CardContent>
       </Card>
 
-      {/* Section Details */}
+      {/* Section Details - Modern Card Design */}
       <div className="space-y-6">
-        <div className="flex items-center gap-2 mb-6">
-          <PieChart className="w-5 h-5 text-gray-600" />
-          <h2 className="text-xl font-semibold text-gray-900">Bölüm Bazında Detaylı Analiz</h2>
+        <div className="flex items-center gap-2">
+          <Clock className="w-6 h-6 text-blue-600" />
+          <h2 className="text-2xl font-bold text-gray-900">Bölüm Bazında Detaylı Analiz</h2>
         </div>
         
-        {analysis.sections.map((section: any, sectionIndex: number) => (
-          <Card key={section.id} className="border-l-4 border-l-blue-500">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">
-                  Bölüm {sectionIndex + 1}: {section.title}
-                </CardTitle>
-                <div className="flex items-center gap-4">
-                  <Badge className={getGradeColor(section.summary.grade)}>
-                    {section.summary.grade}
-                  </Badge>
-                  <div className="text-right">
-                    <div className="text-sm text-gray-600">Başarı Oranı</div>
-                    <div className="text-lg font-bold text-gray-900">{section.summary.successRate}%</div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {analysis.sections.map((section: any, sectionIndex: number) => (
+            <Card key={section.id} className="overflow-hidden border-0 shadow-lg">
+              <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-lg font-bold text-gray-900">
+                      Bölüm {sectionIndex + 1}: {section.title}
+                    </CardTitle>
+                  </div>
+                  <div className={`w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold ${getGradeColor(section.summary.grade)}`}>
+                    {section.summary.successRate}%
                   </div>
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {/* Section Summary Table */}
-              <div className="overflow-x-auto mb-6">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b bg-gray-50">
-                      <th className="text-left p-3 font-medium">Toplam</th>
-                      <th className="text-center p-3 font-medium">Karşılıyor</th>
-                      <th className="text-center p-3 font-medium">Kısmen</th>
-                      <th className="text-center p-3 font-medium">Karşılamıyor</th>
-                      <th className="text-center p-3 font-medium">Kapsam Dışı</th>
-                      <th className="text-center p-3 font-medium">Maks. Puan</th>
-                      <th className="text-center p-3 font-medium">Alınan Puan</th>
-                      <th className="text-center p-3 font-medium">Başarı Oranı</th>
-                      <th className="text-center p-3 font-medium">Değerlendirme</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr className="border-b">
-                      <td className="p-3 font-medium">{section.summary.total}</td>
-                      <td className="text-center p-3 text-green-600 font-medium">{section.summary.meets}</td>
-                      <td className="text-center p-3 text-yellow-600 font-medium">{section.summary.partial}</td>
-                      <td className="text-center p-3 text-red-600 font-medium">{section.summary.doesNotMeet}</td>
-                      <td className="text-center p-3 text-gray-600 font-medium">{section.summary.outOfScope}</td>
-                      <td className="text-center p-3 font-medium">{section.summary.maxPoints}</td>
-                      <td className="text-center p-3 font-medium">{section.summary.earnedPoints}</td>
-                      <td className="text-center p-3 font-bold">{section.summary.successRate}%</td>
-                      <td className="text-center p-3">
-                        <Badge className={getGradeColor(section.summary.grade)}>
-                          {section.summary.grade}
-                        </Badge>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+              </CardHeader>
+              
+              <CardContent className="p-6">
+                {/* Compact Summary Grid */}
+                <div className="grid grid-cols-4 gap-2 mb-6 text-sm">
+                  <div className="text-center p-3 bg-gray-50 rounded-lg">
+                    <div className="font-bold text-lg text-gray-900">{section.summary.total}</div>
+                    <div className="text-xs text-gray-600">Toplam</div>
+                  </div>
+                  <div className="text-center p-3 bg-green-50 rounded-lg">
+                    <div className="font-bold text-lg text-green-600">{section.summary.meets}</div>
+                    <div className="text-xs text-gray-600">Karşılıyor</div>
+                  </div>
+                  <div className="text-center p-3 bg-yellow-50 rounded-lg">
+                    <div className="font-bold text-lg text-yellow-600">{section.summary.partial}</div>
+                    <div className="text-xs text-gray-600">Kısmen</div>
+                  </div>
+                  <div className="text-center p-3 bg-red-50 rounded-lg">
+                    <div className="font-bold text-lg text-red-600">{section.summary.doesNotMeet}</div>
+                    <div className="text-xs text-gray-600">Karşılamıyor</div>
+                  </div>
+                </div>
+                
+                {/* Additional Stats */}
+                <div className="grid grid-cols-3 gap-4 mb-6">
+                  <div className="text-center">
+                    <div className="text-sm text-gray-600">Kapsam Dışı</div>
+                    <div className="font-bold">{section.summary.outOfScope}</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-sm text-gray-600">Maks. Puan</div>
+                    <div className="font-bold">{section.summary.maxPoints}</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-sm text-gray-600">Alınan Puan</div>
+                    <div className="font-bold">{section.summary.earnedPoints}</div>
+                  </div>
+                </div>
 
-              {/* Individual Questions */}
-              <div className="space-y-3">
-                <h4 className="font-medium text-gray-900 mb-3">Detaylı Soru Analizi</h4>
-                {section.questions.map((question: any, qIndex: number) => (
-                  <div key={question.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div className="flex-1">
-                      <div className="font-medium text-gray-900">
-                        {sectionIndex + 1}.{qIndex + 1}. {question.text}
-                      </div>
-                      <div className="text-sm text-gray-600 mt-1">
-                        Kategori: {question.category}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="text-center">
-                        <div className="text-sm text-gray-600">Puan</div>
-                        <div className="font-medium">
-                          {question.earnedPoints}/{question.maxPoints}
+                {/* Final Grade */}
+                <div className="text-center mb-6">
+                  <div className={`inline-flex items-center px-6 py-3 rounded-full text-lg font-bold ${getGradeColor(section.summary.grade)}`}>
+                    Değerlendirme: {section.summary.grade}
+                  </div>
+                </div>
+
+                {/* Question List */}
+                <div className="space-y-3">
+                  <h4 className="font-bold text-gray-900 border-b pb-2">Detaylı Soru Analizi</h4>
+                  {section.questions.map((question: any, qIndex: number) => (
+                    <div key={question.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                      <div className="flex-1">
+                        <div className="font-medium text-gray-900 text-sm">
+                          {sectionIndex + 1}.{qIndex + 1}. {question.text}
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          Kategori: {question.category}
                         </div>
                       </div>
-                      <div className="text-center">
-                        <div className="text-sm text-gray-600">Başarı</div>
-                        <div className="font-medium">{question.successRate}%</div>
+                      <div className="flex items-center gap-3">
+                        <div className="text-center">
+                          <div className="text-xs text-gray-500">Puan</div>
+                          <div className="font-bold text-sm">
+                            {question.earnedPoints}/{question.maxPoints}
+                          </div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-xs text-gray-500">Başarı</div>
+                          <div className="font-bold text-sm">{question.successRate}%</div>
+                        </div>
+                        <Badge className={getStatusColor(question.status)} variant="outline">
+                          {getStatusText(question.status)}
+                        </Badge>
                       </div>
-                      <Badge className={getStatusColor(question.status)}>
-                        {getStatusText(question.status)}
-                      </Badge>
                     </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
 
-      {/* Final Summary Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="w-5 h-5" />
-            Genel Özet Tablosu
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b bg-gray-50">
-                  <th className="text-left p-3 font-medium">Bölümler</th>
-                  <th className="text-center p-3 font-medium">Toplam</th>
-                  <th className="text-center p-3 font-medium">Karşılıyor</th>
-                  <th className="text-center p-3 font-medium">Kısmen Karşılıyor</th>
-                  <th className="text-center p-3 font-medium">Karşılamıyor</th>
-                  <th className="text-center p-3 font-medium">Kapsam Dışı</th>
-                  <th className="text-center p-3 font-medium">Alınabilecek Maks. Puan</th>
-                  <th className="text-center p-3 font-medium">Alınan Puan</th>
-                  <th className="text-center p-3 font-medium">Başarı Oranı</th>
-                  <th className="text-center p-3 font-medium">Değerlendirme</th>
-                </tr>
-              </thead>
-              <tbody>
-                {analysis.sections.map((section: any, index: number) => (
-                  <tr key={section.id} className="border-b hover:bg-gray-50">
-                    <td className="p-3 font-medium">Bölüm {index + 1}: {section.title}</td>
-                    <td className="text-center p-3">{section.summary.total}</td>
-                    <td className="text-center p-3 text-green-600 font-medium">{section.summary.meets}</td>
-                    <td className="text-center p-3 text-yellow-600 font-medium">{section.summary.partial}</td>
-                    <td className="text-center p-3 text-red-600 font-medium">{section.summary.doesNotMeet}</td>
-                    <td className="text-center p-3 text-gray-600 font-medium">{section.summary.outOfScope}</td>
-                    <td className="text-center p-3">{section.summary.maxPoints}</td>
-                    <td className="text-center p-3 font-medium">{section.summary.earnedPoints}</td>
-                    <td className="text-center p-3 font-bold">{section.summary.successRate}%</td>
-                    <td className="text-center p-3">
-                      <Badge className={getGradeColor(section.summary.grade)}>
-                        {section.summary.grade}
-                      </Badge>
+        {/* Final Summary Table - Cleaner Design */}
+        <Card className="mt-8">
+          <CardHeader className="bg-gradient-to-r from-gray-50 to-blue-50">
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="w-6 h-6 text-blue-600" />
+              Genel Özet Tablosu
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-gray-100 border-b-2">
+                    <th className="text-left p-4 font-bold">Bölümler</th>
+                    <th className="text-center p-4 font-bold">Toplam</th>
+                    <th className="text-center p-4 font-bold">Karşılıyor</th>
+                    <th className="text-center p-4 font-bold">Kısmen Karşılıyor</th>
+                    <th className="text-center p-4 font-bold">Karşılamıyor</th>
+                    <th className="text-center p-4 font-bold">Kapsam Dışı</th>
+                    <th className="text-center p-4 font-bold">Alınabilecek Maks. Puan</th>
+                    <th className="text-center p-4 font-bold">Alınan Puan</th>
+                    <th className="text-center p-4 font-bold">Başarı Oranı</th>
+                    <th className="text-center p-4 font-bold">Değerlendirme</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {analysis.sections.map((section: any, index: number) => (
+                    <tr key={section.id} className="border-b hover:bg-gray-50 transition-colors">
+                      <td className="p-4 font-medium">Bölüm {index + 1}: {section.title}</td>
+                      <td className="text-center p-4">{section.summary.total}</td>
+                      <td className="text-center p-4">
+                        <span className="inline-flex items-center px-2 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
+                          {section.summary.meets}
+                        </span>
+                      </td>
+                      <td className="text-center p-4">
+                        <span className="inline-flex items-center px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm font-medium">
+                          {section.summary.partial}
+                        </span>
+                      </td>
+                      <td className="text-center p-4">
+                        <span className="inline-flex items-center px-2 py-1 bg-red-100 text-red-800 rounded-full text-sm font-medium">
+                          {section.summary.doesNotMeet}
+                        </span>
+                      </td>
+                      <td className="text-center p-4 text-gray-600">{section.summary.outOfScope}</td>
+                      <td className="text-center p-4 font-medium">{section.summary.maxPoints}</td>
+                      <td className="text-center p-4 font-medium">{section.summary.earnedPoints}</td>
+                      <td className="text-center p-4 font-bold text-lg">{section.summary.successRate}%</td>
+                      <td className="text-center p-4">
+                        <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto text-lg font-bold ${getGradeColor(section.summary.grade)}`}>
+                          {section.summary.grade}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  <tr className="bg-blue-50 border-t-2 border-blue-200">
+                    <td className="p-4 font-bold text-lg">Sonuç</td>
+                    <td className="text-center p-4 font-bold">{analysis.overall.totalQuestions}</td>
+                    <td className="text-center p-4">
+                      <span className="inline-flex items-center px-3 py-2 bg-green-100 text-green-800 rounded-full font-bold">
+                        {analysis.overall.meetsCriteria}
+                      </span>
+                    </td>
+                    <td className="text-center p-4">
+                      <span className="inline-flex items-center px-3 py-2 bg-yellow-100 text-yellow-800 rounded-full font-bold">
+                        {analysis.overall.partiallyMeets}
+                      </span>
+                    </td>
+                    <td className="text-center p-4">
+                      <span className="inline-flex items-center px-3 py-2 bg-red-100 text-red-800 rounded-full font-bold">
+                        {analysis.overall.doesNotMeet}
+                      </span>
+                    </td>
+                    <td className="text-center p-4 font-bold text-gray-600">{analysis.overall.outOfScope}</td>
+                    <td className="text-center p-4 font-bold">{analysis.overall.totalPossiblePoints}</td>
+                    <td className="text-center p-4 font-bold">{analysis.overall.totalEarnedPoints}</td>
+                    <td className="text-center p-4 font-bold text-2xl">{overallSuccessRate}%</td>
+                    <td className="text-center p-4">
+                      <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto text-2xl font-bold ${getGradeColor(overallGrade)}`}>
+                        {overallGrade}
+                      </div>
                     </td>
                   </tr>
-                ))}
-                <tr className="border-b-2 border-blue-600 bg-blue-50 font-bold">
-                  <td className="p-3">Sonuç</td>
-                  <td className="text-center p-3">{analysis.overall.totalQuestions}</td>
-                  <td className="text-center p-3 text-green-600">{analysis.overall.meetsCriteria}</td>
-                  <td className="text-center p-3 text-yellow-600">{analysis.overall.partiallyMeets}</td>
-                  <td className="text-center p-3 text-red-600">{analysis.overall.doesNotMeet}</td>
-                  <td className="text-center p-3 text-gray-600">{analysis.overall.outOfScope}</td>
-                  <td className="text-center p-3">{analysis.overall.totalPossiblePoints}</td>
-                  <td className="text-center p-3">{analysis.overall.totalEarnedPoints}</td>
-                  <td className="text-center p-3 text-lg">{overallSuccessRate}%</td>
-                  <td className="text-center p-3">
-                    <Badge className={`${getGradeColor(overallGrade)} text-lg px-3 py-1`}>
-                      {overallGrade}
-                    </Badge>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
