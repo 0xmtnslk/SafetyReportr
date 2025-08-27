@@ -167,23 +167,84 @@ export default function Dashboard() {
                 </Card>
               ) : (
                 recentReportsData.slice(0, 5).map((report: any) => (
-                  <Card key={report.id} className="hover:shadow-md transition-shadow">
-                    <CardContent className="p-4">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h4 className="font-semibold text-gray-900">{report.reportNumber}</h4>
-                          <p className="text-sm text-gray-600">{report.location}</p>
-                          <p className="text-xs text-gray-500">
-                            {new Date(report.reportDate).toLocaleDateString('tr-TR')}
-                          </p>
+                  <Card key={report.id} className="hover:shadow-md transition-all duration-200 cursor-pointer" 
+                        onClick={() => setLocation(`/reports/${report.id}`)}>
+                    <CardContent className="p-5">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <div className="w-10 h-10 bg-primary bg-opacity-10 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <FileText className="text-primary" size={18} />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <h4 className="font-semibold text-gray-900 truncate">
+                              Rapor #{report.reportNumber}
+                            </h4>
+                            <p className="text-sm text-gray-600 truncate">{report.location}</p>
+                            <p className="text-xs text-gray-500">
+                              {new Date(report.reportDate).toLocaleDateString('tr-TR')} - {report.reporter}
+                            </p>
+                          </div>
                         </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          {report.status === "completed" ? (
+                            <div className="flex items-center gap-1 bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                              <CheckCircle className="h-3 w-3" />
+                              <span className="text-xs font-medium">Tamamlandı</span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1 bg-orange-100 text-orange-800 px-2 py-1 rounded-full">
+                              <Clock className="h-3 w-3" />
+                              <span className="text-xs font-medium">Devam Ediyor</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {/* Progress Bar */}
+                      <div className="mb-3">
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-xs text-gray-600">Tamamlanma Durumu</span>
+                          <span className="text-xs font-medium text-gray-900">
+                            {Math.round(calculateProgress(report))}%
+                          </span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div 
+                            className={`h-2 rounded-full transition-all duration-300 ${
+                              report.status === "completed" 
+                                ? 'bg-green-500' 
+                                : 'bg-orange-500'
+                            }`}
+                            style={{ width: `${Math.max(calculateProgress(report), 10)}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Action buttons */}
+                      <div className="flex gap-2">
                         <Button 
                           size="sm" 
-                          variant="outline"
-                          onClick={() => setLocation(`/reports/${report.id}`)}
+                          variant="outline" 
+                          className="flex-1"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setLocation(`/view-report/${report.id}`);
+                          }}
                         >
                           Görüntüle
                         </Button>
+                        {report.status !== "completed" && (
+                          <Button 
+                            size="sm" 
+                            className="flex-1"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setLocation(`/reports/${report.id}`);
+                            }}
+                          >
+                            Düzenle
+                          </Button>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
