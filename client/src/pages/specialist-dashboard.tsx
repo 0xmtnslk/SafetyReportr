@@ -315,12 +315,17 @@ export default function SpecialistDashboard() {
               {reports.length > 0 ? (
                 <div className="space-y-3">
                   {reports.slice(0, 4).map((report: any) => (
-                    <div key={report.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div 
+                      key={report.id} 
+                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors"
+                      onClick={() => setLocation(`/view-report/${report.id}`)}
+                      data-testid={`report-card-${report.id}`}
+                    >
                       <div className="flex items-center gap-3">
                         <div className="w-3 h-3 rounded-full bg-blue-500"></div>
                         <div>
-                          <div className="font-medium">{report.title}</div>
-                          <div className="text-sm text-gray-600">{report.location}</div>
+                          <div className="font-medium">{report.title || 'İsimsiz Rapor'}</div>
+                          <div className="text-sm text-gray-600">{report.projectLocation || report.location}</div>
                         </div>
                       </div>
                       <div className="text-right">

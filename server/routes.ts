@@ -213,7 +213,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             username: user.username,
             fullName: user.fullName,
             role: user.role,
-            location: user.location
+            location: user.location,
+            locationId: user.locationId
           },
           JWT_SECRET,
           { expiresIn: '24h' }
@@ -227,6 +228,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             fullName: user.fullName,
             role: user.role,
             location: user.location,
+            locationId: user.locationId,
             firstLogin: user.firstLogin
           } 
         });
