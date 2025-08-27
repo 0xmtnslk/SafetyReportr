@@ -11,70 +11,72 @@ export default function HospitalInspections() {
   const hospitalId = params?.hospitalId;
 
   // Fetch all completed inspections for this hospital
-  const { data: inspections = [], isLoading } = useQuery({
+  const { data: inspections = [], isLoading: inspectionsLoading } = useQuery({
     queryKey: ["/api/admin/inspections"],
   });
+  
+  // Fetch checklist templates
+  const { data: checklistTemplates = [], isLoading: templatesLoading } = useQuery({
+    queryKey: ["/api/checklist/templates"],
+  });
 
-  // Filter inspections for this specific hospital and group by inspection type
-  const processHospitalInspections = () => {
+  // Process hospital data and checklist templates
+  const processHospitalData = () => {
     const hospitalInspections = inspections.filter((inspection: any) => 
       inspection.location?.id === hospitalId
     );
     
-    if (hospitalInspections.length === 0) return { hospital: null, inspectionTypes: [] };
+    let hospital = null;
+    if (hospitalInspections.length > 0) {
+      hospital = {
+        id: hospitalId,
+        name: hospitalInspections[0]?.location?.name || 'Bilinmeyen Hastane'
+      };
+    }
     
-    const hospital = {
-      id: hospitalId,
-      name: hospitalInspections[0]?.location?.name || 'Bilinmeyen Hastane'
-    };
-    
-    const typeMap: Record<string, any> = {};
-    
-    hospitalInspections.forEach((inspection: any) => {
-      const checklistId = inspection.inspection?.id || 'unknown';
-      const checklistTitle = inspection.inspection?.title || 'Bilinmeyen Kontrol Listesi';
+    // Process checklist templates with their statistics
+    const templatesWithStats = checklistTemplates.map((template: any) => {
+      const templateInspections = hospitalInspections.filter((inspection: any) => 
+        inspection.inspection?.id === template.id
+      );
       
-      if (!typeMap[checklistId]) {
-        typeMap[checklistId] = {
-          id: checklistId,
-          title: checklistTitle,
-          inspections: [],
-          totalInspections: 0,
-          averageScore: 0,
-          letterGrade: 'E',
-          lastInspection: null,
-          uniqueTitles: new Set()
-        };
-      }
+      const scores = templateInspections.map((i: any) => i.scorePercentage || 0);
+      const averageScore = scores.length > 0 ? Math.round(scores.reduce((a: number, b: number) => a + b, 0) / scores.length) : 0;
       
-      typeMap[checklistId].inspections.push(inspection);
-      typeMap[checklistId].totalInspections++;
-      typeMap[checklistId].uniqueTitles.add(inspection.inspectionTitle || inspection.title || 'Belirsiz Denetim');
+      // Count unique inspection titles for this template
+      const uniqueTitles = new Set();
+      templateInspections.forEach((inspection: any) => {
+        uniqueTitles.add(inspection.inspectionTitle || inspection.title || 'Belirsiz Denetim');
+      });
       
-      if (!typeMap[checklistId].lastInspection || 
-          new Date(inspection.completedAt) > new Date(typeMap[checklistId].lastInspection.completedAt)) {
-        typeMap[checklistId].lastInspection = inspection;
-      }
-    });
-    
-    // Calculate statistics for each inspection type
-    Object.values(typeMap).forEach((type: any) => {
-      const scores = type.inspections.map((i: any) => i.scorePercentage || 0);
-      type.averageScore = scores.length > 0 ? Math.round(scores.reduce((a: number, b: number) => a + b, 0) / scores.length) : 0;
-      type.letterGrade = type.averageScore >= 90 ? "A" :
-                        type.averageScore >= 75 ? "B" :
-                        type.averageScore >= 50 ? "C" :
-                        type.averageScore >= 25 ? "D" : "E";
-      type.periodCount = type.uniqueTitles.size;
+      const lastInspection = templateInspections.length > 0 ? 
+        templateInspections.sort((a: any, b: any) => 
+          new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime())[0] : null;
+      
+      return {
+        id: template.id,
+        title: template.title,
+        description: template.description,
+        inspections: templateInspections,
+        totalInspections: templateInspections.length,
+        averageScore,
+        letterGrade: averageScore >= 90 ? "A" :
+                    averageScore >= 75 ? "B" :
+                    averageScore >= 50 ? "C" :
+                    averageScore >= 25 ? "D" : "E",
+        inspectionTitleCount: uniqueTitles.size,
+        lastInspection
+      };
     });
     
     return {
       hospital,
-      inspectionTypes: Object.values(typeMap).sort((a: any, b: any) => b.averageScore - a.averageScore)
+      checklistTemplates: templatesWithStats.filter((t: any) => t.totalInspections > 0)
+        .sort((a: any, b: any) => b.averageScore - a.averageScore)
     };
   };
 
-  const { hospital, inspectionTypes } = processHospitalInspections();
+  const { hospital, checklistTemplates: hospitalChecklists } = processHospitalData();
 
   const getGradeColor = (grade: string) => {
     const colors = {
@@ -95,7 +97,7 @@ export default function HospitalInspections() {
     return "text-red-600";
   };
 
-  if (isLoading) {
+  if (inspectionsLoading || templatesLoading) {
     return (
       <div className="container mx-auto p-6">
         <div className="animate-pulse">
@@ -133,9 +135,9 @@ export default function HospitalInspections() {
   }
 
   // Calculate overall hospital statistics
-  const totalInspections = inspectionTypes.reduce((sum: number, type: any) => sum + type.totalInspections, 0);
-  const overallAverage = inspectionTypes.length > 0 ? 
-    Math.round(inspectionTypes.reduce((sum: number, type: any) => sum + type.averageScore, 0) / inspectionTypes.length) : 0;
+  const totalInspections = hospitalChecklists.reduce((sum: number, checklist: any) => sum + checklist.totalInspections, 0);
+  const overallAverage = hospitalChecklists.length > 0 ? 
+    Math.round(hospitalChecklists.reduce((sum: number, checklist: any) => sum + checklist.averageScore, 0) / hospitalChecklists.length) : 0;
 
   return (
     <div className="container mx-auto p-6 space-y-8">
@@ -153,7 +155,7 @@ export default function HospitalInspections() {
         </div>
         
         <div className="flex items-center gap-2">
-          <Badge variant="outline">{inspectionTypes.length} Denetim Çeşidi</Badge>
+          <Badge variant="outline">{hospitalChecklists.length} Kontrol Listesi</Badge>
           <Badge className="bg-blue-100 text-blue-800">
             {totalInspections} Toplam Denetim
           </Badge>
@@ -167,8 +169,8 @@ export default function HospitalInspections() {
             <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mx-auto mb-3">
               <CheckSquare className="w-6 h-6 text-blue-600" />
             </div>
-            <div className="text-2xl font-bold text-gray-900">{inspectionTypes.length}</div>
-            <p className="text-sm text-gray-600">Denetim Çeşidi</p>
+            <div className="text-2xl font-bold text-gray-900">{hospitalChecklists.length}</div>
+            <p className="text-sm text-gray-600">Kontrol Listesi</p>
           </CardContent>
         </Card>
         
@@ -215,18 +217,18 @@ export default function HospitalInspections() {
         </Card>
       </div>
 
-      {/* Inspection Types List - Görseldeki Format */}
+      {/* Checklist Templates List */}
       <div className="space-y-4">
         <div className="flex items-center gap-2 mb-6">
           <CheckSquare className="w-5 h-5 text-gray-600" />
-          <h2 className="text-xl font-semibold text-gray-900">Denetim Çeşitleri</h2>
+          <h2 className="text-xl font-semibold text-gray-900">Kontrol Listeleri</h2>
         </div>
         
-        {inspectionTypes.map((type: any) => (
+        {hospitalChecklists.map((checklist: any) => (
           <Card 
-            key={type.id} 
+            key={checklist.id} 
             className="hover:shadow-lg transition-all duration-200 cursor-pointer border-l-4 border-l-blue-500"
-            onClick={() => setLocation(`/inspection-type-detail/${hospitalId}/${type.id}`)}
+            onClick={() => setLocation(`/checklist-inspections/${hospitalId}/${checklist.id}`)}
           >
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -237,19 +239,19 @@ export default function HospitalInspections() {
                   </div>
                   
                   <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">{type.title}</h3>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">{checklist.title}</h3>
                     <div className="flex items-center gap-6 text-sm text-gray-600">
                       <div className="flex items-center gap-1">
                         <Calendar className="w-4 h-4" />
-                        <span>{type.periodCount} Denetim Dönemi</span>
+                        <span>{checklist.inspectionTitleCount} Denetim Başlığı</span>
                       </div>
                       <div className="flex items-center gap-1">
                         <BarChart3 className="w-4 h-4" />
-                        <span>{type.totalInspections} Toplam Denetim</span>
+                        <span>{checklist.totalInspections} Toplam Denetim</span>
                       </div>
                       <div>
-                        Son: {type.lastInspection ? 
-                          new Date(type.lastInspection.completedAt).toLocaleDateString('tr-TR', { 
+                        Son: {checklist.lastInspection ? 
+                          new Date(checklist.lastInspection.completedAt).toLocaleDateString('tr-TR', { 
                             day: '2-digit', 
                             month: '2-digit',
                             year: '2-digit'
@@ -265,15 +267,15 @@ export default function HospitalInspections() {
                 <div className="flex items-center gap-6 flex-shrink-0">
                   {/* Ortalama Puan */}
                   <div className="text-center">
-                    <div className={`text-3xl font-bold ${getScoreColor(type.averageScore)}`}>
-                      {type.averageScore}%
+                    <div className={`text-3xl font-bold ${getScoreColor(checklist.averageScore)}`}>
+                      {checklist.averageScore}%
                     </div>
                     <p className="text-xs text-gray-500">Ortalama Puan</p>
                   </div>
                   
                   {/* Harf Notu */}
-                  <div className={`w-16 h-16 rounded-full flex items-center justify-center border-4 ${getGradeColor(type.letterGrade)}`}>
-                    <div className="text-2xl font-bold">{type.letterGrade}</div>
+                  <div className={`w-16 h-16 rounded-full flex items-center justify-center border-4 ${getGradeColor(checklist.letterGrade)}`}>
+                    <div className="text-2xl font-bold">{checklist.letterGrade}</div>
                   </div>
                   
                   {/* Aksiyon Butonları */}
@@ -283,7 +285,7 @@ export default function HospitalInspections() {
                       size="sm"
                       onClick={(e) => {
                         e.stopPropagation();
-                        alert(`${type.title} trend analizi geliştiriliyor...`);
+                        alert(`${checklist.title} trend analizi geliştiriliyor...`);
                       }}
                     >
                       <TrendingUp size={14} className="mr-1" />
@@ -295,7 +297,7 @@ export default function HospitalInspections() {
                       className="bg-blue-600 hover:bg-blue-700"
                       onClick={(e) => {
                         e.stopPropagation();
-                        setLocation(`/inspection-type-detail/${hospitalId}/${type.id}`);
+                        setLocation(`/checklist-inspections/${hospitalId}/${checklist.id}`);
                       }}
                     >
                       <Eye size={14} className="mr-1" />
@@ -312,15 +314,15 @@ export default function HospitalInspections() {
       </div>
 
       {/* Empty State */}
-      {inspectionTypes.length === 0 && (
+      {hospitalChecklists.length === 0 && (
         <Card>
           <CardContent className="p-12 text-center">
             <CheckSquare className="w-16 h-16 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              Denetim Bulunamadı
+              Kontrol Listesi Bulunamadı
             </h3>
             <p className="text-gray-600">
-              Bu hastane için henüz denetim kaydı bulunmuyor.
+              Bu hastane için henüz kontrol listesi denetimi bulunmuyor.
             </p>
           </CardContent>
         </Card>

@@ -7,9 +7,9 @@ import { useLocation, useRoute } from "wouter";
 
 export default function InspectionTitleDetail() {
   const [, setLocation] = useLocation();
-  const [, params] = useRoute("/inspection-title-detail/:hospitalId/:typeId/:titleName");
+  const [, params] = useRoute("/inspection-title-detail/:hospitalId/:checklistId/:titleName");
   const hospitalId = params?.hospitalId;
-  const typeId = params?.typeId;
+  const checklistId = params?.checklistId;
   const titleName = params?.titleName ? decodeURIComponent(params.titleName) : '';
 
   // Fetch all completed inspections
@@ -21,7 +21,7 @@ export default function InspectionTitleDetail() {
   const processInspectionTitleData = () => {
     const relevantInspections = inspections.filter((inspection: any) => 
       inspection.location?.id === hospitalId && 
-      inspection.inspection?.id === typeId &&
+      inspection.inspection?.id === checklistId &&
       (inspection.inspectionTitle === titleName || inspection.title === titleName)
     );
     
@@ -32,8 +32,8 @@ export default function InspectionTitleDetail() {
       name: relevantInspections[0]?.location?.name || 'Bilinmeyen Hastane'
     };
     
-    const inspectionType = {
-      id: typeId,
+    const checklistTemplate = {
+      id: checklistId,
       title: relevantInspections[0]?.inspection?.title || 'Bilinmeyen Kontrol Listesi'
     };
 
@@ -91,7 +91,7 @@ export default function InspectionTitleDetail() {
     
     return {
       hospital,
-      inspectionType,
+      checklistTemplate,
       titleData: {
         title: titleName,
         inspections: relevantInspections,
@@ -108,7 +108,7 @@ export default function InspectionTitleDetail() {
     };
   };
 
-  const { hospital, inspectionType, titleData } = processInspectionTitleData();
+  const { hospital, checklistTemplate, titleData } = processInspectionTitleData();
 
   const getGradeColor = (grade: string) => {
     const colors = {
@@ -144,7 +144,7 @@ export default function InspectionTitleDetail() {
     );
   }
 
-  if (!hospital || !inspectionType || !titleData) {
+  if (!hospital || !checklistTemplate || !titleData) {
     return (
       <div className="container mx-auto p-6">
         <Card>
@@ -156,7 +156,7 @@ export default function InspectionTitleDetail() {
             <p className="text-gray-600">
               Bu denetim başlığı için detay bulunamadı.
             </p>
-            <Button className="mt-4" onClick={() => setLocation(`/inspection-type-detail/${hospitalId}/${typeId}`)}>
+            <Button className="mt-4" onClick={() => setLocation(`/checklist-inspections/${hospitalId}/${checklistId}`)}>
               <ArrowLeft size={16} className="mr-2" />
               Geri Dön
             </Button>
@@ -174,9 +174,9 @@ export default function InspectionTitleDetail() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button variant="outline" onClick={() => setLocation(`/inspection-type-detail/${hospitalId}/${typeId}`)}>
+          <Button variant="outline" onClick={() => setLocation(`/checklist-inspections/${hospitalId}/${checklistId}`)}>
             <ArrowLeft size={16} className="mr-2" />
-            {inspectionType.title}
+            {checklistTemplate.title}
           </Button>
           <div>
             <h1 className="text-3xl font-bold text-gray-900">{titleData.title}</h1>
