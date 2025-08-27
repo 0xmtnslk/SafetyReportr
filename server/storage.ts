@@ -240,6 +240,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteUser(id: string): Promise<boolean> {
+    // First delete all inspection assignments for this user
+    await db.delete(inspectionAssignments).where(eq(inspectionAssignments.assignedUserId, id));
+    
+    // Then delete the user
     const result = await db.delete(users).where(eq(users.id, id));
     return (result.rowCount || 0) > 0;
   }

@@ -594,6 +594,8 @@ export default function AdminPanel() {
 
   // Handle edit user
   const onEditSubmit = (data: EditUserForm) => {
+    console.log('Edit form submitted with data:', data);
+    console.log('Form errors:', editForm.formState.errors);
     if (editingUser) {
       updateUserMutation.mutate({ id: editingUser.id, userData: data });
     }
@@ -621,7 +623,12 @@ export default function AdminPanel() {
     setEditingUser(user);
     editForm.setValue("username", user.username);
     editForm.setValue("fullName", user.fullName);
+    editForm.setValue("email", user.email || "");
+    editForm.setValue("phone", user.phone || "");
     editForm.setValue("role", user.role);
+    editForm.setValue("position", user.position || "");
+    editForm.setValue("department", user.department || "");
+    editForm.setValue("location", user.location || "");
     editForm.setValue("locationId", user.locationId || ""); // Hospital ID for dropdown
     editForm.setValue("isActive", user.isActive);
     setIsEditDialogOpen(true);
