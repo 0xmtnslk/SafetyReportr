@@ -8,10 +8,8 @@ neonConfig.webSocketConstructor = ws;
 
 // Production ortamında WebSocket proxy'yi devre dışı bırak
 if (process.env.NODE_ENV === 'production') {
-  neonConfig.wsProxy = (host, port) => ({ host, port });
+  neonConfig.wsProxy = undefined;
   neonConfig.useSecureWebSocket = true;
-  neonConfig.pipelineHost = undefined; // Production'da pipeline host kullanma
-  neonConfig.pipelinePath = undefined;
 } else {
   // Development ortamında varsayılan ayarları kullan
   neonConfig.wsProxy = undefined;
