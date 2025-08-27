@@ -1944,7 +1944,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all inspection titles (for admin analysis)
   app.get('/api/admin/inspection-titles', authenticateToken, requireCentralManagement, async (req: Request, res: Response) => {
     try {
+      console.log('API: Fetching inspection titles...');
       const inspectionTitles = await storage.getAllInspections();
+      console.log('API: Found inspection titles:', inspectionTitles.length, 'items');
+      console.log('API: First item:', inspectionTitles[0]);
       res.json(inspectionTitles);
     } catch (error: any) {
       console.error('Error fetching inspection titles:', error);
