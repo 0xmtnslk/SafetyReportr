@@ -39,10 +39,9 @@ export default function Navigation({ children }: NavigationProps) {
       );
     }
     
-    // Safety specialists can see their checklists and inspection history
+    // Safety specialists can see their inspection history
     if (['safety_specialist', 'occupational_physician'].includes(user?.role || '')) {
       baseItems.push(
-        { path: "/specialist/checklists", label: "Denetimlerim", icon: CheckSquare },
         { path: "/inspection-history", label: "Denetim Geçmişim", icon: BarChart3 },
       );
     }
