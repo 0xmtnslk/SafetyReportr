@@ -39,9 +39,10 @@ export default function Navigation({ children }: NavigationProps) {
       );
     }
     
-    // Safety specialists can see their inspection history
-    if (['safety_specialist'].includes(user?.role || '')) {
+    // Safety specialists can see their checklists and inspection history
+    if (['safety_specialist', 'occupational_physician'].includes(user?.role || '')) {
       baseItems.push(
+        { path: "/specialist/checklists", label: "Denetimlerim", icon: CheckSquare },
         { path: "/inspection-history", label: "Denetim Geçmişim", icon: BarChart3 },
       );
     }
@@ -49,9 +50,9 @@ export default function Navigation({ children }: NavigationProps) {
     // All authenticated users can view reports
     baseItems.push({ path: "/reports", label: "Raporlar", icon: FileText });
     
-    // Checklist system for admin (safety specialists see their assignments in dashboard)
+    // Checklist system for admin only
     if (['central_admin', 'admin'].includes(user?.role || '')) {
-      baseItems.push({ path: "/checklist", label: "Kontrol Listeleri", icon: CheckSquare });
+      baseItems.push({ path: "/checklist", label: "Kontrol Listeleri Yönetimi", icon: CheckSquare });
     }
     
     // Only admin users can access admin panel

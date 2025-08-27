@@ -35,6 +35,10 @@ import HospitalInspections from "@/pages/hospital-inspections";
 import ChecklistInspections from "@/pages/checklist-inspections";
 import InspectionTitleDetail from "@/pages/inspection-title-detail";
 import InspectionAnalysis from "@/pages/inspection-analysis";
+import SpecialistDashboard from "@/pages/specialist-dashboard";
+import SpecialistChecklists from "@/pages/specialist-checklists";
+import SpecialistInspections from "@/pages/specialist-inspections";
+import SpecialistInspectionDetail from "@/pages/specialist-inspection-detail";
 import Navigation from "@/components/navigation";
 import OfflineIndicator from "@/components/offline-indicator";
 import { useOfflineSync } from "./hooks/useOfflineSync";
@@ -82,7 +86,9 @@ function Router() {
         <Navigation>
           {user && <OfflineIndicator />}
           <Switch>
-            <Route path="/dashboard" component={Dashboard} />
+            <Route path="/dashboard">
+              {() => ['safety_specialist', 'occupational_physician'].includes(user?.role || '') ? <SpecialistDashboard /> : <Dashboard />}
+            </Route>
             <Route path="/create-report" component={CreateReport} />
             <Route path="/reports" component={Reports} />
             <Route path="/edit-report/:id" component={EditReport} />
@@ -163,6 +169,9 @@ function Router() {
             <Route path="/inspection-analysis/:hospitalId/:checklistId/:inspectionId">
               {() => ['central_admin', 'admin'].includes(user?.role || '') ? <InspectionAnalysis /> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
             </Route>
+            <Route path="/specialist/checklists" component={SpecialistChecklists} />
+            <Route path="/specialist/checklists/:checklistId/inspections" component={SpecialistInspections} />
+            <Route path="/specialist/inspection/:inspectionId" component={SpecialistInspectionDetail} />
             <Route component={() => <div className="p-8"><div>404 - Page Not Found</div></div>} />
           </Switch>
         </Navigation>

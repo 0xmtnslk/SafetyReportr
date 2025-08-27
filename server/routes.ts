@@ -2002,6 +2002,231 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // === SPECIALIST-SPECIFIC ENDPOINTS ===
+  
+  // Get recent inspections for specialist's hospital
+  app.get('/api/hospital/:hospitalId/recent-inspections', authenticateToken, requireSafetySpecialist, async (req, res) => {
+    try {
+      const { hospitalId } = req.params;
+      const user = (req as any).user;
+      
+      // Verify user has access to this hospital
+      const userAssignments = await storage.getUserAssignments(user.id);
+      const hasAccess = userAssignments.some((assignment: any) => assignment.hospital?.id === hospitalId);
+      
+      if (!hasAccess) {
+        return res.status(403).json({ error: 'Bu hastaneye erişim yetkiniz yok' });
+      }
+      
+      // Get recent inspections for this hospital (mock data for now)
+      const recentInspections = [
+        {
+          id: 'recent-1',
+          title: 'Haftalık Güvenlik Denetimi',
+          templateName: 'ADP Checklist',
+          status: 'completed',
+          progress: 100,
+          createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+          updatedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+          completedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+        },
+        {
+          id: 'recent-2',
+          title: 'Aylık İSG Denetimi',
+          templateName: 'İSG Checklist',
+          status: 'in_progress',
+          progress: 65,
+          createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          id: 'recent-3',
+          title: 'Acil Durum Denetimi',
+          templateName: 'Acil Durum Checklist',
+          status: 'pending',
+          progress: 0,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }
+      ];
+      
+      res.json(recentInspections);
+    } catch (error) {
+      console.error('Error fetching recent inspections:', error);
+      res.status(500).json({ error: 'Error fetching recent inspections' });
+    }
+  });
+
+  // Get inspections for a specific checklist (specialist view)
+  app.get('/api/specialist/checklist/:checklistId/inspections', authenticateToken, requireSafetySpecialist, async (req, res) => {
+    try {
+      const { checklistId } = req.params;
+      const user = (req as any).user;
+      
+      // Get user's hospital
+      const userAssignments = await storage.getUserAssignments(user.id);
+      const userHospital = userAssignments[0]?.hospital;
+      
+      if (!userHospital) {
+        return res.status(403).json({ error: 'Hastane ataması bulunamadı' });
+      }
+      
+      // Get inspections for this checklist at user's hospital (mock data for now)
+      const inspections = [
+        {
+          id: 'insp-1',
+          title: 'Haftalık ADP Denetimi',
+          description: 'Haftalık rutin ADP checklist denetimi',
+          status: 'completed',
+          progress: 100,
+          templateId: checklistId,
+          hospitalId: userHospital.id,
+          createdBy: user.id,
+          createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+          updatedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+          completedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+        },
+        {
+          id: 'insp-2',
+          title: 'Aylık Kapsamlı Denetim',
+          description: 'Aylık detaylı checklist denetimi',
+          status: 'in_progress',
+          progress: 45,
+          templateId: checklistId,
+          hospitalId: userHospital.id,
+          createdBy: user.id,
+          createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          id: 'insp-3',
+          title: 'Yeni Başlatılan Denetim',
+          description: 'Admin tarafından yeni oluşturulan checklist denetimi',
+          status: 'pending',
+          progress: 0,
+          templateId: checklistId,
+          hospitalId: userHospital.id,
+          createdBy: user.id,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }
+      ];
+      
+      res.json(inspections);
+    } catch (error) {
+      console.error('Error fetching specialist checklist inspections:', error);
+      res.status(500).json({ error: 'Error fetching specialist checklist inspections' });
+    }
+  });
+
+  // Get specific inspection details for specialist
+  app.get('/api/specialist/inspection/:inspectionId', authenticateToken, requireSafetySpecialist, async (req, res) => {
+    try {
+      const { inspectionId } = req.params;
+      const user = (req as any).user;
+      
+      // Get user's hospital
+      const userAssignments = await storage.getUserAssignments(user.id);
+      const userHospital = userAssignments[0]?.hospital;
+      
+      if (!userHospital) {
+        return res.status(403).json({ error: 'Hastane ataması bulunamadı' });
+      }
+      
+      // Mock inspection data
+      const inspection = {
+        id: inspectionId,
+        title: 'Denetim Detayı',
+        description: 'Bu denetim specialist tarafından yönetiliyor',
+        status: inspectionId === 'insp-1' ? 'completed' : inspectionId === 'insp-2' ? 'in_progress' : 'pending',
+        progress: inspectionId === 'insp-1' ? 100 : inspectionId === 'insp-2' ? 45 : 0,
+        templateId: 'bac1e1ac-9d4b-4a72-ba38-f1e8931e08c2',
+        hospitalId: userHospital.id,
+        createdBy: user.id,
+        createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+        updatedAt: new Date().toISOString(),
+        completedAt: inspectionId === 'insp-1' ? new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString() : null,
+      };
+      
+      res.json(inspection);
+    } catch (error) {
+      console.error('Error fetching specialist inspection:', error);
+      res.status(500).json({ error: 'Error fetching specialist inspection' });
+    }
+  });
+
+  // Create new inspection for specialist
+  app.post('/api/specialist/inspection', authenticateToken, requireSafetySpecialist, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      const { checklistId, title, description } = req.body;
+      
+      // Get user's hospital
+      const userAssignments = await storage.getUserAssignments(user.id);
+      const userHospital = userAssignments[0]?.hospital;
+      
+      if (!userHospital) {
+        return res.status(403).json({ error: 'Hastane ataması bulunamadı' });
+      }
+      
+      // Create new inspection (mock implementation)
+      const newInspection = {
+        id: `insp-${Date.now()}`,
+        title: title || 'Yeni Denetim',
+        description: description || '',
+        status: 'pending',
+        progress: 0,
+        templateId: checklistId,
+        hospitalId: userHospital.id,
+        createdBy: user.id,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      
+      res.status(201).json(newInspection);
+    } catch (error) {
+      console.error('Error creating specialist inspection:', error);
+      res.status(500).json({ error: 'Error creating specialist inspection' });
+    }
+  });
+
+  // Update inspection progress/status for specialist
+  app.put('/api/specialist/inspection/:inspectionId', authenticateToken, requireSafetySpecialist, async (req, res) => {
+    try {
+      const { inspectionId } = req.params;
+      const user = (req as any).user;
+      const { status, progress, completedAt } = req.body;
+      
+      // Get user's hospital
+      const userAssignments = await storage.getUserAssignments(user.id);
+      const userHospital = userAssignments[0]?.hospital;
+      
+      if (!userHospital) {
+        return res.status(403).json({ error: 'Hastane ataması bulunamadı' });
+      }
+      
+      // Update inspection (mock implementation)
+      const updatedInspection = {
+        id: inspectionId,
+        title: 'Güncellenmiş Denetim',
+        description: 'Bu denetim güncellendi',
+        status: status || 'in_progress',
+        progress: progress || 0,
+        templateId: 'bac1e1ac-9d4b-4a72-ba38-f1e8931e08c2',
+        hospitalId: userHospital.id,
+        createdBy: user.id,
+        createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+        updatedAt: new Date().toISOString(),
+        completedAt: completedAt || null,
+      };
+      
+      res.json(updatedInspection);
+    } catch (error) {
+      console.error('Error updating specialist inspection:', error);
+      res.status(500).json({ error: 'Error updating specialist inspection' });
+    }
+  });
+
   app.put('/api/notifications/:id/read', authenticateToken, async (req, res) => {
     try {
       const user = (req as any).user;
