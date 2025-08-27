@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Search, Building2, TrendingUp, Award, Eye, Filter, CheckSquare, Activity } from "lucide-react";
+import { ArrowLeft, Search, Building2, TrendingUp, Award, Eye, Filter, CheckSquare, Activity, ChevronRight, Calendar, Users } from "lucide-react";
 import { useLocation } from "wouter";
 import { useState } from "react";
 
@@ -122,9 +122,9 @@ export default function InspectionResultsAdmin() {
       <div className="container mx-auto p-6">
         <div className="animate-pulse">
           <div className="h-8 bg-gray-200 rounded w-1/3 mb-4"></div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div key={i} className="h-48 bg-gray-200 rounded-lg"></div>
+          <div className="space-y-4">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="h-20 bg-gray-200 rounded-lg"></div>
             ))}
           </div>
         </div>
@@ -143,7 +143,7 @@ export default function InspectionResultsAdmin() {
           </Button>
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Kontrol Listesi Bazlı Denetim Sonuçları</h1>
-            <p className="text-gray-600 mt-1">Aynı kontrol listesinin zaman içindeki performansı ve trendi</p>
+            <p className="text-gray-600 mt-1">Hastane ve kontrol listesi kombinasyonu bazlı trend analizi</p>
           </div>
         </div>
         
@@ -163,7 +163,7 @@ export default function InspectionResultsAdmin() {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
                 <Input
-                  placeholder="Kontrol listesi veya hastane ara..."
+                  placeholder="Hastane veya kontrol listesi ara..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10"
@@ -198,111 +198,135 @@ export default function InspectionResultsAdmin() {
         </CardContent>
       </Card>
 
-      {/* Inspection Groups */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {filteredGroups.map((group: any, index: number) => (
-          <Card key={group.id} className="hover:shadow-lg transition-shadow cursor-pointer border-l-4 border-l-blue-500">
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0">
-                    <CheckSquare className="w-6 h-6 text-blue-600" />
+      {/* Inspection Groups - Liste Format */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CheckSquare className="w-5 h-5" />
+            Hastane + Kontrol Listesi Kombinasyonları
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="divide-y">
+            {filteredGroups.map((group: any, index: number) => (
+              <div key={group.id} className="p-6 hover:bg-gray-50 transition-colors cursor-pointer">
+                <div className="flex items-center justify-between">
+                  {/* Ana Bilgiler */}
+                  <div className="flex items-center gap-4 flex-1 min-w-0">
+                    <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
+                      <Building2 className="w-5 h-5 text-blue-600" />
+                    </div>
+                    
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-3">
+                        <h3 className="font-semibold text-gray-900 truncate" title={group.locationName}>
+                          {group.locationName}
+                        </h3>
+                        <span className="text-gray-400">•</span>
+                        <p className="text-gray-600 truncate" title={group.checklistTitle}>
+                          {group.checklistTitle}
+                        </p>
+                      </div>
+                      
+                      <div className="flex items-center gap-4 mt-1">
+                        <div className="flex items-center gap-1 text-sm text-gray-500">
+                          <Users className="w-4 h-4" />
+                          <span>{group.totalInspections} Denetim</span>
+                        </div>
+                        
+                        <div className="flex items-center gap-1 text-sm text-gray-500">
+                          <Calendar className="w-4 h-4" />
+                          <span>
+                            Son: {group.lastInspection ? 
+                              new Date(group.lastInspection.completedAt).toLocaleDateString('tr-TR', { 
+                                day: '2-digit', 
+                                month: '2-digit',
+                                year: '2-digit'
+                              }) : 
+                              'N/A'
+                            }
+                          </span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <CardTitle className="text-base truncate" title={group.checklistTitle}>
-                      {group.checklistTitle}
-                    </CardTitle>
-                    <p className="text-sm text-gray-600 truncate" title={group.locationName}>
-                      {group.locationName}
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  {getTrendIcon(group.trend)}
-                  <div className={`px-3 py-1 rounded-lg border-2 ${getGradeColor(group.letterGrade)}`}>
-                    <div className="text-lg font-bold">{group.letterGrade}</div>
+                  
+                  {/* Sağ Taraf: Puan, Not ve Trend */}
+                  <div className="flex items-center gap-6 flex-shrink-0">
+                    {/* Ortalama Puan */}
+                    <div className="text-center">
+                      <div className={`text-2xl font-bold ${getScoreColor(group.averageScore)}`}>
+                        {group.averageScore}%
+                      </div>
+                      <p className="text-xs text-gray-500">Ortalama</p>
+                    </div>
+                    
+                    {/* Harf Notu */}
+                    <div className={`px-4 py-2 rounded-lg border-2 ${getGradeColor(group.letterGrade)}`}>
+                      <div className="text-xl font-bold text-center">{group.letterGrade}</div>
+                    </div>
+                    
+                    {/* Trend */}
+                    <div className="flex items-center gap-2">
+                      {getTrendIcon(group.trend)}
+                      <span className={`text-sm font-medium ${
+                        group.trend === 'improving' ? 'text-green-600' : 
+                        group.trend === 'declining' ? 'text-red-600' : 'text-gray-600'
+                      }`}>
+                        {group.trend === 'improving' ? 'Gelişiyor' : 
+                         group.trend === 'declining' ? 'Düşüyor' : 'Sabit'}
+                      </span>
+                    </div>
+                    
+                    {/* Aksiyon Butonları */}
+                    <div className="flex items-center gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setLocation(`/inspection-results/${group.lastInspection?.id}`);
+                        }}
+                      >
+                        <Eye size={14} className="mr-1" />
+                        Son Sonuç
+                      </Button>
+                      
+                      <Button 
+                        size="sm" 
+                        className="bg-blue-600 hover:bg-blue-700"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          alert(`${group.checklistTitle} - ${group.locationName} için detaylı trend analizi geliştiriliyor...`);
+                        }}
+                      >
+                        <TrendingUp size={14} className="mr-1" />
+                        Trend Analizi
+                      </Button>
+                      
+                      <ChevronRight className="w-5 h-5 text-gray-400" />
+                    </div>
                   </div>
                 </div>
               </div>
-            </CardHeader>
-            
-            <CardContent className="space-y-4">
-              {/* Score Display */}
-              <div className="text-center">
-                <div className={`text-2xl font-bold ${getScoreColor(group.averageScore)}`}>
-                  {group.averageScore}%
-                </div>
-                <p className="text-sm text-gray-600">Ortalama Puan</p>
-              </div>
-              
-              {/* Stats */}
-              <div className="grid grid-cols-2 gap-4 text-center">
-                <div>
-                  <div className="text-lg font-semibold text-gray-900">
-                    {group.totalInspections}
-                  </div>
-                  <p className="text-xs text-gray-600">Denetim</p>
-                </div>
-                <div>
-                  <div className="text-lg font-semibold text-gray-900">
-                    {group.lastInspection ? 
-                      new Date(group.lastInspection.completedAt).toLocaleDateString('tr-TR', { 
-                        day: '2-digit', 
-                        month: '2-digit' 
-                      }) : 
-                      'N/A'
-                    }
-                  </div>
-                  <p className="text-xs text-gray-600">Son Denetim</p>
-                </div>
-              </div>
-              
-              {/* Trend Indicator */}
-              <div className="flex items-center justify-center gap-1 text-sm">
-                {getTrendIcon(group.trend)}
-                <span className="text-gray-600">
-                  {group.trend === 'improving' ? 'Gelişiyor' : 
-                   group.trend === 'declining' ? 'Düşüyor' : 'Sabit'}
-                </span>
-              </div>
-              
-              {/* Action Buttons */}
-              <div className="flex gap-2 pt-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="flex-1"
-                  onClick={() => setLocation(`/inspection-results/${group.lastInspection?.id}`)}
-                >
-                  <Eye size={14} className="mr-1" />
-                  Son Sonuç
-                </Button>
-                <Button 
-                  size="sm" 
-                  className="flex-1 bg-blue-600 hover:bg-blue-700"
-                  onClick={() => alert(`${group.checklistTitle} - ${group.locationName} için detaylı trend analizi geliştiriliyor...`)}
-                >
-                  <TrendingUp size={14} className="mr-1" />
-                  Trend
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Empty State */}
       {filteredGroups.length === 0 && (
-        <div className="text-center py-12">
-          <CheckSquare className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            Denetim Bulunamadı
-          </h3>
-          <p className="text-gray-600">
-            Arama kriterlerinize uygun denetim sonucu bulunamadı.
-          </p>
-        </div>
+        <Card>
+          <CardContent className="p-12 text-center">
+            <CheckSquare className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              Denetim Bulunamadı
+            </h3>
+            <p className="text-gray-600">
+              Arama kriterlerinize uygun denetim sonucu bulunamadı.
+            </p>
+          </CardContent>
+        </Card>
       )}
     </div>
   );
