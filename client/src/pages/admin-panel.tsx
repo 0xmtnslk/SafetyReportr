@@ -594,8 +594,6 @@ export default function AdminPanel() {
 
   // Handle edit user
   const onEditSubmit = (data: EditUserForm) => {
-    console.log('Edit form submitted with data:', data);
-    console.log('Form errors:', editForm.formState.errors);
     if (editingUser) {
       updateUserMutation.mutate({ id: editingUser.id, userData: data });
     }
