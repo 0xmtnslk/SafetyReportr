@@ -1468,8 +1468,8 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(notifications)
       .where(and(
-        eq(notifications.user_id, userId),
-        eq(notifications.is_read, false)
+        eq(notifications.userId, userId),
+        eq(notifications.isRead, false)
       ))
       .orderBy(desc(notifications.createdAt));
   }
@@ -1479,12 +1479,12 @@ export class DatabaseStorage implements IStorage {
       const [updated] = await db
         .update(notifications)
         .set({ 
-          is_read: true, 
-          read_at: new Date() 
+          isRead: true, 
+          readAt: new Date() 
         })
         .where(and(
           eq(notifications.id, notificationId),
-          eq(notifications.user_id, userId)
+          eq(notifications.userId, userId)
         ))
         .returning();
       return !!updated;
@@ -1499,12 +1499,12 @@ export class DatabaseStorage implements IStorage {
       await db
         .update(notifications)
         .set({ 
-          is_read: true, 
-          read_at: new Date() 
+          isRead: true, 
+          readAt: new Date() 
         })
         .where(and(
-          eq(notifications.user_id, userId),
-          eq(notifications.is_read, false)
+          eq(notifications.userId, userId),
+          eq(notifications.isRead, false)
         ));
       return true;
     } catch (error) {
@@ -1519,8 +1519,8 @@ export class DatabaseStorage implements IStorage {
         .select({ count: sql<number>`count(*)` })
         .from(notifications)
         .where(and(
-          eq(notifications.user_id, userId),
-          eq(notifications.is_read, false)
+          eq(notifications.userId, userId),
+          eq(notifications.isRead, false)
         ));
       return result?.count || 0;
     } catch (error) {
