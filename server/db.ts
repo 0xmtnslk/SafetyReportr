@@ -85,20 +85,8 @@ async function withRetry<T>(operation: () => Promise<T>, maxRetries = 3): Promis
 // Wrap the drizzle instance with retry logic
 const originalDb = drizzle({ client: pool, schema });
 
-// Create a proxy that wraps database operations with retry logic
-export const db = new Proxy(originalDb, {
-  get(target, prop) {
-    const originalMethod = target[prop as keyof typeof target];
-    
-    if (typeof originalMethod === 'function') {
-      return function (...args: any[]) {
-        return withRetry(() => originalMethod.apply(target, args));
-      };
-    }
-    
-    return originalMethod;
-  }
-});
+// Export the original drizzle instance directly - proxy was causing issues
+export const db = originalDb;
 
 // Health check function
 export async function checkDatabaseHealth(): Promise<boolean> {
