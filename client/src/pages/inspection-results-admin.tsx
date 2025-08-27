@@ -23,7 +23,18 @@ export default function InspectionResultsAdmin() {
     queryKey: ["/api/admin/inspection-titles"],
   });
   
-  const isLoading = inspectionsLoading || titlesLoading;
+  // Fetch all hospitals to get proper names
+  const { data: hospitals = [], isLoading: hospitalsLoading } = useQuery({
+    queryKey: ["/api/admin/hospitals"],
+  });
+  
+  const isLoading = inspectionsLoading || titlesLoading || hospitalsLoading;
+  
+  // Create hospital lookup map
+  const hospitalLookup = hospitals.reduce((acc: any, hospital: any) => {
+    acc[hospital.id] = hospital.name;
+    return acc;
+  }, {});
 
   // Group inspections by hospital (both completed and pending)
   const processInspectionsByHospital = () => {
@@ -63,7 +74,7 @@ export default function InspectionResultsAdmin() {
         if (!hospitalMap[locationId]) {
           hospitalMap[locationId] = {
             id: locationId,
-            name: `Hastane ${locationId.substring(0, 8)}`, // Fallback name
+            name: hospitalLookup[locationId] || `Bilinmeyen Hastane ${locationId.substring(0, 8)}`, // Use real name
             inspectionTypes: new Set(),
             inspections: [],
             totalInspections: 0,
