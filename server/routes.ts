@@ -5,6 +5,7 @@ import { Request, Response, NextFunction } from "express";
 import express from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { checkDatabaseHealth } from "./db";
 import { 
   insertReportSchema, 
   insertFindingSchema, 
@@ -2429,6 +2430,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error marking all notifications as read:', error);
       res.status(500).json({ error: 'Error marking all notifications as read' });
+    }
+  });
+
+  // Health check endpoint for production monitoring
+  app.get('/api/health', async (req, res) => {
+    try {
+      const dbHealthy = await checkDatabaseHealth();
+      const currentTime = new Date().toISOString();
+      
+      res.status(dbHealthy ? 200 : 503).json({
+        status: dbHealthy ? 'healthy' : 'unhealthy',
+        timestamp: currentTime,
+        database: dbHealthy ? 'connected' : 'disconnected',
+        uptime: process.uptime(),
+        memory: process.memoryUsage(),
+        version: process.version
+      });
+    } catch (error) {
+      console.error('Health check error:', error);
+      res.status(503).json({
+        status: 'unhealthy',
+        timestamp: new Date().toISOString(),
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   });
 
