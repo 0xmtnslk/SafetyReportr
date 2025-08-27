@@ -28,13 +28,21 @@ export default function ChecklistInspections() {
 
   // Process data for this specific hospital and checklist template
   const processChecklistData = () => {
+    console.log('Debug - All inspection titles:', inspectionTitles);
+    console.log('Debug - All completed inspections:', completedInspections);
+    console.log('Debug - Looking for checklistId:', checklistId);
+    console.log('Debug - Looking for hospitalId:', hospitalId);
+    
     // Filter inspection titles for this checklist template
-    const relevantInspectionTitles = inspectionTitles.filter((inspection: any) => 
-      inspection.templateId === checklistId
-    );
+    const relevantInspectionTitles = (inspectionTitles as any[]).filter((inspection: any) => {
+      console.log('Checking inspection:', inspection.templateId, 'vs', checklistId);
+      return inspection.templateId === checklistId;
+    });
+    
+    console.log('Debug - Relevant inspection titles found:', relevantInspectionTitles);
     
     // Filter completed inspections for this hospital
-    const hospitalInspections = completedInspections.filter((inspection: any) => 
+    const hospitalInspections = (completedInspections as any[]).filter((inspection: any) => 
       inspection.location?.id === hospitalId
     );
     
@@ -46,7 +54,7 @@ export default function ChecklistInspections() {
       name: hospitalInspections[0]?.location?.name || 'Bilinmeyen Hastane'
     };
     
-    const checklistTemplate = checklistTemplates.find((template: any) => template.id === checklistId) || {
+    const checklistTemplate = (checklistTemplates as any[]).find((template: any) => template.id === checklistId) || {
       id: checklistId,
       title: relevantInspectionTitles[0]?.template?.name || 'Bilinmeyen Kontrol Listesi',
       description: ''
@@ -242,15 +250,15 @@ export default function ChecklistInspections() {
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">En Yüksek Performans:</span>
-                  <span className="font-semibold">{inspectionTitles[0]?.averageScore || 0}%</span>
+                  <span className="font-semibold">{processedTitles[0]?.averageScore || 0}%</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">En Düşük Performans:</span>
-                  <span className="font-semibold">{inspectionTitles[inspectionTitles.length - 1]?.averageScore || 0}%</span>
+                  <span className="font-semibold">{processedTitles[processedTitles.length - 1]?.averageScore || 0}%</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">Başarılı Denetimler (≥75%):</span>
-                  <span className="font-semibold">{inspectionTitles.filter((t: any) => t.averageScore >= 75).length}</span>
+                  <span className="font-semibold">{processedTitles.filter((t: any) => t.averageScore >= 75).length}</span>
                 </div>
               </div>
             </div>
