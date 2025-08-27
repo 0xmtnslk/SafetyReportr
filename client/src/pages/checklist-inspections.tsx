@@ -11,8 +11,13 @@ export default function ChecklistInspections() {
   const hospitalId = params?.hospitalId;
   const checklistId = params?.checklistId;
 
+  // Fetch all inspection titles
+  const { data: inspectionTitles = [], isLoading: inspectionsLoading } = useQuery({
+    queryKey: ["/api/admin/inspection-titles"],
+  });
+  
   // Fetch all completed inspections
-  const { data: inspections = [], isLoading: inspectionsLoading } = useQuery({
+  const { data: completedInspections = [], isLoading: completedLoading } = useQuery({
     queryKey: ["/api/admin/inspections"],
   });
   
@@ -23,13 +28,19 @@ export default function ChecklistInspections() {
 
   // Process data for this specific hospital and checklist template
   const processChecklistData = () => {
-    const hospitalInspections = inspections.filter((inspection: any) => 
-      inspection.location?.id === hospitalId && 
-      inspection.inspection?.id === checklistId
+    // Filter inspection titles for this checklist template
+    const relevantInspectionTitles = inspectionTitles.filter((inspection: any) => 
+      inspection.templateId === checklistId
     );
     
-    if (hospitalInspections.length === 0) return { hospital: null, checklistTemplate: null, inspectionTitles: [] };
+    // Filter completed inspections for this hospital
+    const hospitalInspections = completedInspections.filter((inspection: any) => 
+      inspection.location?.id === hospitalId
+    );
     
+    if (relevantInspectionTitles.length === 0) return { hospital: null, checklistTemplate: null, inspectionTitles: [] };
+    
+    // Get hospital name from completed inspections
     const hospital = {
       id: hospitalId,
       name: hospitalInspections[0]?.location?.name || 'Bilinmeyen Hastane'
@@ -37,59 +48,45 @@ export default function ChecklistInspections() {
     
     const checklistTemplate = checklistTemplates.find((template: any) => template.id === checklistId) || {
       id: checklistId,
-      title: hospitalInspections[0]?.inspection?.title || 'Bilinmeyen Kontrol Listesi',
+      title: relevantInspectionTitles[0]?.template?.name || 'Bilinmeyen Kontrol Listesi',
       description: ''
     };
     
-    // Group by inspection titles (user-created titles for inspections)
-    const titleMap: Record<string, any> = {};
-    
-    hospitalInspections.forEach((inspection: any) => {
-      const titleKey = inspection.inspectionTitle || inspection.title || 'Belirsiz Denetim';
+    // Process inspection titles with their assignments
+    const inspectionTitlesList = relevantInspectionTitles.map((inspectionTitle: any) => {
+      // Find completed inspections for this title and hospital
+      const titleAssignments = hospitalInspections.filter((comp: any) => 
+        comp.inspectionId === inspectionTitle.id
+      );
       
-      if (!titleMap[titleKey]) {
-        titleMap[titleKey] = {
-          title: titleKey,
-          inspections: [],
-          totalInspections: 0,
-          averageScore: 0,
-          letterGrade: 'E',
-          lastInspection: null,
-          firstInspection: null
-        };
-      }
+      const scores = titleAssignments.map((assignment: any) => assignment.scorePercentage || 0);
+      const averageScore = scores.length > 0 ? Math.round(scores.reduce((a: number, b: number) => a + b, 0) / scores.length) : 0;
+      const letterGrade = averageScore >= 90 ? "A" :
+                         averageScore >= 75 ? "B" :
+                         averageScore >= 50 ? "C" :
+                         averageScore >= 25 ? "D" : "E";
       
-      titleMap[titleKey].inspections.push(inspection);
-      titleMap[titleKey].totalInspections++;
-      
-      // Update last and first inspection dates
-      const inspectionDate = new Date(inspection.completedAt);
-      if (!titleMap[titleKey].lastInspection || inspectionDate > new Date(titleMap[titleKey].lastInspection.completedAt)) {
-        titleMap[titleKey].lastInspection = inspection;
-      }
-      if (!titleMap[titleKey].firstInspection || inspectionDate < new Date(titleMap[titleKey].firstInspection.completedAt)) {
-        titleMap[titleKey].firstInspection = inspection;
-      }
-    });
-    
-    // Calculate statistics for each inspection title
-    Object.values(titleMap).forEach((title: any) => {
-      const scores = title.inspections.map((i: any) => i.scorePercentage || 0);
-      title.averageScore = scores.length > 0 ? Math.round(scores.reduce((a: number, b: number) => a + b, 0) / scores.length) : 0;
-      title.letterGrade = title.averageScore >= 90 ? "A" :
-                        title.averageScore >= 75 ? "B" :
-                        title.averageScore >= 50 ? "C" :
-                        title.averageScore >= 25 ? "D" : "E";
+      return {
+        id: inspectionTitle.id,
+        title: inspectionTitle.title,
+        description: inspectionTitle.description,
+        totalInspections: titleAssignments.length,
+        averageScore,
+        letterGrade,
+        lastInspection: titleAssignments.length > 0 ? titleAssignments.sort((a: any, b: any) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime())[0] : null,
+        firstInspection: titleAssignments.length > 0 ? titleAssignments.sort((a: any, b: any) => new Date(a.completedAt).getTime() - new Date(b.completedAt).getTime())[0] : null,
+        inspections: titleAssignments
+      };
     });
     
     return {
       hospital,
       checklistTemplate,
-      inspectionTitles: Object.values(titleMap).sort((a: any, b: any) => b.averageScore - a.averageScore)
+      inspectionTitles: inspectionTitlesList.sort((a: any, b: any) => b.averageScore - a.averageScore)
     };
   };
 
-  const { hospital, checklistTemplate, inspectionTitles } = processChecklistData();
+  const { hospital, checklistTemplate, inspectionTitles: processedTitles } = processChecklistData();
 
   const getGradeColor = (grade: string) => {
     const colors = {
@@ -110,7 +107,7 @@ export default function ChecklistInspections() {
     return "text-red-600";
   };
 
-  if (inspectionsLoading || templatesLoading) {
+  if (inspectionsLoading || templatesLoading || completedLoading) {
     return (
       <div className="container mx-auto p-6">
         <div className="animate-pulse">
@@ -148,9 +145,9 @@ export default function ChecklistInspections() {
   }
 
   // Calculate overall statistics
-  const totalInspections = inspectionTitles.reduce((sum: number, title: any) => sum + title.totalInspections, 0);
-  const overallAverage = inspectionTitles.length > 0 ? 
-    Math.round(inspectionTitles.reduce((sum: number, title: any) => sum + title.averageScore, 0) / inspectionTitles.length) : 0;
+  const totalInspections = processedTitles.reduce((sum: number, title: any) => sum + title.totalInspections, 0);
+  const overallAverage = processedTitles.length > 0 ? 
+    Math.round(processedTitles.reduce((sum: number, title: any) => sum + title.averageScore, 0) / processedTitles.length) : 0;
 
   return (
     <div className="container mx-auto p-6 space-y-8">
@@ -168,7 +165,7 @@ export default function ChecklistInspections() {
         </div>
         
         <div className="flex items-center gap-2">
-          <Badge variant="outline">{inspectionTitles.length} Denetim Başlığı</Badge>
+          <Badge variant="outline">{processedTitles.length} Denetim Başlığı</Badge>
           <Badge className="bg-blue-100 text-blue-800">
             {totalInspections} Toplam Denetim
           </Badge>
@@ -182,7 +179,7 @@ export default function ChecklistInspections() {
             <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mx-auto mb-3">
               <FileText className="w-6 h-6 text-purple-600" />
             </div>
-            <div className="text-2xl font-bold text-gray-900">{inspectionTitles.length}</div>
+            <div className="text-2xl font-bold text-gray-900">{processedTitles.length}</div>
             <p className="text-sm text-gray-600">Denetim Başlığı</p>
           </CardContent>
         </Card>
@@ -292,7 +289,7 @@ export default function ChecklistInspections() {
           <h2 className="text-xl font-semibold text-gray-900">Denetim Başlıkları</h2>
         </div>
         
-        {inspectionTitles.map((title: any, index: number) => (
+        {processedTitles.map((title: any, index: number) => (
           <Card 
             key={index} 
             className="hover:shadow-lg transition-all duration-200 cursor-pointer border-l-4 border-l-blue-500"

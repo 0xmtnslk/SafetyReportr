@@ -1149,12 +1149,30 @@ export class DatabaseStorage implements IStorage {
   // NEW: Inspection Management System Implementation
   
   // Inspection operations
-  async getAllInspections(): Promise<Inspection[]> {
-    return await db
+  async getAllInspections(): Promise<any[]> {
+    const results = await db
       .select()
       .from(inspections)
+      .leftJoin(checklistTemplates, eq(inspections.templateId, checklistTemplates.id))
       .where(eq(inspections.isActive, true))
       .orderBy(desc(inspections.createdAt));
+
+    return results.map(result => ({
+      id: result.inspections.id,
+      inspectionNumber: result.inspections.inspectionNumber,
+      templateId: result.inspections.templateId,
+      title: result.inspections.title,
+      description: result.inspections.description,
+      startDate: result.inspections.startDate,
+      dueDate: result.inspections.dueDate,
+      status: result.inspections.status,
+      template: result.checklist_templates ? {
+        id: result.checklist_templates.id,
+        name: result.checklist_templates.name,
+        title: result.checklist_templates.name
+      } : null,
+      createdAt: result.inspections.createdAt
+    }));
   }
 
   async getInspection(id: string): Promise<Inspection | undefined> {

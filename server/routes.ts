@@ -1941,6 +1941,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all inspection titles (for admin analysis)
+  app.get('/api/admin/inspection-titles', authenticateToken, requireCentralManagement, async (req: Request, res: Response) => {
+    try {
+      const inspectionTitles = await storage.getAllInspections();
+      res.json(inspectionTitles);
+    } catch (error: any) {
+      console.error('Error fetching inspection titles:', error);
+      res.status(500).json({ error: 'Error fetching inspection titles' });
+    }
+  });
+
   // Helper function to create notifications
   const createNotificationForUser = async (userId: string, type: string, title: string, message: string, relatedId?: string, relatedType?: string) => {
     try {
