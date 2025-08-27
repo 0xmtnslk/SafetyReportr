@@ -26,13 +26,13 @@ export default function HospitalInspections() {
       inspection.location?.id === hospitalId
     );
     
-    let hospital = null;
-    if (hospitalInspections.length > 0) {
-      hospital = {
-        id: hospitalId,
-        name: hospitalInspections[0]?.location?.name || 'Bilinmeyen Hastane'
-      };
-    }
+    // Find hospital name from any available data or use a default
+    let hospital = {
+      id: hospitalId,
+      name: hospitalInspections.length > 0 ? 
+        hospitalInspections[0]?.location?.name || 'Bilinmeyen Hastane' : 
+        'Seçilen Hastane'
+    };
     
     // Process checklist templates with their statistics
     const templatesWithStats = checklistTemplates.map((template: any) => {
@@ -71,8 +71,7 @@ export default function HospitalInspections() {
     
     return {
       hospital,
-      checklistTemplates: templatesWithStats.filter((t: any) => t.totalInspections > 0)
-        .sort((a: any, b: any) => b.averageScore - a.averageScore)
+      checklistTemplates: templatesWithStats.sort((a: any, b: any) => b.averageScore - a.averageScore)
     };
   };
 
