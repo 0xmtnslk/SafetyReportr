@@ -237,7 +237,7 @@ export default function InspectionAnalysis() {
             <p className="text-gray-600">
               Bu denetim için detaylı analiz verisi mevcut değil.
             </p>
-            <Button className="mt-4" onClick={() => setLocation(`/checklist-inspections/${hospitalId}/${checklistId}`)}>
+            <Button className="mt-4" onClick={() => setLocation(isSpecialist ? '/inspection-history' : `/checklist-inspections/${hospitalId}/${checklistId}`)}>
               <ArrowLeft size={16} className="mr-2" />
               Geri Dön
             </Button>
@@ -255,9 +255,9 @@ export default function InspectionAnalysis() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button variant="outline" onClick={() => setLocation(`/checklist-inspections/${hospitalId}/${checklistId}`)}>
+          <Button variant="outline" onClick={() => setLocation(isSpecialist ? '/inspection-history' : `/checklist-inspections/${hospitalId}/${checklistId}`)}>
             <ArrowLeft size={16} className="mr-2" />
-            Denetim Başlıkları
+            {isSpecialist ? 'Denetim Geçmişi' : 'Denetim Başlıkları'}
           </Button>
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Detaylı Denetim Analizi</h1>
