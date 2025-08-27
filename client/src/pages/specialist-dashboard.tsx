@@ -30,7 +30,17 @@ export default function SpecialistDashboard() {
     enabled: !!hospitalId,
   });
 
-  const isLoading = assignmentsLoading || templatesLoading || inspectionsLoading;
+  // Fetch reports for specialist
+  const { data: reports = [], isLoading: reportsLoading } = useQuery({
+    queryKey: ["/api/reports"],
+  });
+
+  // Fetch stats for reports
+  const { data: stats, isLoading: statsLoading } = useQuery({
+    queryKey: ["/api/stats"],
+  });
+
+  const isLoading = assignmentsLoading || templatesLoading || inspectionsLoading || reportsLoading || statsLoading;
 
   if (isLoading) {
     return (
@@ -84,134 +94,302 @@ export default function SpecialistDashboard() {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card>
-          <CardContent className="p-6 text-center">
-            <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mx-auto mb-3">
-              <ClipboardList className="w-6 h-6 text-blue-600" />
-            </div>
-            <div className="text-2xl font-bold text-gray-900">{checklistTemplates.length}</div>
-            <p className="text-sm text-gray-600">Aktif Checklist</p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-6 text-center">
-            <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center mx-auto mb-3">
-              <Clock className="w-6 h-6 text-yellow-600" />
-            </div>
-            <div className="text-2xl font-bold text-yellow-600">{pendingInspections}</div>
-            <p className="text-sm text-gray-600">Bekleyen Denetim</p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-6 text-center">
-            <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center mx-auto mb-3">
-              <TrendingUp className="w-6 h-6 text-orange-600" />
-            </div>
-            <div className="text-2xl font-bold text-orange-600">{inProgressInspections}</div>
-            <p className="text-sm text-gray-600">Devam Eden</p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-6 text-center">
-            <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mx-auto mb-3">
-              <CheckSquare className="w-6 h-6 text-green-600" />
-            </div>
-            <div className="text-2xl font-bold text-green-600">{completedInspections}</div>
-            <p className="text-sm text-gray-600">Tamamlanan</p>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Main Content - Two Columns */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
 
-      {/* Quick Actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Target className="w-5 h-5" />
-            Hızlı İşlemler
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* LEFT COLUMN - CHECKLIST SYSTEM */}
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-bold text-gray-900">Denetim Sistemi</h2>
             <Button 
               onClick={() => setLocation('/specialist/checklists')}
-              className="flex items-center gap-2 h-auto py-4"
-              data-testid="button-view-checklists"
+              data-testid="button-view-all-checklists"
             >
-              <ClipboardList className="w-5 h-5" />
-              <div className="text-left">
-                <div className="font-medium">Denetimleri Görüntüle</div>
-                <div className="text-sm opacity-80">Checklist'lerdeki denetimleri incele</div>
-              </div>
+              Tümünü Görüntüle
             </Button>
+          </div>
+
+          {/* Checklist Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Card>
+              <CardContent className="p-6 text-center">
+                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                  <ClipboardList className="w-6 h-6 text-blue-600" />
+                </div>
+                <div className="text-2xl font-bold text-gray-900">{checklistTemplates.length}</div>
+                <p className="text-sm text-gray-600">Aktif Checklist</p>
+              </CardContent>
+            </Card>
             
-            <Button 
-              variant="outline"
-              onClick={() => setLocation('/inspection-history')}
-              className="flex items-center gap-2 h-auto py-4"
-              data-testid="button-inspection-history"
-            >
-              <FileText className="w-5 h-5" />
-              <div className="text-left">
-                <div className="font-medium">Denetim Geçmişi</div>
-                <div className="text-sm opacity-80">Tamamlanan denetimleri görüntüle</div>
+            <Card>
+              <CardContent className="p-6 text-center">
+                <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                  <Clock className="w-6 h-6 text-yellow-600" />
+                </div>
+                <div className="text-2xl font-bold text-yellow-600">{pendingInspections}</div>
+                <p className="text-sm text-gray-600">Bekleyen Denetim</p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-6 text-center">
+                <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                  <TrendingUp className="w-6 h-6 text-orange-600" />
+                </div>
+                <div className="text-2xl font-bold text-orange-600">{inProgressInspections}</div>
+                <p className="text-sm text-gray-600">Devam Eden</p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-6 text-center">
+                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                  <CheckSquare className="w-6 h-6 text-green-600" />
+                </div>
+                <div className="text-2xl font-bold text-green-600">{completedInspections}</div>
+                <p className="text-sm text-gray-600">Tamamlanan</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Quick Actions */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Target className="w-5 h-5" />
+                Hızlı İşlemler
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <Button 
+                  onClick={() => setLocation('/specialist/checklists')}
+                  className="w-full flex items-center gap-2 h-auto py-4"
+                  data-testid="button-view-checklists"
+                >
+                  <ClipboardList className="w-5 h-5" />
+                  <div className="text-left">
+                    <div className="font-medium">Denetimleri Görüntüle</div>
+                    <div className="text-sm opacity-80">Checklist'lerdeki denetimleri incele</div>
+                  </div>
+                </Button>
+                
+                <Button 
+                  variant="outline"
+                  onClick={() => setLocation('/inspection-history')}
+                  className="w-full flex items-center gap-2 h-auto py-4"
+                  data-testid="button-inspection-history"
+                >
+                  <FileText className="w-5 h-5" />
+                  <div className="text-left">
+                    <div className="font-medium">Denetim Geçmişi</div>
+                    <div className="text-sm opacity-80">Tamamlanan denetimleri görüntüle</div>
+                  </div>
+                </Button>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Available Checklists */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ClipboardList className="w-5 h-5" />
+                Mevcut Checklist'ler
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {checklistTemplates.slice(0, 3).map((template: any) => (
+                  <Card key={template.id} className="hover:shadow-lg transition-shadow cursor-pointer">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="font-semibold text-gray-900">{template.name}</h3>
+                        <Badge variant="secondary">{template.version || 'v1.0'}</Badge>
+                      </div>
+                      <p className="text-sm text-gray-600 mb-4 line-clamp-2">{template.description}</p>
+                      <Button 
+                        onClick={() => setLocation(`/specialist/checklists/${template.id}/inspections`)}
+                        size="sm" 
+                        className="w-full"
+                        data-testid={`button-checklist-${template.id}`}
+                      >
+                        Denetimleri Görüntüle
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+                
+                {checklistTemplates.length > 3 && (
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setLocation('/specialist/checklists')}
+                    className="w-full"
+                  >
+                    +{checklistTemplates.length - 3} Checklist Daha...
+                  </Button>
+                )}
+              </div>
+              
+              {checklistTemplates.length === 0 && (
+                <div className="text-center py-8">
+                  <ClipboardList className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    Henüz Checklist Bulunmuyor
+                  </h3>
+                  <p className="text-gray-600">
+                    Admin tarafından checklist oluşturulduğunda burada görünecek.
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* RIGHT COLUMN - REPORTS SYSTEM */}
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-bold text-gray-900">Rapor Sistemi</h2>
+            <Button 
+              onClick={() => setLocation('/reports')}
+              data-testid="button-view-all-reports"
+            >
+              Tümünü Görüntüle
             </Button>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Available Checklists */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ClipboardList className="w-5 h-5" />
-            Mevcut Checklist'ler
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {checklistTemplates.map((template: any) => (
-              <Card key={template.id} className="hover:shadow-lg transition-shadow cursor-pointer">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-semibold text-gray-900">{template.name}</h3>
-                    <Badge variant="secondary">{template.version || 'v1.0'}</Badge>
-                  </div>
-                  <p className="text-sm text-gray-600 mb-4">{template.description}</p>
-                  <Button 
-                    onClick={() => setLocation(`/specialist/checklists/${template.id}/inspections`)}
-                    size="sm" 
-                    className="w-full"
-                    data-testid={`button-checklist-${template.id}`}
-                  >
-                    Denetimleri Görüntüle
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
+          {/* Report Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Card>
+              <CardContent className="p-6 text-center">
+                <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                  <FileText className="w-6 h-6 text-purple-600" />
+                </div>
+                <div className="text-2xl font-bold text-gray-900">{stats?.totalReports || 0}</div>
+                <p className="text-sm text-gray-600">Toplam Rapor</p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-6 text-center">
+                <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                  <AlertTriangle className="w-6 h-6 text-red-600" />
+                </div>
+                <div className="text-2xl font-bold text-red-600">{stats?.highRiskFindings || 0}</div>
+                <p className="text-sm text-gray-600">Yüksek Risk</p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-6 text-center">
+                <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                  <AlertTriangle className="w-6 h-6 text-yellow-600" />
+                </div>
+                <div className="text-2xl font-bold text-yellow-600">{stats?.mediumRiskFindings || 0}</div>
+                <p className="text-sm text-gray-600">Orta Risk</p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-6 text-center">
+                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                  <CheckSquare className="w-6 h-6 text-green-600" />
+                </div>
+                <div className="text-2xl font-bold text-green-600">{stats?.completedFindings || 0}</div>
+                <p className="text-sm text-gray-600">Tamamlanan</p>
+              </CardContent>
+            </Card>
           </div>
-          
-          {checklistTemplates.length === 0 && (
-            <div className="text-center py-12">
-              <ClipboardList className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Henüz Checklist Bulunmuyor
-              </h3>
-              <p className="text-gray-600">
-                Admin tarafından checklist oluşturulduğunda burada görünecek.
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
-      {/* Recent Activity */}
-      <Card>
+          {/* Quick Report Actions */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Plus className="w-5 h-5" />
+                Rapor İşlemleri
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <Button 
+                  onClick={() => setLocation('/create-report')}
+                  className="w-full flex items-center gap-2 h-auto py-4"
+                  data-testid="button-create-report"
+                >
+                  <Plus className="w-5 h-5" />
+                  <div className="text-left">
+                    <div className="font-medium">Yeni Rapor Oluştur</div>
+                    <div className="text-sm opacity-80">Güvenlik raporu hazırla</div>
+                  </div>
+                </Button>
+                
+                <Button 
+                  variant="outline"
+                  onClick={() => setLocation('/reports')}
+                  className="w-full flex items-center gap-2 h-auto py-4"
+                  data-testid="button-view-reports"
+                >
+                  <FileText className="w-5 h-5" />
+                  <div className="text-left">
+                    <div className="font-medium">Raporları Görüntüle</div>
+                    <div className="text-sm opacity-80">Mevcut raporları incele</div>
+                  </div>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Recent Reports */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="w-5 h-5" />
+                Son Raporlar
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {reports.length > 0 ? (
+                <div className="space-y-3">
+                  {reports.slice(0, 4).map((report: any) => (
+                    <div key={report.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                        <div>
+                          <div className="font-medium">{report.title}</div>
+                          <div className="text-sm text-gray-600">{report.location}</div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-xs text-gray-500">
+                          {new Date(report.createdAt).toLocaleDateString('tr-TR')}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {reports.length > 4 && (
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setLocation('/reports')}
+                      className="w-full mt-4"
+                    >
+                      +{reports.length - 4} Rapor Daha...
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-600">Henüz rapor bulunmuyor.</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Recent Activity - Full Width */}
+      <Card className="xl:col-span-2">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <AlertTriangle className="w-5 h-5" />
@@ -220,8 +398,8 @@ export default function SpecialistDashboard() {
         </CardHeader>
         <CardContent>
           {recentInspections.length > 0 ? (
-            <div className="space-y-4">
-              {recentInspections.slice(0, 5).map((inspection: any) => (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {recentInspections.slice(0, 6).map((inspection: any) => (
                 <div key={inspection.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div className="flex items-center gap-3">
                     <div className={`w-3 h-3 rounded-full ${
@@ -230,16 +408,16 @@ export default function SpecialistDashboard() {
                       'bg-gray-400'
                     }`}></div>
                     <div>
-                      <div className="font-medium">{inspection.title}</div>
-                      <div className="text-sm text-gray-600">{inspection.templateName}</div>
+                      <div className="font-medium text-sm">{inspection.title}</div>
+                      <div className="text-xs text-gray-600">{inspection.templateName}</div>
                     </div>
                   </div>
                   <div className="text-right">
-                    <Badge variant="outline" className={
+                    <Badge variant="outline" className={`text-xs ${
                       inspection.status === 'completed' ? 'bg-green-50 text-green-700' :
                       inspection.status === 'in_progress' ? 'bg-yellow-50 text-yellow-700' :
                       'bg-gray-50 text-gray-700'
-                    }>
+                    }`}>
                       {inspection.status === 'completed' ? 'Tamamlandı' :
                        inspection.status === 'in_progress' ? 'Devam Ediyor' :
                        'Bekliyor'}

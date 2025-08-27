@@ -262,6 +262,15 @@ function Router() {
         <Route path="/inspection-analysis/:hospitalId/:checklistId/:inspectionId">
           {() => ['central_admin', 'admin'].includes((user as any)?.role || '') ? <InspectionAnalysis /> : <Login />}
         </Route>
+        <Route path="/specialist/checklists">
+          {() => ['safety_specialist', 'occupational_physician'].includes((user as any)?.role || '') ? <SpecialistChecklists /> : <Login />}
+        </Route>
+        <Route path="/specialist/checklists/:checklistId/inspections">
+          {() => ['safety_specialist', 'occupational_physician'].includes((user as any)?.role || '') ? <SpecialistInspections /> : <Login />}
+        </Route>
+        <Route path="/specialist/inspection/:inspectionId">
+          {() => ['safety_specialist', 'occupational_physician'].includes((user as any)?.role || '') ? <SpecialistInspectionDetail /> : <Login />}
+        </Route>
         <Route component={() => <div>404 - Page Not Found</div>} />
       </Switch>
     </div>
