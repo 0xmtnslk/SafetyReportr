@@ -40,7 +40,10 @@ export default function ChecklistInspections() {
     
     // Filter inspection titles for this checklist template
     const relevantInspectionTitles = (inspectionTitles as any[]).filter((inspection: any) => {
-      console.log('Checking inspection:', inspection.templateId, 'vs', checklistId);
+      console.log('Checking inspection templateId:', inspection.templateId);
+      console.log('Checking against checklistId:', checklistId);
+      console.log('Types:', typeof inspection.templateId, typeof checklistId);
+      console.log('Equality check:', inspection.templateId === checklistId);
       return inspection.templateId === checklistId;
     });
     
