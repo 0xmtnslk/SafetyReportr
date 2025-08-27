@@ -243,6 +243,9 @@ export class DatabaseStorage implements IStorage {
     // First delete all inspection assignments for this user
     await db.delete(inspectionAssignments).where(eq(inspectionAssignments.assignedUserId, id));
     
+    // Delete all notifications for this user
+    await db.delete(notifications).where(eq(notifications.userId, id));
+    
     // Then delete the user
     const result = await db.delete(users).where(eq(users.id, id));
     return (result.rowCount || 0) > 0;
