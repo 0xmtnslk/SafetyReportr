@@ -12,9 +12,14 @@ export default function ChecklistInspections() {
   const checklistId = params?.checklistId;
 
   // Fetch all inspection titles
-  const { data: inspectionTitles = [], isLoading: inspectionsLoading } = useQuery({
+  const { data: inspectionTitles = [], isLoading: inspectionsLoading, error: inspectionsError } = useQuery({
     queryKey: ["/api/admin/inspection-titles"],
+    staleTime: 0,
+    cacheTime: 0
   });
+  
+  // Log query state
+  console.log('useQuery inspection titles:', { inspectionTitles, inspectionsLoading, inspectionsError });
   
   // Fetch all completed inspections
   const { data: completedInspections = [], isLoading: completedLoading } = useQuery({
