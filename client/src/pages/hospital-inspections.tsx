@@ -55,7 +55,7 @@ export default function HospitalInspections() {
       
       return {
         id: template.id,
-        title: template.title,
+        title: template.name || template.title,
         description: template.description,
         inspections: templateInspections,
         totalInspections: templateInspections.length,
