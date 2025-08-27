@@ -365,7 +365,9 @@ export default function ChecklistInspections() {
                       className="bg-indigo-600 hover:bg-indigo-700"
                       onClick={(e) => {
                         e.stopPropagation();
-                        setLocation(`/inspection-title-detail/${hospitalId}/${checklistId}/${encodeURIComponent(title.title)}`);
+                        // Use the first inspection ID for detailed analysis
+                        const inspectionId = title.inspections?.[0]?.id || 'demo-inspection';
+                        setLocation(`/inspection-analysis/${hospitalId}/${checklistId}/${inspectionId}`);
                       }}
                     >
                       <Eye size={14} className="mr-1" />
@@ -382,7 +384,7 @@ export default function ChecklistInspections() {
       </div>
 
       {/* Empty State */}
-      {inspectionTitles.length === 0 && (
+      {processedTitles.length === 0 && (
         <Card>
           <CardContent className="p-12 text-center">
             <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
