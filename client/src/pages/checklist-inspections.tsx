@@ -34,8 +34,8 @@ export default function ChecklistInspections() {
       inspection.templateId === checklistId
     );
     
-    // TEMP: Show ALL inspection titles without filtering
-    const titlesToShow = (inspectionTitles as any[]);
+    // TEMP: Show all if filtering fails
+    const titlesToShow = relevantInspectionTitles.length > 0 ? relevantInspectionTitles : (inspectionTitles as any[]);
     
     // Filter completed inspections for this hospital
     const hospitalInspections = (completedInspections as any[]).filter((inspection: any) => 
@@ -52,7 +52,7 @@ export default function ChecklistInspections() {
     
     const checklistTemplate = (checklistTemplates as any[]).find((template: any) => template.id === checklistId) || {
       id: checklistId,
-      title: 'ADP Kontrol Listesi',
+      title: relevantInspectionTitles[0]?.template?.name || 'Bilinmeyen Kontrol Listesi',
       description: ''
     };
     
