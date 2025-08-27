@@ -1165,6 +1165,7 @@ export class DatabaseStorage implements IStorage {
       startDate: result.inspections.startDate,
       dueDate: result.inspections.dueDate,
       status: result.inspections.status,
+      targetLocationIds: result.inspections.targetLocationIds || [],
       template: result.checklist_templates ? {
         id: result.checklist_templates.id,
         name: result.checklist_templates.name,
