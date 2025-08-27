@@ -1855,6 +1855,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bulk submit inspection responses
+  app.post('/api/inspection/responses', authenticateToken, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      const responses = req.body; // Array of response objects
+      
+      const results = [];
+      for (const responseData of responses) {
+        const validatedData = {
+          assignmentId: responseData.assignmentId,
+          questionId: responseData.questionId, 
+          answer: responseData.answer,
+          notes: responseData.notes || '',
+          photos: responseData.photos || [],
+          documents: responseData.documents || [],
+          respondedBy: user.id
+        };
+        
+        const response = await storage.submitInspectionResponse(
+          responseData.assignmentId,
+          responseData.questionId,
+          validatedData
+        );
+        results.push(response);
+      }
+      
+      res.json(results);
+    } catch (error: any) {
+      console.error('Error submitting bulk inspection responses:', error);
+      res.status(500).json({ error: 'Error submitting bulk inspection responses' });
+    }
+  });
+
+  // Complete an assignment
+  app.post('/api/assignments/:assignmentId/complete', authenticateToken, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      const assignmentId = req.params.assignmentId;
+      
+      // Update assignment status to completed
+      const success = await storage.completeInspection(assignmentId, user.id);
+      
+      if (success) {
+        // Create notification for admins
+        await createNotificationForUser(
+          'admin', // This should be adapted based on your admin detection logic
+          'inspection_completed',
+          'Denetim Tamamlandı',
+          `${user.fullName || user.username} tarafından denetim tamamlandı.`,
+          assignmentId,
+          'assignment'
+        );
+        
+        res.json({ message: 'Assignment completed successfully' });
+      } else {
+        res.status(400).json({ error: 'Cannot complete assignment' });
+      }
+    } catch (error: any) {
+      console.error('Error completing assignment:', error);
+      res.status(500).json({ error: 'Error completing assignment' });
+    }
+  });
+
+  // Get responses for an assignment
+  app.get('/api/assignments/:assignmentId/responses', authenticateToken, async (req: Request, res: Response) => {
+    try {
+      const assignmentId = req.params.assignmentId;
+      const responses = await storage.getInspectionResponses(assignmentId);
+      res.json(responses);
+    } catch (error: any) {
+      console.error('Error fetching assignment responses:', error);
+      res.status(500).json({ error: 'Error fetching assignment responses' });
+    }
+  });
+
+  // Admin: Get all completed inspections for management
+  app.get('/api/admin/inspections', authenticateToken, requireCentralManagement, async (req: Request, res: Response) => {
+    try {
+      const inspections = await storage.getAllCompletedInspections();
+      res.json(inspections);
+    } catch (error: any) {
+      console.error('Error fetching admin inspections:', error);
+      res.status(500).json({ error: 'Error fetching admin inspections' });
+    }
+  });
+
   // Helper function to create notifications
   const createNotificationForUser = async (userId: string, type: string, title: string, message: string, relatedId?: string, relatedType?: string) => {
     try {

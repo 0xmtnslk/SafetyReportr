@@ -245,6 +245,69 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
     });
   };
 
+  // Check if all sections are completed
+  const isAllSectionsComplete = () => {
+    return sections.every(section => 
+      section.questions.every(q => answers[q.id]?.answer)
+    );
+  };
+
+  // Submit inspection for completion
+  const handleSubmitInspection = async () => {
+    if (!assignmentId || !isAllSectionsComplete()) return;
+    
+    try {
+      // Submit responses for each question
+      const responsePromises = Object.values(answers).map(async (answer) => {
+        const responseData = {
+          answer: answer.answer === 'compliant' ? 'Karşılıyor' : 
+                 answer.answer === 'partially_compliant' ? 'Kısmen Karşılıyor' :
+                 answer.answer === 'non_compliant' ? 'Karşılamıyor' : 'Kapsam Dışı',
+          notes: answer.notes || '',
+          photos: answer.files || [],
+          documents: []
+        };
+        
+        return fetch(`/api/assignments/${assignmentId}/questions/${answer.questionId}/response`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
+          body: JSON.stringify(responseData)
+        });
+      });
+      
+      // Wait for all responses to be submitted
+      await Promise.all(responsePromises);
+      
+      // Complete the inspection
+      const completeResponse = await fetch(`/api/assignments/${assignmentId}/complete`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      if (completeResponse.ok) {
+        toast({
+          title: "Denetim Tamamlandı!",
+          description: "Denetim başarıyla gönderildi. Sonuç analizini görüntüleyebilirsiniz.",
+        });
+        
+        // Redirect to result analysis page
+        setLocation(`/inspection-results/${assignmentId}`);
+      }
+    } catch (error) {
+      console.error('Error submitting inspection:', error);
+      toast({
+        title: "Hata",
+        description: "Denetim gönderilirken bir hata oluştu.",
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
     <div className="container mx-auto p-4 md:p-6">
       {/* Header - Mobile Responsive */}
@@ -627,14 +690,26 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
               </Button>
             </div>
             
-            <Button
-              onClick={goToNextSection}
-              disabled={currentSectionIndex === totalSections - 1 || !isCurrentSectionComplete()}
-              className={isCurrentSectionComplete() ? "bg-green-600 hover:bg-green-700" : ""}
-            >
-              Sonraki Bölüm
-              <ChevronRight size={16} className="ml-2" />
-            </Button>
+            {currentSectionIndex === totalSections - 1 ? (
+              // Last section: Show submit button if all sections complete
+              <Button
+                onClick={handleSubmitInspection}
+                disabled={!isAllSectionsComplete()}
+                className={isAllSectionsComplete() ? "bg-green-600 hover:bg-green-700" : ""}
+              >
+                {isAllSectionsComplete() ? "🚀 Denetimi Gönder" : "Tüm Soruları Cevaplayın"}
+              </Button>
+            ) : (
+              // Not last section: Show next button
+              <Button
+                onClick={goToNextSection}
+                disabled={!isCurrentSectionComplete()}
+                className={isCurrentSectionComplete() ? "bg-green-600 hover:bg-green-700" : ""}
+              >
+                Sonraki Bölüm
+                <ChevronRight size={16} className="ml-2" />
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>

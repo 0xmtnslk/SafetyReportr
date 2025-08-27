@@ -27,6 +27,8 @@ import AddSection from "@/pages/add-section";
 import SectionDetail from "@/pages/section-detail";
 import LiveChecklist from "@/pages/live-checklist";
 import InspectionCreatePage from "@/pages/inspection-create";
+import InspectionResults from "@/pages/inspection-results";
+import AdminInspections from "@/pages/admin-inspections";
 import Navigation from "@/components/navigation";
 import OfflineIndicator from "@/components/offline-indicator";
 import { useOfflineSync } from "./hooks/useOfflineSync";
@@ -50,7 +52,7 @@ function Router() {
   }
 
   // Protected routes - require authentication
-  const protectedRoutes = ['/dashboard', '/create-report', '/reports', '/edit-report', '/view-report', '/admin', '/change-password', '/checklist', '/live-checklist'];
+  const protectedRoutes = ['/dashboard', '/create-report', '/reports', '/edit-report', '/view-report', '/admin', '/change-password', '/checklist', '/live-checklist', '/inspection-results', '/admin/inspections'];
   const isProtectedRoute = protectedRoutes.some(route => location.startsWith(route));
 
   if (isProtectedRoute && !user) {
@@ -131,6 +133,12 @@ function Router() {
             <Route path="/admin/inspections/create">
               {() => ['central_admin', 'admin'].includes(user?.role || '') ? <InspectionCreatePage /> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
             </Route>
+            <Route path="/inspection-results/:assignmentId">
+              {(params) => <InspectionResults assignmentId={params.assignmentId} />}
+            </Route>
+            <Route path="/admin/inspections">
+              {() => ['central_admin', 'admin'].includes(user?.role || '') ? <AdminInspections /> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
+            </Route>
             <Route component={() => <div className="p-8"><div>404 - Page Not Found</div></div>} />
           </Switch>
         </Navigation>
@@ -197,6 +205,12 @@ function Router() {
         </Route>
         <Route path="/checklist/live" component={user ? LiveChecklist : Login} />
         <Route path="/live-checklist" component={user ? LiveChecklist : Login} />
+        <Route path="/inspection-results/:assignmentId">
+          {(params) => user ? <InspectionResults assignmentId={params.assignmentId} /> : <Login />}
+        </Route>
+        <Route path="/admin/inspections">
+          {() => ['central_admin', 'admin'].includes((user as any)?.role || '') ? <AdminInspections /> : <Login />}
+        </Route>
         <Route component={() => <div>404 - Page Not Found</div>} />
       </Switch>
     </div>

@@ -265,7 +265,7 @@ export default function Dashboard() {
             </div>
 
             <div className="flex-1 space-y-6 overflow-y-auto">
-            {userAssignments.length === 0 ? (
+            {Array.isArray(userAssignments) && userAssignments.length === 0 ? (
               <Card>
                 <CardContent className="p-8 text-center">
                   <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -278,7 +278,7 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
             ) : (
-              userAssignments.map((assignment: any) => (
+              Array.isArray(userAssignments) && userAssignments.map((assignment: any) => (
                 <Card key={assignment.id} className="hover:shadow-md transition-shadow">
                   <CardContent className="p-6">
                     <div className="flex justify-between items-start mb-4">
