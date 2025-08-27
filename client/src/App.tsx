@@ -32,6 +32,8 @@ import AdminInspections from "@/pages/admin-inspections";
 import InspectionHistory from "@/pages/inspection-history";
 import InspectionResultsAdmin from "@/pages/inspection-results-admin";
 import HospitalInspections from "@/pages/hospital-inspections";
+import InspectionTypeDetail from "@/pages/inspection-type-detail";
+import InspectionTitleDetail from "@/pages/inspection-title-detail";
 import Navigation from "@/components/navigation";
 import OfflineIndicator from "@/components/offline-indicator";
 import { useOfflineSync } from "./hooks/useOfflineSync";
@@ -55,7 +57,7 @@ function Router() {
   }
 
   // Protected routes - require authentication
-  const protectedRoutes = ['/dashboard', '/create-report', '/reports', '/edit-report', '/view-report', '/admin', '/change-password', '/checklist', '/live-checklist', '/inspection-results', '/admin/inspections', '/inspection-history', '/inspection-results-admin', '/hospital-inspections'];
+  const protectedRoutes = ['/dashboard', '/create-report', '/reports', '/edit-report', '/view-report', '/admin', '/change-password', '/checklist', '/live-checklist', '/inspection-results', '/admin/inspections', '/inspection-history', '/inspection-results-admin', '/hospital-inspections', '/inspection-type-detail', '/inspection-title-detail'];
   const isProtectedRoute = protectedRoutes.some(route => location.startsWith(route));
 
   if (isProtectedRoute && !user) {
@@ -151,6 +153,12 @@ function Router() {
             <Route path="/hospital-inspections/:hospitalId">
               {() => ['central_admin', 'admin'].includes(user?.role || '') ? <HospitalInspections /> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
             </Route>
+            <Route path="/inspection-type-detail/:hospitalId/:typeId">
+              {() => ['central_admin', 'admin'].includes(user?.role || '') ? <InspectionTypeDetail /> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
+            </Route>
+            <Route path="/inspection-title-detail/:hospitalId/:typeId/:titleName">
+              {() => ['central_admin', 'admin'].includes(user?.role || '') ? <InspectionTitleDetail /> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
+            </Route>
             <Route component={() => <div className="p-8"><div>404 - Page Not Found</div></div>} />
           </Switch>
         </Navigation>
@@ -231,6 +239,12 @@ function Router() {
         </Route>
         <Route path="/hospital-inspections/:hospitalId">
           {() => ['central_admin', 'admin'].includes((user as any)?.role || '') ? <HospitalInspections /> : <Login />}
+        </Route>
+        <Route path="/inspection-type-detail/:hospitalId/:typeId">
+          {() => ['central_admin', 'admin'].includes((user as any)?.role || '') ? <InspectionTypeDetail /> : <Login />}
+        </Route>
+        <Route path="/inspection-title-detail/:hospitalId/:typeId/:titleName">
+          {() => ['central_admin', 'admin'].includes((user as any)?.role || '') ? <InspectionTitleDetail /> : <Login />}
         </Route>
         <Route component={() => <div>404 - Page Not Found</div>} />
       </Switch>
