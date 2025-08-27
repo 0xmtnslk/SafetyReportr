@@ -215,87 +215,101 @@ export default function HospitalInspections() {
         </Card>
       </div>
 
-      {/* Inspection Types List */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CheckSquare className="w-5 h-5" />
-            Denetim Çeşitleri
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="divide-y">
-            {inspectionTypes.map((type: any) => (
-              <div 
-                key={type.id} 
-                className="p-6 hover:bg-gray-50 transition-colors cursor-pointer"
-                onClick={() => setLocation(`/inspection-type-detail/${hospitalId}/${type.id}`)}
-              >
-                <div className="flex items-center justify-between">
-                  {/* Type Info */}
-                  <div className="flex items-center gap-4 flex-1">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0">
-                      <CheckSquare className="w-6 h-6 text-white" />
-                    </div>
-                    
-                    <div className="flex-1">
-                      <h3 className="text-xl font-semibold text-gray-900">{type.title}</h3>
-                      <div className="flex items-center gap-4 mt-2">
-                        <div className="flex items-center gap-1 text-sm text-gray-600">
-                          <Calendar className="w-4 h-4" />
-                          <span>{type.periodCount} Denetim Dönemi</span>
-                        </div>
-                        <div className="flex items-center gap-1 text-sm text-gray-600">
-                          <BarChart3 className="w-4 h-4" />
-                          <span>{type.totalInspections} Toplam Denetim</span>
-                        </div>
-                        <div className="flex items-center gap-1 text-sm text-gray-500">
-                          Son: {type.lastInspection ? 
-                            new Date(type.lastInspection.completedAt).toLocaleDateString('tr-TR', { 
-                              day: '2-digit', 
-                              month: '2-digit',
-                              year: '2-digit'
-                            }) : 
-                            'N/A'
-                          }
-                        </div>
-                      </div>
-                    </div>
+      {/* Inspection Types List - Görseldeki Format */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 mb-6">
+          <CheckSquare className="w-5 h-5 text-gray-600" />
+          <h2 className="text-xl font-semibold text-gray-900">Denetim Çeşitleri</h2>
+        </div>
+        
+        {inspectionTypes.map((type: any) => (
+          <Card 
+            key={type.id} 
+            className="hover:shadow-lg transition-all duration-200 cursor-pointer border-l-4 border-l-blue-500"
+            onClick={() => setLocation(`/inspection-type-detail/${hospitalId}/${type.id}`)}
+          >
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                {/* Sol Taraf - Denetim Türü Bilgileri */}
+                <div className="flex items-center gap-4 flex-1">
+                  <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0">
+                    <CheckSquare className="w-6 h-6 text-blue-600" />
                   </div>
                   
-                  {/* Stats */}
-                  <div className="flex items-center gap-6 flex-shrink-0">
-                    <div className="text-center">
-                      <div className={`text-3xl font-bold ${getScoreColor(type.averageScore)}`}>
-                        {type.averageScore}%
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">{type.title}</h3>
+                    <div className="flex items-center gap-6 text-sm text-gray-600">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="w-4 h-4" />
+                        <span>{type.periodCount} Denetim Dönemi</span>
                       </div>
-                      <p className="text-xs text-gray-500">Ortalama Puan</p>
+                      <div className="flex items-center gap-1">
+                        <BarChart3 className="w-4 h-4" />
+                        <span>{type.totalInspections} Toplam Denetim</span>
+                      </div>
+                      <div>
+                        Son: {type.lastInspection ? 
+                          new Date(type.lastInspection.completedAt).toLocaleDateString('tr-TR', { 
+                            day: '2-digit', 
+                            month: '2-digit',
+                            year: '2-digit'
+                          }) : 
+                          'N/A'
+                        }
+                      </div>
                     </div>
-                    
-                    <div className={`px-4 py-3 rounded-xl border-2 ${getGradeColor(type.letterGrade)}`}>
-                      <div className="text-2xl font-bold text-center">{type.letterGrade}</div>
-                    </div>
-                    
-                    <div className="flex items-center gap-2">
-                      <Button variant="outline" size="sm">
-                        <TrendingUp size={14} className="mr-2" />
-                        Trend Analizi
-                      </Button>
-                      
-                      <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
-                        <Eye size={14} className="mr-2" />
-                        Detaylar
-                      </Button>
-                    </div>
-                    
-                    <ChevronRight className="w-5 h-5 text-gray-400" />
                   </div>
                 </div>
+                
+                {/* Sağ Taraf - Puan ve Aksiyonlar */}
+                <div className="flex items-center gap-6 flex-shrink-0">
+                  {/* Ortalama Puan */}
+                  <div className="text-center">
+                    <div className={`text-3xl font-bold ${getScoreColor(type.averageScore)}`}>
+                      {type.averageScore}%
+                    </div>
+                    <p className="text-xs text-gray-500">Ortalama Puan</p>
+                  </div>
+                  
+                  {/* Harf Notu */}
+                  <div className={`w-16 h-16 rounded-full flex items-center justify-center border-4 ${getGradeColor(type.letterGrade)}`}>
+                    <div className="text-2xl font-bold">{type.letterGrade}</div>
+                  </div>
+                  
+                  {/* Aksiyon Butonları */}
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        alert(`${type.title} trend analizi geliştiriliyor...`);
+                      }}
+                    >
+                      <TrendingUp size={14} className="mr-1" />
+                      Trend Analizi
+                    </Button>
+                    
+                    <Button 
+                      size="sm" 
+                      className="bg-blue-600 hover:bg-blue-700"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setLocation(`/inspection-type-detail/${hospitalId}/${type.id}`);
+                      }}
+                    >
+                      <Eye size={14} className="mr-1" />
+                      Detaylar
+                    </Button>
+                  </div>
+                  
+                  <ChevronRight className="w-5 h-5 text-gray-400" />
+                </div>
               </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
 
       {/* Empty State */}
       {inspectionTypes.length === 0 && (
