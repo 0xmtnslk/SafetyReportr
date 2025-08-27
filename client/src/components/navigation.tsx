@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { HardHat, Home, Plus, FileText, LogOut, Shield, Menu, X, CheckSquare } from "lucide-react";
+import { HardHat, Home, Plus, FileText, LogOut, Shield, Menu, X, CheckSquare, BarChart3, TrendingUp } from "lucide-react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import NotificationDropdown from "./NotificationDropdown";
@@ -39,6 +39,13 @@ export default function Navigation({ children }: NavigationProps) {
       );
     }
     
+    // Safety specialists can see their inspection history
+    if (['safety_specialist'].includes(user?.role || '')) {
+      baseItems.push(
+        { path: "/inspection-history", label: "Denetim Geçmişim", icon: BarChart3 },
+      );
+    }
+    
     // All authenticated users can view reports
     baseItems.push({ path: "/reports", label: "Raporlar", icon: FileText });
     
@@ -49,7 +56,10 @@ export default function Navigation({ children }: NavigationProps) {
     
     // Only admin users can access admin panel
     if (['central_admin', 'admin'].includes(user?.role || '')) {
-      baseItems.push({ path: "/admin", label: "Yönetim Panel", icon: Shield });
+      baseItems.push(
+        { path: "/admin", label: "Yönetim Panel", icon: Shield },
+        { path: "/inspection-results-admin", label: "Denetim Sonuçları", icon: TrendingUp }
+      );
     }
     
     return baseItems;

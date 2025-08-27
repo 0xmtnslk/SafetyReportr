@@ -1386,44 +1386,46 @@ export class DatabaseStorage implements IStorage {
     return result.rowCount > 0;
   }
 
-  async getAllCompletedInspections(): Promise<InspectionAssignment[]> {
-    return await db
-      .select({
-        id: inspectionAssignments.id,
-        assignedUserId: inspectionAssignments.assignedUserId,
-        inspectionId: inspectionAssignments.inspectionId,
-        locationId: inspectionAssignments.locationId,
-        assignedBy: inspectionAssignments.assignedBy,
-        dueDate: inspectionAssignments.dueDate,
-        status: inspectionAssignments.status,
-        completedAt: inspectionAssignments.completedAt,
-        scorePercentage: inspectionAssignments.scorePercentage,
-        letterGrade: inspectionAssignments.letterGrade,
-        answeredQuestions: inspectionAssignments.answeredQuestions,
-        actualScore: inspectionAssignments.actualScore,
-        createdAt: inspectionAssignments.createdAt,
-        location: {
-          id: locations.id,
-          name: locations.name,
-          type: locations.type
-        },
-        inspection: {
-          id: inspections.id,
-          title: inspections.title,
-          category: inspections.category
-        },
-        assignedUser: {
-          id: users.id,
-          fullName: users.fullName,
-          username: users.username
-        }
-      })
+  async getAllCompletedInspections(): Promise<any[]> {
+    const results = await db
+      .select()
       .from(inspectionAssignments)
       .leftJoin(locations, eq(inspectionAssignments.locationId, locations.id))
       .leftJoin(inspections, eq(inspectionAssignments.inspectionId, inspections.id))
       .leftJoin(users, eq(inspectionAssignments.assignedUserId, users.id))
       .where(eq(inspectionAssignments.status, 'completed'))
       .orderBy(desc(inspectionAssignments.completedAt));
+
+    return results.map(result => ({
+      id: result.inspection_assignments.id,
+      assignedUserId: result.inspection_assignments.assignedUserId,
+      inspectionId: result.inspection_assignments.inspectionId,
+      locationId: result.inspection_assignments.locationId,
+      assignedBy: result.inspection_assignments.assignedBy,
+      dueDate: result.inspection_assignments.dueDate,
+      status: result.inspection_assignments.status,
+      completedAt: result.inspection_assignments.completedAt,
+      scorePercentage: result.inspection_assignments.scorePercentage,
+      letterGrade: result.inspection_assignments.letterGrade,
+      answeredQuestions: result.inspection_assignments.answeredQuestions,
+      actualScore: result.inspection_assignments.actualScore,
+      createdAt: result.inspection_assignments.createdAt,
+      location: result.locations ? {
+        id: result.locations.id,
+        name: result.locations.name,
+        type: result.locations.type
+      } : null,
+      inspection: result.inspections ? {
+        id: result.inspections.id,
+        title: result.inspections.title,
+        category: result.inspections.category
+      } : null,
+      assignedUser: result.users ? {
+        id: result.users.id,
+        fullName: result.users.fullName,
+        username: result.users.username
+      } : null
+    }));
   }
 
   // Notification operations
