@@ -5,15 +5,22 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { ArrowLeft, Building2, CheckSquare, Award, TrendingUp, AlertTriangle, Target, BarChart3, PieChart, FileText, Calendar, User, Clock } from "lucide-react";
 import { useLocation, useRoute } from "wouter";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function InspectionAnalysis() {
   const [, setLocation] = useLocation();
+  const { user } = useAuth();
   const [, params] = useRoute("/inspection-analysis/:hospitalId/:checklistId/:inspectionId");
   const { hospitalId, checklistId, inspectionId } = params || {};
 
+  // Determine if user is a specialist
+  const isSpecialist = ['safety_specialist', 'occupational_physician'].includes((user as any)?.role || '');
+
   // Fetch inspection assignments for this specific inspection
   const { data: assignments = [], isLoading: assignmentsLoading } = useQuery({
-    queryKey: [`/api/inspections/${inspectionId}/assignments`],
+    queryKey: isSpecialist ? 
+      [`/api/specialist/inspections/${inspectionId}/assignments`] : 
+      [`/api/inspections/${inspectionId}/assignments`],
   });
 
   // Fetch checklist template structure
@@ -28,7 +35,7 @@ export default function InspectionAnalysis() {
 
   // Fetch hospitals for name lookup
   const { data: hospitals = [], isLoading: hospitalsLoading } = useQuery({
-    queryKey: ["/api/admin/hospitals"],
+    queryKey: isSpecialist ? ["/api/specialist/hospitals"] : ["/api/admin/hospitals"],
   });
 
   const isLoading = assignmentsLoading || sectionsLoading || templatesLoading || hospitalsLoading;

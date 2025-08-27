@@ -97,30 +97,20 @@ export default function SpecialistDashboard() {
       {/* Main Content - Two Columns */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
 
-        {/* LEFT COLUMN - CHECKLIST SYSTEM */}
+        {/* LEFT COLUMN - ASSIGNED INSPECTIONS */}
         <div className="space-y-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-gray-900">Denetim Sistemi</h2>
+            <h2 className="text-2xl font-bold text-gray-900">Atanan Denetimler</h2>
             <Button 
-              onClick={() => setLocation('/specialist/checklists')}
-              data-testid="button-view-all-checklists"
+              onClick={() => setLocation('/inspection-history')}
+              data-testid="button-view-inspection-history"
             >
-              Tümünü Görüntüle
+              Denetim Geçmişi
             </Button>
           </div>
 
-          {/* Checklist Stats */}
+          {/* Inspection Stats */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card>
-              <CardContent className="p-6 text-center">
-                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mx-auto mb-3">
-                  <ClipboardList className="w-6 h-6 text-blue-600" />
-                </div>
-                <div className="text-2xl font-bold text-gray-900">{checklistTemplates.length}</div>
-                <p className="text-sm text-gray-600">Aktif Checklist</p>
-              </CardContent>
-            </Card>
-            
             <Card>
               <CardContent className="p-6 text-center">
                 <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center mx-auto mb-3">
@@ -150,96 +140,70 @@ export default function SpecialistDashboard() {
                 <p className="text-sm text-gray-600">Tamamlanan</p>
               </CardContent>
             </Card>
+            
+            <Card>
+              <CardContent className="p-6 text-center">
+                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                  <ClipboardList className="w-6 h-6 text-blue-600" />
+                </div>
+                <div className="text-2xl font-bold text-gray-900">{checklistTemplates.length}</div>
+                <p className="text-sm text-gray-600">Aktif Checklist</p>
+              </CardContent>
+            </Card>
           </div>
 
-          {/* Quick Actions */}
+          {/* Recent Assigned Inspections */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Target className="w-5 h-5" />
-                Hızlı İşlemler
+                <AlertTriangle className="w-5 h-5" />
+                Son Atanan Denetimler
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                <Button 
-                  onClick={() => setLocation('/specialist/checklists')}
-                  className="w-full flex items-center gap-2 h-auto py-4"
-                  data-testid="button-view-checklists"
-                >
-                  <ClipboardList className="w-5 h-5" />
-                  <div className="text-left">
-                    <div className="font-medium">Denetimleri Görüntüle</div>
-                    <div className="text-sm opacity-80">Checklist'lerdeki denetimleri incele</div>
-                  </div>
-                </Button>
-                
-                <Button 
-                  variant="outline"
-                  onClick={() => setLocation('/inspection-history')}
-                  className="w-full flex items-center gap-2 h-auto py-4"
-                  data-testid="button-inspection-history"
-                >
-                  <FileText className="w-5 h-5" />
-                  <div className="text-left">
-                    <div className="font-medium">Denetim Geçmişi</div>
-                    <div className="text-sm opacity-80">Tamamlanan denetimleri görüntüle</div>
-                  </div>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Available Checklists */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <ClipboardList className="w-5 h-5" />
-                Mevcut Checklist'ler
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {checklistTemplates.slice(0, 3).map((template: any) => (
-                  <Card key={template.id} className="hover:shadow-lg transition-shadow cursor-pointer">
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <h3 className="font-semibold text-gray-900">{template.name}</h3>
-                        <Badge variant="secondary">{template.version || 'v1.0'}</Badge>
+              {recentInspections.length > 0 ? (
+                <div className="space-y-3">
+                  {recentInspections.slice(0, 4).map((inspection: any) => (
+                    <div key={inspection.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-3 h-3 rounded-full ${
+                          inspection.status === 'completed' ? 'bg-green-500' :
+                          inspection.status === 'in_progress' ? 'bg-orange-500' :
+                          'bg-red-500'
+                        }`}></div>
+                        <div>
+                          <div className="font-medium text-sm">{inspection.title}</div>
+                          <div className="text-xs text-gray-600">{inspection.templateName}</div>
+                        </div>
                       </div>
-                      <p className="text-sm text-gray-600 mb-4 line-clamp-2">{template.description}</p>
-                      <Button 
-                        onClick={() => setLocation(`/specialist/checklists/${template.id}/inspections`)}
-                        size="sm" 
-                        className="w-full"
-                        data-testid={`button-checklist-${template.id}`}
-                      >
-                        Denetimleri Görüntüle
-                      </Button>
-                    </CardContent>
-                  </Card>
-                ))}
-                
-                {checklistTemplates.length > 3 && (
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setLocation('/specialist/checklists')}
-                    className="w-full"
-                  >
-                    +{checklistTemplates.length - 3} Checklist Daha...
-                  </Button>
-                )}
-              </div>
-              
-              {checklistTemplates.length === 0 && (
+                      <div className="text-right">
+                        <Badge variant="outline" className={`text-xs ${
+                          inspection.status === 'completed' ? 'bg-green-50 text-green-700' :
+                          inspection.status === 'in_progress' ? 'bg-orange-50 text-orange-700' :
+                          'bg-red-50 text-red-700'
+                        }`}>
+                          {inspection.status === 'completed' ? 'Tamamlandı' :
+                           inspection.status === 'in_progress' ? 'Devam Ediyor' :
+                           'Bekliyor'}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {recentInspections.length > 4 && (
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setLocation('/inspection-history')}
+                      className="w-full mt-4"
+                    >
+                      +{recentInspections.length - 4} Denetim Daha...
+                    </Button>
+                  )}
+                </div>
+              ) : (
                 <div className="text-center py-8">
                   <ClipboardList className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                    Henüz Checklist Bulunmuyor
-                  </h3>
-                  <p className="text-gray-600">
-                    Admin tarafından checklist oluşturulduğunda burada görünecek.
-                  </p>
+                  <p className="text-gray-600">Henüz atanan denetim bulunmuyor.</p>
                 </div>
               )}
             </CardContent>

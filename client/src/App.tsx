@@ -260,7 +260,7 @@ function Router() {
           {() => ['central_admin', 'admin'].includes((user as any)?.role || '') ? <InspectionTitleDetail /> : <Login />}
         </Route>
         <Route path="/inspection-analysis/:hospitalId/:checklistId/:inspectionId">
-          {() => ['central_admin', 'admin'].includes((user as any)?.role || '') ? <InspectionAnalysis /> : <Login />}
+          {() => ['central_admin', 'admin', 'safety_specialist', 'occupational_physician'].includes((user as any)?.role || '') ? <InspectionAnalysis /> : <Login />}
         </Route>
         <Route path="/specialist/checklists">
           {() => ['safety_specialist', 'occupational_physician'].includes((user as any)?.role || '') ? <SpecialistChecklists /> : <Login />}

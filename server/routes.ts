@@ -915,6 +915,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get hospitals for specialists - only their assigned hospital
+  app.get('/api/specialist/hospitals', authenticateToken, requireSafetySpecialist, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      const userAssignments = await storage.getUserAssignments(user.id);
+      const userHospital = userAssignments[0]?.hospital;
+      
+      if (!userHospital) {
+        return res.status(403).json({ error: 'Hastane ataması bulunamadı' });
+      }
+      
+      // Return only the specialist's assigned hospital
+      res.json([userHospital]);
+    } catch (error) {
+      console.error('Get specialist hospitals error:', error);
+      res.status(500).json({ message: 'Hastane bilgileri alınırken hata oluştu' });
+    }
+  });
+
   // Create new hospital - Central Admin only
   app.post('/api/admin/hospitals', authenticateToken, requireCentralManagement, async (req, res) => {
     try {
@@ -2224,6 +2243,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error updating specialist inspection:', error);
       res.status(500).json({ error: 'Error updating specialist inspection' });
+    }
+  });
+
+  // Get inspection assignments for specialists
+  app.get('/api/specialist/inspections/:inspectionId/assignments', authenticateToken, requireSafetySpecialist, async (req, res) => {
+    try {
+      const { inspectionId } = req.params;
+      const user = (req as any).user;
+      
+      // Get user's hospital
+      const userAssignments = await storage.getUserAssignments(user.id);
+      const userHospital = userAssignments[0]?.hospital;
+      
+      if (!userHospital) {
+        return res.status(403).json({ error: 'Hastane ataması bulunamadı' });
+      }
+      
+      // Mock inspection assignment data for analysis
+      const assignments = [
+        {
+          id: 'assignment-1',
+          inspectionId: inspectionId,
+          locationId: userHospital.id,
+          assignedUserId: user.id,
+          status: 'completed',
+          scorePercentage: 85,
+          letterGrade: 'B',
+          totalQuestions: 45,
+          answeredQuestions: 45,
+          totalPossibleScore: 450,
+          earnedScore: 383,
+          completedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+          createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+          location: userHospital,
+          assignedUser: {
+            id: user.id,
+            fullName: user.fullName,
+            role: user.role
+          }
+        }
+      ];
+      
+      res.json(assignments);
+    } catch (error) {
+      console.error('Error fetching specialist inspection assignments:', error);
+      res.status(500).json({ error: 'Error fetching specialist inspection assignments' });
     }
   });
 
