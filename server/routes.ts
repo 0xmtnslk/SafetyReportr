@@ -65,7 +65,7 @@ const authenticateToken = (req: Request, res: Response, next: NextFunction) => {
 // Role-based access control middleware
 const requireAdmin = (req: Request, res: Response, next: NextFunction) => {
   const user = (req as any).user;
-  if (!user || user.role !== 'admin') {
+  if (!user || !['admin', 'central_admin'].includes(user.role)) {
     return res.status(403).json({ message: 'Admin erişimi gerekli' });
   }
   next();
@@ -421,7 +421,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete user (Admin only)
-  app.delete("/api/admin/users/:id", authenticateToken, requireAdmin, async (req, res) => {
+  app.delete("/api/admin/users/:id", authenticateToken, requireCentralManagement, async (req, res) => {
     try {
       const { id } = req.params;
       const currentUser = (req as any).user;
