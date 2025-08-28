@@ -171,9 +171,9 @@ export default function SpecialistDashboard() {
                       }`}
                       onClick={() => {
                         if (inspection.status === 'pending') {
-                          setLocation(`/live-checklist/${inspection.id}`);
+                          setLocation(`/live-checklist?assignmentId=${inspection.id}`);
                         } else if (inspection.status === 'in_progress') {
-                          setLocation(`/live-checklist/${inspection.id}`);
+                          setLocation(`/live-checklist?assignmentId=${inspection.id}`);
                         } else if (inspection.status === 'completed') {
                           // Show detailed analysis for completed inspections
                           const hospitalId = inspection.location?.id;

@@ -274,7 +274,7 @@ export default function InspectionHistory() {
                         className={`p-4 border-l-4 ${getStatusColor(inspection.status)} hover:bg-gray-50 transition-colors cursor-pointer`}
                         onClick={() => {
                           if (inspection.status === 'pending' || inspection.status === 'in_progress') {
-                            setLocation(`/live-checklist/${inspection.id}`);
+                            setLocation(`/live-checklist?assignmentId=${inspection.id}`);
                           } else if (inspection.status === 'completed') {
                             // Get inspection assignment details for proper analysis routing
                             const hospitalId = inspection.location?.id;
@@ -319,7 +319,7 @@ export default function InspectionHistory() {
                               onClick={(e) => {
                                 e.stopPropagation();
                                 if (inspection.status === 'pending' || inspection.status === 'in_progress') {
-                                  setLocation(`/live-checklist/${inspection.id}`);
+                                  setLocation(`/live-checklist?assignmentId=${inspection.id}`);
                                 } else if (inspection.status === 'completed') {
                                   // Get inspection assignment details for proper analysis routing
                                   const hospitalId = inspection.location?.id;
