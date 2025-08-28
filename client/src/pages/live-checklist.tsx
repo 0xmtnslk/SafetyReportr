@@ -61,7 +61,7 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
   const assignmentId = urlParams.get('assignmentId');
   
   // Fetch assignment details if assignmentId is provided
-  const { data: assignment, isLoading: assignmentLoading } = useQuery({
+  const { data: assignment, isLoading: assignmentLoading } = useQuery<any>({
     queryKey: ["/api/assignments", assignmentId],
     enabled: !!assignmentId,
   });
@@ -82,8 +82,18 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
     }
   }, [assignment, assignmentId, setLocation, toast]);
   
-  // Use templateId from assignment or prop
-  const currentTemplateId = assignment?.inspection?.templateId || templateId || "7c39d8c0-7ff5-47ad-84f0-cd04de8bfd2a";
+  // Use templateId from assignment or prop - NO HARDCODED DEFAULT
+  const currentTemplateId = assignment?.inspection?.templateId || templateId;
+  
+  // If no template ID, show error
+  if (!currentTemplateId && !assignmentLoading) {
+    return (
+      <div className="container mx-auto p-6 text-center">
+        <h1 className="text-2xl font-bold text-red-600 mb-4">Template Hatası</h1>
+        <p className="text-gray-600">Denetim template'i bulunamadı. Lütfen doğru linki kullandığınızdan emin olun.</p>
+      </div>
+    );
+  }
   
 
   // State for current section and progress
@@ -93,12 +103,14 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
   const [answers, setAnswers] = useState<Record<string, Answer>>({});
 
   // Fetch template sections and questions
-  const { data: template } = useQuery({
+  const { data: template } = useQuery<any>({
     queryKey: ["/api/checklist/templates", currentTemplateId],
+    enabled: !!currentTemplateId,
   });
 
   const { data: sectionsData = [] } = useQuery<any[]>({
     queryKey: ["/api/checklist/templates", currentTemplateId, "sections"],
+    enabled: !!currentTemplateId,
   });
 
   const { data: questionsData = {} } = useQuery<Record<string, any[]>>({
@@ -120,7 +132,7 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
         return acc;
       }, {} as Record<string, any[]>);
     },
-    enabled: sectionsData.length > 0,
+    enabled: sectionsData.length > 0 && !!currentTemplateId,
   });
 
   // Process sections with questions
