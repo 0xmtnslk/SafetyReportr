@@ -1453,6 +1453,129 @@ export class DatabaseStorage implements IStorage {
     }));
   }
 
+  // Get hospital statistics with aggregated scores
+  async getHospitalStatistics(): Promise<any[]> {
+    const hospitals = await db
+      .select()
+      .from(locations)
+      .where(eq(locations.type, 'hospital'))
+      .orderBy(locations.name);
+
+    const statistics = [];
+    
+    for (const hospital of hospitals) {
+      // Get completed inspections for this hospital
+      const completedInspections = await db
+        .select()
+        .from(inspectionAssignments)
+        .leftJoin(inspections, eq(inspectionAssignments.inspectionId, inspections.id))
+        .where(
+          and(
+            eq(inspectionAssignments.locationId, hospital.id),
+            eq(inspectionAssignments.status, 'completed')
+          )
+        );
+
+      const totalInspections = completedInspections.length;
+      let averageScore = 0;
+      let letterGrade = 'E';
+      
+      if (totalInspections > 0) {
+        const totalScore = completedInspections.reduce((sum, inspection) => {
+          return sum + (inspection.inspection_assignments.scorePercentage || 0);
+        }, 0);
+        averageScore = Math.round(totalScore / totalInspections);
+        letterGrade = calculateLetterGrade(averageScore);
+      }
+
+      // Get all inspections (including pending) for counts
+      const allInspections = await db
+        .select()
+        .from(inspectionAssignments)
+        .where(eq(inspectionAssignments.locationId, hospital.id));
+
+      const pendingInspections = allInspections.filter(i => i.status === 'pending').length;
+      const overdueInspections = allInspections.filter(i => {
+        if (i.status !== 'pending') return false;
+        return new Date(i.dueDate || '') < new Date();
+      }).length;
+
+      statistics.push({
+        ...hospital,
+        totalInspections,
+        completedInspections: totalInspections,
+        pendingInspections,
+        overdueInspections,
+        averageScore,
+        letterGrade
+      });
+    }
+
+    return statistics;
+  }
+
+  // Get inspection title statistics with aggregated scores
+  async getInspectionTitleStatistics(): Promise<any[]> {
+    const inspectionTitles = await db
+      .select()
+      .from(inspections)
+      .orderBy(desc(inspections.createdAt));
+
+    const statistics = [];
+    
+    for (const inspectionTitle of inspectionTitles) {
+      // Get completed assignments for this inspection title
+      const completedAssignments = await db
+        .select()
+        .from(inspectionAssignments)
+        .leftJoin(locations, eq(inspectionAssignments.locationId, locations.id))
+        .where(
+          and(
+            eq(inspectionAssignments.inspectionId, inspectionTitle.id),
+            eq(inspectionAssignments.status, 'completed')
+          )
+        );
+
+      const totalCompletedInspections = completedAssignments.length;
+      let averageScore = 0;
+      let letterGrade = 'E';
+      
+      if (totalCompletedInspections > 0) {
+        const totalScore = completedAssignments.reduce((sum, assignment) => {
+          return sum + (assignment.inspection_assignments.scorePercentage || 0);
+        }, 0);
+        averageScore = Math.round(totalScore / totalCompletedInspections);
+        letterGrade = calculateLetterGrade(averageScore);
+      }
+
+      // Get all assignments for counts
+      const allAssignments = await db
+        .select()
+        .from(inspectionAssignments)
+        .where(eq(inspectionAssignments.inspectionId, inspectionTitle.id));
+
+      const totalAssignments = allAssignments.length;
+      const pendingAssignments = allAssignments.filter(a => a.status === 'pending').length;
+      const overdueAssignments = allAssignments.filter(a => {
+        if (a.status !== 'pending') return false;
+        return new Date(a.dueDate || '') < new Date();
+      }).length;
+
+      statistics.push({
+        ...inspectionTitle,
+        totalAssignments,
+        completedAssignments: totalCompletedInspections,
+        pendingAssignments,
+        overdueAssignments,
+        averageScore,
+        letterGrade,
+        targetLocationIds: inspectionTitle.targetLocationIds || []
+      });
+    }
+
+    return statistics;
+  }
+
   // Notification operations
   async createNotification(notification: InsertNotification): Promise<Notification> {
     const [created] = await db

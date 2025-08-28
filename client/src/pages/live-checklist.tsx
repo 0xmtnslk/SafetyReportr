@@ -56,15 +56,28 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
   const { user } = useAuth();
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   
-  // Get assignmentId from URL params
-  const urlParams = new URLSearchParams(window.location.search);
-  const assignmentId = urlParams.get('assignmentId');
+  // Get assignmentId from URL path (e.g. /live-checklist/assignmentId)
+  const pathSegments = location.split('/');
+  const assignmentId = pathSegments[pathSegments.length - 1] || null;
   
   // Fetch assignment details if assignmentId is provided
-  const { data: assignment } = useQuery({
+  const { data: assignment, isLoading: assignmentLoading } = useQuery({
     queryKey: ["/api/assignments", assignmentId],
     enabled: !!assignmentId,
   });
+  
+  // Check if assignment is completed - redirect to results page
+  useEffect(() => {
+    if (assignment && assignment.status === 'completed') {
+      toast({
+        title: "Denetim Tamamlanmış",
+        description: "Bu denetim zaten tamamlanmıştır. Sonuçlar sayfasına yönlendiriliyorsunuz.",
+        variant: "default"
+      });
+      setLocation(`/inspection-results/${assignmentId}`);
+      return;
+    }
+  }, [assignment, assignmentId, setLocation, toast]);
   
   // Use templateId from assignment or prop (note: database field is template_id, not checklistTemplateId)
   const currentTemplateId = assignment?.inspection?.templateId || assignment?.inspection?.template_id || templateId || "7c39d8c0-7ff5-47ad-84f0-cd04de8bfd2a";

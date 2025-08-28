@@ -157,14 +157,32 @@ export default function SpecialistDashboard() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <AlertTriangle className="w-5 h-5" />
-                Son Atanan Denetimler
+                Atanmış Denetimlerim
               </CardTitle>
             </CardHeader>
             <CardContent>
               {recentInspections.length > 0 ? (
                 <div className="space-y-3">
                   {recentInspections.slice(0, 4).map((inspection: any) => (
-                    <div key={inspection.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div 
+                      key={inspection.id} 
+                      className={`flex items-center justify-between p-3 bg-gray-50 rounded-lg ${
+                        inspection.status === 'pending' || inspection.status === 'in_progress' 
+                          ? 'cursor-pointer hover:bg-gray-100 transition-colors' 
+                          : 'cursor-default'
+                      }`}
+                      onClick={() => {
+                        if (inspection.status === 'pending') {
+                          setLocation(`/live-checklist/${inspection.id}`);
+                        } else if (inspection.status === 'in_progress') {
+                          setLocation(`/live-checklist/${inspection.id}`);
+                        } else if (inspection.status === 'completed') {
+                          // Show read-only view for completed inspections
+                          setLocation(`/inspection-results/${inspection.id}`);
+                        }
+                      }}
+                      data-testid={`assignment-card-${inspection.id}`}
+                    >
                       <div className="flex items-center gap-3">
                         <div className={`w-3 h-3 rounded-full ${
                           inspection.status === 'completed' ? 'bg-green-500' :
@@ -174,6 +192,15 @@ export default function SpecialistDashboard() {
                         <div>
                           <div className="font-medium text-sm">{inspection.title}</div>
                           <div className="text-xs text-gray-600">{inspection.templateName}</div>
+                          {inspection.status === 'pending' && (
+                            <div className="text-xs text-blue-600 mt-1">Tıklayın: Denetimi başlat</div>
+                          )}
+                          {inspection.status === 'in_progress' && (
+                            <div className="text-xs text-orange-600 mt-1">Tıklayın: Devam et</div>
+                          )}
+                          {inspection.status === 'completed' && (
+                            <div className="text-xs text-green-600 mt-1">Tıklayın: Sonuçları görüntüle</div>
+                          )}
                         </div>
                       </div>
                       <div className="text-right">
@@ -186,6 +213,11 @@ export default function SpecialistDashboard() {
                            inspection.status === 'in_progress' ? 'Devam Ediyor' :
                            'Bekliyor'}
                         </Badge>
+                        {inspection.status === 'completed' && inspection.scorePercentage && (
+                          <div className="text-xs text-gray-500 mt-1">
+                            %{inspection.scorePercentage} - {inspection.letterGrade} Notu
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -369,7 +401,24 @@ export default function SpecialistDashboard() {
           {recentInspections.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {recentInspections.slice(0, 6).map((inspection: any) => (
-                <div key={inspection.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div 
+                  key={inspection.id} 
+                  className={`flex items-center justify-between p-3 bg-gray-50 rounded-lg ${
+                    inspection.status === 'pending' || inspection.status === 'in_progress' 
+                      ? 'cursor-pointer hover:bg-gray-100 transition-colors' 
+                      : 'cursor-default'
+                  }`}
+                  onClick={() => {
+                    if (inspection.status === 'pending') {
+                      setLocation(`/live-checklist/${inspection.id}`);
+                    } else if (inspection.status === 'in_progress') {
+                      setLocation(`/live-checklist/${inspection.id}`);
+                    } else if (inspection.status === 'completed') {
+                      setLocation(`/inspection-results/${inspection.id}`);
+                    }
+                  }}
+                  data-testid={`activity-card-${inspection.id}`}
+                >
                   <div className="flex items-center gap-3">
                     <div className={`w-3 h-3 rounded-full ${
                       inspection.status === 'completed' ? 'bg-green-500' :
@@ -391,6 +440,11 @@ export default function SpecialistDashboard() {
                        inspection.status === 'in_progress' ? 'Devam Ediyor' :
                        'Bekliyor'}
                     </Badge>
+                    {inspection.status === 'completed' && inspection.scorePercentage && (
+                      <div className="text-xs text-gray-500 mt-1">
+                        %{inspection.scorePercentage} - {inspection.letterGrade}
+                      </div>
+                    )}
                     <div className="text-xs text-gray-500 mt-1">
                       {new Date(inspection.createdAt).toLocaleDateString('tr-TR')}
                     </div>

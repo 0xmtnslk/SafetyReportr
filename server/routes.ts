@@ -907,14 +907,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Hospital Management API Endpoints
-  // Get all hospitals - Central Admin only
+  // Get all hospitals with statistics - Central Admin only
   app.get('/api/admin/hospitals', authenticateToken, requireCentralManagement, async (req, res) => {
     try {
-      const hospitals = await storage.getAllLocations();
-      res.json(hospitals);
+      const hospitalStats = await storage.getHospitalStatistics();
+      res.json(hospitalStats);
     } catch (error) {
-      console.error('Get hospitals error:', error);
-      res.status(500).json({ message: 'Hastaneler alınırken hata oluştu' });
+      console.error('Get hospital statistics error:', error);
+      res.status(500).json({ message: 'Hastane istatistikleri alınırken hata oluştu' });
     }
   });
 
@@ -1969,14 +1969,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get all inspection titles (for admin analysis)
+  // Get all inspection titles with statistics (for admin analysis)
   app.get('/api/admin/inspection-titles', authenticateToken, requireCentralManagement, async (req: Request, res: Response) => {
     try {
-      const inspectionTitles = await storage.getAllInspections();
-      res.json(inspectionTitles);
+      const inspectionTitleStats = await storage.getInspectionTitleStatistics();
+      res.json(inspectionTitleStats);
     } catch (error: any) {
-      console.error('Error fetching inspection titles:', error);
-      res.status(500).json({ error: 'Error fetching inspection titles' });
+      console.error('Error fetching inspection title statistics:', error);
+      res.status(500).json({ error: 'Error fetching inspection title statistics' });
     }
   });
 

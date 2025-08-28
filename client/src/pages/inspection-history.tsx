@@ -25,62 +25,22 @@ export default function InspectionHistory() {
 
   // Process checklist templates with inspection statistics
   const processChecklistData = () => {
-    // Mock inspection data for demonstration (bu gerçek verilerle değiştirilecek)
-    const mockInspections = [
-      {
-        id: 'insp-1',
-        title: 'Haftalık ADP Denetimi',
-        templateId: 'bac1e1ac-9d4b-4a72-ba38-f1e8931e08c2',
-        status: 'completed',
-        scorePercentage: 85,
-        letterGrade: 'B',
-        completedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-        createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-      },
-      {
-        id: 'insp-2',
-        title: 'Aylık Kapsamlı ADP Denetimi',
-        templateId: 'bac1e1ac-9d4b-4a72-ba38-f1e8931e08c2',
-        status: 'completed',
-        scorePercentage: 92,
-        letterGrade: 'A',
-        completedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-        createdAt: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString(),
-      },
-      {
-        id: 'insp-3',
-        title: 'İSG Denetimi - Ocak',
-        templateId: '651f9031-b763-46a9-a974-dd83720b4c29',
-        status: 'completed',
-        scorePercentage: 78,
-        letterGrade: 'B',
-        completedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
-        createdAt: new Date(Date.now() - 11 * 24 * 60 * 60 * 1000).toISOString(),
-      },
-      {
-        id: 'insp-4',
-        title: 'İSG Denetimi - Şubat (Devam Ediyor)',
-        templateId: '651f9031-b763-46a9-a974-dd83720b4c29',
-        status: 'in_progress',
-        scorePercentage: 0,
-        letterGrade: '',
-        completedAt: null,
-        createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-      },
-      {
-        id: 'insp-5',
-        title: 'Acil Durum Denetimi (Beklemede)',
-        templateId: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
-        status: 'pending',
-        scorePercentage: 0,
-        letterGrade: '',
-        completedAt: null,
-        createdAt: new Date().toISOString(),
-      }
-    ];
+    // Use real user assignments data instead of mock data
+    const realInspections = userAssignments.map((assignment: any) => ({
+      id: assignment.id,
+      title: assignment.inspection?.title || 'İsimsiz Denetim',
+      templateId: assignment.inspection?.templateId || '',
+      status: assignment.status,
+      scorePercentage: assignment.scorePercentage || 0,
+      letterGrade: assignment.letterGrade || '',
+      completedAt: assignment.completedAt,
+      createdAt: assignment.createdAt,
+      assignedAt: assignment.assignedAt,
+      dueDate: assignment.dueDate
+    }));
 
     const templatesWithStats = checklistTemplates.map((template: any) => {
-      const templateInspections = mockInspections.filter((inspection: any) => 
+      const templateInspections = realInspections.filter((inspection: any) => 
         inspection.templateId === template.id
       );
       
@@ -313,12 +273,13 @@ export default function InspectionHistory() {
                         key={inspection.id} 
                         className={`p-4 border-l-4 ${getStatusColor(inspection.status)} hover:bg-gray-50 transition-colors cursor-pointer`}
                         onClick={() => {
-                          if (inspection.status === 'completed') {
-                            setLocation(`/inspection-analysis/${userHospital?.id}/${checklist.id}/${inspection.id}`);
-                          } else {
-                            setLocation(`/specialist/inspection/${inspection.id}`);
+                          if (inspection.status === 'pending' || inspection.status === 'in_progress') {
+                            setLocation(`/live-checklist/${inspection.id}`);
+                          } else if (inspection.status === 'completed') {
+                            setLocation(`/inspection-results/${inspection.id}`);
                           }
                         }}
+                        data-testid={`inspection-row-${inspection.id}`}
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
@@ -354,12 +315,13 @@ export default function InspectionHistory() {
                               size="sm"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                if (inspection.status === 'completed') {
-                                  setLocation(`/inspection-analysis/${userHospital?.id}/${checklist.id}/${inspection.id}`);
-                                } else {
-                                  setLocation(`/specialist/inspection/${inspection.id}`);
+                                if (inspection.status === 'pending' || inspection.status === 'in_progress') {
+                                  setLocation(`/live-checklist/${inspection.id}`);
+                                } else if (inspection.status === 'completed') {
+                                  setLocation(`/inspection-results/${inspection.id}`);
                                 }
                               }}
+                              data-testid={`inspection-action-${inspection.id}`}
                             >
                               {inspection.status === 'completed' ? (
                                 <>
