@@ -42,7 +42,7 @@ async function seedLocationsAndUsers() {
       // Create central admin first
       const [centralAdmin] = await db.insert(users).values({
         username: "central_admin",
-        password: await bcrypt.hash("Admin2024!medicalisg", 10),
+        password: await bcrypt.hash("password", 10),
         fullName: "Merkez Yönetim",
         role: "central_admin",
         position: "Sistem Yöneticisi",
@@ -61,7 +61,7 @@ async function seedLocationsAndUsers() {
     // Topkapı Liv - İş Güvenliği Uzmanı
     await db.insert(users).values({
       username: "metin.salik",
-      password: await bcrypt.hash("MetinSalik2024!", 10),
+      password: await bcrypt.hash("password", 10),
       fullName: "Metin Salık",
       role: "safety_specialist",
       position: "İş Güvenliği Uzmanı",
@@ -72,7 +72,7 @@ async function seedLocationsAndUsers() {
     // MedicalPark GOP - İş Güvenliği Uzmanı
     await db.insert(users).values({
       username: "bugra.torlak",
-      password: await bcrypt.hash("BugraTorlak2024!", 10),
+      password: await bcrypt.hash("password", 10),
       fullName: "Buğra Torlak",
       role: "safety_specialist", 
       position: "İş Güvenliği Uzmanı",

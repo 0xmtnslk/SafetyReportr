@@ -10,7 +10,7 @@ async function createAdminUser() {
     console.log("🔍 Checking for existing admin user...");
     
     const adminUsername = process.env.ADMIN_USERNAME || 'admin';
-    const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
+    const adminPassword = process.env.ADMIN_PASSWORD || 'password';
     const adminFullname = process.env.ADMIN_FULLNAME || 'Sistem Yöneticisi';
     const adminLocation = process.env.ADMIN_LOCATION || 'Yönetim';
 
@@ -36,7 +36,7 @@ async function createAdminUser() {
       password: hashedPassword,
       fullName: adminFullname,
       location: adminLocation,
-      role: 'admin',
+      role: 'central_admin',
       firstLogin: false, // Admin doesn't need to change password on first login
     }).returning();
 
