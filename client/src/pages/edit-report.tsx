@@ -34,13 +34,13 @@ export default function EditReport() {
   const [editingFinding, setEditingFinding] = useState<any>(null);
 
   // Fetch report data
-  const { data: report, isLoading } = useQuery({
+  const { data: report, isLoading } = useQuery<any>({
     queryKey: [`/api/reports/${id}`],
     enabled: !!id,
   });
 
   // Fetch findings
-  const { data: findings = [] } = useQuery({
+  const { data: findings = [] } = useQuery<any[]>({
     queryKey: [`/api/reports/${id}/findings`],
     enabled: !!id,
   });

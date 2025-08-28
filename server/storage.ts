@@ -1432,8 +1432,8 @@ export class DatabaseStorage implements IStorage {
       assignedUserId: result.inspection_assignments.assignedUserId,
       inspectionId: result.inspection_assignments.inspectionId,
       locationId: result.inspection_assignments.locationId,
-      assignedBy: result.inspection_assignments.assignedBy,
-      dueDate: result.inspection_assignments.dueDate,
+      assignedBy: result.inspection_assignments.assignedBy || null,
+      dueDate: result.inspection_assignments.dueDate || null,
       status: result.inspection_assignments.status,
       completedAt: result.inspection_assignments.completedAt,
       scorePercentage: result.inspection_assignments.scorePercentage,
@@ -1503,7 +1503,7 @@ export class DatabaseStorage implements IStorage {
       const pendingInspections = allInspections.filter(i => i.status === 'pending').length;
       const overdueInspections = allInspections.filter(i => {
         if (i.status !== 'pending') return false;
-        return new Date(i.dueDate || '') < new Date();
+        return i.dueDate ? new Date(i.dueDate) < new Date() : false;
       }).length;
 
       statistics.push({
@@ -1564,7 +1564,7 @@ export class DatabaseStorage implements IStorage {
       const pendingAssignments = allAssignments.filter(a => a.status === 'pending').length;
       const overdueAssignments = allAssignments.filter(a => {
         if (a.status !== 'pending') return false;
-        return new Date(a.dueDate || '') < new Date();
+        return a.dueDate ? new Date(a.dueDate) < new Date() : false;
       }).length;
 
       statistics.push({
