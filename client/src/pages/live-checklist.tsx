@@ -63,6 +63,17 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
   // Fetch assignment details if assignmentId is provided
   const { data: assignment, isLoading: assignmentLoading, error: assignmentError } = useQuery<any>({
     queryKey: ["/api/assignments", assignmentId],
+    queryFn: async () => {
+      const response = await fetch(`/api/assignments/${assignmentId}`, {
+        headers: {
+          "Authorization": `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+      }
+      return response.json();
+    },
     enabled: !!assignmentId,
   });
   
