@@ -1576,6 +1576,32 @@ export class DatabaseStorage implements IStorage {
     return statistics;
   }
 
+  // Update inspection target hospitals
+  async updateInspectionTargetHospitals(inspectionId: string, targetLocationIds: string[]): Promise<boolean> {
+    const result = await db
+      .update(inspections)
+      .set({
+        targetLocationIds: JSON.stringify(targetLocationIds),
+        updatedAt: new Date()
+      })
+      .where(eq(inspections.id, inspectionId));
+    
+    return result.rowCount > 0;
+  }
+
+  // Add new hospital to all active inspections (for dynamic system)
+  async addHospitalToAllInspections(hospitalId: string): Promise<number> {
+    const result = await db.execute(sql`
+      UPDATE inspections 
+      SET target_location_ids = target_location_ids || ${JSON.stringify([hospitalId])}::jsonb,
+          updated_at = NOW()
+      WHERE is_active = true
+      AND NOT target_location_ids ? ${hospitalId}
+    `);
+    
+    return result.rowCount || 0;
+  }
+
   // Notification operations
   async createNotification(notification: InsertNotification): Promise<Notification> {
     const [created] = await db

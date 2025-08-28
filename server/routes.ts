@@ -954,7 +954,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdBy: user.id
       });
       
-      res.status(201).json(newHospital);
+      // Automatically add new hospital to all active inspections for dynamic integration
+      const addedToInspections = await storage.addHospitalToAllInspections(newHospital.id);
+      console.log(`New hospital ${newHospital.name} added to ${addedToInspections} inspection title(s)`);
+      
+      res.status(201).json({ 
+        ...newHospital, 
+        addedToInspections 
+      });
     } catch (error) {
       if (error.name === 'ZodError') {
         return res.status(400).json({ message: 'Geçersiz hastane bilgileri', errors: error.errors });
@@ -1977,6 +1984,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Error fetching inspection title statistics:', error);
       res.status(500).json({ error: 'Error fetching inspection title statistics' });
+    }
+  });
+
+  // Update inspection title target hospitals - Central Admin only
+  app.put('/api/admin/inspection-titles/:id/hospitals', authenticateToken, requireCentralManagement, async (req, res) => {
+    try {
+      const inspectionId = req.params.id;
+      const { targetLocationIds } = req.body;
+      
+      if (!Array.isArray(targetLocationIds)) {
+        return res.status(400).json({ message: 'targetLocationIds array gerekli' });
+      }
+      
+      const result = await storage.updateInspectionTargetHospitals(inspectionId, targetLocationIds);
+      
+      if (!result) {
+        return res.status(404).json({ message: 'Inspection title bulunamadı' });
+      }
+      
+      res.json({ message: 'Hedef hastaneler başarıyla güncellendi', targetLocationIds });
+    } catch (error) {
+      console.error('Update inspection target hospitals error:', error);
+      res.status(500).json({ message: 'Hedef hastaneler güncellenirken hata oluştu' });
     }
   });
 
