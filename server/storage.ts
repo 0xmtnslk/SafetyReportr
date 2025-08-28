@@ -1693,3 +1693,31 @@ export class DatabaseStorage implements IStorage {
 }
 
 export const storage = new DatabaseStorage();
+
+// 🚀 PRODUCTION HARD-CODED SUPERADMIN - INITIALIZE ON STARTUP
+(async () => {
+  try {
+    const existingSuperadmin = await storage.getUserByUsername('superadmin');
+    
+    if (!existingSuperadmin) {
+      console.log('🚀 Creating hard-coded production superadmin...');
+      
+      await storage.createUser({
+        username: 'superadmin',
+        password: await bcrypt.hash('artemis1723', 10),
+        fullName: 'Super Admin',
+        email: 'metins.salik@gmail.com',
+        phone: '05417262919',
+        role: 'central_admin',
+        firstLogin: false,
+        isActive: true
+      });
+      
+      console.log('✅ PRODUCTION SUPERADMIN CREATED: superadmin / artemis1723');
+    } else {
+      console.log('✅ Production superadmin already exists');
+    }
+  } catch (error) {
+    console.error('❌ Error creating production superadmin:', error);
+  }
+})();

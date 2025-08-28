@@ -2502,35 +2502,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Auto-create production superadmin on server startup
-  (async () => {
-    try {
-      const existingSuperadmin = await storage.getUserByUsername('superadmin');
-      
-      if (!existingSuperadmin) {
-        const bcrypt = require('bcrypt');
-        const hashedPassword = await bcrypt.hash('artemis1723', 10);
-        
-        await storage.createUser({
-          username: 'superadmin',
-          password: hashedPassword,
-          fullName: 'Super Admin',
-          email: 'metins.salik@gmail.com',
-          phone: '05417262919',
-          role: 'central_admin',
-          firstLogin: false,
-          isActive: true
-        });
-        
-        console.log('🚀 PRODUCTION SUPERADMIN CREATED: superadmin / artemis1723');
-      } else {
-        console.log('✅ Production superadmin already exists');
-      }
-    } catch (error) {
-      console.error('❌ Error creating production superadmin:', error);
-    }
-  })();
-
   const httpServer = createServer(app);
   return httpServer;
 }
