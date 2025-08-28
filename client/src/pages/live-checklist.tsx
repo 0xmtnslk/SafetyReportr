@@ -61,113 +61,28 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
   
   // State for answers - MUST BE AT TOP
   const [answers, setAnswers] = useState<Record<string, Answer>>({});
-  
-  // Get assignmentId from URL query (e.g. /live-checklist?assignmentId=xyz)
-  // Use window.location.search instead of wouter location for query params
-  const urlParams = new URLSearchParams(window.location.search);
-  const assignmentId = urlParams.get('assignmentId');
-  
-  // Debug URL parsing
-  console.log('URL Parsing Debug FIXED:', {
-    windowLocationSearch: window.location.search,
-    assignmentId,
-    allParams: Object.fromEntries(urlParams.entries())
-  });
-  
+
+  // ALL HOOKS MUST BE HERE - NO CONDITIONAL LOGIC BEFORE THIS
   // Fetch assignment details if assignmentId is provided
   const { data: assignment, isLoading: assignmentLoading, error: assignmentError } = useQuery<any>({
     queryKey: ["/api/assignments", assignmentId],
     queryFn: async () => {
-      console.log('API Call Starting:', assignmentId);
       const token = localStorage.getItem("token");
-      console.log('Token exists:', !!token);
-      
       const response = await fetch(`/api/assignments/${assignmentId}`, {
         headers: {
           "Authorization": `Bearer ${token}`,
         },
       });
-      
-      console.log('API Response Status:', response.status);
-      const text = await response.text();
-      console.log('API Response Text:', text);
-      
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${text}`);
+        throw new Error(`HTTP ${response.status}: ${await response.text()}`);
       }
-      
-      try {
-        return JSON.parse(text);
-      } catch (e) {
-        console.error('JSON Parse Error:', e);
-        throw new Error('Invalid JSON response');
-      }
+      return response.json();
     },
     enabled: !!assignmentId,
   });
-  
-  // Debug assignment loading
-  console.log('Assignment Debug:', {
-    assignmentId,
-    assignmentLoading,
-    assignment,
-    assignmentError,
-    templateIdFromAssignment: assignment?.inspection?.templateId
-  });
-  
-  // Check if assignment is completed - redirect to results page
-  useEffect(() => {
-    if (assignment && assignment.status === 'completed') {
-      toast({
-        title: "Denetim Tamamlanmış",
-        description: "Bu denetim zaten tamamlanmıştır. Sonuçlar sayfasına yönlendiriliyorsunuz.",
-        variant: "default"
-      });
-      // Get inspection details for proper analysis routing
-      const hospitalId = assignment?.location?.id;
-      const templateId = assignment?.inspection?.templateId;
-      setLocation(`/inspection-analysis/${hospitalId}/${templateId}/${assignmentId}`);
-      return;
-    }
-  }, [assignment, assignmentId, setLocation, toast]);
-  
+
   // Use templateId from assignment or prop - with fallback for safety
   const currentTemplateId = assignment?.inspection?.templateId || templateId;
-  
-  // Debug template ID
-  console.log('Template ID debugging:', {
-    assignment,
-    assignmentId,
-    templateId,
-    inspection: assignment?.inspection,
-    assignmentLoading,
-    currentTemplateId
-  });
-  
-  // Show loading while assignment or template is loading  
-  if (assignmentLoading || !currentTemplateId) {
-    return (
-      <div className="container mx-auto p-6 text-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-        <p className="text-gray-600">Denetim bilgileri yükleniyor...</p>
-        {!currentTemplateId && !assignmentLoading && (
-          <div className="mt-4">
-            <p className="text-red-600">Template ID bulunamadı</p>
-            <Button 
-              onClick={() => setLocation('/specialist-dashboard')} 
-              variant="outline"
-              className="mt-2"
-            >
-              Panele Dön
-            </Button>
-          </div>
-        )}
-      </div>
-    );
-  }
-  
-
-  // All useState hooks now moved to top of component to fix React hooks rule
 
   // Fetch template sections and questions
   const { data: template } = useQuery<any>({
@@ -201,6 +116,52 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
     },
     enabled: sectionsData.length > 0 && !!currentTemplateId,
   });
+  
+  // Get assignmentId from URL query (e.g. /live-checklist?assignmentId=xyz)
+  // Use window.location.search instead of wouter location for query params
+  const urlParams = new URLSearchParams(window.location.search);
+  const assignmentId = urlParams.get('assignmentId');
+  
+  // Check if assignment is completed - redirect to results page
+  useEffect(() => {
+    if (assignment && assignment.status === 'completed') {
+      toast({
+        title: "Denetim Tamamlanmış",
+        description: "Bu denetim zaten tamamlanmıştır. Sonuçlar sayfasına yönlendiriliyorsunuz.",
+        variant: "default"
+      });
+      // Get inspection details for proper analysis routing
+      const hospitalId = assignment?.location?.id;
+      const templateId = assignment?.inspection?.templateId;
+      setLocation(`/inspection-analysis/${hospitalId}/${templateId}/${assignmentId}`);
+      return;
+    }
+  }, [assignment, assignmentId, setLocation, toast]);
+  
+  // NOW ALL THE CONDITIONAL LOGIC CAN HAPPEN AFTER ALL HOOKS
+  
+  // Show loading while assignment or template is loading  
+  if (assignmentLoading || !currentTemplateId) {
+    return (
+      <div className="container mx-auto p-6 text-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+        <p className="text-gray-600">Denetim bilgileri yükleniyor...</p>
+        {!currentTemplateId && !assignmentLoading && (
+          <div className="mt-4">
+            <p className="text-red-600">Template ID bulunamadı</p>
+            <Button 
+              onClick={() => setLocation('/specialist-dashboard')} 
+              variant="outline"
+              className="mt-2"
+            >
+              Panele Dön
+            </Button>
+          </div>
+        )}
+      </div>
+    );
+  }
+  
 
   // Process sections with questions
   const sections: Section[] = sectionsData.map((section: any) => ({
@@ -209,6 +170,9 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
     description: section.description,
     questions: questionsData[section.id] || []
   }));
+
+  const currentSection = sections[currentSectionIndex];
+  const totalSections = sections.length;
 
   const currentSection = sections[currentSectionIndex];
   const totalSections = sections.length;
