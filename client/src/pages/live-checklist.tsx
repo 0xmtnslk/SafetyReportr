@@ -57,13 +57,13 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   
   // Get assignmentId from URL query (e.g. /live-checklist?assignmentId=xyz)
-  const urlParams = new URLSearchParams(location.split('?')[1] || '');
+  // Use window.location.search instead of wouter location for query params
+  const urlParams = new URLSearchParams(window.location.search);
   const assignmentId = urlParams.get('assignmentId');
   
   // Debug URL parsing
-  console.log('URL Parsing Debug:', {
-    fullLocation: location,
-    urlParams: location.split('?')[1],
+  console.log('URL Parsing Debug FIXED:', {
+    windowLocationSearch: window.location.search,
     assignmentId,
     allParams: Object.fromEntries(urlParams.entries())
   });
