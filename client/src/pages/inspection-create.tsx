@@ -129,6 +129,15 @@ export default function InspectionCreatePage() {
     try {
       const dueDateTime = new Date(`${dueDate} ${dueTime}`);
       
+      const assignments = selectedHospitalDetails.flatMap(({ hospital, specialists }) =>
+        specialists.map(specialist => ({
+          locationId: hospital.id,
+          assignedUserId: specialist.id,
+          totalQuestions: totalQuestions || 0,
+          totalPossibleScore: (totalQuestions || 0) * 10,
+        }))
+      );
+      
       const inspectionData = {
         templateId: selectedTemplate.id,
         title,
@@ -139,14 +148,8 @@ export default function InspectionCreatePage() {
         targetLocationIds: selectedHospitals,
         status: 'pending' as const,
         isActive: true,
-        assignments: selectedHospitalDetails.flatMap(({ hospital, specialists }) =>
-          specialists.map(specialist => ({
-            locationId: hospital.id,
-            assignedUserId: specialist.id,
-            totalQuestions: totalQuestions || 0,
-            totalPossibleScore: (totalQuestions || 0) * 10,
-          }))
-        ),
+        assignments,
+        totalAssignments: assignments.length
       };
 
       await apiRequest("POST", "/api/inspections", inspectionData);

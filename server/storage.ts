@@ -1256,7 +1256,10 @@ export class DatabaseStorage implements IStorage {
     return {
       ...assignment,
       location: location || null,
-      inspection: inspection || null,
+      inspection: inspection ? {
+        ...inspection,
+        templateId: inspection.templateId // Ensure templateId is explicitly included
+      } : null,
     };
   }
 
@@ -1283,7 +1286,10 @@ export class DatabaseStorage implements IStorage {
         return {
           ...assignment,
           location: location || null,
-          inspection: inspection || null,
+          inspection: inspection ? {
+            ...inspection,
+            templateId: inspection.templateId // Ensure templateId is explicitly included
+          } : null,
         };
       })
     );

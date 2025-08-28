@@ -191,6 +191,10 @@ export const inspectionAssignments = pgTable("inspection_assignments", {
   locationId: varchar("location_id").references(() => locations.id).notNull(),
   assignedUserId: varchar("assigned_user_id").references(() => users.id).notNull(), // Safety specialist
   
+  // Assignment details
+  assignedBy: varchar("assigned_by").references(() => users.id).notNull(), // Who assigned this
+  dueDate: timestamp("due_date").notNull(), // Assignment deadline
+  
   // Status
   status: text("status").notNull().default("pending"), // pending, in_progress, completed, overdue
   assignedAt: timestamp("assigned_at").defaultNow(),
@@ -429,6 +433,8 @@ export const insertInspectionAssignmentSchema = createInsertSchema(inspectionAss
   inspectionId: true,
   locationId: true,
   assignedUserId: true,
+  assignedBy: true,
+  dueDate: true,
   status: true,
   totalQuestions: true,
   answeredQuestions: true,
@@ -438,6 +444,11 @@ export const insertInspectionAssignmentSchema = createInsertSchema(inspectionAss
   scorePercentage: true,
   letterGrade: true,
   notes: true,
+}).extend({
+  dueDate: z.union([
+    z.string().transform((str) => new Date(str)),
+    z.date()
+  ]),
 });
 
 export const insertInspectionResponseSchema = createInsertSchema(inspectionResponses).pick({
