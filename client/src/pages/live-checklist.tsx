@@ -54,16 +54,17 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
   const [location, setLocation] = useLocation();
   const { toast } = useToast();
   const { user } = useAuth();
+  
+  // Get assignmentId from URL query FIRST - BEFORE ALL HOOKS
+  const urlParams = new URLSearchParams(window.location.search);
+  const assignmentId = urlParams.get('assignmentId');
+  
+  // ALL useState HOOKS MUST BE AT TOP
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  
-  // State for current section and progress - MUST BE AT TOP
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
-  
-  // State for answers - MUST BE AT TOP
   const [answers, setAnswers] = useState<Record<string, Answer>>({});
 
-  // ALL HOOKS MUST BE HERE - NO CONDITIONAL LOGIC BEFORE THIS
-  // Fetch assignment details if assignmentId is provided
+  // ALL useQuery HOOKS NEXT
   const { data: assignment, isLoading: assignmentLoading, error: assignmentError } = useQuery<any>({
     queryKey: ["/api/assignments", assignmentId],
     queryFn: async () => {
@@ -117,10 +118,7 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
     enabled: sectionsData.length > 0 && !!currentTemplateId,
   });
   
-  // Get assignmentId from URL query (e.g. /live-checklist?assignmentId=xyz)
-  // Use window.location.search instead of wouter location for query params
-  const urlParams = new URLSearchParams(window.location.search);
-  const assignmentId = urlParams.get('assignmentId');
+  // Already have sections above - this was duplicate
   
   // Check if assignment is completed - redirect to results page
   useEffect(() => {
@@ -137,8 +135,6 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
       return;
     }
   }, [assignment, assignmentId, setLocation, toast]);
-  
-  // NOW ALL THE CONDITIONAL LOGIC CAN HAPPEN AFTER ALL HOOKS
   
   // Show loading while assignment or template is loading  
   if (assignmentLoading || !currentTemplateId) {
@@ -161,21 +157,6 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
       </div>
     );
   }
-  
-
-  // Process sections with questions
-  const sections: Section[] = sectionsData.map((section: any) => ({
-    id: section.id,
-    name: section.name,
-    description: section.description,
-    questions: questionsData[section.id] || []
-  }));
-
-  const currentSection = sections[currentSectionIndex];
-  const totalSections = sections.length;
-
-  const currentSection = sections[currentSectionIndex];
-  const totalSections = sections.length;
 
   // Progress calculation
   const getCurrentSectionProgress = () => {
