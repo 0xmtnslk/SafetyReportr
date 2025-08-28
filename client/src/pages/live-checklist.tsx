@@ -64,15 +64,30 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
   const { data: assignment, isLoading: assignmentLoading, error: assignmentError } = useQuery<any>({
     queryKey: ["/api/assignments", assignmentId],
     queryFn: async () => {
+      console.log('API Call Starting:', assignmentId);
+      const token = localStorage.getItem("token");
+      console.log('Token exists:', !!token);
+      
       const response = await fetch(`/api/assignments/${assignmentId}`, {
         headers: {
-          "Authorization": `Bearer ${localStorage.getItem("token")}`,
+          "Authorization": `Bearer ${token}`,
         },
       });
+      
+      console.log('API Response Status:', response.status);
+      const text = await response.text();
+      console.log('API Response Text:', text);
+      
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+        throw new Error(`HTTP ${response.status}: ${text}`);
       }
-      return response.json();
+      
+      try {
+        return JSON.parse(text);
+      } catch (e) {
+        console.error('JSON Parse Error:', e);
+        throw new Error('Invalid JSON response');
+      }
     },
     enabled: !!assignmentId,
   });
