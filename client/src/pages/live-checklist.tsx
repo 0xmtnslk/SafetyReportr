@@ -128,44 +128,34 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
   // Use templateId from assignment or prop - with fallback for safety
   const currentTemplateId = assignment?.inspection?.templateId || templateId;
   
-  // If no template ID and not loading, show error with debug info
-  if (!currentTemplateId && !assignmentLoading) {
-    console.log('Template ID debugging:', {
-      assignment,
-      assignmentId,
-      templateId,
-      inspection: assignment?.inspection,
-      assignmentLoading
-    });
-    
-    return (
-      <div className="container mx-auto p-6 text-center">
-        <h1 className="text-2xl font-bold text-red-600 mb-4">Denetim Bulunamadı</h1>
-        <p className="text-gray-600 mb-4">Bu denetim ataması artık mevcut değil veya size ait değil.</p>
-        <div className="mt-6">
-          <Button 
-            onClick={() => setLocation('/specialist-dashboard')} 
-            variant="outline"
-            data-testid="button-back-to-dashboard"
-          >
-            Panele Dön
-          </Button>
-        </div>
-        {assignmentId && (
-          <div className="text-xs text-gray-500 mt-4">
-            <p>Assignment ID: {assignmentId}</p>
-          </div>
-        )}
-      </div>
-    );
-  }
+  // Debug template ID
+  console.log('Template ID debugging:', {
+    assignment,
+    assignmentId,
+    templateId,
+    inspection: assignment?.inspection,
+    assignmentLoading,
+    currentTemplateId
+  });
   
-  // Show loading while assignment or template is loading
+  // Show loading while assignment or template is loading  
   if (assignmentLoading || !currentTemplateId) {
     return (
       <div className="container mx-auto p-6 text-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
         <p className="text-gray-600">Denetim bilgileri yükleniyor...</p>
+        {!currentTemplateId && !assignmentLoading && (
+          <div className="mt-4">
+            <p className="text-red-600">Template ID bulunamadı</p>
+            <Button 
+              onClick={() => setLocation('/specialist-dashboard')} 
+              variant="outline"
+              className="mt-2"
+            >
+              Panele Dön
+            </Button>
+          </div>
+        )}
       </div>
     );
   }
