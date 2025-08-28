@@ -118,7 +118,16 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
     enabled: sectionsData.length > 0 && !!currentTemplateId,
   });
   
-  // Already have sections above - this was duplicate
+  // Process sections with questions
+  const sections: Section[] = sectionsData.map((section: any) => ({
+    id: section.id,
+    name: section.name,
+    description: section.description,
+    questions: questionsData[section.id] || []
+  }));
+
+  const currentSection = sections[currentSectionIndex];
+  const totalSections = sections.length;
   
   // Check if assignment is completed - redirect to results page
   useEffect(() => {
