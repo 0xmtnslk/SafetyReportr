@@ -24,11 +24,9 @@ export default function SpecialistDashboard() {
   const userHospital = userAssignments[0]?.hospital || null;
   const hospitalId = userHospital?.id;
 
-  // Fetch recent inspections for this hospital
-  const { data: recentInspections = [], isLoading: inspectionsLoading } = useQuery({
-    queryKey: [`/api/hospital/${hospitalId}/recent-inspections`],
-    enabled: !!hospitalId,
-  });
+  // Use userAssignments as recent inspections for specialists
+  const recentInspections = userAssignments || [];
+  const inspectionsLoading = assignmentsLoading;
 
   // Fetch reports for specialist
   const { data: reports = [], isLoading: reportsLoading } = useQuery({
@@ -40,7 +38,7 @@ export default function SpecialistDashboard() {
     queryKey: ["/api/stats"],
   });
 
-  const isLoading = assignmentsLoading || templatesLoading || inspectionsLoading || reportsLoading || statsLoading;
+  const isLoading = assignmentsLoading || templatesLoading || reportsLoading || statsLoading;
 
   if (isLoading) {
     return (
