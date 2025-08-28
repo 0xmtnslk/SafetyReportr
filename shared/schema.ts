@@ -441,8 +441,6 @@ export const insertInspectionAssignmentSchema = createInsertSchema(inspectionAss
 });
 
 export const insertInspectionResponseSchema = createInsertSchema(inspectionResponses).pick({
-  assignmentId: true,
-  questionId: true,
   answer: true,
   score: true,
   notes: true,
@@ -450,6 +448,8 @@ export const insertInspectionResponseSchema = createInsertSchema(inspectionRespo
   documents: true,
 }).extend({
   answer: z.enum(["Karşılıyor", "Kısmen Karşılıyor", "Karşılamıyor", "Kapsam Dışı"]),
+  assignmentId: z.string().optional(), // Made optional since it comes from URL params
+  questionId: z.string().optional(), // Made optional since it comes from URL params
 });
 
 // Types
