@@ -1958,6 +1958,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get single assignment details with inspection and template info
+  app.get('/api/assignments/:assignmentId', authenticateToken, async (req: Request, res: Response) => {
+    try {
+      const assignmentId = req.params.assignmentId;
+      const user = (req as any).user;
+      
+      // Get assignment details with full joined data  
+      const assignment = await storage.getInspectionAssignment(assignmentId);
+      
+      if (!assignment) {
+        return res.status(404).json({ error: 'Assignment not found' });
+      }
+      
+      // Check if user has permission to view this assignment
+      if (assignment.assignedUserId !== user.id && user.role !== 'central_admin') {
+        return res.status(403).json({ error: 'Not authorized to view this assignment' });
+      }
+      
+      res.json(assignment);
+    } catch (error: any) {
+      console.error('Error fetching assignment details:', error);
+      res.status(500).json({ error: 'Error fetching assignment details' });
+    }
+  });
+
   // Get responses for an assignment
   app.get('/api/assignments/:assignmentId/responses', authenticateToken, async (req: Request, res: Response) => {
     try {
