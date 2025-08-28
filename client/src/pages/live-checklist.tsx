@@ -61,9 +61,18 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
   const assignmentId = urlParams.get('assignmentId');
   
   // Fetch assignment details if assignmentId is provided
-  const { data: assignment, isLoading: assignmentLoading } = useQuery<any>({
+  const { data: assignment, isLoading: assignmentLoading, error: assignmentError } = useQuery<any>({
     queryKey: ["/api/assignments", assignmentId],
     enabled: !!assignmentId,
+  });
+  
+  // Debug assignment loading
+  console.log('Assignment Debug:', {
+    assignmentId,
+    assignmentLoading,
+    assignment,
+    assignmentError,
+    templateIdFromAssignment: assignment?.inspection?.templateId
   });
   
   // Check if assignment is completed - redirect to results page
