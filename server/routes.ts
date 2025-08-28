@@ -1794,7 +1794,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           assignedUserId: assignmentData.assignedUserId,
           totalQuestions: assignmentData.totalQuestions,
           totalPossibleScore: assignmentData.totalPossibleScore || (assignmentData.totalQuestions * 10),
-          status: 'pending'
+          status: 'pending',
+          assignedBy: user.id,
+          dueDate: inspection.dueDate
         })
       );
       
@@ -1880,7 +1882,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const response = await storage.submitInspectionResponse(
         req.params.assignmentId,
         req.params.questionId,
-        validatedData
+        {
+          ...validatedData,
+          respondedBy: user.id
+        }
       );
       
       res.json(response);
