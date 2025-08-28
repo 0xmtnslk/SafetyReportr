@@ -60,6 +60,14 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
   const urlParams = new URLSearchParams(location.split('?')[1] || '');
   const assignmentId = urlParams.get('assignmentId');
   
+  // Debug URL parsing
+  console.log('URL Parsing Debug:', {
+    fullLocation: location,
+    urlParams: location.split('?')[1],
+    assignmentId,
+    allParams: Object.fromEntries(urlParams.entries())
+  });
+  
   // Fetch assignment details if assignmentId is provided
   const { data: assignment, isLoading: assignmentLoading, error: assignmentError } = useQuery<any>({
     queryKey: ["/api/assignments", assignmentId],
