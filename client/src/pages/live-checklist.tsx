@@ -56,6 +56,12 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
   const { user } = useAuth();
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   
+  // State for current section and progress - MUST BE AT TOP
+  const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
+  
+  // State for answers - MUST BE AT TOP
+  const [answers, setAnswers] = useState<Record<string, Answer>>({});
+  
   // Get assignmentId from URL query (e.g. /live-checklist?assignmentId=xyz)
   // Use window.location.search instead of wouter location for query params
   const urlParams = new URLSearchParams(window.location.search);
@@ -161,11 +167,7 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
   }
   
 
-  // State for current section and progress
-  const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
-  
-  // State for answers
-  const [answers, setAnswers] = useState<Record<string, Answer>>({});
+  // All useState hooks now moved to top of component to fix React hooks rule
 
   // Fetch template sections and questions
   const { data: template } = useQuery<any>({
