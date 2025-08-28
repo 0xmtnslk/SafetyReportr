@@ -416,7 +416,10 @@ export default function SpecialistDashboard() {
                     } else if (inspection.status === 'in_progress') {
                       setLocation(`/live-checklist/${inspection.id}`);
                     } else if (inspection.status === 'completed') {
-                      setLocation(`/inspection-results/${inspection.id}`);
+                      // Show detailed analysis for completed inspections
+                      const hospitalId = userHospital?.id;
+                      const templateId = inspection.templateId;
+                      setLocation(`/inspection-analysis/${hospitalId}/${templateId}/${inspection.id}`);
                     }
                   }}
                   data-testid={`activity-card-${inspection.id}`}

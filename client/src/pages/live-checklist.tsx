@@ -74,7 +74,10 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
         description: "Bu denetim zaten tamamlanmıştır. Sonuçlar sayfasına yönlendiriliyorsunuz.",
         variant: "default"
       });
-      setLocation(`/inspection-results/${assignmentId}`);
+      // Get inspection details for proper analysis routing
+      const hospitalId = assignment?.location?.id;
+      const templateId = assignment?.inspection?.templateId;
+      setLocation(`/inspection-analysis/${hospitalId}/${templateId}/${assignmentId}`);
       return;
     }
   }, [assignment, assignmentId, setLocation, toast]);
@@ -309,7 +312,10 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
         });
         
         // Redirect to result analysis page
-        setLocation(`/inspection-results/${assignmentId}`);
+        // Get inspection details for proper analysis routing
+      const hospitalId = assignment?.location?.id;
+      const templateId = assignment?.inspection?.templateId;
+      setLocation(`/inspection-analysis/${hospitalId}/${templateId}/${assignmentId}`);
       }
     } catch (error) {
       console.error('Error submitting inspection:', error);

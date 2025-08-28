@@ -276,7 +276,10 @@ export default function InspectionHistory() {
                           if (inspection.status === 'pending' || inspection.status === 'in_progress') {
                             setLocation(`/live-checklist/${inspection.id}`);
                           } else if (inspection.status === 'completed') {
-                            setLocation(`/inspection-results/${inspection.id}`);
+                            // Get inspection assignment details for proper analysis routing
+                            const hospitalId = inspection.location?.id;
+                            const templateId = inspection.templateId;
+                            setLocation(`/inspection-analysis/${hospitalId}/${templateId}/${inspection.id}`);
                           }
                         }}
                         data-testid={`inspection-row-${inspection.id}`}
@@ -318,7 +321,10 @@ export default function InspectionHistory() {
                                 if (inspection.status === 'pending' || inspection.status === 'in_progress') {
                                   setLocation(`/live-checklist/${inspection.id}`);
                                 } else if (inspection.status === 'completed') {
-                                  setLocation(`/inspection-results/${inspection.id}`);
+                                  // Get inspection assignment details for proper analysis routing
+                                  const hospitalId = inspection.location?.id;
+                                  const templateId = inspection.templateId;
+                                  setLocation(`/inspection-analysis/${hospitalId}/${templateId}/${inspection.id}`);
                                 }
                               }}
                               data-testid={`inspection-action-${inspection.id}`}
