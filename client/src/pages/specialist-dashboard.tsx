@@ -176,8 +176,8 @@ export default function SpecialistDashboard() {
                           setLocation(`/live-checklist/${inspection.id}`);
                         } else if (inspection.status === 'completed') {
                           // Show detailed analysis for completed inspections
-                          const hospitalId = userHospital?.id;
-                          const templateId = inspection.templateId;
+                          const hospitalId = inspection.location?.id;
+                          const templateId = inspection.inspection?.templateId;
                           setLocation(`/inspection-analysis/${hospitalId}/${templateId}/${inspection.id}`);
                         }
                       }}
