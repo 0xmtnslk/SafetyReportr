@@ -56,9 +56,9 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
   const { user } = useAuth();
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   
-  // Get assignmentId from URL path (e.g. /live-checklist/assignmentId)
-  const pathSegments = location.split('/');
-  const assignmentId = pathSegments[pathSegments.length - 1] || null;
+  // Get assignmentId from URL query (e.g. /live-checklist?assignmentId=xyz)
+  const urlParams = new URLSearchParams(location.split('?')[1] || '');
+  const assignmentId = urlParams.get('assignmentId');
   
   // Fetch assignment details if assignmentId is provided
   const { data: assignment, isLoading: assignmentLoading } = useQuery({
@@ -82,8 +82,8 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
     }
   }, [assignment, assignmentId, setLocation, toast]);
   
-  // Use templateId from assignment or prop (note: database field is template_id, not checklistTemplateId)
-  const currentTemplateId = assignment?.inspection?.templateId || assignment?.inspection?.template_id || templateId || "7c39d8c0-7ff5-47ad-84f0-cd04de8bfd2a";
+  // Use templateId from assignment or prop
+  const currentTemplateId = assignment?.inspection?.templateId || templateId || "7c39d8c0-7ff5-47ad-84f0-cd04de8bfd2a";
   
 
   // State for current section and progress
