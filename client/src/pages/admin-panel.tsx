@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -345,6 +346,7 @@ export default function AdminPanel() {
   const [hospitalSearch, setHospitalSearch] = useState<string>("");
   const [userSearch, setUserSearch] = useState<string>("");
   
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -704,13 +706,6 @@ export default function AdminPanel() {
             <p className="text-muted-foreground">Kullanıcı yönetimi ve sistem ayarları</p>
           </div>
         </div>
-        <Button
-          onClick={() => setLocation('/admin/create-assignment')}
-          className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
-        >
-          <CheckSquare size={16} />
-          Kontrol Listesi Görevi Ata
-        </Button>
       </div>
 
       <Tabs defaultValue="users" className="space-y-6">
@@ -2709,7 +2704,7 @@ function InspectionResultsAdmin() {
                   variant="outline" 
                   size="sm" 
                   className="flex-1"
-                  onClick={() => window.open(`/inspection-results/${group.lastInspection?.id}`, '_blank')}
+                  onClick={() => setLocation('/inspection-results-admin')}
                 >
                   <Eye size={14} className="mr-1" />
                   Son Sonuç
