@@ -21,6 +21,7 @@ import {
   insertInspectionAssignmentSchema,
   insertInspectionResponseSchema,
   insertNotificationSchema,
+  editUserProfileSchema,
   CHECKLIST_CATEGORIES,
   EVALUATION_OPTIONS,
   Location
@@ -1158,6 +1159,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!res.headersSent) {
         res.status(500).json({ error: "Error serving file" });
       }
+    }
+  });
+
+  // Get current user profile
+  app.get("/api/user/me", authenticateToken, async (req, res) => {
+    try {
+      const currentUser = (req as any).user;
+      const user = await storage.getUserById(currentUser.id);
+      
+      if (!user) {
+        return res.status(404).json({ message: 'Kullanıcı bulunamadı' });
+      }
+
+      // Remove sensitive information
+      const { password, resetToken, resetTokenExpiry, ...userProfile } = user;
+      res.json(userProfile);
+    } catch (error) {
+      console.error("Get user profile error:", error);
+      res.status(500).json({ message: "Kullanıcı profili alınırken hata oluştu" });
+    }
+  });
+
+  // Update current user profile
+  app.put("/api/user/profile", authenticateToken, async (req, res) => {
+    try {
+      const currentUser = (req as any).user;
+      const validation = editUserProfileSchema.safeParse(req.body);
+      
+      if (!validation.success) {
+        return res.status(400).json({ 
+          message: "Geçersiz veri formatı", 
+          errors: validation.error.errors 
+        });
+      }
+
+      const updatedUser = await storage.updateUser(currentUser.id, validation.data);
+      
+      if (!updatedUser) {
+        return res.status(404).json({ message: 'Kullanıcı bulunamadı' });
+      }
+
+      // Remove sensitive information
+      const { password, resetToken, resetTokenExpiry, ...userProfile } = updatedUser;
+      res.json(userProfile);
+    } catch (error) {
+      console.error("Update user profile error:", error);
+      res.status(500).json({ message: "Kullanıcı profili güncellenirken hata oluştu" });
     }
   });
 
