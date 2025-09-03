@@ -91,29 +91,14 @@ export default function Navigation({ children }: NavigationProps) {
           </button>
           <div className="flex items-center">
             <div className="bg-primary w-8 h-8 rounded-lg flex items-center justify-center mr-3">
-              <span className="text-white text-sm font-bold">Z</span>
+              <HardHat className="text-white" size={16} />
             </div>
-            <span className="text-lg font-bold text-gray-900">Zorlu</span>
+            <span className="text-lg font-bold text-gray-900">İSG Rapor Sistemi</span>
           </div>
         </div>
 
-        {/* Right side - Apps, Country, Notifications, Profile */}
+        {/* Right side - Notifications, Profile */}
         <div className="flex items-center space-x-4">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="flex items-center text-sm text-gray-600 hover:text-gray-900 transition-colors">
-                <span>Kurumsal Uygulamalar</span>
-                <ChevronDown size={16} className="ml-1" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem>İSG Rapor Sistemi</DropdownMenuItem>
-              <DropdownMenuItem>Diğer Uygulamalar</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          
-          <div className="bg-red-500 px-2 py-1 rounded text-xs text-white font-medium">🇹🇷</div>
-          
           <NotificationDropdown />
           
           <DropdownMenu open={isProfileDropdownOpen} onOpenChange={setIsProfileDropdownOpen}>
@@ -240,14 +225,13 @@ export default function Navigation({ children }: NavigationProps) {
             </button>
             <div className="flex items-center">
               <div className="bg-primary w-8 h-8 rounded-lg flex items-center justify-center mr-2">
-                <span className="text-white text-sm font-bold">Z</span>
+                <HardHat className="text-white" size={16} />
               </div>
-              <span className="text-lg font-bold text-gray-900">Zorlu</span>
+              <span className="text-sm font-bold text-gray-900">İSG Rapor</span>
             </div>
           </div>
           
           <div className="flex items-center space-x-2">
-            <div className="bg-red-500 px-2 py-1 rounded text-xs text-white font-medium">🇹🇷</div>
             <NotificationDropdown />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -303,16 +287,25 @@ export default function Navigation({ children }: NavigationProps) {
           <div className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm" onClick={() => setIsMobileMenuOpen(false)}></div>
           <div className="fixed inset-y-0 left-0 w-80 max-w-[85vw] bg-white shadow-2xl transform transition-transform duration-300">
             <div className="flex flex-col h-full">
-              {/* Modern Mobile Header */}
-              <div className="px-6 py-6 bg-gradient-to-r from-primary to-blue-600">
-                <div className="flex items-center">
-                  <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center mr-4 backdrop-blur-sm">
-                    <HardHat className="text-white" size={20} />
+              {/* Mobile Header */}
+              <div className="px-6 py-6 bg-white border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center mr-3">
+                      <HardHat className="text-white" size={18} />
+                    </div>
+                    <div className="flex flex-col">
+                      <h1 className="text-lg font-bold text-gray-900 leading-tight">İş Sağlığı ve Güvenliği</h1>
+                      <p className="text-xs text-gray-500">Rapor Sistemi</p>
+                    </div>
                   </div>
-                  <div className="flex flex-col text-white">
-                    <h1 className="text-xl font-bold leading-tight">İSG Rapor Sistemi</h1>
-                    <p className="text-xs text-blue-100">İş Sağlığı ve Güvenliği</p>
-                  </div>
+                  <button
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="p-2 rounded-lg text-gray-600 hover:bg-gray-100"
+                    data-testid="button-close-mobile-menu"
+                  >
+                    <X size={20} />
+                  </button>
                 </div>
               </div>
 
@@ -344,7 +337,7 @@ export default function Navigation({ children }: NavigationProps) {
               </div>
 
               {/* Mobile Navigation */}
-              <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
+              <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
                 {navItems.map((item) => {
                   const Icon = item.icon;
                   const isActive = (item.path === "/dashboard" && (location === "/" || location === "/dashboard")) || location === item.path;
@@ -352,10 +345,10 @@ export default function Navigation({ children }: NavigationProps) {
                   return (
                     <button
                       key={item.path}
-                      className={`w-full flex items-center px-4 py-4 rounded-xl text-left transition-all duration-200 ${
+                      className={`w-full flex items-center px-4 py-3 rounded-lg text-left transition-all duration-200 ${
                         isActive
-                          ? "bg-primary text-white shadow-lg scale-[0.98]"
-                          : "text-gray-700 hover:text-primary hover:bg-blue-50 hover:scale-[0.98]"
+                          ? "bg-primary text-white"
+                          : "text-gray-700 hover:text-primary hover:bg-gray-50"
                       }`}
                       onClick={() => {
                         setLocation(item.path);
@@ -363,33 +356,26 @@ export default function Navigation({ children }: NavigationProps) {
                       }}
                       data-testid={`nav-mobile-${item.path.slice(1) || "home"}`}
                     >
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center mr-3 ${
-                        isActive ? "bg-white bg-opacity-20" : "bg-gray-100"
-                      }`}>
-                        <Icon size={18} className={isActive ? "text-white" : "text-current"} />
-                      </div>
-                      <span className="font-medium text-base">{item.label}</span>
+                      <Icon size={18} className={isActive ? "text-white" : "text-current"} />
+                      <span className="font-medium ml-3">{item.label}</span>
                     </button>
                   );
                 })}
               </nav>
 
               {/* Mobile Logout */}
-              <div className="px-4 py-4 border-t border-gray-200 bg-gray-50">
-                <Button
-                  variant="ghost"
+              <div className="px-4 py-4 border-t border-gray-200">
+                <button
                   onClick={() => {
                     logout();
                     setIsMobileMenuOpen(false);
                   }}
-                  className="w-full justify-start hover:bg-red-50 hover:text-red-600 transition-colors py-4 rounded-xl"
+                  className="w-full flex items-center px-4 py-3 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
                   data-testid="button-mobile-logout"
                 >
-                  <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center mr-3">
-                    <LogOut size={18} className="text-red-600" />
-                  </div>
-                  <span className="font-medium text-base">Çıkış Yap</span>
-                </Button>
+                  <LogOut size={18} />
+                  <span className="font-medium ml-3">Çıkış Yap</span>
+                </button>
               </div>
             </div>
           </div>

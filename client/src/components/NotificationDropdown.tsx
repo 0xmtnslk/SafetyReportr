@@ -49,9 +49,15 @@ export default function NotificationDropdown() {
   // Mark notification as read
   const markAsReadMutation = useMutation({
     mutationFn: async (notificationId: string) => {
-      return apiRequest(`/api/notifications/${notificationId}/read`, {
-        method: "PUT",
+      const response = await fetch(`/api/notifications/${notificationId}/read`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
+        },
       });
+      if (!response.ok) throw new Error('Failed to mark as read');
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
@@ -62,9 +68,15 @@ export default function NotificationDropdown() {
   // Mark all as read
   const markAllAsReadMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest("/api/notifications/read-all", {
-        method: "PUT",
+      const response = await fetch('/api/notifications/read-all', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
+        },
       });
+      if (!response.ok) throw new Error('Failed to mark all as read');
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
@@ -232,10 +244,17 @@ export default function NotificationDropdown() {
             ))}
             
             {notifications.length > 0 && (
-              <DropdownMenuItem className="text-center py-2">
-                <Button variant="ghost" size="sm" className="text-xs text-primary hover:text-primary/80 font-medium">
+              <DropdownMenuItem className="text-center py-2" asChild>
+                <button
+                  onClick={() => {
+                    setLocation('/notifications');
+                    setIsOpen(false);
+                  }}
+                  className="w-full text-xs text-primary hover:text-primary/80 font-medium"
+                  data-testid="button-view-all-notifications"
+                >
                   Tümünü Gör
-                </Button>
+                </button>
               </DropdownMenuItem>
             )}
           </ScrollArea>
