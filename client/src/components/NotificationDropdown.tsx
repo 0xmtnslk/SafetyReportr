@@ -128,7 +128,7 @@ export default function NotificationDropdown() {
       
       <DropdownMenuContent className="w-80" align="end">
         <DropdownMenuLabel className="flex items-center justify-between">
-          <span>Bildirimler</span>
+          <span>Bildirimlerim</span>
           {hasUnread && (
             <Button
               variant="ghost"
@@ -152,7 +152,7 @@ export default function NotificationDropdown() {
           </div>
         ) : notifications.length === 0 ? (
           <div className="p-4 text-center text-sm text-gray-500">
-            Henüz bildiriminiz yok
+            Henüz bir bildirim bulunmamaktadır.
           </div>
         ) : (
           <ScrollArea className="h-96">
@@ -231,11 +231,10 @@ export default function NotificationDropdown() {
               </DropdownMenuItem>
             ))}
             
-            {notifications.length > 10 && (
+            {notifications.length > 0 && (
               <DropdownMenuItem className="text-center py-2">
-                <Button variant="ghost" size="sm" className="text-xs text-gray-500">
-                  <Eye size={12} className="mr-1" />
-                  Tüm Bildirimleri Gör
+                <Button variant="ghost" size="sm" className="text-xs text-primary hover:text-primary/80 font-medium">
+                  Tümünü Gör
                 </Button>
               </DropdownMenuItem>
             )}

@@ -1,9 +1,16 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { HardHat, Home, Plus, FileText, LogOut, Shield, Menu, X, CheckSquare, BarChart3, TrendingUp, User } from "lucide-react";
+import { HardHat, Home, Plus, FileText, LogOut, Shield, Menu, X, CheckSquare, BarChart3, TrendingUp, User, ChevronDown } from "lucide-react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import NotificationDropdown from "./NotificationDropdown";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 // Helper function to get role display names
 const getRoleDisplayName = (role?: string) => {
@@ -25,6 +32,8 @@ export default function Navigation({ children }: NavigationProps) {
   const [location, setLocation] = useLocation();
   const { user, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   // Role-based navigation items
   const getNavItems = () => {
@@ -70,23 +79,27 @@ export default function Navigation({ children }: NavigationProps) {
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-white border-r border-gray-200 shadow-sm">
+      <aside className={`hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 bg-white border-r border-gray-200 shadow-sm transition-all duration-300 ${
+        isSidebarCollapsed ? 'lg:w-16' : 'lg:w-64'
+      }`}>
         <div className="flex flex-col flex-1">
           {/* Logo/Header */}
-          <div className="flex items-center px-6 py-6 border-b border-gray-200">
-            <div className="bg-gradient-to-r from-primary to-blue-600 w-10 h-10 rounded-xl flex items-center justify-center mr-3 shadow-md">
+          <div className={`flex items-center border-b border-gray-200 ${isSidebarCollapsed ? 'px-3 py-4 justify-center' : 'px-6 py-6'}`}>
+            <div className="bg-primary w-10 h-10 rounded-lg flex items-center justify-center shadow-sm">
               <HardHat className="text-white" size={18} />
             </div>
-            <div className="flex flex-col">
-              <h1 className="text-lg font-bold text-gray-900 leading-tight">
-                İSG Rapor Sistemi
-              </h1>
-              <p className="text-xs text-gray-500">İş Sağlığı ve Güvenliği</p>
-            </div>
+            {!isSidebarCollapsed && (
+              <div className="flex flex-col ml-3">
+                <h1 className="text-lg font-bold text-gray-900 leading-tight">
+                  DİJİTAL İŞ
+                </h1>
+                <p className="text-xs text-gray-500">İş Sağlığı ve Güvenliği</p>
+              </div>
+            )}
           </div>
 
           {/* Navigation Items */}
-          <nav className="flex-1 px-4 py-6 space-y-2">
+          <nav className={`flex-1 py-6 space-y-1 ${isSidebarCollapsed ? 'px-2' : 'px-4'}`}>
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = (item.path === "/dashboard" && (location === "/" || location === "/dashboard")) || location === item.path;
@@ -94,95 +107,188 @@ export default function Navigation({ children }: NavigationProps) {
               return (
                 <button
                   key={item.path}
-                  className={`w-full flex items-center px-4 py-3 rounded-lg text-left transition-all duration-200 ${
+                  className={`w-full flex items-center rounded-lg text-left transition-all duration-200 ${
+                    isSidebarCollapsed ? 'px-3 py-3 justify-center' : 'px-4 py-3'
+                  } ${
                     isActive
-                      ? "bg-primary text-white shadow-sm"
+                      ? "bg-primary text-white"
                       : "text-gray-600 hover:text-primary hover:bg-gray-50"
                   }`}
                   onClick={() => setLocation(item.path)}
                   data-testid={`nav-${item.path.slice(1) || "home"}`}
+                  title={isSidebarCollapsed ? item.label : undefined}
                 >
-                  <Icon size={20} className={`mr-3 ${isActive ? "text-white" : "text-current"}`} />
-                  <span className="font-medium">{item.label}</span>
+                  <Icon size={20} className={isActive ? "text-white" : "text-current"} />
+                  {!isSidebarCollapsed && (
+                    <span className="font-medium ml-3">{item.label}</span>
+                  )}
                 </button>
               );
             })}
           </nav>
 
+          {/* Sidebar Toggle Button */}
+          <div className={`border-t border-gray-200 ${isSidebarCollapsed ? 'px-2 py-2' : 'px-4 py-4'}`}>
+            <button
+              onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+              className={`w-full flex items-center rounded-lg text-gray-600 hover:text-primary hover:bg-gray-50 transition-colors ${
+                isSidebarCollapsed ? 'px-3 py-3 justify-center' : 'px-4 py-3'
+              }`}
+              data-testid="button-toggle-sidebar"
+              title={isSidebarCollapsed ? 'Menüyü Genişlet' : 'Menüyü Daralt'}
+            >
+              <Menu size={20} />
+              {!isSidebarCollapsed && (
+                <span className="font-medium ml-3">Menüyü Daralt</span>
+              )}
+            </button>
+          </div>
+
           {/* User Info & Logout */}
-          <div className="px-4 py-4 border-t border-gray-200">
-            <div className="flex items-center justify-between mb-4">
-              <button
-                onClick={() => setLocation('/profile/edit')}
-                className="flex items-center flex-1 p-2 rounded-lg hover:bg-gray-50 transition-colors group"
-                data-testid="button-user-profile"
-              >
-                <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center mr-3 group-hover:bg-primary/90 transition-colors">
-                  <span className="text-white text-sm font-bold">
-                    {(user?.fullName || user?.username || 'U').charAt(0).toUpperCase()}
-                  </span>
-                </div>
-                <div className="flex flex-col text-left">
-                  <span className="text-sm font-medium text-gray-700 group-hover:text-primary transition-colors" data-testid="user-name">
-                    {user?.fullName || user?.username}
-                  </span>
-                  <span className="text-xs text-gray-500" data-testid="user-role">
-                    {getRoleDisplayName(user?.role)}
-                  </span>
-                </div>
-                <User size={14} className="ml-auto text-gray-400 group-hover:text-primary transition-colors" />
-              </button>
+          <div className={`border-t border-gray-200 ${isSidebarCollapsed ? 'px-2 py-2' : 'px-4 py-4'}`}>
+            <div className={`flex items-center ${isSidebarCollapsed ? 'justify-center' : 'justify-between mb-4'}`}>
+              <DropdownMenu open={isProfileDropdownOpen} onOpenChange={setIsProfileDropdownOpen}>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    className={`flex items-center p-2 rounded-lg hover:bg-gray-50 transition-colors group ${
+                      isSidebarCollapsed ? 'justify-center' : 'flex-1'
+                    }`}
+                    data-testid="button-desktop-profile"
+                    title={isSidebarCollapsed ? user?.fullName || user?.username : undefined}
+                  >
+                    <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center group-hover:bg-primary/90 transition-colors">
+                      <span className="text-white text-sm font-bold">
+                        {(user?.fullName || user?.username || 'U').charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                    {!isSidebarCollapsed && (
+                      <>
+                        <div className="flex flex-col text-left flex-1 ml-3">
+                          <span className="text-sm font-medium text-gray-700 group-hover:text-primary transition-colors" data-testid="user-name">
+                            {user?.fullName || user?.username}
+                          </span>
+                          <span className="text-xs text-gray-500" data-testid="user-role">
+                            {getRoleDisplayName(user?.role)}
+                          </span>
+                        </div>
+                        <ChevronDown size={14} className="text-gray-400 group-hover:text-primary transition-colors" />
+                      </>
+                    )}
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-64 p-2" align="start" side="right">
+                  <div className="flex items-center px-3 py-3 rounded-lg bg-gray-50">
+                    <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center mr-3 shadow-sm">
+                      <span className="text-white text-sm font-bold">
+                        {(user?.fullName || user?.username || 'U').charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-sm font-semibold text-gray-900">
+                        {user?.fullName || user?.username}
+                      </span>
+                      <span className="text-sm text-primary font-medium">
+                        Merhaba {(user?.fullName || user?.username || 'Kullanıcı').split(' ')[0]}! 👋
+                      </span>
+                    </div>
+                  </div>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setLocation('/profile/edit');
+                      setIsProfileDropdownOpen(false);
+                    }}
+                    className="flex items-center px-3 py-2 text-gray-700 hover:text-primary hover:bg-gray-50 rounded-lg cursor-pointer"
+                    data-testid="dropdown-view-profile"
+                  >
+                    <User size={16} className="mr-3" />
+                    Profilimi Görüntüle
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      logout();
+                      setIsProfileDropdownOpen(false);
+                    }}
+                    className="flex items-center px-3 py-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg cursor-pointer"
+                    data-testid="dropdown-logout"
+                  >
+                    <LogOut size={16} className="mr-3" />
+                    Çıkış Yap
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <NotificationDropdown />
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={logout}
-              className="w-full justify-start hover:bg-red-50 hover:text-red-600 transition-colors"
-              data-testid="button-logout"
-            >
-              <LogOut size={16} className="mr-2" />
-              Çıkış Yap
-            </Button>
           </div>
         </div>
       </aside>
 
-      {/* Modern Mobile Header */}
+      {/* Mobile Header */}
       <div className="lg:hidden">
-        <div className="flex items-center justify-between px-4 py-4 bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
+        <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200 sticky top-0 z-50">
           <div className="flex items-center">
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="p-2 rounded-xl text-gray-600 hover:bg-gray-100 transition-colors"
+              className="p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors mr-3"
               data-testid="button-mobile-menu"
             >
-              <div className="w-5 h-5 flex flex-col justify-center space-y-1">
-                <div className={`w-full h-0.5 bg-current transition-all duration-300 ${isMobileMenuOpen ? 'rotate-45 translate-y-1.5' : ''}`}></div>
-                <div className={`w-full h-0.5 bg-current transition-all duration-300 ${isMobileMenuOpen ? 'opacity-0' : ''}`}></div>
-                <div className={`w-full h-0.5 bg-current transition-all duration-300 ${isMobileMenuOpen ? '-rotate-45 -translate-y-1.5' : ''}`}></div>
-              </div>
+              <Menu size={20} />
             </button>
-            <div className="bg-gradient-to-r from-primary to-blue-600 w-9 h-9 rounded-xl flex items-center justify-center ml-3 mr-3 shadow-sm">
-              <HardHat className="text-white" size={18} />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-gray-900">İSG Rapor</h1>
-              <p className="text-xs text-gray-500 -mt-1">İş Sağlığı ve Güvenliği</p>
+            <div className="flex items-center">
+              <div className="bg-primary w-8 h-8 rounded-lg flex items-center justify-center mr-2">
+                <HardHat className="text-white" size={16} />
+              </div>
+              <span className="text-lg font-bold text-gray-900">DİJİTAL İŞ</span>
             </div>
           </div>
           
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2">
+            <div className="bg-red-500 px-2 py-1 rounded text-xs text-white font-medium">🇹🇷</div>
             <NotificationDropdown />
-            <button
-              onClick={() => setLocation('/profile/edit')}
-              className="w-9 h-9 bg-primary rounded-xl flex items-center justify-center shadow-sm hover:bg-primary/90 transition-colors"
-              data-testid="button-mobile-user-profile"
-            >
-              <span className="text-white text-sm font-bold">
-                {(user?.fullName || user?.username || 'U').charAt(0).toUpperCase()}
-              </span>
-            </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center hover:bg-primary/90 transition-colors"
+                  data-testid="button-mobile-user-profile"
+                >
+                  <span className="text-white text-sm font-bold">
+                    {(user?.fullName || user?.username || 'U').charAt(0).toUpperCase()}
+                  </span>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-64 p-2" align="end">
+                <div className="flex items-center px-3 py-3 rounded-lg bg-gray-50">
+                  <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center mr-3">
+                    <span className="text-white text-sm font-bold">
+                      {(user?.fullName || user?.username || 'U').charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-semibold text-gray-900">
+                      {user?.fullName || user?.username}
+                    </span>
+                    <span className="text-sm text-primary font-medium">
+                      Merhaba {(user?.fullName || user?.username || 'Kullanıcı').split(' ')[0]}! 👋
+                    </span>
+                  </div>
+                </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => setLocation('/profile/edit')}
+                  className="flex items-center px-3 py-2 text-gray-700 hover:text-primary hover:bg-gray-50 rounded-lg cursor-pointer"
+                >
+                  <User size={16} className="mr-3" />
+                  Profilimi Görüntüle
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={logout}
+                  className="flex items-center px-3 py-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg cursor-pointer"
+                >
+                  <LogOut size={16} className="mr-3" />
+                  Çıkış Yap
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </div>
@@ -287,7 +393,9 @@ export default function Navigation({ children }: NavigationProps) {
       )}
 
       {/* Main Content */}
-      <main className="flex-1 lg:pl-64">
+      <main className={`flex-1 transition-all duration-300 ${
+        isSidebarCollapsed ? 'lg:pl-16' : 'lg:pl-64'
+      }`}>
         <div className="h-full overflow-auto">
           {children}
         </div>
