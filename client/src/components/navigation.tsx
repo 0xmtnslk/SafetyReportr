@@ -154,8 +154,8 @@ export default function Navigation({ children }: NavigationProps) {
         </div>
       </header>
       {/* Left Sidebar */}
-      <aside className={`hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:top-16 bg-white border-r border-gray-200 shadow-sm transition-all duration-300 z-20 ${
-        isSidebarCollapsed ? 'lg:w-16' : 'lg:w-64'
+      <aside className={`hidden md:flex md:flex-col md:fixed md:inset-y-0 md:top-16 bg-white border-r border-gray-200 shadow-sm transition-all duration-300 z-20 ${
+        isSidebarCollapsed ? 'md:w-16' : 'md:w-64'
       }`}>
         <div className="flex flex-col flex-1">
 
@@ -212,22 +212,107 @@ export default function Navigation({ children }: NavigationProps) {
         </div>
       </aside>
 
-      {/* Mobile Header */}
-      <div className="lg:hidden">
-        <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200 sticky top-0 z-50">
+
+      {/* Mobile Sidebar Overlay */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50" 
+            onClick={() => setIsMobileMenuOpen(false)}
+            data-testid="mobile-overlay"
+          />
+          <div className="fixed inset-y-0 left-0 w-72 bg-white shadow-xl">
+            <div className="flex flex-col h-full">
+              {/* Mobile Sidebar Header */}
+              <div className="flex items-center justify-between px-4 py-4 border-b border-gray-200">
+                <div className="flex items-center">
+                  <div className="bg-primary w-8 h-8 rounded-lg flex items-center justify-center mr-3">
+                    <HardHat className="text-white" size={16} />
+                  </div>
+                  <span className="font-bold text-gray-900">İSG Rapor</span>
+                </div>
+                <button
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="p-1 rounded-lg text-gray-600 hover:bg-gray-100"
+                  data-testid="button-close-mobile-sidebar"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Mobile Navigation */}
+              <nav className="flex-1 px-3 py-3 space-y-1 overflow-y-auto">
+                {navItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = (item.path === "/dashboard" && (location === "/" || location === "/dashboard")) || location === item.path;
+                  
+                  return (
+                    <button
+                      key={item.path}
+                      className={`w-full flex items-center px-3 py-2 rounded-lg text-left transition-colors ${
+                        isActive
+                          ? "bg-primary text-white"
+                          : "text-gray-700 hover:bg-gray-100"
+                      }`}
+                      onClick={() => {
+                        setLocation(item.path);
+                        setIsMobileMenuOpen(false);
+                      }}
+                      data-testid={`nav-mobile-${item.path.slice(1) || "home"}`}
+                    >
+                      <Icon size={18} className={isActive ? "text-white" : "text-current"} />
+                      <span className="ml-3 text-sm">{item.label}</span>
+                    </button>
+                  );
+                })}
+              </nav>
+
+              {/* Mobile Bottom Section */}
+              <div className="border-t border-gray-200 p-3 bg-gray-50">
+                <button
+                  onClick={() => {
+                    setLocation('/profile/edit');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="w-full flex items-center px-3 py-2 rounded-lg text-gray-700 hover:bg-white transition-colors mb-2"
+                  data-testid="button-mobile-profile"
+                >
+                  <User size={16} />
+                  <span className="ml-3 text-sm">Profil</span>
+                </button>
+                <button
+                  onClick={() => {
+                    logout();
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="w-full flex items-center px-3 py-2 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
+                  data-testid="button-mobile-logout"
+                >
+                  <LogOut size={16} />
+                  <span className="ml-3 text-sm">Çıkış Yap</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile-first responsive header */}
+      <div className="md:hidden fixed top-0 left-0 right-0 h-14 bg-white border-b border-gray-200 z-40">
+        <div className="flex items-center justify-between px-4 h-full">
           <div className="flex items-center">
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors mr-3"
+              className="p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
               data-testid="button-mobile-menu"
             >
-              <Menu size={20} />
+              <Menu size={18} />
             </button>
-            <div className="flex items-center">
-              <div className="bg-primary w-8 h-8 rounded-lg flex items-center justify-center mr-2">
-                <HardHat className="text-white" size={16} />
+            <div className="flex items-center ml-2">
+              <div className="bg-primary w-7 h-7 rounded flex items-center justify-center mr-2">
+                <HardHat className="text-white" size={14} />
               </div>
-              <span className="text-sm font-bold text-gray-900">İSG Rapor</span>
+              <span className="font-semibold text-gray-900 text-sm">İSG Rapor</span>
             </div>
           </div>
           
@@ -237,17 +322,17 @@ export default function Navigation({ children }: NavigationProps) {
               <DropdownMenuTrigger asChild>
                 <button
                   className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center hover:bg-primary/90 transition-colors"
-                  data-testid="button-mobile-user-profile"
+                  data-testid="button-mobile-profile"
                 >
-                  <span className="text-white text-sm font-bold">
+                  <span className="text-white text-xs font-bold">
                     {(user?.fullName || user?.username || 'U').charAt(0).toUpperCase()}
                   </span>
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-64 p-2" align="end">
-                <div className="flex items-center px-3 py-3 rounded-lg bg-gray-50">
-                  <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center mr-3">
-                    <span className="text-white text-sm font-bold">
+              <DropdownMenuContent className="w-56 p-2" align="end">
+                <div className="flex items-center px-3 py-2 rounded-lg bg-gray-50 mb-2">
+                  <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center mr-3">
+                    <span className="text-white text-xs font-bold">
                       {(user?.fullName || user?.username || 'U').charAt(0).toUpperCase()}
                     </span>
                   </div>
@@ -255,25 +340,21 @@ export default function Navigation({ children }: NavigationProps) {
                     <span className="text-sm font-semibold text-gray-900">
                       {user?.fullName || user?.username}
                     </span>
-                    <span className="text-sm text-primary font-medium">
-                      Merhaba {(user?.fullName || user?.username || 'Kullanıcı').split(' ')[0]}! 👋
-                    </span>
                   </div>
                 </div>
-                <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={() => setLocation('/profile/edit')}
                   className="flex items-center px-3 py-2 text-gray-700 hover:text-primary hover:bg-gray-50 rounded-lg cursor-pointer"
                 >
-                  <User size={16} className="mr-3" />
-                  Profilimi Görüntüle
+                  <User size={14} className="mr-3" />
+                  Profil
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={logout}
                   className="flex items-center px-3 py-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg cursor-pointer"
                 >
-                  <LogOut size={16} className="mr-3" />
-                  Çıkış Yap
+                  <LogOut size={14} className="mr-3" />
+                  Çıkış
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -281,112 +362,11 @@ export default function Navigation({ children }: NavigationProps) {
         </div>
       </div>
 
-      {/* Modern Mobile Sidebar Overlay */}
-      {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-40 lg:hidden">
-          <div className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm" onClick={() => setIsMobileMenuOpen(false)}></div>
-          <div className="fixed inset-y-0 left-0 w-80 max-w-[85vw] bg-white shadow-2xl transform transition-transform duration-300">
-            <div className="flex flex-col h-full">
-              {/* Mobile Header */}
-              <div className="px-6 py-6 bg-white border-b border-gray-200">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center mr-3">
-                      <HardHat className="text-white" size={18} />
-                    </div>
-                    <div className="flex flex-col">
-                      <h1 className="text-lg font-bold text-gray-900 leading-tight">İş Sağlığı ve Güvenliği</h1>
-                      <p className="text-xs text-gray-500">Rapor Sistemi</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className="p-2 rounded-lg text-gray-600 hover:bg-gray-100"
-                    data-testid="button-close-mobile-menu"
-                  >
-                    <X size={20} />
-                  </button>
-                </div>
-              </div>
-
-              {/* Mobile User Info */}
-              <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
-                <button
-                  onClick={() => {
-                    setLocation('/profile/edit');
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className="flex items-center w-full p-2 rounded-lg hover:bg-white transition-colors group"
-                  data-testid="button-mobile-sidebar-profile"
-                >
-                  <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center mr-3 shadow-sm group-hover:bg-primary/90 transition-colors">
-                    <span className="text-white text-sm font-bold">
-                      {(user?.fullName || user?.username || 'U').charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-                  <div className="flex flex-col text-left flex-1">
-                    <span className="text-sm font-semibold text-gray-900 group-hover:text-primary transition-colors">
-                      {user?.fullName || user?.username}
-                    </span>
-                    <span className="text-xs text-gray-500">
-                      {getRoleDisplayName(user?.role)}
-                    </span>
-                  </div>
-                  <User size={14} className="text-gray-400 group-hover:text-primary transition-colors" />
-                </button>
-              </div>
-
-              {/* Mobile Navigation */}
-              <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
-                {navItems.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = (item.path === "/dashboard" && (location === "/" || location === "/dashboard")) || location === item.path;
-                  
-                  return (
-                    <button
-                      key={item.path}
-                      className={`w-full flex items-center px-4 py-3 rounded-lg text-left transition-all duration-200 ${
-                        isActive
-                          ? "bg-primary text-white"
-                          : "text-gray-700 hover:text-primary hover:bg-gray-50"
-                      }`}
-                      onClick={() => {
-                        setLocation(item.path);
-                        setIsMobileMenuOpen(false);
-                      }}
-                      data-testid={`nav-mobile-${item.path.slice(1) || "home"}`}
-                    >
-                      <Icon size={18} className={isActive ? "text-white" : "text-current"} />
-                      <span className="font-medium ml-3">{item.label}</span>
-                    </button>
-                  );
-                })}
-              </nav>
-
-              {/* Mobile Logout */}
-              <div className="px-4 py-4 border-t border-gray-200">
-                <button
-                  onClick={() => {
-                    logout();
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className="w-full flex items-center px-4 py-3 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
-                  data-testid="button-mobile-logout"
-                >
-                  <LogOut size={18} />
-                  <span className="font-medium ml-3">Çıkış Yap</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Main Content */}
-      <main className={`flex-1 transition-all duration-300 pt-16 ${
-        isSidebarCollapsed ? 'lg:pl-16' : 'lg:pl-64'
+      <main className={`flex-1 transition-all duration-300 pt-16 md:pt-16 ${
+        isSidebarCollapsed ? 'md:pl-16' : 'md:pl-64'
       }`}>
-        <div className="h-full overflow-auto">
+        <div className="h-full overflow-auto pt-14 md:pt-0">
           {children}
         </div>
       </main>
