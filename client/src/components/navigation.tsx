@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { HardHat, Home, Plus, FileText, LogOut, Shield, Menu, X, CheckSquare, BarChart3, TrendingUp } from "lucide-react";
+import { HardHat, Home, Plus, FileText, LogOut, Shield, Menu, X, CheckSquare, BarChart3, TrendingUp, User } from "lucide-react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import NotificationDropdown from "./NotificationDropdown";
@@ -112,21 +112,26 @@ export default function Navigation({ children }: NavigationProps) {
           {/* User Info & Logout */}
           <div className="px-4 py-4 border-t border-gray-200">
             <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center">
-                <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center mr-3">
+              <button
+                onClick={() => setLocation('/profile/edit')}
+                className="flex items-center flex-1 p-2 rounded-lg hover:bg-gray-50 transition-colors group"
+                data-testid="button-user-profile"
+              >
+                <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center mr-3 group-hover:bg-primary/90 transition-colors">
                   <span className="text-white text-sm font-bold">
                     {(user?.fullName || user?.username || 'U').charAt(0).toUpperCase()}
                   </span>
                 </div>
-                <div className="flex flex-col">
-                  <span className="text-sm font-medium text-gray-700" data-testid="user-name">
+                <div className="flex flex-col text-left">
+                  <span className="text-sm font-medium text-gray-700 group-hover:text-primary transition-colors" data-testid="user-name">
                     {user?.fullName || user?.username}
                   </span>
                   <span className="text-xs text-gray-500" data-testid="user-role">
                     {getRoleDisplayName(user?.role)}
                   </span>
                 </div>
-              </div>
+                <User size={14} className="ml-auto text-gray-400 group-hover:text-primary transition-colors" />
+              </button>
               <NotificationDropdown />
             </div>
             <Button
@@ -169,11 +174,15 @@ export default function Navigation({ children }: NavigationProps) {
           
           <div className="flex items-center space-x-3">
             <NotificationDropdown />
-            <div className="w-9 h-9 bg-primary rounded-xl flex items-center justify-center shadow-sm">
+            <button
+              onClick={() => setLocation('/profile/edit')}
+              className="w-9 h-9 bg-primary rounded-xl flex items-center justify-center shadow-sm hover:bg-primary/90 transition-colors"
+              data-testid="button-mobile-user-profile"
+            >
               <span className="text-white text-sm font-bold">
                 {(user?.fullName || user?.username || 'U').charAt(0).toUpperCase()}
               </span>
-            </div>
+            </button>
           </div>
         </div>
       </div>
@@ -199,21 +208,29 @@ export default function Navigation({ children }: NavigationProps) {
 
               {/* Mobile User Info */}
               <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
-                <div className="flex items-center">
-                  <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center mr-3 shadow-sm">
+                <button
+                  onClick={() => {
+                    setLocation('/profile/edit');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="flex items-center w-full p-2 rounded-lg hover:bg-white transition-colors group"
+                  data-testid="button-mobile-sidebar-profile"
+                >
+                  <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center mr-3 shadow-sm group-hover:bg-primary/90 transition-colors">
                     <span className="text-white text-sm font-bold">
                       {(user?.fullName || user?.username || 'U').charAt(0).toUpperCase()}
                     </span>
                   </div>
-                  <div className="flex flex-col">
-                    <span className="text-sm font-semibold text-gray-900">
+                  <div className="flex flex-col text-left flex-1">
+                    <span className="text-sm font-semibold text-gray-900 group-hover:text-primary transition-colors">
                       {user?.fullName || user?.username}
                     </span>
                     <span className="text-xs text-gray-500">
                       {getRoleDisplayName(user?.role)}
                     </span>
                   </div>
-                </div>
+                  <User size={14} className="text-gray-400 group-hover:text-primary transition-colors" />
+                </button>
               </div>
 
               {/* Mobile Navigation */}

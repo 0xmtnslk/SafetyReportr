@@ -1166,7 +1166,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/user/me", authenticateToken, async (req, res) => {
     try {
       const currentUser = (req as any).user;
-      const user = await storage.getUserById(currentUser.id);
+      const user = await storage.getUser(currentUser.id);
       
       if (!user) {
         return res.status(404).json({ message: 'Kullanıcı bulunamadı' });

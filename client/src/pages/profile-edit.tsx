@@ -380,7 +380,7 @@ export default function ProfileEdit() {
                       <FormItem>
                         <FormLabel>İlçesi</FormLabel>
                         <FormControl>
-                          <Input placeholder="İlçe" {...field} data-testid="input-district" />
+                          <Input placeholder="İlçe" {...field} value={field.value || ""} data-testid="input-district" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -394,7 +394,7 @@ export default function ProfileEdit() {
                       <FormItem>
                         <FormLabel>Posta Kodu</FormLabel>
                         <FormControl>
-                          <Input placeholder="Posta kodu" {...field} data-testid="input-postal-code" />
+                          <Input placeholder="Posta kodu" {...field} value={field.value || ""} data-testid="input-postal-code" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -458,7 +458,7 @@ export default function ProfileEdit() {
                       <FormItem>
                         <FormLabel>Telefon (2)</FormLabel>
                         <FormControl>
-                          <Input placeholder="+90" {...field} data-testid="input-phone2" />
+                          <Input placeholder="+90" {...field} value={field.value || ""} data-testid="input-phone2" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -472,7 +472,7 @@ export default function ProfileEdit() {
                       <FormItem>
                         <FormLabel>Cep Telefonu (1)</FormLabel>
                         <FormControl>
-                          <Input placeholder="+90 543 726 28 19" {...field} data-testid="input-mobile1" />
+                          <Input placeholder="+90 543 726 28 19" {...field} value={field.value || ""} data-testid="input-mobile1" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -486,7 +486,7 @@ export default function ProfileEdit() {
                       <FormItem>
                         <FormLabel>Cep Telefonu (2)</FormLabel>
                         <FormControl>
-                          <Input placeholder="+90" {...field} data-testid="input-mobile2" />
+                          <Input placeholder="+90" {...field} value={field.value || ""} data-testid="input-mobile2" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -500,7 +500,7 @@ export default function ProfileEdit() {
                       <FormItem>
                         <FormLabel>Faks</FormLabel>
                         <FormControl>
-                          <Input placeholder="Faks numarası" {...field} data-testid="input-fax" />
+                          <Input placeholder="Faks numarası" {...field} value={field.value || ""} data-testid="input-fax" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -514,7 +514,7 @@ export default function ProfileEdit() {
                       <FormItem>
                         <FormLabel>Web Adresi</FormLabel>
                         <FormControl>
-                          <Input placeholder="https://example.com" {...field} data-testid="input-website" />
+                          <Input placeholder="https://example.com" {...field} value={field.value || ""} data-testid="input-website" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
