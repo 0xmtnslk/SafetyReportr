@@ -23,6 +23,15 @@ export default function InspectionAnalysis() {
       [`/api/inspections/${inspectionId}/assignments`],
   });
 
+  // Get the specific assignment for current user (assuming first one for now)
+  const currentAssignment = assignments[0];
+  
+  // Fetch responses for the current assignment
+  const { data: responses = [], isLoading: responsesLoading } = useQuery({
+    queryKey: [`/api/assignments/${currentAssignment?.id}/responses`],
+    enabled: !!currentAssignment?.id,
+  });
+
   // Fetch checklist template structure
   const { data: checklistSections = [], isLoading: sectionsLoading } = useQuery({
     queryKey: [`/api/checklist/templates/${checklistId}/sections`],
@@ -38,15 +47,15 @@ export default function InspectionAnalysis() {
     queryKey: isSpecialist ? ["/api/specialist/hospitals"] : ["/api/admin/hospitals"],
   });
 
-  const isLoading = assignmentsLoading || sectionsLoading || templatesLoading || hospitalsLoading;
+  const isLoading = assignmentsLoading || sectionsLoading || templatesLoading || hospitalsLoading || responsesLoading;
 
   // Get hospital and template info
   const hospital = (hospitals as any[]).find((h: any) => h.id === hospitalId);
   const template = (checklistTemplates as any[]).find((t: any) => t.id === checklistId);
 
-  // Process detailed analysis data
+  // Process detailed analysis data using real responses
   const processDetailedAnalysis = () => {
-    if (!(checklistSections as any[]).length) return null;
+    if (!responses.length || !(checklistSections as any[]).length) return null;
 
     const analysisData: any = {
       sections: [],
@@ -61,11 +70,21 @@ export default function InspectionAnalysis() {
       }
     };
 
-    // Process each section
-    (checklistSections as any[]).forEach((section: any) => {
+    // Group responses by category (instead of section)
+    const responsesByCategory: Record<string, any[]> = {};
+    (responses as any[]).forEach((response: any) => {
+      const category = response.question.category;
+      if (!responsesByCategory[category]) {
+        responsesByCategory[category] = [];
+      }
+      responsesByCategory[category].push(response);
+    });
+
+    // Process each category as a "section"
+    Object.entries(responsesByCategory).forEach(([category, categoryResponses]) => {
       const sectionData = {
-        id: section.id,
-        title: section.name,
+        id: category,
+        title: category,
         questions: [] as any[],
         summary: {
           total: 0,
@@ -80,27 +99,48 @@ export default function InspectionAnalysis() {
         }
       };
 
-      // Get questions for this section (mock data for now)
-      const sectionQuestions = generateMockQuestions(section.name);
-      
-      sectionQuestions.forEach((question: any) => {
+      categoryResponses.forEach((response: any) => {
+        const twPoints = response.question.twScore || 10;
+        // Calculate earned points based on answer
+        let earnedPoints = 0;
+        let status = 'doesNotMeet';
+        
+        switch (response.answer) {
+          case 'Karşılıyor':
+            earnedPoints = twPoints;
+            status = 'meets';
+            break;
+          case 'Kısmen Karşılıyor':
+            earnedPoints = Math.floor(twPoints * 0.5);
+            status = 'partial';
+            break;
+          case 'Karşılamıyor':
+            earnedPoints = 0;
+            status = 'doesNotMeet';
+            break;
+          case 'Kapsam Dışı':
+            earnedPoints = 0;
+            status = 'outOfScope';
+            break;
+        }
+
         const questionData = {
-          id: question.id,
-          text: question.text,
-          category: question.category,
-          maxPoints: question.maxPoints,
-          earnedPoints: question.earnedPoints,
-          status: question.status, // 'meets', 'partial', 'doesNotMeet', 'outOfScope'
-          successRate: Math.round((question.earnedPoints / question.maxPoints) * 100) || 0
+          id: response.questionId,
+          text: response.question.questionText,
+          category: response.question.category,
+          maxPoints: twPoints,
+          earnedPoints: earnedPoints,
+          status: status,
+          successRate: Math.round((earnedPoints / twPoints) * 100) || 0
         };
 
         sectionData.questions.push(questionData);
         sectionData.summary.total++;
-        sectionData.summary.maxPoints += question.maxPoints;
-        sectionData.summary.earnedPoints += question.earnedPoints;
+        sectionData.summary.maxPoints += twPoints;
+        sectionData.summary.earnedPoints += earnedPoints;
 
         // Count status types
-        switch (question.status) {
+        switch (status) {
           case 'meets':
             sectionData.summary.meets++;
             break;
@@ -135,39 +175,6 @@ export default function InspectionAnalysis() {
     return analysisData;
   };
 
-  // Mock data generator (replace with real data processing)
-  const generateMockQuestions = (sectionTitle: string) => {
-    const questionTemplates = [
-      { text: "Ateş ve Acil Durum Yönetimi", category: "Güvenlik", maxPoints: 10 },
-      { text: "Altyapı", category: "Altyapı", maxPoints: 8 },
-      { text: "Emniyet", category: "Güvenlik", maxPoints: 12 },
-      { text: "Güvenlik", category: "Güvenlik", maxPoints: 15 },
-      { text: "Tıbbi Cihaz Yönetimi", category: "Tıbbi", maxPoints: 20 },
-      { text: "Makine-Cihaz Yönetimi", category: "Teknik", maxPoints: 18 },
-      { text: "Tehlikeli Madde Yönetimi", category: "Güvenlik", maxPoints: 25 },
-      { text: "Atık Yönetimi", category: "Çevre", maxPoints: 14 },
-      { text: "Yangın Güvenliği", category: "Güvenlik", maxPoints: 22 }
-    ];
-
-    return questionTemplates.slice(0, Math.floor(Math.random() * 7) + 3).map((template, index) => {
-      const earnedPoints = Math.floor(Math.random() * template.maxPoints);
-      const successRate = (earnedPoints / template.maxPoints) * 100;
-      
-      let status = 'meets';
-      if (successRate < 30) status = 'doesNotMeet';
-      else if (successRate < 70) status = 'partial';
-      else if (Math.random() > 0.9) status = 'outOfScope';
-
-      return {
-        id: `${sectionTitle}-${index}`,
-        text: template.text,
-        category: template.category,
-        maxPoints: template.maxPoints,
-        earnedPoints: status === 'outOfScope' ? 0 : earnedPoints,
-        status
-      };
-    });
-  };
 
   const getGradeFromPercentage = (percentage: number) => {
     if (percentage >= 90) return 'A';

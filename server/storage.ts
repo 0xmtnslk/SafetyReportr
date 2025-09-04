@@ -1315,12 +1315,34 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Response operations
-  async getInspectionResponses(assignmentId: string): Promise<InspectionResponse[]> {
-    return await db
-      .select()
+  async getInspectionResponses(assignmentId: string): Promise<any[]> {
+    const results = await db
+      .select({
+        // Response data
+        id: inspectionResponses.id,
+        assignmentId: inspectionResponses.assignmentId,
+        questionId: inspectionResponses.questionId,
+        answer: inspectionResponses.answer,
+        score: inspectionResponses.score,
+        notes: inspectionResponses.notes,
+        photos: inspectionResponses.photos,
+        documents: inspectionResponses.documents,
+        respondedAt: inspectionResponses.respondedAt,
+        // Question data
+        question: {
+          id: checklistQuestions.id,
+          questionText: checklistQuestions.questionText,
+          category: checklistQuestions.category,
+          twScore: checklistQuestions.twScore,
+          sectionId: checklistQuestions.sectionId,
+        }
+      })
       .from(inspectionResponses)
+      .leftJoin(checklistQuestions, eq(inspectionResponses.questionId, checklistQuestions.id))
       .where(eq(inspectionResponses.assignmentId, assignmentId))
       .orderBy(desc(inspectionResponses.respondedAt));
+    
+    return results;
   }
 
   async getInspectionResponse(assignmentId: string, questionId: string): Promise<InspectionResponse | undefined> {
