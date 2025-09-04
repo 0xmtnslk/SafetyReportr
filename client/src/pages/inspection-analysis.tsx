@@ -13,7 +13,15 @@ import {
   Calendar,
   User,
   BarChart3,
-  Target
+  Target,
+  Shield,
+  Zap,
+  Activity,
+  Award,
+  TrendingDown,
+  Eye,
+  Gauge,
+  Users
 } from "lucide-react";
 
 export function InspectionAnalysisPage() {
@@ -350,7 +358,7 @@ export function InspectionAnalysisPage() {
         </div>
       </div>
 
-      {/* Overall Stats */}
+      {/* Enhanced Overall Stats with Infographics */}
       <Card className="mb-8">
         <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50">
           <CardTitle className="flex items-center gap-2">
@@ -359,22 +367,114 @@ export function InspectionAnalysisPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            <div className="text-center">
-              <div className="text-3xl font-bold text-blue-600">{analysis.overall.totalQuestions}</div>
-              <div className="text-sm text-gray-600">Toplam Soru</div>
+          {/* Overall Success Rate with Large Gauge */}
+          <div className="flex items-center justify-center mb-8">
+            <div className="relative">
+              <div className="w-32 h-32 rounded-full border-8 border-gray-200 flex items-center justify-center relative">
+                <div 
+                  className="absolute inset-0 rounded-full border-8 border-transparent"
+                  style={{
+                    borderTopColor: Math.round((analysis.overall.totalEarnedPoints / analysis.overall.totalPossiblePoints) * 100) >= 80 ? '#10b981' : 
+                                   Math.round((analysis.overall.totalEarnedPoints / analysis.overall.totalPossiblePoints) * 100) >= 60 ? '#f59e0b' : '#ef4444',
+                    transform: `rotate(${(Math.round((analysis.overall.totalEarnedPoints / analysis.overall.totalPossiblePoints) * 100) * 3.6) - 90}deg)`,
+                    borderRightColor: Math.round((analysis.overall.totalEarnedPoints / analysis.overall.totalPossiblePoints) * 100) >= 25 ? 'inherit' : 'transparent',
+                    borderBottomColor: Math.round((analysis.overall.totalEarnedPoints / analysis.overall.totalPossiblePoints) * 100) >= 50 ? 'inherit' : 'transparent',
+                    borderLeftColor: Math.round((analysis.overall.totalEarnedPoints / analysis.overall.totalPossiblePoints) * 100) >= 75 ? 'inherit' : 'transparent'
+                  }}
+                ></div>
+                <div className="text-center z-10">
+                  <div className="text-2xl font-bold text-gray-900">
+                    {Math.round((analysis.overall.totalEarnedPoints / analysis.overall.totalPossiblePoints) * 100) || 0}%
+                  </div>
+                  <div className="text-xs text-gray-500">Genel Başarı</div>
+                </div>
+              </div>
             </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold text-green-600">{analysis.overall.meetsCriteria}</div>
-              <div className="text-sm text-gray-600">Karşılıyor</div>
+          </div>
+
+          {/* Stats Cards with Icons and Progress */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Card className="p-4 text-center hover:shadow-lg transition-shadow">
+              <div className="flex items-center justify-center mb-2">
+                <div className="p-2 bg-blue-100 rounded-full">
+                  <Eye className="w-6 h-6 text-blue-600" />
+                </div>
+              </div>
+              <div className="text-3xl font-bold text-blue-600 mb-1">{analysis.overall.totalQuestions}</div>
+              <div className="text-sm text-gray-600 mb-2">Toplam Soru</div>
+              <div className="w-full bg-blue-100 rounded-full h-2">
+                <div className="bg-blue-500 h-2 rounded-full" style={{ width: '100%' }}></div>
+              </div>
+            </Card>
+
+            <Card className="p-4 text-center hover:shadow-lg transition-shadow">
+              <div className="flex items-center justify-center mb-2">
+                <div className="p-2 bg-green-100 rounded-full">
+                  <CheckCircle className="w-6 h-6 text-green-600" />
+                </div>
+              </div>
+              <div className="text-3xl font-bold text-green-600 mb-1">{analysis.overall.meetsCriteria}</div>
+              <div className="text-sm text-gray-600 mb-2">Karşılıyor</div>
+              <div className="w-full bg-green-100 rounded-full h-2">
+                <div 
+                  className="bg-green-500 h-2 rounded-full" 
+                  style={{ width: `${(analysis.overall.meetsCriteria / analysis.overall.totalQuestions) * 100}%` }}
+                ></div>
+              </div>
+            </Card>
+
+            <Card className="p-4 text-center hover:shadow-lg transition-shadow">
+              <div className="flex items-center justify-center mb-2">
+                <div className="p-2 bg-yellow-100 rounded-full">
+                  <AlertTriangle className="w-6 h-6 text-yellow-600" />
+                </div>
+              </div>
+              <div className="text-3xl font-bold text-yellow-600 mb-1">{analysis.overall.partiallyMeets}</div>
+              <div className="text-sm text-gray-600 mb-2">Kısmen</div>
+              <div className="w-full bg-yellow-100 rounded-full h-2">
+                <div 
+                  className="bg-yellow-500 h-2 rounded-full" 
+                  style={{ width: `${(analysis.overall.partiallyMeets / analysis.overall.totalQuestions) * 100}%` }}
+                ></div>
+              </div>
+            </Card>
+
+            <Card className="p-4 text-center hover:shadow-lg transition-shadow">
+              <div className="flex items-center justify-center mb-2">
+                <div className="p-2 bg-red-100 rounded-full">
+                  <TrendingDown className="w-6 h-6 text-red-600" />
+                </div>
+              </div>
+              <div className="text-3xl font-bold text-red-600 mb-1">{analysis.overall.doesNotMeet}</div>
+              <div className="text-sm text-gray-600 mb-2">Karşılamıyor</div>
+              <div className="w-full bg-red-100 rounded-full h-2">
+                <div 
+                  className="bg-red-500 h-2 rounded-full" 
+                  style={{ width: `${(analysis.overall.doesNotMeet / analysis.overall.totalQuestions) * 100}%` }}
+                ></div>
+              </div>
+            </Card>
+          </div>
+
+          {/* Quick Insights */}
+          <div className="mt-6 p-4 bg-gradient-to-r from-gray-50 to-blue-50 rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <Activity className="w-5 h-5 text-blue-600" />
+              <span className="font-medium text-gray-900">Hızlı Değerlendirme</span>
             </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold text-yellow-600">{analysis.overall.partiallyMeets}</div>
-              <div className="text-sm text-gray-600">Kısmen</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold text-red-600">{analysis.overall.doesNotMeet}</div>
-              <div className="text-sm text-gray-600">Karşılamıyor</div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                <span>Güçlü: {analysis.overall.meetsCriteria} alan</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                <span>İyileştirilebilir: {analysis.overall.partiallyMeets} alan</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                <span>Kritik: {analysis.overall.doesNotMeet} alan</span>
+              </div>
             </div>
           </div>
         </CardContent>
@@ -390,13 +490,33 @@ export function InspectionAnalysisPage() {
         </CardHeader>
         <CardContent className="p-6">
           <Tabs defaultValue={analysis.sections[0]?.id} className="w-full">
-            <TabsList className="grid w-full grid-cols-1 md:grid-cols-3 mb-6">
+            <TabsList className="grid w-full grid-cols-1 md:grid-cols-3 mb-6 h-auto p-2">
               {analysis.sections.map((section: any) => (
-                <TabsTrigger key={section.id} value={section.id} className="text-sm">
-                  {section.title}
-                  <Badge className="ml-2" variant="outline">
-                    {section.summary.successRate}%
-                  </Badge>
+                <TabsTrigger key={section.id} value={section.id} className="flex flex-col p-4 h-auto">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Shield className="w-4 h-4" />
+                    <span className="font-medium text-sm">{section.title}</span>
+                  </div>
+                  <div className="flex items-center gap-2 w-full">
+                    <div className="flex-1 bg-gray-200 rounded-full h-2">
+                      <div 
+                        className={`h-2 rounded-full ${
+                          section.summary.successRate >= 80 ? 'bg-green-500' :
+                          section.summary.successRate >= 60 ? 'bg-yellow-500' : 'bg-red-500'
+                        }`}
+                        style={{ width: `${section.summary.successRate}%` }}
+                      ></div>
+                    </div>
+                    <Badge 
+                      className={`text-xs px-2 py-1 ${
+                        section.summary.successRate >= 80 ? 'bg-green-100 text-green-800' :
+                        section.summary.successRate >= 60 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
+                      }`} 
+                      variant="outline"
+                    >
+                      {section.summary.successRate}%
+                    </Badge>
+                  </div>
                 </TabsTrigger>
               ))}
             </TabsList>
@@ -421,19 +541,64 @@ export function InspectionAnalysisPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="p-6">
-                    <div className="space-y-4">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                       {section.categories.map((category: any, categoryIndex: number) => (
-                        <Card key={category.id} className="border-l-4 border-l-blue-500">
+                        <Card 
+                          key={category.id} 
+                          className={`border-l-4 hover:shadow-lg transition-all duration-200 ${
+                            category.summary.successRate >= 80 ? 'border-l-green-500 bg-green-50' :
+                            category.summary.successRate >= 60 ? 'border-l-yellow-500 bg-yellow-50' : 
+                            'border-l-red-500 bg-red-50'
+                          }`}
+                        >
                           <CardHeader className="pb-3">
-                            <div className="flex items-center justify-between">
-                              <CardTitle className="text-lg">{category.title}</CardTitle>
-                              <div className="flex items-center gap-4">
-                                <Badge variant="outline" className="text-sm">
-                                  {category.summary.earnedPoints}/{category.summary.maxPoints} puan
+                            <div className="flex items-start justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className={`p-2 rounded-full ${
+                                  category.summary.successRate >= 80 ? 'bg-green-100' :
+                                  category.summary.successRate >= 60 ? 'bg-yellow-100' : 'bg-red-100'
+                                }`}>
+                                  {category.summary.successRate >= 80 ? <CheckCircle className="w-5 h-5 text-green-600" /> :
+                                   category.summary.successRate >= 60 ? <AlertTriangle className="w-5 h-5 text-yellow-600" /> :
+                                   <TrendingDown className="w-5 h-5 text-red-600" />}
+                                </div>
+                                <div>
+                                  <CardTitle className="text-lg">{category.title}</CardTitle>
+                                  <div className="text-sm text-gray-600 mt-1">
+                                    {category.summary.total} soru • {category.summary.meets} karşılıyor
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <Badge 
+                                  className={`text-sm px-3 py-1 ${
+                                    category.summary.successRate >= 80 ? 'bg-green-100 text-green-800' :
+                                    category.summary.successRate >= 60 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
+                                  }`} 
+                                  variant="outline"
+                                >
+                                  {category.summary.successRate}%
                                 </Badge>
-                                <Badge variant="outline" className="text-sm">
-                                  {category.summary.successRate}% - Not: {category.summary.grade}
-                                </Badge>
+                                <div className="text-xs text-gray-500 mt-1">
+                                  Not: {category.summary.grade}
+                                </div>
+                              </div>
+                            </div>
+                            
+                            {/* Progress Bar */}
+                            <div className="mt-3">
+                              <div className="flex justify-between text-sm mb-1">
+                                <span>Başarı Oranı</span>
+                                <span>{category.summary.earnedPoints}/{category.summary.maxPoints} puan</span>
+                              </div>
+                              <div className="w-full bg-gray-200 rounded-full h-3">
+                                <div 
+                                  className={`h-3 rounded-full transition-all duration-500 ${
+                                    category.summary.successRate >= 80 ? 'bg-green-500' :
+                                    category.summary.successRate >= 60 ? 'bg-yellow-500' : 'bg-red-500'
+                                  }`}
+                                  style={{ width: `${category.summary.successRate}%` }}
+                                ></div>
                               </div>
                             </div>
                           </CardHeader>
