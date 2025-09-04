@@ -280,7 +280,8 @@ export default function InspectionHistory() {
                             // Get inspection assignment details for proper analysis routing
                             const hospitalId = inspection.location?.id;
                             const templateId = inspection.templateId;
-                            setLocation(`/inspection-analysis/${hospitalId}/${templateId}/${inspection.id}`);
+                            const inspectionId = inspection.inspection?.id || inspection.inspectionId;
+                            setLocation(`/inspection-analysis/${hospitalId}/${templateId}/${inspectionId}`);
                           }
                         }}
                         data-testid={`inspection-row-${inspection.id}`}
@@ -325,7 +326,8 @@ export default function InspectionHistory() {
                                   // Get inspection assignment details for proper analysis routing
                                   const hospitalId = inspection.location?.id;
                                   const templateId = inspection.templateId;
-                                  setLocation(`/inspection-analysis/${hospitalId}/${templateId}/${inspection.id}`);
+                                  const inspectionId = inspection.inspection?.id || inspection.inspectionId;
+                                  setLocation(`/inspection-analysis/${hospitalId}/${templateId}/${inspectionId}`);
                                 }
                               }}
                               data-testid={`inspection-action-${inspection.id}`}

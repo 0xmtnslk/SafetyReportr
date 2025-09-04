@@ -178,7 +178,8 @@ export default function SpecialistDashboard() {
                           // Show detailed analysis for completed inspections
                           const hospitalId = inspection.location?.id;
                           const templateId = inspection.inspection?.templateId;
-                          setLocation(`/inspection-analysis/${hospitalId}/${templateId}/${inspection.id}`);
+                          const inspectionId = inspection.inspection?.id;
+                          setLocation(`/inspection-analysis/${hospitalId}/${templateId}/${inspectionId}`);
                         }
                       }}
                       data-testid={`assignment-card-${inspection.id}`}

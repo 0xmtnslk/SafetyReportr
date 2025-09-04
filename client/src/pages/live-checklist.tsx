@@ -140,7 +140,8 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
       // Get inspection details for proper analysis routing
       const hospitalId = assignment?.location?.id;
       const templateId = assignment?.inspection?.templateId;
-      setLocation(`/inspection-analysis/${hospitalId}/${templateId}/${assignmentId}`);
+      const inspectionId = assignment?.inspection?.id;
+      setLocation(`/inspection-analysis/${hospitalId}/${templateId}/${inspectionId}`);
       return;
     }
   }, [assignment, assignmentId, setLocation, toast]);
@@ -348,7 +349,8 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
         // Get inspection details for proper analysis routing
       const hospitalId = assignment?.location?.id;
       const templateId = assignment?.inspection?.templateId;
-      setLocation(`/inspection-analysis/${hospitalId}/${templateId}/${assignmentId}`);
+      const inspectionId = assignment?.inspection?.id;
+      setLocation(`/inspection-analysis/${hospitalId}/${templateId}/${inspectionId}`);
       }
     } catch (error) {
       console.error('Error submitting inspection:', error);
