@@ -22,7 +22,6 @@ export default function InspectionHistory() {
 
   // Get user's hospital from user.hospital (included in /api/user/me response)
   const userHospital = user?.hospital || null;
-  const isLoading = assignmentsLoading || templatesLoading || isResponsesLoading;
 
   // Function to calculate real analysis score from responses (synchronous)
   const calculateRealAnalysisScore = (responses: any[]) => {
@@ -71,6 +70,9 @@ export default function InspectionHistory() {
   // Check if all responses are loaded
   const allResponsesLoaded = responsesQueries.every(q => !q.isLoading);
   const isResponsesLoading = responsesQueries.some(q => q.isLoading);
+  
+  // Combined loading state
+  const isLoading = assignmentsLoading || templatesLoading || isResponsesLoading;
 
   // Process checklist templates with inspection statistics
   const processChecklistData = () => {
