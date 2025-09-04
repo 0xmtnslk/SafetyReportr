@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Building2, TrendingUp, Award, Eye, CheckSquare, Calendar, BarChart3, ChevronRight, ClipboardList, AlertTriangle, Clock } from "lucide-react";
+import { ArrowLeft, Building2, TrendingUp, Award, Eye, CheckSquare, Calendar, BarChart3, ChevronRight, ClipboardList, AlertTriangle, Clock, Target, Activity, CheckCircle, Gauge } from "lucide-react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -23,6 +23,50 @@ export default function InspectionHistory() {
   // Get user's hospital from user.hospital (included in /api/user/me response)
   const userHospital = user?.hospital || null;
   const isLoading = assignmentsLoading || templatesLoading;
+
+  // Function to calculate real analysis score from responses
+  const calculateRealAnalysisScore = async (assignmentId: string) => {
+    try {
+      const responsesRes = await fetch(`/api/assignments/${assignmentId}/responses`);
+      if (!responsesRes.ok) return { score: 0, grade: 'E' };
+      
+      const responses = await responsesRes.json();
+      if (!responses || responses.length === 0) return { score: 0, grade: 'E' };
+      
+      let totalPoints = 0;
+      let earnedPoints = 0;
+      
+      responses.forEach((response: any) => {
+        const twPoints = response.question?.twScore || 10;
+        totalPoints += twPoints;
+        
+        switch (response.answer) {
+          case 'Karşılıyor':
+            earnedPoints += twPoints;
+            break;
+          case 'Kısmen Karşılıyor':
+            earnedPoints += Math.floor(twPoints * 0.5);
+            break;
+          case 'Karşılamıyor':
+          case 'Kapsam Dışı':
+            earnedPoints += 0;
+            break;
+        }
+      });
+      
+      const score = totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0;
+      const grade = score >= 90 ? 'AA' :
+                   score >= 80 ? 'A' :
+                   score >= 70 ? 'B' :
+                   score >= 60 ? 'C' :
+                   score >= 50 ? 'D' : 'E';
+      
+      return { score, grade };
+    } catch (error) {
+      console.error('Error calculating analysis score:', error);
+      return { score: 0, grade: 'E' };
+    }
+  };
 
   // Process checklist templates with inspection statistics
   const processChecklistData = () => {
@@ -168,54 +212,149 @@ export default function InspectionHistory() {
         </div>
       </div>
 
-      {/* Summary Stats */}
+      {/* Enhanced Summary Stats with Infographics */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card>
-          <CardContent className="p-6 text-center">
-            <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mx-auto mb-3">
-              <ClipboardList className="w-6 h-6 text-blue-600" />
+        <Card className="hover:shadow-lg transition-shadow duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                <ClipboardList className="w-6 h-6 text-blue-600" />
+              </div>
+              <div className="text-right">
+                <div className="text-2xl font-bold text-blue-600">{checklistsWithStats.length}</div>
+                <p className="text-sm text-gray-600">Aktif Checklist</p>
+              </div>
             </div>
-            <div className="text-2xl font-bold text-gray-900">{checklistsWithStats.length}</div>
-            <p className="text-sm text-gray-600">Aktif Checklist</p>
+            <div className="w-full bg-blue-100 rounded-full h-2">
+              <div className="bg-blue-500 h-2 rounded-full" style={{ width: '100%' }}></div>
+            </div>
           </CardContent>
         </Card>
         
-        <Card>
-          <CardContent className="p-6 text-center">
-            <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mx-auto mb-3">
-              <CheckSquare className="w-6 h-6 text-green-600" />
+        <Card className="hover:shadow-lg transition-shadow duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                <CheckCircle className="w-6 h-6 text-green-600" />
+              </div>
+              <div className="text-right">
+                <div className="text-2xl font-bold text-green-600">
+                  {checklistsWithStats.reduce((sum, checklist) => sum + checklist.completedInspections, 0)}
+                </div>
+                <p className="text-sm text-gray-600">Tamamlanan</p>
+              </div>
             </div>
-            <div className="text-2xl font-bold text-green-600">
-              {checklistsWithStats.reduce((sum, checklist) => sum + checklist.completedInspections, 0)}
+            <div className="w-full bg-green-100 rounded-full h-2">
+              <div 
+                className="bg-green-500 h-2 rounded-full transition-all duration-500" 
+                style={{ 
+                  width: `${checklistsWithStats.reduce((sum, checklist) => sum + checklist.totalInspections, 0) > 0 
+                    ? (checklistsWithStats.reduce((sum, checklist) => sum + checklist.completedInspections, 0) / 
+                       checklistsWithStats.reduce((sum, checklist) => sum + checklist.totalInspections, 0)) * 100 
+                    : 0}%` 
+                }}
+              ></div>
             </div>
-            <p className="text-sm text-gray-600">Tamamlanan</p>
           </CardContent>
         </Card>
         
-        <Card>
-          <CardContent className="p-6 text-center">
-            <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center mx-auto mb-3">
-              <Clock className="w-6 h-6 text-orange-600" />
+        <Card className="hover:shadow-lg transition-shadow duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
+                <Activity className="w-6 h-6 text-orange-600" />
+              </div>
+              <div className="text-right">
+                <div className="text-2xl font-bold text-orange-600">
+                  {checklistsWithStats.reduce((sum, checklist) => sum + checklist.inProgressInspections, 0)}
+                </div>
+                <p className="text-sm text-gray-600">Devam Eden</p>
+              </div>
             </div>
-            <div className="text-2xl font-bold text-orange-600">
-              {checklistsWithStats.reduce((sum, checklist) => sum + checklist.inProgressInspections, 0)}
+            <div className="w-full bg-orange-100 rounded-full h-2">
+              <div 
+                className="bg-orange-500 h-2 rounded-full transition-all duration-500" 
+                style={{ 
+                  width: `${checklistsWithStats.reduce((sum, checklist) => sum + checklist.totalInspections, 0) > 0 
+                    ? (checklistsWithStats.reduce((sum, checklist) => sum + checklist.inProgressInspections, 0) / 
+                       checklistsWithStats.reduce((sum, checklist) => sum + checklist.totalInspections, 0)) * 100 
+                    : 0}%` 
+                }}
+              ></div>
             </div>
-            <p className="text-sm text-gray-600">Devam Eden</p>
           </CardContent>
         </Card>
         
-        <Card>
-          <CardContent className="p-6 text-center">
-            <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center mx-auto mb-3">
-              <AlertTriangle className="w-6 h-6 text-red-600" />
+        <Card className="hover:shadow-lg transition-shadow duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
+                <Gauge className="w-6 h-6 text-amber-600" />
+              </div>
+              <div className="text-right">
+                <div className={`text-2xl font-bold ${
+                  overallStats.averageScore >= 80 ? 'text-green-600' :
+                  overallStats.averageScore >= 60 ? 'text-amber-600' : 'text-red-600'
+                }`}>
+                  {overallStats.averageScore}%
+                </div>
+                <p className="text-sm text-gray-600">Ortalama Başarı</p>
+              </div>
             </div>
-            <div className="text-2xl font-bold text-red-600">
-              {checklistsWithStats.reduce((sum, checklist) => sum + checklist.pendingInspections, 0)}
+            <div className="w-full bg-amber-100 rounded-full h-2">
+              <div 
+                className={`h-2 rounded-full transition-all duration-500 ${
+                  overallStats.averageScore >= 80 ? 'bg-green-500' :
+                  overallStats.averageScore >= 60 ? 'bg-amber-500' : 'bg-red-500'
+                }`}
+                style={{ width: `${overallStats.averageScore}%` }}
+              ></div>
             </div>
-            <p className="text-sm text-gray-600">Bekleyen</p>
           </CardContent>
         </Card>
       </div>
+      
+      {/* Performance Insights Card */}
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Target className="w-5 h-5 text-blue-600" />
+            Performans İstatistikleri
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="text-center p-4 bg-green-50 rounded-lg">
+              <div className="text-2xl font-bold text-green-600">
+                {checklistsWithStats.filter(c => c.averageScore >= 80).length}
+              </div>
+              <div className="text-sm text-gray-600 mt-1">Yüksek Performans</div>
+              <div className="text-xs text-gray-500">80%+ ortalama</div>
+            </div>
+            <div className="text-center p-4 bg-yellow-50 rounded-lg">
+              <div className="text-2xl font-bold text-yellow-600">
+                {checklistsWithStats.filter(c => c.averageScore >= 60 && c.averageScore < 80).length}
+              </div>
+              <div className="text-sm text-gray-600 mt-1">Orta Performans</div>
+              <div className="text-xs text-gray-500">60-79% ortalama</div>
+            </div>
+            <div className="text-center p-4 bg-red-50 rounded-lg">
+              <div className="text-2xl font-bold text-red-600">
+                {checklistsWithStats.filter(c => c.averageScore < 60 && c.averageScore > 0).length}
+              </div>
+              <div className="text-sm text-gray-600 mt-1">Düşük Performans</div>
+              <div className="text-xs text-gray-500">60% altı</div>
+            </div>
+            <div className="text-center p-4 bg-gray-50 rounded-lg">
+              <div className="text-2xl font-bold text-gray-600">
+                {checklistsWithStats.reduce((sum, checklist) => sum + checklist.pendingInspections, 0)}
+              </div>
+              <div className="text-sm text-gray-600 mt-1">Bekleyen</div>
+              <div className="text-xs text-gray-500">Tamamlanmamış</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Checklist Cards */}
       <div className="space-y-6">
