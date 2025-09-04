@@ -59,7 +59,7 @@ export default function InspectionHistory() {
   };
 
   // Fetch all responses for all assignments using useQueries
-  const assignmentIds = (userAssignments as any[]).map((a: any) => a.id);
+  const assignmentIds = (userAssignments as any[]).map((a: any) => a.id).filter(Boolean);
   const responsesQueries = useQueries({
     queries: assignmentIds.map(id => ({
       queryKey: [`/api/assignments/${id}/responses`],
@@ -68,11 +68,19 @@ export default function InspectionHistory() {
   });
 
   // Check if all responses are loaded
-  const allResponsesLoaded = responsesQueries.every(q => !q.isLoading);
   const isResponsesLoading = responsesQueries.some(q => q.isLoading);
   
   // Combined loading state
   const isLoading = assignmentsLoading || templatesLoading || isResponsesLoading;
+  
+  // Create responses map for easier lookup
+  const responsesMap = new Map();
+  assignmentIds.forEach((id, index) => {
+    const query = responsesQueries[index];
+    if (query?.data) {
+      responsesMap.set(id, query.data);
+    }
+  });
 
   // Process checklist templates with inspection statistics
   const processChecklistData = () => {
@@ -103,8 +111,7 @@ export default function InspectionHistory() {
       
       // Calculate real analysis scores from responses
       const realScores = completedInspections.map((inspection: any) => {
-        const responseQuery = responsesQueries.find(q => q.queryKey[0].includes(inspection.id));
-        const responses = responseQuery?.data || [];
+        const responses = responsesMap.get(inspection.id) || [];
         const realAnalysis = calculateRealAnalysisScore(responses);
         
         // Update inspection with real score and grade
