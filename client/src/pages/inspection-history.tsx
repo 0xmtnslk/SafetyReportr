@@ -22,51 +22,55 @@ export default function InspectionHistory() {
 
   // Get user's hospital from user.hospital (included in /api/user/me response)
   const userHospital = user?.hospital || null;
-  const isLoading = assignmentsLoading || templatesLoading;
+  const isLoading = assignmentsLoading || templatesLoading || isResponsesLoading;
 
-  // Function to calculate real analysis score from responses
-  const calculateRealAnalysisScore = async (assignmentId: string) => {
-    try {
-      const responsesRes = await fetch(`/api/assignments/${assignmentId}/responses`);
-      if (!responsesRes.ok) return { score: 0, grade: 'E' };
+  // Function to calculate real analysis score from responses (synchronous)
+  const calculateRealAnalysisScore = (responses: any[]) => {
+    if (!responses || responses.length === 0) return { score: 0, grade: 'E' };
+    
+    let totalPoints = 0;
+    let earnedPoints = 0;
+    
+    responses.forEach((response: any) => {
+      const twPoints = response.question?.twScore || 10;
+      totalPoints += twPoints;
       
-      const responses = await responsesRes.json();
-      if (!responses || responses.length === 0) return { score: 0, grade: 'E' };
-      
-      let totalPoints = 0;
-      let earnedPoints = 0;
-      
-      responses.forEach((response: any) => {
-        const twPoints = response.question?.twScore || 10;
-        totalPoints += twPoints;
-        
-        switch (response.answer) {
-          case 'Karşılıyor':
-            earnedPoints += twPoints;
-            break;
-          case 'Kısmen Karşılıyor':
-            earnedPoints += Math.floor(twPoints * 0.5);
-            break;
-          case 'Karşılamıyor':
-          case 'Kapsam Dışı':
-            earnedPoints += 0;
-            break;
-        }
-      });
-      
-      const score = totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0;
-      const grade = score >= 90 ? 'AA' :
-                   score >= 80 ? 'A' :
-                   score >= 70 ? 'B' :
-                   score >= 60 ? 'C' :
-                   score >= 50 ? 'D' : 'E';
-      
-      return { score, grade };
-    } catch (error) {
-      console.error('Error calculating analysis score:', error);
-      return { score: 0, grade: 'E' };
-    }
+      switch (response.answer) {
+        case 'Karşılıyor':
+          earnedPoints += twPoints;
+          break;
+        case 'Kısmen Karşılıyor':
+          earnedPoints += Math.floor(twPoints * 0.5);
+          break;
+        case 'Karşılamıyor':
+        case 'Kapsam Dışı':
+          earnedPoints += 0;
+          break;
+      }
+    });
+    
+    const score = totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0;
+    const grade = score >= 90 ? 'AA' :
+                 score >= 80 ? 'A' :
+                 score >= 70 ? 'B' :
+                 score >= 60 ? 'C' :
+                 score >= 50 ? 'D' : 'E';
+    
+    return { score, grade };
   };
+
+  // Fetch all responses for all assignments
+  const assignmentIds = (userAssignments as any[]).map((a: any) => a.id);
+  const responsesQueries = assignmentIds.map(id => 
+    useQuery({
+      queryKey: [`/api/assignments/${id}/responses`],
+      enabled: !!id,
+    })
+  );
+
+  // Check if all responses are loaded
+  const allResponsesLoaded = responsesQueries.every(q => !q.isLoading);
+  const isResponsesLoading = responsesQueries.some(q => q.isLoading);
 
   // Process checklist templates with inspection statistics
   const processChecklistData = () => {
@@ -94,8 +98,21 @@ export default function InspectionHistory() {
       );
       
       const completedInspections = templateInspections.filter(i => i.status === 'completed');
-      const scores = completedInspections.map((i: any) => i.scorePercentage || 0);
-      const averageScore = scores.length > 0 ? Math.round(scores.reduce((a: number, b: number) => a + b, 0) / scores.length) : 0;
+      
+      // Calculate real analysis scores from responses
+      const realScores = completedInspections.map((inspection: any) => {
+        const responseQuery = responsesQueries.find(q => q.queryKey[0].includes(inspection.id));
+        const responses = responseQuery?.data || [];
+        const realAnalysis = calculateRealAnalysisScore(responses);
+        
+        // Update inspection with real score and grade
+        inspection.realScore = realAnalysis.score;
+        inspection.realGrade = realAnalysis.grade;
+        
+        return realAnalysis.score;
+      });
+      
+      const averageScore = realScores.length > 0 ? Math.round(realScores.reduce((a: number, b: number) => a + b, 0) / realScores.length) : 0;
       
       const lastInspection = templateInspections.length > 0 ? 
         templateInspections.sort((a: any, b: any) => 
@@ -460,11 +477,14 @@ export default function InspectionHistory() {
                           <div className="flex items-center gap-4">
                             {inspection.status === 'completed' && (
                               <div className="text-right">
-                                <div className="text-2xl font-bold text-green-600">
-                                  {inspection.scorePercentage}%
+                                <div className={`text-2xl font-bold ${
+                                  (inspection.realScore || 0) >= 80 ? 'text-green-600' :
+                                  (inspection.realScore || 0) >= 60 ? 'text-amber-600' : 'text-red-600'
+                                }`}>
+                                  {inspection.realScore || 0}%
                                 </div>
-                                <div className={`px-2 py-1 rounded ${getGradeColor(inspection.letterGrade)}`}>
-                                  {inspection.letterGrade} Notu
+                                <div className={`px-2 py-1 rounded ${getGradeColor(inspection.realGrade || 'E')}`}>
+                                  {inspection.realGrade || 'E'} Notu
                                 </div>
                               </div>
                             )}
