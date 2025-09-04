@@ -24,7 +24,7 @@ export default function InspectionAnalysis() {
   });
 
   // Get the specific assignment for current user (assuming first one for now)
-  const currentAssignment = assignments[0];
+  const currentAssignment = (assignments as any[])[0];
   
   // Fetch responses for the current assignment
   const { data: responses = [], isLoading: responsesLoading } = useQuery({
@@ -55,7 +55,10 @@ export default function InspectionAnalysis() {
 
   // Process detailed analysis data using real responses
   const processDetailedAnalysis = () => {
-    if (!responses.length || !(checklistSections as any[]).length) return null;
+    if (!(responses as any[]).length || !(checklistSections as any[]).length) return null;
+
+    console.log('Processing analysis with responses:', (responses as any[]).length);
+    console.log('Sample response:', (responses as any[])[0]);
 
     const analysisData: any = {
       sections: [],
@@ -73,12 +76,14 @@ export default function InspectionAnalysis() {
     // Group responses by category (instead of section)
     const responsesByCategory: Record<string, any[]> = {};
     (responses as any[]).forEach((response: any) => {
-      const category = response.question.category;
+      const category = response.question?.category || 'Diğer';
       if (!responsesByCategory[category]) {
         responsesByCategory[category] = [];
       }
       responsesByCategory[category].push(response);
     });
+
+    console.log('Responses by category:', responsesByCategory);
 
     // Process each category as a "section"
     Object.entries(responsesByCategory).forEach(([category, categoryResponses]) => {
