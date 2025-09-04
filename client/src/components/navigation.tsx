@@ -188,6 +188,23 @@ export default function Navigation({ children }: NavigationProps) {
             })}
           </nav>
 
+          {/* Logout Button */}
+          <div className={`border-t border-gray-200 ${isSidebarCollapsed ? 'px-2 py-2' : 'px-4 py-2'}`}>
+            <button
+              onClick={logout}
+              className={`w-full flex items-center rounded-lg text-left transition-all duration-200 text-red-600 hover:text-red-700 hover:bg-red-50 ${
+                isSidebarCollapsed ? 'px-3 py-3 justify-center' : 'px-4 py-3'
+              }`}
+              data-testid="sidebar-logout"
+              title={isSidebarCollapsed ? 'Çıkış Yap' : undefined}
+            >
+              <LogOut size={20} />
+              {!isSidebarCollapsed && (
+                <span className="font-medium ml-3">Çıkış Yap</span>
+              )}
+            </button>
+          </div>
+
           {/* Sidebar Toggle Arrow */}
           <div className={`border-t border-gray-200 ${isSidebarCollapsed ? 'px-2 py-2' : 'px-4 py-4'}`}>
             <button
