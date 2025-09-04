@@ -603,3 +603,5 @@ export function InspectionAnalysisPage() {
     </div>
   );
 }
+
+export default InspectionAnalysisPage;
