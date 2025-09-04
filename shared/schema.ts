@@ -70,6 +70,11 @@ export const locations = pgTable("locations", {
   taxNumber: text("tax_number"),
   legalRepresentative: text("legal_representative"),
   
+  // İSG Specific Fields
+  naceCode: text("nace_code"), // NACE Kodu
+  dangerClass: text("danger_class"), // Tehlike Sınıfı: "Çok Tehlikeli", "Tehlikeli", "Az Tehlikeli"
+  sgkRegistrationNumber: text("sgk_registration_number"), // SGK Sicil Numarası
+  
   // System Fields
   isActive: boolean("is_active").default(true),
   createdBy: varchar("created_by").references(() => users.id), // Created by central management

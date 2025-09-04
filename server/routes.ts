@@ -1037,6 +1037,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update hospital by ID - Safety Specialist for their own hospital
+  app.put('/api/hospitals/:id', authenticateToken, async (req, res) => {
+    try {
+      const currentUser = (req as any).user;
+      const hospitalId = req.params.id;
+      
+      // Safety specialists can only edit their own hospital
+      if (['safety_specialist', 'occupational_physician'].includes(currentUser.role)) {
+        const user = await storage.getUser(currentUser.id);
+        if (!user || user.locationId !== hospitalId) {
+          return res.status(403).json({ message: 'Bu hastaneyi düzenleme yetkiniz yok' });
+        }
+      } else if (!['central_admin', 'admin'].includes(currentUser.role)) {
+        return res.status(403).json({ message: 'Yetkisiz erişim' });
+      }
+
+      const hospitalData = {
+        name: req.body.name,
+        shortName: req.body.shortName,
+        phone: req.body.phone,
+        email: req.body.email,
+        website: req.body.website,
+        address: req.body.address,
+        naceCode: req.body.naceCode,
+        dangerClass: req.body.dangerClass,
+        sgkRegistrationNumber: req.body.sgkRegistrationNumber,
+        taxNumber: req.body.taxNumber,
+        legalRepresentative: req.body.legalRepresentative,
+      };
+
+      const hospital = await storage.updateLocation(hospitalId, hospitalData);
+      
+      if (!hospital) {
+        return res.status(404).json({ message: 'Hastane bulunamadı' });
+      }
+      
+      res.json(hospital);
+    } catch (error) {
+      console.error('Update hospital error:', error);
+      res.status(500).json({ message: 'Hastane güncellenirken hata oluştu' });
+    }
+  });
+
   // Template sistem kapalı - sadece mevcut ReactPDF sistemi kullanılıyor
 
   // Object Storage Upload Endpoints

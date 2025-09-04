@@ -48,10 +48,11 @@ export default function Navigation({ children }: NavigationProps) {
       );
     }
     
-    // Safety specialists can see their inspection history
+    // Safety specialists can see their inspection history and manage hospital
     if (['safety_specialist', 'occupational_physician'].includes(user?.role || '')) {
       baseItems.push(
         { path: "/inspection-history", label: "Denetim Geçmişim", icon: BarChart3 },
+        { path: "/hospital-management", label: "Hastane Yönetimi", icon: Building2 },
       );
     }
     
