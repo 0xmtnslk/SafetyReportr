@@ -178,8 +178,8 @@ export default function SpecialistDashboard() {
                           // Show detailed analysis for completed inspections
                           const hospitalId = inspection.location?.id;
                           const templateId = inspection.inspection?.templateId;
-                          const inspectionId = inspection.inspection?.id;
-                          setLocation(`/inspection-analysis/${hospitalId}/${templateId}/${inspectionId}`);
+                          const assignmentId = inspection.id; // Use assignment ID
+                          setLocation(`/inspection-analysis/${hospitalId}/${templateId}/${assignmentId}`);
                         }
                       }}
                       data-testid={`assignment-card-${inspection.id}`}
@@ -418,7 +418,8 @@ export default function SpecialistDashboard() {
                       // Show detailed analysis for completed inspections
                       const hospitalId = userHospital?.id;
                       const templateId = inspection.templateId;
-                      setLocation(`/inspection-analysis/${hospitalId}/${templateId}/${inspection.id}`);
+                      const assignmentId = inspection.id; // Use assignment ID
+                      setLocation(`/inspection-analysis/${hospitalId}/${templateId}/${assignmentId}`);
                     }
                   }}
                   data-testid={`activity-card-${inspection.id}`}

@@ -349,8 +349,8 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
         // Get inspection details for proper analysis routing
       const hospitalId = assignment?.location?.id;
       const templateId = assignment?.inspection?.templateId;
-      const inspectionId = assignment?.inspection?.id;
-      setLocation(`/inspection-analysis/${hospitalId}/${templateId}/${inspectionId}`);
+      // assignmentId is already available in scope
+      setLocation(`/inspection-analysis/${hospitalId}/${templateId}/${assignmentId}`);
       }
     } catch (error) {
       console.error('Error submitting inspection:', error);

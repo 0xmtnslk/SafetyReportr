@@ -10,21 +10,17 @@ import { useAuth } from "@/hooks/useAuth";
 export default function InspectionAnalysis() {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
-  const [, params] = useRoute("/inspection-analysis/:hospitalId/:checklistId/:inspectionId");
-  const { hospitalId, checklistId, inspectionId } = params || {};
+  const [, params] = useRoute("/inspection-analysis/:hospitalId/:checklistId/:assignmentId");
+  const { hospitalId, checklistId, assignmentId } = params || {};
 
   // Determine if user is a specialist
   const isSpecialist = ['safety_specialist', 'occupational_physician'].includes((user as any)?.role || '');
 
-  // Fetch inspection assignments for this specific inspection
-  const { data: assignments = [], isLoading: assignmentsLoading } = useQuery({
-    queryKey: isSpecialist ? 
-      [`/api/specialist/inspections/${inspectionId}/assignments`] : 
-      [`/api/inspections/${inspectionId}/assignments`],
+  // Fetch the specific assignment directly
+  const { data: currentAssignment, isLoading: assignmentLoading } = useQuery({
+    queryKey: [`/api/assignments/${assignmentId}`],
+    enabled: !!assignmentId,
   });
-
-  // Get the specific assignment for current user (assuming first one for now)
-  const currentAssignment = (assignments as any[])[0];
   
   // Fetch responses for the current assignment
   const { data: responses = [], isLoading: responsesLoading } = useQuery({
@@ -34,7 +30,7 @@ export default function InspectionAnalysis() {
 
   console.log('Current assignment:', currentAssignment);
   console.log('Responses data:', responses);
-  console.log('Parameters:', { hospitalId, checklistId, inspectionId });
+  console.log('Parameters:', { hospitalId, checklistId, assignmentId });
 
   // Fetch checklist template structure
   const { data: checklistSections = [], isLoading: sectionsLoading } = useQuery({
@@ -51,7 +47,7 @@ export default function InspectionAnalysis() {
     queryKey: ["/api/specialist/hospitals"],
   });
 
-  const isLoading = assignmentsLoading || sectionsLoading || templatesLoading || hospitalsLoading || responsesLoading;
+  const isLoading = assignmentLoading || sectionsLoading || templatesLoading || hospitalsLoading || responsesLoading;
 
   // Get hospital and template info
   const hospital = (hospitals as any[]).find((h: any) => h.id === hospitalId);
