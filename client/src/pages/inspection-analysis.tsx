@@ -32,6 +32,10 @@ export default function InspectionAnalysis() {
     enabled: !!currentAssignment?.id,
   });
 
+  console.log('Current assignment:', currentAssignment);
+  console.log('Responses data:', responses);
+  console.log('Parameters:', { hospitalId, checklistId, inspectionId });
+
   // Fetch checklist template structure
   const { data: checklistSections = [], isLoading: sectionsLoading } = useQuery({
     queryKey: [`/api/checklist/templates/${checklistId}/sections`],
@@ -42,9 +46,9 @@ export default function InspectionAnalysis() {
     queryKey: ["/api/checklist/templates"],
   });
 
-  // Fetch hospitals for name lookup
+  // Fetch hospitals for name lookup - Always use specialist endpoint for now
   const { data: hospitals = [], isLoading: hospitalsLoading } = useQuery({
-    queryKey: isSpecialist ? ["/api/specialist/hospitals"] : ["/api/admin/hospitals"],
+    queryKey: ["/api/specialist/hospitals"],
   });
 
   const isLoading = assignmentsLoading || sectionsLoading || templatesLoading || hospitalsLoading || responsesLoading;
