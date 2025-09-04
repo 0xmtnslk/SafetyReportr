@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Building2, CheckSquare, Award, TrendingUp, AlertTriangle, Target, BarChart3, PieChart, FileText, Calendar, User, Clock } from "lucide-react";
 import { useLocation, useRoute } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
@@ -94,15 +95,15 @@ export default function InspectionAnalysis() {
         summary: {
           total: 0,
           meets: 0,
-          partial: 0,
-          doesNotMeet: 0,
-          outOfScope: 0,
-          maxPoints: 0,
-          earnedPoints: 0,
-          successRate: 0,
-          grade: 'E'
-        }
-      };
+            partial: 0,
+            doesNotMeet: 0,
+            outOfScope: 0,
+            maxPoints: 0,
+            earnedPoints: 0,
+            successRate: 0,
+            grade: 'E'
+          }
+        };
 
       categoryResponses.forEach((response: any) => {
         const twPoints = response.question.twScore || 10;
@@ -394,16 +395,29 @@ export default function InspectionAnalysis() {
         </CardContent>
       </Card>
 
-      {/* Section Details - Modern Card Design */}
+      {/* Section Details - Tabs Design */}
       <div className="space-y-6">
         <div className="flex items-center gap-2">
           <Clock className="w-6 h-6 text-blue-600" />
           <h2 className="text-2xl font-bold text-gray-900">Bölüm Bazında Detaylı Analiz</h2>
         </div>
         
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Tabs defaultValue={analysis.sections[0]?.id} className="w-full">
+          <TabsList className="grid w-full grid-cols-3 mb-6">
+            {analysis.sections.map((section: any, sectionIndex: number) => (
+              <TabsTrigger 
+                key={section.id} 
+                value={section.id}
+                className="text-sm font-medium"
+              >
+                {section.title}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+          
           {analysis.sections.map((section: any, sectionIndex: number) => (
-            <Card key={section.id} className="overflow-hidden border-0 shadow-lg">
+            <TabsContent key={section.id} value={section.id} className="space-y-6">
+              <Card className="overflow-hidden border-0 shadow-lg">
               <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b">
                 <div className="flex items-center justify-between">
                   <div>
@@ -493,9 +507,10 @@ export default function InspectionAnalysis() {
                   ))}
                 </div>
               </CardContent>
-            </Card>
+              </Card>
+            </TabsContent>
           ))}
-        </div>
+        </Tabs>
 
         {/* Final Summary Table - Cleaner Design */}
         <Card className="mt-8">
