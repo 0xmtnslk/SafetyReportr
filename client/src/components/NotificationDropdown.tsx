@@ -141,19 +141,36 @@ export default function NotificationDropdown() {
       <DropdownMenuContent className="w-80" align="end">
         <DropdownMenuLabel className="flex items-center justify-between">
           <span>Bildirimlerim</span>
-          {hasUnread && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => markAllAsReadMutation.mutate()}
-              disabled={markAllAsReadMutation.isPending}
-              className="h-6 px-2 text-xs"
-              data-testid="button-mark-all-read"
-            >
-              <CheckCheck size={12} className="mr-1" />
-              Tümünü Okundu Say
-            </Button>
-          )}
+          <div className="flex items-center space-x-2">
+            {notifications.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setLocation('/notifications');
+                  setIsOpen(false);
+                }}
+                className="h-6 px-2 text-xs text-primary hover:text-primary/80"
+                data-testid="button-view-all-notifications-header"
+              >
+                <Eye size={12} className="mr-1" />
+                Tümünü Gör
+              </Button>
+            )}
+            {hasUnread && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => markAllAsReadMutation.mutate()}
+                disabled={markAllAsReadMutation.isPending}
+                className="h-6 px-2 text-xs"
+                data-testid="button-mark-all-read"
+              >
+                <CheckCheck size={12} className="mr-1" />
+                Okundu Say
+              </Button>
+            )}
+          </div>
         </DropdownMenuLabel>
         
         <DropdownMenuSeparator />
@@ -243,20 +260,6 @@ export default function NotificationDropdown() {
               </DropdownMenuItem>
             ))}
             
-            {notifications.length > 0 && (
-              <DropdownMenuItem className="text-center py-2" asChild>
-                <button
-                  onClick={() => {
-                    setLocation('/notifications');
-                    setIsOpen(false);
-                  }}
-                  className="w-full text-xs text-primary hover:text-primary/80 font-medium"
-                  data-testid="button-view-all-notifications"
-                >
-                  Tümünü Gör
-                </button>
-              </DropdownMenuItem>
-            )}
           </ScrollArea>
         )}
       </DropdownMenuContent>

@@ -206,6 +206,39 @@ export default function NotificationsPage() {
         </button>
       </div>
 
+      {/* Statistics */}
+      {notifications.length > 0 && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="text-lg">İstatistikler</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-gray-900">{notifications.length}</div>
+                <div className="text-sm text-gray-500">Toplam</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-primary">{unreadCount}</div>
+                <div className="text-sm text-gray-500">Okunmamış</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-green-600">
+                  {notifications.filter(n => n.type === 'success').length}
+                </div>
+                <div className="text-sm text-gray-500">Başarılı</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-yellow-600">
+                  {notifications.filter(n => n.type === 'warning').length}
+                </div>
+                <div className="text-sm text-gray-500">Uyarı</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Notifications List */}
       <div className="space-y-3">
         {filteredNotifications.length === 0 ? (
@@ -302,38 +335,6 @@ export default function NotificationsPage() {
         )}
       </div>
 
-      {/* Statistics */}
-      {notifications.length > 0 && (
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle className="text-lg">İstatistikler</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-gray-900">{notifications.length}</div>
-                <div className="text-sm text-gray-500">Toplam</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-primary">{unreadCount}</div>
-                <div className="text-sm text-gray-500">Okunmamış</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">
-                  {notifications.filter(n => n.type === 'success').length}
-                </div>
-                <div className="text-sm text-gray-500">Başarılı</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-yellow-600">
-                  {notifications.filter(n => n.type === 'warning').length}
-                </div>
-                <div className="text-sm text-gray-500">Uyarı</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }
