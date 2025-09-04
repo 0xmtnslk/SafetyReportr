@@ -20,8 +20,8 @@ export default function SpecialistDashboard() {
     queryKey: ["/api/checklist/templates"],
   });
 
-  // Get user's hospital (assuming specialist is assigned to one hospital)
-  const userHospital = userAssignments[0]?.hospital || null;
+  // Get user's hospital from user.hospital (included in /api/user/me response)
+  const userHospital = user?.hospital || null;
   const hospitalId = userHospital?.id;
 
   // Use userAssignments as recent inspections for specialists

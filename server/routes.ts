@@ -1174,7 +1174,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Remove sensitive information
       const { password, resetToken, resetTokenExpiry, ...userProfile } = user;
-      res.json(userProfile);
+      
+      // Include hospital/location details if user has locationId
+      let userWithLocation = { ...userProfile };
+      if (user.locationId) {
+        try {
+          const location = await storage.getLocationById(user.locationId);
+          if (location) {
+            userWithLocation.hospital = location;
+          }
+        } catch (error) {
+          console.error('Error fetching user location:', error);
+          // Continue without location info if fetch fails
+        }
+      }
+      
+      res.json(userWithLocation);
     } catch (error) {
       console.error("Get user profile error:", error);
       res.status(500).json({ message: "Kullanıcı profili alınırken hata oluştu" });
