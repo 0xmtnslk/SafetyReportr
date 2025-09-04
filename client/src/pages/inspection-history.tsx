@@ -37,7 +37,11 @@ export default function InspectionHistory() {
       completedAt: assignment.completedAt,
       createdAt: assignment.createdAt,
       assignedAt: assignment.assignedAt,
-      dueDate: assignment.dueDate
+      dueDate: assignment.dueDate,
+      // Add necessary data for analysis links
+      location: assignment.location,
+      inspection: assignment.inspection,
+      inspectionId: assignment.inspection?.id
     }));
 
     const templatesWithStats = checklistTemplates.map((template: any) => {
@@ -280,7 +284,7 @@ export default function InspectionHistory() {
                             // Get inspection assignment details for proper analysis routing
                             const hospitalId = inspection.location?.id;
                             const templateId = inspection.templateId;
-                            const inspectionId = inspection.inspection?.id || inspection.inspectionId;
+                            const inspectionId = inspection.inspectionId;
                             setLocation(`/inspection-analysis/${hospitalId}/${templateId}/${inspectionId}`);
                           }
                         }}
@@ -326,7 +330,7 @@ export default function InspectionHistory() {
                                   // Get inspection assignment details for proper analysis routing
                                   const hospitalId = inspection.location?.id;
                                   const templateId = inspection.templateId;
-                                  const inspectionId = inspection.inspection?.id || inspection.inspectionId;
+                                  const inspectionId = inspection.inspectionId;
                                   setLocation(`/inspection-analysis/${hospitalId}/${templateId}/${inspectionId}`);
                                 }
                               }}
