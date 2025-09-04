@@ -15,6 +15,78 @@ import { User, editUserProfileSchema } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { ArrowLeft, Camera, Save, User as UserIcon } from "lucide-react";
 
+// Turkey City-District Data (All 81 provinces)
+const TURKEY_CITIES = {
+  "Adana": ["Aladağ", "Ceyhan", "Çukurova", "Feke", "İmamoğlu", "Karaisalı", "Karataş", "Kozan", "Pozantı", "Saimbeyli", "Sarıçam", "Seyhan", "Tufanbeyli", "Yumurtalık", "Yüreğir"],
+  "Adıyaman": ["Besni", "Çelikhan", "Gerger", "Gölbaşı", "Kahta", "Merkez", "Samsat", "Sincik", "Tut"],
+  "Afyonkarahisar": ["Başmakçı", "Bayat", "Bolvadin", "Çay", "Çobanlar", "Dazkırı", "Dinar", "Emirdağ", "Evciler", "Hocalar", "İhsaniye", "İscehisar", "Kızılören", "Merkez", "Sandıklı", "Sinanpaşa", "Sultandağı", "Şuhut"],
+  "Ağrı": ["Diyadin", "Doğubayazıt", "Eleşkirt", "Hamur", "Merkez", "Patnos", "Taşlıçay", "Tutak"],
+  "Amasya": ["Göynücek", "Gümüşhacıköy", "Hamamözü", "Merkez", "Merzifon", "Suluova", "Taşova"],
+  "Ankara": ["Akyurt", "Altındağ", "Ayaş", "Bala", "Beypazarı", "Çamlıdere", "Çankaya", "Çubuk", "Elmadağ", "Etimesgut", "Evren", "Gölbaşı", "Güdül", "Haymana", "Kalecik", "Kazan", "Keçiören", "Kızılcahamam", "Mamak", "Nallıhan", "Polatlı", "Pursaklar", "Sincan", "Şereflikoçhisar", "Yenimahalle"],
+  "Antalya": ["Akseki", "Aksu", "Alanya", "Demre", "Döşemealtı", "Elmalı", "Finike", "Gazipaşa", "Gündoğmuş", "İbradı", "Kaş", "Kemer", "Kepez", "Konyaaltı", "Korkuteli", "Kumluca", "Manavgat", "Muratpaşa", "Serik"],
+  "Artvin": ["Ardanuç", "Arhavi", "Borçka", "Hopa", "Merkez", "Murgul", "Şavşat", "Yusufeli"],
+  "Aydın": ["Bozdoğan", "Buharkent", "Çine", "Didim", "Germencik", "İncirliova", "Karacasu", "Karpuzlu", "Koçarlı", "Köşk", "Kuşadası", "Kuyucak", "Merkez", "Nazilli", "Söke", "Sultanhisar", "Yenipazar"],
+  "Balıkesir": ["Altıeylül", "Ayvalık", "Balya", "Bandırma", "Bigadiç", "Burhaniye", "Dursunbey", "Edremit", "Erdek", "Gömeç", "Gönen", "Havran", "İvrindi", "Karesi", "Kepsut", "Manyas", "Marmara", "Savaştepe", "Sındırgı", "Susurluk"],
+  "Bilecik": ["Bozüyük", "Gölpazarı", "İnhisar", "Merkez", "Osmaneli", "Pazaryeri", "Söğüt", "Yenipazar"],
+  "Bingöl": ["Adaklı", "Genç", "Karlıova", "Kiğı", "Merkez", "Solhan", "Yayladere", "Yedisu"],
+  "Bitlis": ["Adilcevaz", "Ahlat", "Güroymak", "Hizan", "Merkez", "Mutki", "Tatvan"],
+  "Bolu": ["Dörtdivan", "Gerede", "Göynük", "Kıbrıscık", "Mengen", "Merkez", "Mudurnu", "Seben", "Yeniçağa"],
+  "Burdur": ["Ağlasun", "Altınyayla", "Bucak", "Çavdır", "Çeltikçi", "Gölhisar", "Karamanlı", "Kemer", "Merkez", "Tefenni", "Yeşilova"],
+  "Bursa": ["Büyükorhan", "Gemlik", "Gürsu", "Harmancık", "İnegöl", "İznik", "Karacabey", "Keles", "Kestel", "Mudanya", "Mustafakemalpaşa", "Nilüfer", "Orhaneli", "Orhangazi", "Osmangazi", "Yenişehir", "Yıldırım"],
+  "Çanakkale": ["Ayvacık", "Bayramiç", "Biga", "Bozcaada", "Çan", "Eceabat", "Ezine", "Gelibolu", "Gökçeada", "Lapseki", "Merkez", "Yenice"],
+  "Çankırı": ["Atkaracalar", "Bayramören", "Çerkeş", "Eldivan", "Ilgaz", "Kızılırmak", "Korgun", "Kurşunlu", "Merkez", "Orta", "Şabanözü", "Yapraklı"],
+  "Çorum": ["Alaca", "Bayat", "Boğazkale", "Dodurga", "İskilip", "Kargı", "Laçin", "Mecitözü", "Merkez", "Oğuzlar", "Ortaköy", "Osmancık", "Sungurlu", "Uğurludağ"],
+  "Denizli": ["Acıpayam", "Babadağ", "Baklan", "Bekilli", "Beyağaç", "Bozkurt", "Buldan", "Çal", "Çameli", "Çardak", "Çivril", "Güney", "Honaz", "Kale", "Merkezefendi", "Pamukkale", "Sarayköy", "Serinhisar", "Tavas"],
+  "Diyarbakır": ["Bağlar", "Bismil", "Çermik", "Çınar", "Çüngüş", "Dicle", "Eğil", "Ergani", "Hani", "Hazro", "Kayapınar", "Kocaköy", "Kulp", "Lice", "Silvan", "Sur", "Yenişehir"],
+  "Düzce": ["Akçakoca", "Cumayeri", "Çilimli", "Gölyaka", "Gümüşova", "Kaynaşlı", "Merkez", "Yığılca"],
+  "Edirne": ["Enez", "Havsa", "İpsala", "Keşan", "Lalapaşa", "Merkez", "Meriç", "Süloğlu", "Uzunköprü"],
+  "Elazığ": ["Ağın", "Alacakaya", "Arıcak", "Baskil", "Karakoçan", "Keban", "Kovancılar", "Maden", "Merkez", "Palu", "Sivrice"],
+  "Erzincan": ["Çayırlı", "İliç", "Kemah", "Kemaliye", "Merkez", "Otlukbeli", "Refahiye", "Tercan", "Üzümlü"],
+  "Erzurum": ["Aşkale", "Aziziye", "Çat", "Hınıs", "Horasan", "İspir", "Karaçoban", "Karayazı", "Köprüköy", "Narman", "Oltu", "Olur", "Palandöken", "Pasinler", "Pazaryolu", "Şenkaya", "Tekman", "Tortum", "Uzundere", "Yakutiye"],
+  "Eskişehir": ["Alpu", "Beylikova", "Çifteler", "Günyüzü", "Han", "İnönü", "Mahmudiye", "Mihalgazi", "Mihalıççık", "Odunpazarı", "Sarıcakaya", "Seyitgazi", "Sivrihisar", "Tepebaşı"],
+  "Gaziantep": ["Araban", "İslahiye", "Karkamış", "Nizip", "Nurdağı", "Oğuzeli", "Şahinbey", "Şehitkamil", "Yavuzeli"],
+  "Giresun": ["Alucra", "Bulancak", "Çamoluk", "Çanakçı", "Dereli", "Doğankent", "Espiye", "Eynesil", "Görele", "Güce", "Keşap", "Merkez", "Piraziz", "Şebinkarahisar", "Tirebolu", "Yağlıdere"],
+  "Gümüşhane": ["Kelkit", "Köse", "Kürtün", "Merkez", "Şiran", "Torul"],
+  "Hakkari": ["Çukurca", "Derecik", "Merkez", "Şemdinli", "Yüksekova"],
+  "Hatay": ["Altınözü", "Antakya", "Arsuz", "Belen", "Defne", "Dörtyol", "Erzin", "Hassa", "İskenderun", "Kırıkhan", "Kumlu", "Payas", "Reyhanlı", "Samandağ", "Yayladağı"],
+  "Isparta": ["Aksu", "Atabey", "Eğirdir", "Gelendost", "Gönen", "Keçiborlu", "Merkez", "Senirkent", "Sütçüler", "Şarkikaraağaç", "Uluborlu", "Yalvaç", "Yenişarbademli"],
+  "Mersin": ["Akdeniz", "Anamur", "Aydıncık", "Bozyazı", "Çamlıyayla", "Erdemli", "Gülnar", "Mezitli", "Mut", "Silifke", "Tarsus", "Toroslar", "Yenişehir"],
+  "İstanbul": ["Adalar", "Arnavutköy", "Ataşehir", "Avcılar", "Bağcılar", "Bahçelievler", "Bakırköy", "Başakşehir", "Bayrampaşa", "Beşiktaş", "Beykoz", "Beylikdüzü", "Beyoğlu", "Büyükçekmece", "Çatalca", "Çekmeköy", "Esenler", "Esenyurt", "Eyüpsultan", "Fatih", "Gaziosmanpaşa", "Güngören", "Kadıköy", "Kağıthane", "Kartal", "Küçükçekmece", "Maltepe", "Pendik", "Sancaktepe", "Sarıyer", "Silivri", "Sultanbeyli", "Sultangazi", "Şile", "Şişli", "Tuzla", "Ümraniye", "Üsküdar", "Zeytinburnu"],
+  "İzmir": ["Aliağa", "Balçova", "Bayındır", "Bayraklı", "Bergama", "Beydağ", "Bornova", "Buca", "Çeşme", "Çiğli", "Dikili", "Foça", "Gaziemir", "Güzelbahçe", "Karabağlar", "Karaburun", "Karşıyaka", "Kemalpaşa", "Kınık", "Kiraz", "Konak", "Menderes", "Menemen", "Narlıdere", "Ödemiş", "Seferihisar", "Selçuk", "Tire", "Torbalı", "Urla"],
+  "Kars": ["Akyaka", "Arpaçay", "Digor", "Kağızman", "Merkez", "Sarıkamış", "Selim", "Susuz"],
+  "Kastamonu": ["Abana", "Ağlı", "Araç", "Azdavay", "Bozkurt", "Cide", "Çatalzeytin", "Daday", "Devrekani", "Doğanyurt", "Hanönü", "İhsangazi", "İnebolu", "Küre", "Merkez", "Pınarbaşı", "Seydiler", "Şenpazar", "Taşköprü", "Tosya"],
+  "Kayseri": ["Akkışla", "Bünyan", "Develi", "Felahiye", "Hacılar", "İncesu", "Kocasinan", "Melikgazi", "Özvatan", "Pınarbaşı", "Sarıoğlan", "Sarız", "Talas", "Tomarza", "Yahyalı", "Yeşilhisar"],
+  "Kırklareli": ["Babaeski", "Demirköy", "Kofçaz", "Lüleburgaz", "Merkez", "Pehlivanköy", "Pınarhisar", "Vize"],
+  "Kırşehir": ["Akçakent", "Akpınar", "Boztepe", "Çiçekdağı", "Kaman", "Merkez", "Mucur"],
+  "Kocaeli": ["Başiskele", "Çayırova", "Darıca", "Derince", "Dilovası", "Gebze", "Gölcük", "İzmit", "Kandıra", "Karamürsel", "Kartepe", "Körfez"],
+  "Konya": ["Ahırlı", "Akören", "Akşehir", "Altınekin", "Beyşehir", "Bozkır", "Cihanbeyli", "Çeltik", "Çumra", "Derbent", "Derebucak", "Doğanhisar", "Emirgazi", "Ereğli", "Güneysınır", "Hadim", "Halkapınar", "Hüyük", "Ilgın", "Kadınhanı", "Karapınar", "Karatay", "Kulu", "Meram", "Sarayönü", "Selçuklu", "Seydişehir", "Taşkent", "Tuzlukçu", "Yalıhüyük", "Yunak"],
+  "Kütahya": ["Altıntaş", "Aslanapa", "Çavdarhisar", "Domaniç", "Dumlupınar", "Emet", "Gediz", "Hisarcık", "Merkez", "Pazarlar", "Simav", "Şaphane", "Tavşanlı"],
+  "Malatya": ["Akçadağ", "Arapgir", "Arguvan", "Battalgazi", "Darende", "Doğanşehir", "Doğanyol", "Hekimhan", "Kale", "Kuluncak", "Pütürge", "Yazıhan", "Yeşilyurt"],
+  "Manisa": ["Ahmetli", "Akhisar", "Alaşehir", "Demirci", "Gölmarmara", "Gördes", "Kırkağaç", "Köprübaşı", "Kula", "Salihli", "Sarıgöl", "Saruhanlı", "Selendi", "Soma", "Şehzadeler", "Turgutlu", "Yunusemre"],
+  "Mardin": ["Artuklu", "Dargeçit", "Derik", "Kızıltepe", "Mazıdağı", "Midyat", "Nusaybin", "Ömerli", "Savur", "Yeşilli"],
+  "Muğla": ["Bodrum", "Dalaman", "Datça", "Fethiye", "Kavaklıdere", "Köyceğiz", "Marmaris", "Menteşe", "Milas", "Ortaca", "Seydikemer", "Ula", "Yatağan"],
+  "Muş": ["Bulanık", "Hasköy", "Korkut", "Malazgirt", "Merkez", "Varto"],
+  "Nevşehir": ["Acıgöl", "Avanos", "Derinkuyu", "Gülşehir", "Hacıbektaş", "Kozaklı", "Merkez", "Ürgüp"],
+  "Niğde": ["Altunhisar", "Bor", "Çamardı", "Çiftlik", "Merkez", "Ulukışla"],
+  "Ordu": ["Akkuş", "Altınordu", "Aybastı", "Çamaş", "Çatalpınar", "Çaybaşı", "Fatsa", "Gölköy", "Gülyalı", "Gürgentepe", "İkizce", "Kabadüz", "Kabataş", "Korgan", "Kumru", "Mesudiye", "Perşembe", "Ulubey", "Ünye"],
+  "Rize": ["Ardeşen", "Çamlıhemşin", "Çayeli", "Derepazarı", "Fındıklı", "Güneysu", "Hemşin", "İkizdere", "İyidere", "Kalkandere", "Merkez", "Pazar"],
+  "Sakarya": ["Adapazarı", "Akyazı", "Arifiye", "Erenler", "Ferizli", "Geyve", "Hendek", "Karapürçek", "Karasu", "Kaynarca", "Kocaali", "Pamukova", "Sapanca", "Serdivan", "Söğütlü", "Taraklı"],
+  "Samsun": ["19 Mayıs", "Alaçam", "Asarcık", "Atakum", "Ayvacık", "Bafra", "Canik", "Çarşamba", "Havza", "İlkadım", "Kavak", "Ladik", "Ondokuzmayıs", "Salıpazarı", "Tekkeköy", "Terme", "Vezirköprü", "Yakakent"],
+  "Siirt": ["Baykan", "Eruh", "Kurtalan", "Merkez", "Pervari", "Şirvan", "Tillo"],
+  "Sinop": ["Ayancık", "Boyabat", "Dikmen", "Durağan", "Erfelek", "Gerze", "Merkez", "Saraydüzü", "Türkeli"],
+  "Sivas": ["Akıncılar", "Altınyayla", "Divriği", "Doğanşar", "Gemerek", "Gölova", "Gürün", "Hafik", "İmranlı", "Kangal", "Koyulhisar", "Merkez", "Suşehri", "Şarkışla", "Ulaş", "Yıldızeli", "Zara"],
+  "Şanlıurfa": ["Akçakale", "Birecik", "Bozova", "Ceylanpınar", "Eyyübiye", "Halfeti", "Haliliye", "Harran", "Hilvan", "Karaköprü", "Siverek", "Suruç", "Viranşehir"],
+  "Şırnak": ["Beytüşşebap", "Cizre", "Güçlükonak", "İdil", "Merkez", "Silopi", "Uludere"],
+  "Tekirdağ": ["Çerkezköy", "Çorlu", "Ergene", "Hayrabolu", "Kapaklı", "Malkara", "Marmaraereğlisi", "Muratlı", "Saray", "Süleymanpaşa", "Şarköy"],
+  "Tokat": ["Almus", "Artova", "Başçiftlik", "Erbaa", "Merkez", "Niksar", "Pazar", "Reşadiye", "Sulusaray", "Turhal", "Yeşilyurt", "Zile"],
+  "Trabzon": ["Akçaabat", "Araklı", "Arsin", "Beşikdüzü", "Çarşıbaşı", "Çaykara", "Dernekpazarı", "Düzköy", "Hayrat", "Köprübaşı", "Maçka", "Of", "Ortahisar", "Sürmene", "Şalpazarı", "Tonya", "Vakfıkebir", "Yomra"],
+  "Tunceli": ["Çemişgezek", "Hozat", "Mazgirt", "Merkez", "Nazımiye", "Ovacık", "Pertek", "Pülümür"],
+  "Uşak": ["Banaz", "Eşme", "Karahallı", "Merkez", "Sivaslı", "Ulubey"],
+  "Van": ["Bahçesaray", "Başkale", "Çaldıran", "Çatak", "Edremit", "Erciş", "Gevaş", "Gürpınar", "İpekyolu", "Muradiye", "Özalp", "Saray", "Tuşba"],
+  "Yozgat": ["Akdağmadeni", "Aydıncık", "Boğazlıyan", "Çandır", "Çayıralan", "Çekerek", "Kadışehri", "Merkez", "Saraykent", "Sarıkaya", "Sorgun", "Şefaatli", "Yenifakılı", "Yerköy"],
+  "Zonguldak": ["Alaplı", "Çaycuma", "Devrek", "Gökçebey", "Kilimli", "Kozlu", "Merkez"]
+};
+
 // Form schema based on the editUserProfileSchema
 const profileFormSchema = editUserProfileSchema;
 
@@ -24,6 +96,7 @@ export default function ProfileEdit() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [selectedProvince, setSelectedProvince] = useState<string>("");
 
   // Get current user info
   const { data: currentUser } = useQuery<User>({
@@ -36,47 +109,45 @@ export default function ProfileEdit() {
       fullName: "",
       email: "",
       phone: "",
-      position: "",
-      department: "",
-      language: "Türkçe",
+      firstName: "",
+      lastName: "",
       certificateNumber: "",
       safetySpecialistClass: undefined,
       phone2: "",
       mobilPhone1: "",
       mobilPhone2: "",
-      fax: "",
-      website: "",
       province: "",
       district: "",
       postalCode: "",
       address: "",
-      userType: "",
     },
   });
 
   // Load user data when available
   useEffect(() => {
     if (currentUser) {
+      const nameParts = currentUser.fullName?.split(" ") || [];
+      const firstName = nameParts[0] || "";
+      const lastName = nameParts.slice(1).join(" ") || "";
+
       form.reset({
         fullName: currentUser.fullName || "",
         email: currentUser.email || "",
         phone: currentUser.phone || "",
-        position: currentUser.position || "",
-        department: currentUser.department || "",
-        language: currentUser.language || "Türkçe",
+        firstName: currentUser.firstName || firstName,
+        lastName: currentUser.lastName || lastName,
         certificateNumber: currentUser.certificateNumber || "",
         safetySpecialistClass: currentUser.safetySpecialistClass as "A" | "B" | "C" | undefined,
         phone2: currentUser.phone2 || "",
         mobilPhone1: currentUser.mobilPhone1 || "",
         mobilPhone2: currentUser.mobilPhone2 || "",
-        fax: currentUser.fax || "",
-        website: currentUser.website || "",
         province: currentUser.province || "",
         district: currentUser.district || "",
         postalCode: currentUser.postalCode || "",
         address: currentUser.address || "",
-        userType: currentUser.userType || "",
       });
+      
+      setSelectedProvince(currentUser.province || "");
     }
   }, [currentUser, form]);
 
@@ -126,6 +197,20 @@ export default function ProfileEdit() {
       </div>
     );
   }
+
+  // Get city options for dropdown
+  const cityOptions = Object.keys(TURKEY_CITIES).map(city => ({
+    value: city,
+    label: city
+  }));
+
+  // Get district options based on selected province
+  const districtOptions = selectedProvince ? 
+    TURKEY_CITIES[selectedProvince as keyof typeof TURKEY_CITIES]?.map(district => ({ 
+      value: district, 
+      label: district 
+    })) || [] 
+    : [];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -196,37 +281,12 @@ export default function ProfileEdit() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
-                    name="fullName"
+                    name="firstName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Kullanıcı Adı</FormLabel>
+                        <FormLabel>Adı</FormLabel>
                         <FormControl>
-                          <Input placeholder="Adınızı ve soyadınızı giriniz" {...field} data-testid="input-fullname" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">Kullanıcı Kodu</label>
-                    <Input
-                      value={currentUser.username}
-                      disabled
-                      className="bg-gray-50"
-                      data-testid="input-username-readonly"
-                    />
-                    <p className="text-xs text-gray-500">Kullanıcı kodu değiştirilemez</p>
-                  </div>
-
-                  <FormField
-                    control={form.control}
-                    name="position"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Adi</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Pozisyon" {...field} value={field.value || ""} data-testid="input-position" />
+                          <Input placeholder="Adınızı giriniz" {...field} value={field.value ?? ""} data-testid="input-firstname" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -235,43 +295,13 @@ export default function ProfileEdit() {
 
                   <FormField
                     control={form.control}
-                    name="language"
+                    name="lastName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Soyadi</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger data-testid="select-language">
-                              <SelectValue placeholder="Dil seçiniz" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="Türkçe">Türkçe</SelectItem>
-                            <SelectItem value="English">English</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="department"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Kullanıcı Dili</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger data-testid="select-department">
-                              <SelectValue placeholder="Departman seçiniz" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="Türkçe">Türkçe</SelectItem>
-                            <SelectItem value="English">English</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <FormLabel>Soyadı</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Soyadınızı giriniz" {...field} value={field.value ?? ""} data-testid="input-lastname" />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -282,7 +312,7 @@ export default function ProfileEdit() {
                     name="safetySpecialistClass"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Kullanıcı Sapi Gilimi</FormLabel>
+                        <FormLabel>İGU Sınıfı</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger data-testid="select-specialist-class">
@@ -290,9 +320,9 @@ export default function ProfileEdit() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="A">A Sınıfı</SelectItem>
-                            <SelectItem value="B">B Sınıfı</SelectItem>
-                            <SelectItem value="C">C Sınıfı</SelectItem>
+                            <SelectItem value="A">A Sınıfı İş Güvenliği Uzmanı</SelectItem>
+                            <SelectItem value="B">B Sınıfı İş Güvenliği Uzmanı</SelectItem>
+                            <SelectItem value="C">C Sınıfı İş Güvenliği Uzmanı</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -301,7 +331,7 @@ export default function ProfileEdit() {
                   />
 
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">Kayit Tarihi</label>
+                    <label className="text-sm font-medium text-gray-700">Kayıt Tarihi</label>
                     <Input
                       value={currentUser.createdAt ? new Date(currentUser.createdAt).toLocaleDateString('tr-TR') : ''}
                       disabled
@@ -315,23 +345,9 @@ export default function ProfileEdit() {
                     name="certificateNumber"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Sicil No</FormLabel>
+                        <FormLabel>Belge No</FormLabel>
                         <FormControl>
-                          <Input placeholder="Sicil numarası" {...field} value={field.value || ""} data-testid="input-certificate-number" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="userType"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>İdari Yönetici</FormLabel>
-                        <FormControl>
-                          <Input placeholder="İdari pozisyon" {...field} value={field.value || ""} data-testid="input-user-type" />
+                          <Input placeholder="İGU-287183" {...field} value={field.value ?? ""} data-testid="input-certificate-number" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -354,18 +370,25 @@ export default function ProfileEdit() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>İl</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
+                        <Select 
+                          onValueChange={(value) => {
+                            field.onChange(value);
+                            setSelectedProvince(value);
+                            form.setValue("district", ""); // Reset district when province changes
+                          }} 
+                          value={field.value ?? ""}
+                        >
                           <FormControl>
                             <SelectTrigger data-testid="select-province">
                               <SelectValue placeholder="İl seçiniz" />
                             </SelectTrigger>
                           </FormControl>
-                          <SelectContent>
-                            <SelectItem value="İstanbul">İstanbul</SelectItem>
-                            <SelectItem value="Ankara">Ankara</SelectItem>
-                            <SelectItem value="İzmir">İzmir</SelectItem>
-                            <SelectItem value="Bursa">Bursa</SelectItem>
-                            <SelectItem value="Antalya">Antalya</SelectItem>
+                          <SelectContent className="max-h-[200px]">
+                            {cityOptions.map((city) => (
+                              <SelectItem key={city.value} value={city.value}>
+                                {city.label}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -379,9 +402,20 @@ export default function ProfileEdit() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>İlçesi</FormLabel>
-                        <FormControl>
-                          <Input placeholder="İlçe" {...field} value={field.value || ""} data-testid="input-district" />
-                        </FormControl>
+                        <Select onValueChange={field.onChange} value={field.value ?? ""}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-district">
+                              <SelectValue placeholder={selectedProvince ? "İlçe seçiniz" : "Önce il seçiniz"} />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent className="max-h-[200px]">
+                            {districtOptions.map((district) => (
+                              <SelectItem key={district.value} value={district.value}>
+                                {district.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -427,6 +461,7 @@ export default function ProfileEdit() {
                           placeholder="Tam adresinizi giriniz"
                           className="min-h-[80px]"
                           {...field}
+                          value={field.value ?? ""}
                           data-testid="textarea-address"
                         />
                       </FormControl>
@@ -444,7 +479,7 @@ export default function ProfileEdit() {
                       <FormItem>
                         <FormLabel>Telefon (1)</FormLabel>
                         <FormControl>
-                          <Input placeholder="+90" {...field} data-testid="input-phone1" />
+                          <Input placeholder="0555-000-0000" {...field} data-testid="input-phone1" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -487,34 +522,6 @@ export default function ProfileEdit() {
                         <FormLabel>Cep Telefonu (2)</FormLabel>
                         <FormControl>
                           <Input placeholder="+90" {...field} value={field.value || ""} data-testid="input-mobile2" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="fax"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Faks</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Faks numarası" {...field} value={field.value || ""} data-testid="input-fax" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="website"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Web Adresi</FormLabel>
-                        <FormControl>
-                          <Input placeholder="https://example.com" {...field} value={field.value || ""} data-testid="input-website" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>

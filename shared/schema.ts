@@ -19,17 +19,16 @@ export const users = pgTable("users", {
   location: text("location"), // Legacy field - to be deprecated
   
   // Extended Profile Information
-  language: text("language").default("Türkçe"), // User's preferred language
+  firstName: text("first_name"), // Adı
+  lastName: text("last_name"), // Soyadı
   registrationDate: timestamp("registration_date"), // Kayıt Tarihi
-  certificateNumber: text("certificate_number"), // Belge No
-  safetySpecialistClass: text("safety_specialist_class"), // A, B, C - İş Güvenliği Uzmanı Sınıfı
+  certificateNumber: text("certificate_number"), // Belge No (İGU-287183)
+  safetySpecialistClass: text("safety_specialist_class"), // A Sınıfı İş Güvenliği Uzmanı, B Sınıfı İş Güvenliği Uzmanı, C Sınıfı İş Güvenliği Uzmanı
   
   // Contact Information
   phone2: text("phone2"), // Second phone number
   mobilPhone1: text("mobil_phone1"), // Mobile phone 1
   mobilPhone2: text("mobil_phone2"), // Mobile phone 2
-  fax: text("fax"), // Fax number
-  website: text("website"), // Website address
   
   // Address Information
   province: text("province"), // İl
@@ -37,8 +36,6 @@ export const users = pgTable("users", {
   postalCode: text("postal_code"), // Posta Kodu
   address: text("address"), // Full address
   
-  // User Type
-  userType: text("user_type"), // User type for profile customization
   
   firstLogin: boolean("first_login").default(true), // Force password change on first login
   resetToken: text("reset_token"), // Password reset token
@@ -298,20 +295,18 @@ export const insertUserSchema = createInsertSchema(users).pick({
   department: true,
   locationId: true,
   location: true, // Keep for backward compatibility
-  language: true,
+  firstName: true,
+  lastName: true,
   registrationDate: true,
   certificateNumber: true,
   safetySpecialistClass: true,
   phone2: true,
   mobilPhone1: true,
   mobilPhone2: true,
-  fax: true,
-  website: true,
   province: true,
   district: true,
   postalCode: true,
   address: true,
-  userType: true,
   isActive: true,
 }).extend({
   email: z.string().email("Geçerli bir e-posta adresi giriniz"),
@@ -329,21 +324,17 @@ export const editUserProfileSchema = createInsertSchema(users).pick({
   email: true,
   phone: true,
   profileImage: true,
-  position: true,
-  department: true,
-  language: true,
+  firstName: true,
+  lastName: true,
   certificateNumber: true,
   safetySpecialistClass: true,
   phone2: true,
   mobilPhone1: true,
   mobilPhone2: true,
-  fax: true,
-  website: true,
   province: true,
   district: true,
   postalCode: true,
   address: true,
-  userType: true,
 }).extend({
   email: z.string().email("Geçerli bir e-posta adresi giriniz"),
   phone: z.string().min(10, "Telefon numarası en az 10 karakter olmalıdır"),
