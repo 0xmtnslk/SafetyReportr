@@ -129,6 +129,17 @@ export default function InspectionHistory() {
   };
 
   const checklistsWithStats = processChecklistData();
+  
+  // Calculate overall stats
+  const overallStats = {
+    totalInspections: checklistsWithStats.reduce((sum, checklist) => sum + checklist.totalInspections, 0),
+    completedInspections: checklistsWithStats.reduce((sum, checklist) => sum + checklist.completedInspections, 0),
+    inProgressInspections: checklistsWithStats.reduce((sum, checklist) => sum + checklist.inProgressInspections, 0),
+    pendingInspections: checklistsWithStats.reduce((sum, checklist) => sum + checklist.pendingInspections, 0),
+    averageScore: checklistsWithStats.length > 0 
+      ? Math.round(checklistsWithStats.reduce((sum, checklist) => sum + (checklist.averageScore || 0), 0) / checklistsWithStats.length)
+      : 0
+  };
 
   const getGradeColor = (grade: string) => {
     const colors = {
