@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueries } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -58,14 +58,14 @@ export default function InspectionHistory() {
     return { score, grade };
   };
 
-  // Fetch all responses for all assignments
+  // Fetch all responses for all assignments using useQueries
   const assignmentIds = (userAssignments as any[]).map((a: any) => a.id);
-  const responsesQueries = assignmentIds.map(id => 
-    useQuery({
+  const responsesQueries = useQueries({
+    queries: assignmentIds.map(id => ({
       queryKey: [`/api/assignments/${id}/responses`],
       enabled: !!id,
-    })
-  );
+    }))
+  });
 
   // Check if all responses are loaded
   const allResponsesLoaded = responsesQueries.every(q => !q.isLoading);
