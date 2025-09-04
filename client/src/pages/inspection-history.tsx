@@ -330,8 +330,8 @@ export default function InspectionHistory() {
                                   // Get inspection assignment details for proper analysis routing
                                   const hospitalId = inspection.location?.id;
                                   const templateId = inspection.templateId;
-                                  const inspectionId = inspection.inspectionId;
-                                  setLocation(`/inspection-analysis/${hospitalId}/${templateId}/${inspectionId}`);
+                                  const assignmentId = inspection.id; // Use assignment ID
+                                  setLocation(`/inspection-analysis/${hospitalId}/${templateId}/${assignmentId}`);
                                 }
                               }}
                               data-testid={`inspection-action-${inspection.id}`}

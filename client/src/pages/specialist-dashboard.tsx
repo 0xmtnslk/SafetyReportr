@@ -417,7 +417,7 @@ export default function SpecialistDashboard() {
                     } else if (inspection.status === 'completed') {
                       // Show detailed analysis for completed inspections
                       const hospitalId = userHospital?.id;
-                      const templateId = inspection.templateId;
+                      const templateId = inspection.inspection?.templateId;
                       const assignmentId = inspection.id; // Use assignment ID
                       setLocation(`/inspection-analysis/${hospitalId}/${templateId}/${assignmentId}`);
                     }
