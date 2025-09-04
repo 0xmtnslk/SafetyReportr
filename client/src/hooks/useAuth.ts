@@ -7,6 +7,12 @@ interface User {
   role: 'admin' | 'user';
   location: string;
   firstLogin: boolean;
+  hospital?: {
+    id: string;
+    name: string;
+    address: string;
+    type: string;
+  };
 }
 
 export function useAuth() {
@@ -15,16 +21,29 @@ export function useAuth() {
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    const storedUser = localStorage.getItem("user");
 
-    if (token && storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (error) {
-        console.error("Error parsing stored user:", error);
+    if (token) {
+      // Fetch current user data from API to get latest info including hospital
+      fetch('/api/user/me', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+      .then(response => {
+        if (response.ok) {
+          return response.json();
+        }
+        throw new Error('Failed to fetch user data');
+      })
+      .then(userData => {
+        setUser(userData);
+        localStorage.setItem("user", JSON.stringify(userData));
+      })
+      .catch(error => {
+        console.error("Error fetching user data:", error);
         localStorage.removeItem("token");
         localStorage.removeItem("user");
-      }
+      });
     }
 
     setIsLoading(false);

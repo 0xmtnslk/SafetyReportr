@@ -20,7 +20,8 @@ export default function InspectionHistory() {
     queryKey: ["/api/checklist/templates"],
   });
 
-  const userHospital = userAssignments[0]?.hospital || null;
+  // Get user's hospital from user.hospital (included in /api/user/me response)
+  const userHospital = user?.hospital || null;
   const isLoading = assignmentsLoading || templatesLoading;
 
   // Process checklist templates with inspection statistics
