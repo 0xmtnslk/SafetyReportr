@@ -944,6 +944,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Specialist: Update their own hospital information
+  app.put('/api/specialist/hospital', authenticateToken, requireSafetySpecialist, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      
+      // Check if user has a hospital
+      if (!user.locationId) {
+        return res.status(400).json({ message: 'Hastane ataması bulunamadı' });
+      }
+      
+      // Validate data (allow subset of fields that specialists can edit)
+      const allowedFields = {
+        name: req.body.name,
+        shortName: req.body.shortName,
+        phone: req.body.phone,
+        email: req.body.email,
+        website: req.body.website,
+        address: req.body.address,
+        naceCode: req.body.naceCode,
+        dangerClass: req.body.dangerClass,
+        sgkRegistrationNumber: req.body.sgkRegistrationNumber,
+        taxNumber: req.body.taxNumber,
+        legalRepresentative: req.body.legalRepresentative,
+      };
+      
+      // Remove undefined fields
+      const validatedData = Object.fromEntries(
+        Object.entries(allowedFields).filter(([_, value]) => value !== undefined)
+      );
+      
+      const updatedHospital = await storage.updateLocation(user.locationId, validatedData);
+      
+      if (!updatedHospital) {
+        return res.status(404).json({ message: 'Hastane bulunamadı' });
+      }
+      
+      res.json(updatedHospital);
+    } catch (error) {
+      console.error('Update hospital error:', error);
+      res.status(500).json({ message: 'Hastane güncellenirken hata oluştu' });
+    }
+  });
+
   // Create new hospital - Central Admin only
   app.post('/api/admin/hospitals', authenticateToken, requireCentralManagement, async (req, res) => {
     try {

@@ -53,13 +53,17 @@ export default function HospitalManagement() {
   // Get user's hospital
   const userHospital = user?.hospital;
   
+  // Check if user is admin (can access admin endpoints)
+  const isAdmin = user?.role === 'central_admin' || user?.role === 'admin';
+  
+  // Use admin endpoint only if user is admin, otherwise use hospital data from user object
   const { data: hospital, isLoading: hospitalLoading } = useQuery({
     queryKey: ["/api/admin/hospitals", userHospital?.id],
-    enabled: !!userHospital?.id,
+    enabled: !!userHospital?.id && isAdmin,
   });
 
-  // Hospital data from user object or from API
-  const hospitalData = hospital || userHospital;
+  // Hospital data from user object or from API (admin users get fresh data)
+  const hospitalData = isAdmin ? (hospital || userHospital) : userHospital;
 
   const form = useForm<HospitalManagementForm>({
     resolver: zodResolver(hospitalManagementSchema),
@@ -99,10 +103,9 @@ export default function HospitalManagement() {
 
   const updateHospitalMutation = useMutation({
     mutationFn: (data: HospitalManagementForm) =>
-      apiRequest(`/api/hospitals/${userHospital?.id}`, {
-        method: "PUT",
-        body: JSON.stringify(data),
-      }),
+      isAdmin 
+        ? apiRequest('PUT', `/api/admin/hospitals/${userHospital?.id}`, data)
+        : apiRequest('PUT', `/api/specialist/hospital`, data),
     onSuccess: () => {
       toast({
         title: "Başarılı",
