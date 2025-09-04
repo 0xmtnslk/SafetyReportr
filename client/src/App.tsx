@@ -169,7 +169,7 @@ function Router() {
             <Route path="/inspection-title-detail/:hospitalId/:checklistId/:titleName">
               {() => ['central_admin', 'admin'].includes(user?.role || '') ? <InspectionTitleDetail /> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
             </Route>
-            <Route path="/inspection-analysis/:hospitalId/:checklistId/:inspectionId">
+            <Route path="/inspection-analysis/:hospitalId/:checklistId/:assignmentId">
               {() => ['central_admin', 'admin', 'safety_specialist', 'occupational_physician'].includes(user?.role || '') ? <InspectionAnalysis /> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
             </Route>
             <Route path="/specialist/checklists" component={SpecialistChecklists} />
@@ -267,7 +267,7 @@ function Router() {
         <Route path="/inspection-title-detail/:hospitalId/:checklistId/:titleName">
           {() => ['central_admin', 'admin'].includes((user as any)?.role || '') ? <InspectionTitleDetail /> : <Login />}
         </Route>
-        <Route path="/inspection-analysis/:hospitalId/:checklistId/:inspectionId">
+        <Route path="/inspection-analysis/:hospitalId/:checklistId/:assignmentId">
           {() => ['central_admin', 'admin', 'safety_specialist', 'occupational_physician'].includes((user as any)?.role || '') ? <InspectionAnalysis /> : <Login />}
         </Route>
         <Route path="/specialist/checklists">

@@ -33,14 +33,7 @@ export function InspectionAnalysisPage() {
     queryKey: [`/api/assignments/${assignmentId}/responses`],
   });
 
-  console.log('Responses data:', responses);
-  console.log('Parameters:', { hospitalId, checklistId, assignmentId });
-  console.log('URL params from useParams:', useParams());
-  
-  // Debug early return to understand the issue
-  if (!assignmentId) {
-    console.error('assignmentId is missing!', { hospitalId, checklistId, assignmentId });
-  }
+  console.log('Processing analysis for assignment:', assignmentId);
 
   // Fetch checklist template structure
   const { data: checklistSections = [], isLoading: sectionsLoading } = useQuery({
