@@ -22,8 +22,16 @@ import {
   insertInspectionResponseSchema,
   insertNotificationSchema,
   editUserProfileSchema,
+  insertHospitalDepartmentSchema,
+  insertRiskCategorySchema,
+  insertRiskSubCategorySchema,
+  insertRiskAssessmentSchema,
+  insertRiskImprovementSchema,
   CHECKLIST_CATEGORIES,
   EVALUATION_OPTIONS,
+  FINE_KINNEY_PROBABILITY,
+  FINE_KINNEY_FREQUENCY,
+  FINE_KINNEY_SEVERITY,
   Location
 } from "@shared/schema";
 import { ReactPdfService } from "./pdfService";
@@ -2625,6 +2633,158 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Error marking all notifications as read:', error);
       res.status(500).json({ error: 'Error marking all notifications as read' });
     }
+  });
+
+  // RISK ASSESSMENT API ENDPOINTS - Fine-Kinney Method
+  
+  // Hospital Departments Management (Specialist Access)
+  app.get('/api/risk/hospital-departments', authenticateToken, requireSafetySpecialist, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      
+      if (!user.locationId) {
+        return res.status(400).json({ message: 'Hastane ataması bulunamadı' });
+      }
+      
+      const departments = await storage.getLocationDepartments(user.locationId);
+      res.json(departments);
+    } catch (error) {
+      console.error('Get hospital departments error:', error);
+      res.status(500).json({ message: 'Hastane bölümleri alınırken hata oluştu' });
+    }
+  });
+  
+  app.post('/api/risk/hospital-departments', authenticateToken, requireSafetySpecialist, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      const departmentData = insertHospitalDepartmentSchema.parse(req.body);
+      
+      if (!user.locationId) {
+        return res.status(400).json({ message: 'Hastane ataması bulunamadı' });
+      }
+      
+      const newDepartment = await storage.createHospitalDepartment({
+        ...departmentData,
+        locationId: user.locationId,
+        createdBy: user.id
+      });
+      
+      res.status(201).json(newDepartment);
+    } catch (error) {
+      console.error('Create hospital department error:', error);
+      res.status(500).json({ message: 'Hastane bölümü oluşturulurken hata oluştu' });
+    }
+  });
+  
+  // Risk Categories Management (Admin Only) - Public access for specialists
+  app.get('/api/risk/categories', authenticateToken, requireSafetySpecialist, async (req, res) => {
+    try {
+      const categories = await storage.getAllRiskCategories();
+      res.json(categories);
+    } catch (error) {
+      console.error('Get risk categories error:', error);
+      res.status(500).json({ message: 'Risk kategorileri alınırken hata oluştu' });
+    }
+  });
+  
+  app.get('/api/risk/sub-categories', authenticateToken, requireSafetySpecialist, async (req, res) => {
+    try {
+      const { categoryId } = req.query;
+      let subCategories;
+      
+      if (categoryId) {
+        subCategories = await storage.getCategorySubCategories(categoryId as string);
+      } else {
+        subCategories = await storage.getAllRiskSubCategories();
+      }
+      
+      res.json(subCategories);
+    } catch (error) {
+      console.error('Get risk sub-categories error:', error);
+      res.status(500).json({ message: 'Risk alt kategorileri alınırken hata oluştu' });
+    }
+  });
+  
+  // Risk Assessments (Specialist Access)
+  app.get('/api/risk/assessments', authenticateToken, requireSafetySpecialist, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      const { departmentId } = req.query;
+      
+      let assessments;
+      if (departmentId) {
+        // Check if department belongs to user's location
+        const department = await storage.getHospitalDepartment(departmentId as string);
+        if (!department || department.locationId !== user.locationId) {
+          return res.status(403).json({ message: 'Bu bölüme erişim yetkiniz yok' });
+        }
+        assessments = await storage.getDepartmentRiskAssessments(departmentId as string);
+      } else {
+        if (!user.locationId) {
+          return res.status(400).json({ message: 'Hastane ataması bulunamadı' });
+        }
+        assessments = await storage.getLocationRiskAssessments(user.locationId);
+      }
+      
+      res.json(assessments);
+    } catch (error) {
+      console.error('Get risk assessments error:', error);
+      res.status(500).json({ message: 'Risk değerlendirmeleri alınırken hata oluştu' });
+    }
+  });
+  
+  app.post('/api/risk/assessments', authenticateToken, requireSafetySpecialist, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      const assessmentData = insertRiskAssessmentSchema.parse(req.body);
+      
+      if (!user.locationId) {
+        return res.status(400).json({ message: 'Hastane ataması bulunamadı' });
+      }
+      
+      // Verify department belongs to user's location
+      const department = await storage.getHospitalDepartment(assessmentData.departmentId);
+      if (!department || department.locationId !== user.locationId) {
+        return res.status(403).json({ message: 'Bu bölüme erişim yetkiniz yok' });
+      }
+      
+      const newAssessment = await storage.createRiskAssessment({
+        ...assessmentData,
+        locationId: user.locationId,
+        assessorId: user.id
+      });
+      
+      res.status(201).json(newAssessment);
+    } catch (error) {
+      console.error('Create risk assessment error:', error);
+      res.status(500).json({ message: 'Risk değerlendirmesi oluşturulurken hata oluştu' });
+    }
+  });
+  
+  // Risk Assessment Statistics 
+  app.get('/api/risk/stats', authenticateToken, requireSafetySpecialist, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      
+      if (!user.locationId) {
+        return res.status(400).json({ message: 'Hastane ataması bulunamadı' });
+      }
+      
+      const stats = await storage.getRiskAssessmentStats(user.locationId);
+      res.json(stats);
+    } catch (error) {
+      console.error('Get risk assessment stats error:', error);
+      res.status(500).json({ message: 'Risk değerlendirme istatistikleri alınırken hata oluştu' });
+    }
+  });
+  
+  // Fine-Kinney Constants (Public access for form UI)
+  app.get('/api/risk/fine-kinney-values', (req, res) => {
+    res.json({
+      probability: FINE_KINNEY_PROBABILITY,
+      frequency: FINE_KINNEY_FREQUENCY,
+      severity: FINE_KINNEY_SEVERITY
+    });
   });
 
   // Health check endpoint for production monitoring

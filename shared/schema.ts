@@ -266,6 +266,134 @@ export const inspectionResponses = pgTable("inspection_responses", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// RISK ASSESSMENT SYSTEM - Fine-Kinney Method Implementation
+
+// Hospital Departments/Units - Managed by specialists
+export const hospitalDepartments = pgTable("hospital_departments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  locationId: varchar("location_id").references(() => locations.id).notNull(),
+  name: text("name").notNull(), // e.g., "Acil Servis", "Ameliyathane"
+  isDefault: boolean("is_default").default(false), // Predefined departments vs custom added
+  createdBy: varchar("created_by").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Risk Categories - Main categories (Admin managed)
+export const riskCategories = pgTable("risk_categories", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull().unique(), // e.g., "Tıbbi Hizmetler", "Yönetsel Hizmetler"
+  orderIndex: integer("order_index").default(0),
+  isActive: boolean("is_active").default(true),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Risk Sub-Categories - Under main categories (Admin managed)
+export const riskSubCategories = pgTable("risk_sub_categories", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  categoryId: varchar("category_id").references(() => riskCategories.id).notNull(),
+  name: text("name").notNull(), // e.g., "Hizmete erişim ile ilgili riskler"
+  orderIndex: integer("order_index").default(0),
+  isActive: boolean("is_active").default(true),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Risk Assessments - Main assessment records using Fine-Kinney method
+export const riskAssessments = pgTable("risk_assessments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  locationId: varchar("location_id").references(() => locations.id).notNull(),
+  departmentId: varchar("department_id").references(() => hospitalDepartments.id).notNull(),
+  assessorId: varchar("assessor_id").references(() => users.id).notNull(), // Safety specialist
+  
+  // Basic Information
+  assessmentNumber: text("assessment_number").notNull().unique(), // Auto-generated
+  detectionDate: timestamp("detection_date").notNull(),
+  categoryId: varchar("category_id").references(() => riskCategories.id).notNull(),
+  subCategoryId: varchar("sub_category_id").references(() => riskSubCategories.id).notNull(),
+  
+  // Risk Details
+  area: text("area").notNull(), // Equipment, location, etc.
+  activity: text("activity").notNull(), // Work or incident description  
+  hazard: text("hazard").notNull(), // Identified hazard
+  risk: text("risk").notNull(), // Associated risk
+  potentialConsequence: text("potential_consequence").notNull(), // Possible harm/damage
+  
+  // Affected Persons
+  affectedPersons: jsonb("affected_persons").$type<string[]>().default([]), 
+  // Array of: "Doktor", "Hemşire", "YSP", "Teknisyen", "Hasta", "Hasta Yakını", "Çalışan", "Ziyaretçi", "Diğer"
+  otherAffectedPersons: text("other_affected_persons"), // If "Diğer" is selected
+  
+  // Current State
+  currentStateDescription: text("current_state_description").notNull(),
+  currentStateImages: jsonb("current_state_images").$type<string[]>().default([]),
+  
+  // Fine-Kinney Current Risk Score
+  currentProbability: integer("current_probability").notNull(), // 0.2, 0.5, 1, 3, 6, 10
+  currentFrequency: integer("current_frequency").notNull(), // 0.5, 1, 2, 3, 6, 10
+  currentSeverity: integer("current_severity").notNull(), // 1, 3, 7, 15, 40, 100
+  currentRiskScore: integer("current_risk_score").notNull(), // P*F*S
+  currentRiskLevel: text("current_risk_level").notNull(), // Based on score ranges
+  currentRiskColor: text("current_risk_color").notNull(), // Color coding
+  
+  // Improvement Plan
+  improvementMeasures: text("improvement_measures").notNull(), // Actions to take
+  improvementResponsible: text("improvement_responsible").notNull(), // Person responsible
+  targetDate: timestamp("target_date").notNull(), // Deadline for improvement
+  
+  // Status
+  status: text("status").notNull().default("open"), // open, in_progress, completed
+  priority: text("priority").notNull().default("medium"), // low, medium, high, critical
+  
+  // System fields
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Risk Improvements - Improvement tracking and post-assessment
+export const riskImprovements = pgTable("risk_improvements", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  assessmentId: varchar("assessment_id").references(() => riskAssessments.id).notNull(),
+  
+  // Improvement Implementation
+  improvementDescription: text("improvement_description").notNull(), // What was done
+  completionDate: timestamp("completion_date").notNull(), // When completed
+  postImprovementImages: jsonb("post_improvement_images").$type<string[]>().default([]),
+  
+  // Post-Improvement Fine-Kinney Risk Score
+  postProbability: integer("post_probability").notNull(), // New probability after improvement
+  postFrequency: integer("post_frequency").notNull(), // New frequency after improvement
+  postSeverity: integer("post_severity").notNull(), // New severity after improvement
+  postRiskScore: integer("post_risk_score").notNull(), // New P*F*S
+  postRiskLevel: text("post_risk_level").notNull(), // New risk level
+  postRiskColor: text("post_risk_color").notNull(), // New color coding
+  
+  // Effectiveness Measurement
+  effectivenessMeasurement: text("effectiveness_measurement").notNull(), 
+  // "Gösterge takibi", "Belgelendirme (Rapor, Tatbikat, Kayıt v.b.)", "Sınav/Değerlendirme", "Diğer"
+  effectivenessOther: text("effectiveness_other"), // If "Diğer" selected
+  controlResponsible: text("control_responsible").notNull(), // Person responsible for control
+  result: text("result").notNull(), // Final result/outcome
+  relatedRegulation: text("related_regulation"), // Related laws/regulations
+  
+  // System fields  
+  createdBy: varchar("created_by").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Regulation library for auto-complete (built from user inputs)
+export const regulations = pgTable("regulations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull().unique(), // Regulation/law title
+  usageCount: integer("usage_count").default(1), // How many times it's been used
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Insert schemas  
 export const insertLocationSchema = createInsertSchema(locations).pick({
   name: true,
@@ -528,6 +656,109 @@ export const insertInspectionResponseSchema = createInsertSchema(inspectionRespo
   questionId: z.string().optional(), // Made optional since it comes from URL params
 });
 
+// Risk Assessment insert schemas
+export const insertHospitalDepartmentSchema = createInsertSchema(hospitalDepartments).pick({
+  locationId: true,
+  name: true,
+  isDefault: true,
+});
+
+export const insertRiskCategorySchema = createInsertSchema(riskCategories).pick({
+  name: true,
+  orderIndex: true,
+  isActive: true,
+});
+
+export const insertRiskSubCategorySchema = createInsertSchema(riskSubCategories).pick({
+  categoryId: true,
+  name: true,
+  orderIndex: true,
+  isActive: true,
+});
+
+export const insertRiskAssessmentSchema = createInsertSchema(riskAssessments).pick({
+  locationId: true,
+  departmentId: true,
+  detectionDate: true,
+  categoryId: true,
+  subCategoryId: true,
+  area: true,
+  activity: true,
+  hazard: true,
+  risk: true,
+  potentialConsequence: true,
+  affectedPersons: true,
+  otherAffectedPersons: true,
+  currentStateDescription: true,
+  currentStateImages: true,
+  currentProbability: true,
+  currentFrequency: true,
+  currentSeverity: true,
+  improvementMeasures: true,
+  improvementResponsible: true,
+  targetDate: true,
+  status: true,
+  priority: true,
+}).extend({
+  detectionDate: z.union([
+    z.string().transform((str) => new Date(str)),
+    z.date()
+  ]),
+  targetDate: z.union([
+    z.string().transform((str) => new Date(str)),
+    z.date()
+  ]),
+  affectedPersons: z.array(z.string()).default([]),
+  currentProbability: z.number().refine(val => [0.2, 0.5, 1, 3, 6, 10].includes(val), {
+    message: "Geçersiz olasılık değeri"
+  }),
+  currentFrequency: z.number().refine(val => [0.5, 1, 2, 3, 6, 10].includes(val), {
+    message: "Geçersiz frekans değeri"
+  }),
+  currentSeverity: z.number().refine(val => [1, 3, 7, 15, 40, 100].includes(val), {
+    message: "Geçersiz şiddet değeri"
+  }),
+});
+
+export const insertRiskImprovementSchema = createInsertSchema(riskImprovements).pick({
+  assessmentId: true,
+  improvementDescription: true,
+  completionDate: true,
+  postImprovementImages: true,
+  postProbability: true,
+  postFrequency: true,
+  postSeverity: true,
+  effectivenessMeasurement: true,
+  effectivenessOther: true,
+  controlResponsible: true,
+  result: true,
+  relatedRegulation: true,
+}).extend({
+  completionDate: z.union([
+    z.string().transform((str) => new Date(str)),
+    z.date()
+  ]),
+  postProbability: z.number().refine(val => [0.2, 0.5, 1, 3, 6, 10].includes(val), {
+    message: "Geçersiz olasılık değeri"
+  }),
+  postFrequency: z.number().refine(val => [0.5, 1, 2, 3, 6, 10].includes(val), {
+    message: "Geçersiz frekans değeri"
+  }),
+  postSeverity: z.number().refine(val => [1, 3, 7, 15, 40, 100].includes(val), {
+    message: "Geçersiz şiddet değeri"
+  }),
+  effectivenessMeasurement: z.enum([
+    "Gösterge takibi", 
+    "Belgelendirme (Rapor, Tatbikat, Kayıt v.b.)", 
+    "Sınav/Değerlendirme", 
+    "Diğer"
+  ]),
+});
+
+export const insertRegulationSchema = createInsertSchema(regulations).pick({
+  title: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -569,6 +800,25 @@ export type InsertInspectionResponse = z.infer<typeof insertInspectionResponseSc
 export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 
+// Risk Assessment types
+export type HospitalDepartment = typeof hospitalDepartments.$inferSelect;
+export type InsertHospitalDepartment = z.infer<typeof insertHospitalDepartmentSchema>;
+
+export type RiskCategory = typeof riskCategories.$inferSelect;
+export type InsertRiskCategory = z.infer<typeof insertRiskCategorySchema>;
+
+export type RiskSubCategory = typeof riskSubCategories.$inferSelect;
+export type InsertRiskSubCategory = z.infer<typeof insertRiskSubCategorySchema>;
+
+export type RiskAssessment = typeof riskAssessments.$inferSelect;
+export type InsertRiskAssessment = z.infer<typeof insertRiskAssessmentSchema>;
+
+export type RiskImprovement = typeof riskImprovements.$inferSelect;
+export type InsertRiskImprovement = z.infer<typeof insertRiskImprovementSchema>;
+
+export type Regulation = typeof regulations.$inferSelect;
+export type InsertRegulation = z.infer<typeof insertRegulationSchema>;
+
 // Utility functions
 export const calculateQuestionScore = (evaluation: string, twScore: number): number => {
   if (!evaluation) return 0;
@@ -601,6 +851,180 @@ export const CHECKLIST_CATEGORIES = [
 ] as const;
 
 export const EVALUATION_OPTIONS = [
+  "Karşılıyor",
+  "Kısmen Karşılıyor", 
+  "Karşılamıyor",
+  "Kapsam Dışı"
+] as const;
+
+// FINE-KINNEY RISK ASSESSMENT CONSTANTS
+
+// Hospital departments (predefined list)
+export const DEFAULT_HOSPITAL_DEPARTMENTS = [
+  "Acil Servis",
+  "Ameliyathane",
+  "Arşiv",
+  "Atık Alanları",
+  "Bilgi Sistemleri",
+  "Biyomedikal",
+  "CCTV Odası",
+  "Doğumhane",
+  "Eczane",
+  "Endoskopi",
+  "Girişimsel Radyoloji",
+  "İdari Ofisler",
+  "Kan Alma",
+  "Laboratuvar (Biyokimya)",
+  "Laboratuvar (Mkirobiyoloji)",
+  "Laboratuvar (Patoloji)",
+  "Laboratuvar (PCR)",
+  "Merkezi Sterilizasyon Ünitesi",
+  "Morg",
+  "Mutfak",
+  "Nükleer Tıp",
+  "Organ Nakli",
+  "Otopark (Açık)",
+  "Otopark (Kapalı)",
+  "Poliklinikler",
+  "Radyasyon Onkolojisi",
+  "Radyoloji",
+  "Santral / Çağrı Merkezi",
+  "Server Odası",
+  "Teknik Alanlar",
+  "Toplanma Alanı",
+  "Transfüzyon Merkezi",
+  "Tüp Bebek (IVF)",
+  "Yatan Hasta Katı",
+  "Yemekhane",
+  "Yoğun Bakım (Erişkin)",
+  "Yoğun Bakım (KVC)",
+  "Yoğun Bakım (NICU)",
+  "Yoğun Bakım (Pediyatrik)",
+  "Yoğun Bakım (Yenidoğan)",
+  "Diğer"
+] as const;
+
+// Fine-Kinney Probability (Olasılık) Scale
+export const FINE_KINNEY_PROBABILITY = [
+  { value: 10, label: "Beklenir, kesin" },
+  { value: 6, label: "Yüksek, oldukça mümkün" },
+  { value: 3, label: "Olası" },
+  { value: 1, label: "Mümkün fakat düşük" },
+  { value: 0.5, label: "Beklenmez fakat mümkün" },
+  { value: 0.2, label: "Beklenmez" }
+] as const;
+
+// Fine-Kinney Frequency (Frekans) Scale  
+export const FINE_KINNEY_FREQUENCY = [
+  { value: 10, label: "Hemen hemen sürekli (bir saatte birkaç defa)" },
+  { value: 6, label: "Sık (günde bir veya birkaç defa)" },
+  { value: 3, label: "Ara sıra (haftada bir veya birkaç defa)" },
+  { value: 2, label: "Sık değil (ayda bir veya birkaç defa)" },
+  { value: 1, label: "Seyrek (yılda birkaç defa)" },
+  { value: 0.5, label: "Çok seyrek (yılda bir veya daha seyrek)" }
+] as const;
+
+// Fine-Kinney Severity (Şiddet) Scale
+export const FINE_KINNEY_SEVERITY = [
+  { value: 100, label: "Birden fazla ölümlü kaza / Çevresel Felaket" },
+  { value: 40, label: "Öldürücü kaza / Ciddi çevresel zarar" },
+  { value: 15, label: "Kalıcı hasar - Yaralanma, İş kaybı / Çevresel engel oluşturma, Yakın çevreden şikayet" },
+  { value: 7, label: "Önemli hasar / Yaralanma, Dış ilkyardım ihtiyacı / Arazi sınırları dışında çevresel zarar" },
+  { value: 3, label: "Küçük hasar / Yaralanma, dahili ilkyardım / Arazi sınırları içinde çevresel zarar" },
+  { value: 1, label: "Ucuz atlatma / Çevresel zarar yok" }
+] as const;
+
+// Risk Level Categories based on Fine-Kinney score
+export const FINE_KINNEY_RISK_LEVELS = [
+  { 
+    min: 400, 
+    max: Infinity, 
+    level: "Tolerans Gösterilemez Risk", 
+    color: "bg-red-900",
+    textColor: "text-white",
+    description: "Hemen gerekli önlemler alınmalı veya tesis, bina ve çevrenin kapatılması düşünülmelidir"
+  },
+  { 
+    min: 200, 
+    max: 399, 
+    level: "Yüksek Risk", 
+    color: "bg-red-500",
+    textColor: "text-white", 
+    description: "Kısa dönemde iyileştirilmelidir (birkaç ay içinde)"
+  },
+  { 
+    min: 70, 
+    max: 199, 
+    level: "Önemli Risk", 
+    color: "bg-orange-500",
+    textColor: "text-white",
+    description: "Uzun dönemde iyileştirilmelidir (yıl içinde)"
+  },
+  { 
+    min: 20, 
+    max: 69, 
+    level: "Olası Risk", 
+    color: "bg-yellow-600",
+    textColor: "text-white",
+    description: "Gözetim altında uygulanmalıdır"
+  },
+  { 
+    min: 0.1, 
+    max: 19, 
+    level: "Düşük Risk", 
+    color: "bg-green-500",
+    textColor: "text-white",
+    description: "Önlem öncelikli değildir"
+  }
+] as const;
+
+// Affected persons options
+export const AFFECTED_PERSONS_OPTIONS = [
+  "Doktor",
+  "Hemşire", 
+  "YSP",
+  "Teknisyen",
+  "Hasta",
+  "Hasta Yakını",
+  "Çalışan",
+  "Ziyaretçi",
+  "Diğer"
+] as const;
+
+// Effectiveness measurement options
+export const EFFECTIVENESS_MEASUREMENT_OPTIONS = [
+  "Gösterge takibi",
+  "Belgelendirme (Rapor, Tatbikat, Kayıt v.b.)",
+  "Sınav/Değerlendirme",
+  "Diğer"
+] as const;
+
+// Risk assessment status options
+export const RISK_ASSESSMENT_STATUS_OPTIONS = [
+  { value: "open", label: "Açık" },
+  { value: "in_progress", label: "Devam Ediyor" },
+  { value: "completed", label: "Tamamlandı" }
+] as const;
+
+// Risk assessment priority options
+export const RISK_ASSESSMENT_PRIORITY_OPTIONS = [
+  { value: "low", label: "Düşük", color: "bg-blue-100 text-blue-800" },
+  { value: "medium", label: "Orta", color: "bg-yellow-100 text-yellow-800" },
+  { value: "high", label: "Yüksek", color: "bg-orange-100 text-orange-800" },
+  { value: "critical", label: "Kritik", color: "bg-red-100 text-red-800" }
+] as const;
+
+// Fine-Kinney calculation function
+export const calculateFineKinneyScore = (probability: number, frequency: number, severity: number): number => {
+  return probability * frequency * severity;
+};
+
+// Get risk level from Fine-Kinney score
+export const getFineKinneyRiskLevel = (score: number) => {
+  return FINE_KINNEY_RISK_LEVELS.find(level => score >= level.min && score <= level.max) || FINE_KINNEY_RISK_LEVELS[FINE_KINNEY_RISK_LEVELS.length - 1];
+};
+
+export const OLD_EVALUATION_OPTIONS = [
   "Karşılıyor",
   "Kısmen Karşılıyor", 
   "Karşılamıyor",

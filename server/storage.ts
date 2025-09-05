@@ -1,13 +1,17 @@
 import { 
   reports, findings, users, offlineQueue, locations, notifications,
   checklistTemplates, checklistSections, checklistQuestions, inspections, inspectionAssignments, inspectionResponses,
+  hospitalDepartments, riskCategories, riskSubCategories, riskAssessments, riskImprovements, regulations,
   type User, type InsertUser, type Report, type InsertReport, type Finding, type InsertFinding, 
   type OfflineQueueItem, type InsertOfflineQueueItem, type Location, type InsertLocation,
   type ChecklistTemplate, type InsertChecklistTemplate, type ChecklistSection, type InsertChecklistSection,
   type ChecklistQuestion, type InsertChecklistQuestion, 
   type Inspection, type InsertInspection, type InspectionAssignment, type InsertInspectionAssignment,
   type InspectionResponse, type InsertInspectionResponse, type Notification, type InsertNotification,
-  calculateQuestionScore, calculateLetterGrade
+  type HospitalDepartment, type InsertHospitalDepartment, type RiskCategory, type InsertRiskCategory,
+  type RiskSubCategory, type InsertRiskSubCategory, type RiskAssessment, type InsertRiskAssessment,
+  type RiskImprovement, type InsertRiskImprovement, type Regulation, type InsertRegulation,
+  calculateQuestionScore, calculateLetterGrade, calculateFineKinneyScore, getFineKinneyRiskLevel
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, inArray, sql, gt, or, isNull } from "drizzle-orm";
@@ -196,6 +200,68 @@ export interface IStorage {
   markNotificationAsRead(notificationId: string, userId: string): Promise<boolean>;
   markAllNotificationsAsRead(userId: string): Promise<boolean>;
   getNotificationCount(userId: string): Promise<number>;
+
+  // RISK ASSESSMENT OPERATIONS - Fine-Kinney Method
+  
+  // Hospital Departments operations (Specialist managed)
+  getLocationDepartments(locationId: string): Promise<HospitalDepartment[]>;
+  getHospitalDepartment(id: string): Promise<HospitalDepartment | undefined>;
+  createHospitalDepartment(department: InsertHospitalDepartment & { createdBy: string }): Promise<HospitalDepartment>;
+  updateHospitalDepartment(id: string, department: Partial<InsertHospitalDepartment>): Promise<HospitalDepartment>;
+  deleteHospitalDepartment(id: string): Promise<boolean>;
+  initializeDefaultDepartments(locationId: string, createdBy: string): Promise<HospitalDepartment[]>;
+  
+  // Risk Categories operations (Admin managed)
+  getAllRiskCategories(): Promise<RiskCategory[]>;
+  getRiskCategory(id: string): Promise<RiskCategory | undefined>;
+  createRiskCategory(category: InsertRiskCategory & { createdBy: string }): Promise<RiskCategory>;
+  updateRiskCategory(id: string, category: Partial<InsertRiskCategory>): Promise<RiskCategory>;
+  deleteRiskCategory(id: string): Promise<boolean>;
+  
+  // Risk Sub-Categories operations (Admin managed)
+  getCategorySubCategories(categoryId: string): Promise<RiskSubCategory[]>;
+  getAllRiskSubCategories(): Promise<RiskSubCategory[]>;
+  getRiskSubCategory(id: string): Promise<RiskSubCategory | undefined>;
+  createRiskSubCategory(subCategory: InsertRiskSubCategory & { createdBy: string }): Promise<RiskSubCategory>;
+  updateRiskSubCategory(id: string, subCategory: Partial<InsertRiskSubCategory>): Promise<RiskSubCategory>;
+  deleteRiskSubCategory(id: string): Promise<boolean>;
+  
+  // Risk Assessment operations (Specialist operations)
+  getRiskAssessment(id: string): Promise<RiskAssessment | undefined>;
+  getLocationRiskAssessments(locationId: string): Promise<RiskAssessment[]>;
+  getDepartmentRiskAssessments(departmentId: string): Promise<RiskAssessment[]>;
+  getUserRiskAssessments(assessorId: string): Promise<RiskAssessment[]>;
+  createRiskAssessment(assessment: InsertRiskAssessment & { assessorId: string }): Promise<RiskAssessment>;
+  updateRiskAssessment(id: string, assessment: Partial<InsertRiskAssessment>): Promise<RiskAssessment>;
+  deleteRiskAssessment(id: string): Promise<boolean>;
+  
+  // Risk Improvement operations
+  getRiskImprovement(assessmentId: string): Promise<RiskImprovement | undefined>;
+  createRiskImprovement(improvement: InsertRiskImprovement & { createdBy: string }): Promise<RiskImprovement>;
+  updateRiskImprovement(assessmentId: string, improvement: Partial<InsertRiskImprovement>): Promise<RiskImprovement>;
+  
+  // Regulation operations (Auto-complete support)
+  getRegulations(): Promise<Regulation[]>;
+  getRegulationByTitle(title: string): Promise<Regulation | undefined>;
+  createOrUpdateRegulation(title: string): Promise<Regulation>;
+  
+  // Risk Assessment Statistics
+  getRiskAssessmentStats(locationId?: string): Promise<{
+    totalAssessments: number;
+    openAssessments: number;
+    inProgressAssessments: number;
+    completedAssessments: number;
+    highRiskAssessments: number;
+    mediumRiskAssessments: number;
+    lowRiskAssessments: number;
+    avgRiskScore: number;
+  }>;
+  
+  getDepartmentRiskStats(departmentId: string): Promise<{
+    totalAssessments: number;
+    avgRiskScore: number;
+    riskDistribution: { level: string; count: number }[];
+  }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1711,6 +1777,451 @@ export class DatabaseStorage implements IStorage {
       console.error('Error fetching notification count:', error);
       return 0;
     }
+  }
+
+  // RISK ASSESSMENT IMPLEMENTATION - Fine-Kinney Method
+  
+  // Hospital Departments operations (Specialist managed)
+  async getLocationDepartments(locationId: string): Promise<HospitalDepartment[]> {
+    return await db
+      .select()
+      .from(hospitalDepartments)
+      .where(eq(hospitalDepartments.locationId, locationId))
+      .orderBy(hospitalDepartments.name);
+  }
+  
+  async getHospitalDepartment(id: string): Promise<HospitalDepartment | undefined> {
+    const [department] = await db
+      .select()
+      .from(hospitalDepartments)
+      .where(eq(hospitalDepartments.id, id));
+    return department;
+  }
+  
+  async createHospitalDepartment(department: InsertHospitalDepartment & { createdBy: string }): Promise<HospitalDepartment> {
+    const [created] = await db
+      .insert(hospitalDepartments)
+      .values(department)
+      .returning();
+    return created;
+  }
+  
+  async updateHospitalDepartment(id: string, department: Partial<InsertHospitalDepartment>): Promise<HospitalDepartment> {
+    const [updated] = await db
+      .update(hospitalDepartments)
+      .set({ ...department, updatedAt: new Date() })
+      .where(eq(hospitalDepartments.id, id))
+      .returning();
+    return updated;
+  }
+  
+  async deleteHospitalDepartment(id: string): Promise<boolean> {
+    const result = await db.delete(hospitalDepartments).where(eq(hospitalDepartments.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+  
+  async initializeDefaultDepartments(locationId: string, createdBy: string): Promise<HospitalDepartment[]> {
+    const { DEFAULT_HOSPITAL_DEPARTMENTS } = await import('@shared/schema');
+    const departments = await Promise.all(
+      DEFAULT_HOSPITAL_DEPARTMENTS.map(name => 
+        this.createHospitalDepartment({
+          locationId,
+          name,
+          isDefault: true,
+          createdBy
+        })
+      )
+    );
+    return departments;
+  }
+  
+  // Risk Categories operations (Admin managed)
+  async getAllRiskCategories(): Promise<RiskCategory[]> {
+    return await db
+      .select()
+      .from(riskCategories)
+      .where(eq(riskCategories.isActive, true))
+      .orderBy(riskCategories.orderIndex, riskCategories.name);
+  }
+  
+  async getRiskCategory(id: string): Promise<RiskCategory | undefined> {
+    const [category] = await db
+      .select()
+      .from(riskCategories)
+      .where(eq(riskCategories.id, id));
+    return category;
+  }
+  
+  async createRiskCategory(category: InsertRiskCategory & { createdBy: string }): Promise<RiskCategory> {
+    const [created] = await db
+      .insert(riskCategories)
+      .values(category)
+      .returning();
+    return created;
+  }
+  
+  async updateRiskCategory(id: string, category: Partial<InsertRiskCategory>): Promise<RiskCategory> {
+    const [updated] = await db
+      .update(riskCategories)
+      .set({ ...category, updatedAt: new Date() })
+      .where(eq(riskCategories.id, id))
+      .returning();
+    return updated;
+  }
+  
+  async deleteRiskCategory(id: string): Promise<boolean> {
+    const result = await db.delete(riskCategories).where(eq(riskCategories.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+  
+  // Risk Sub-Categories operations (Admin managed)
+  async getCategorySubCategories(categoryId: string): Promise<RiskSubCategory[]> {
+    return await db
+      .select()
+      .from(riskSubCategories)
+      .where(and(
+        eq(riskSubCategories.categoryId, categoryId),
+        eq(riskSubCategories.isActive, true)
+      ))
+      .orderBy(riskSubCategories.orderIndex, riskSubCategories.name);
+  }
+  
+  async getAllRiskSubCategories(): Promise<RiskSubCategory[]> {
+    return await db
+      .select()
+      .from(riskSubCategories)
+      .where(eq(riskSubCategories.isActive, true))
+      .orderBy(riskSubCategories.orderIndex, riskSubCategories.name);
+  }
+  
+  async getRiskSubCategory(id: string): Promise<RiskSubCategory | undefined> {
+    const [subCategory] = await db
+      .select()
+      .from(riskSubCategories)
+      .where(eq(riskSubCategories.id, id));
+    return subCategory;
+  }
+  
+  async createRiskSubCategory(subCategory: InsertRiskSubCategory & { createdBy: string }): Promise<RiskSubCategory> {
+    const [created] = await db
+      .insert(riskSubCategories)
+      .values(subCategory)
+      .returning();
+    return created;
+  }
+  
+  async updateRiskSubCategory(id: string, subCategory: Partial<InsertRiskSubCategory>): Promise<RiskSubCategory> {
+    const [updated] = await db
+      .update(riskSubCategories)
+      .set({ ...subCategory, updatedAt: new Date() })
+      .where(eq(riskSubCategories.id, id))
+      .returning();
+    return updated;
+  }
+  
+  async deleteRiskSubCategory(id: string): Promise<boolean> {
+    const result = await db.delete(riskSubCategories).where(eq(riskSubCategories.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+  
+  // Risk Assessment operations (Specialist operations)
+  async getRiskAssessment(id: string): Promise<RiskAssessment | undefined> {
+    const [assessment] = await db
+      .select()
+      .from(riskAssessments)
+      .where(eq(riskAssessments.id, id));
+    return assessment;
+  }
+  
+  async getLocationRiskAssessments(locationId: string): Promise<RiskAssessment[]> {
+    return await db
+      .select()
+      .from(riskAssessments)
+      .where(eq(riskAssessments.locationId, locationId))
+      .orderBy(desc(riskAssessments.createdAt));
+  }
+  
+  async getDepartmentRiskAssessments(departmentId: string): Promise<RiskAssessment[]> {
+    return await db
+      .select()
+      .from(riskAssessments)
+      .where(eq(riskAssessments.departmentId, departmentId))
+      .orderBy(desc(riskAssessments.currentRiskScore), desc(riskAssessments.createdAt));
+  }
+  
+  async getUserRiskAssessments(assessorId: string): Promise<RiskAssessment[]> {
+    return await db
+      .select()
+      .from(riskAssessments)
+      .where(eq(riskAssessments.assessorId, assessorId))
+      .orderBy(desc(riskAssessments.createdAt));
+  }
+  
+  async createRiskAssessment(assessment: InsertRiskAssessment & { assessorId: string }): Promise<RiskAssessment> {
+    const { calculateFineKinneyScore, getFineKinneyRiskLevel } = await import('@shared/schema');
+    
+    // Calculate risk score and level
+    const riskScore = calculateFineKinneyScore(
+      assessment.currentProbability,
+      assessment.currentFrequency, 
+      assessment.currentSeverity
+    );
+    
+    const riskLevel = getFineKinneyRiskLevel(riskScore);
+    
+    // Generate assessment number
+    const assessmentCount = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(riskAssessments)
+      .where(eq(riskAssessments.locationId, assessment.locationId));
+    
+    const assessmentNumber = `RSK-${new Date().getFullYear()}-${String(assessmentCount[0]?.count + 1 || 1).padStart(4, '0')}`;
+    
+    const [created] = await db
+      .insert(riskAssessments)
+      .values({
+        ...assessment,
+        assessmentNumber,
+        currentRiskScore: riskScore,
+        currentRiskLevel: riskLevel.level,
+        currentRiskColor: riskLevel.color,
+      })
+      .returning();
+    
+    return created;
+  }
+  
+  async updateRiskAssessment(id: string, assessment: Partial<InsertRiskAssessment>): Promise<RiskAssessment> {
+    let updateData = { ...assessment, updatedAt: new Date() };
+    
+    // Recalculate risk score if probability, frequency, or severity changed
+    if (assessment.currentProbability || assessment.currentFrequency || assessment.currentSeverity) {
+      const current = await this.getRiskAssessment(id);
+      if (current) {
+        const { calculateFineKinneyScore, getFineKinneyRiskLevel } = await import('@shared/schema');
+        
+        const riskScore = calculateFineKinneyScore(
+          assessment.currentProbability ?? current.currentProbability,
+          assessment.currentFrequency ?? current.currentFrequency,
+          assessment.currentSeverity ?? current.currentSeverity
+        );
+        
+        const riskLevel = getFineKinneyRiskLevel(riskScore);
+        
+        updateData = {
+          ...updateData,
+          currentRiskScore: riskScore,
+          currentRiskLevel: riskLevel.level,
+          currentRiskColor: riskLevel.color,
+        };
+      }
+    }
+    
+    const [updated] = await db
+      .update(riskAssessments)
+      .set(updateData)
+      .where(eq(riskAssessments.id, id))
+      .returning();
+    
+    return updated;
+  }
+  
+  async deleteRiskAssessment(id: string): Promise<boolean> {
+    // Delete related improvements first
+    await db.delete(riskImprovements).where(eq(riskImprovements.assessmentId, id));
+    
+    const result = await db.delete(riskAssessments).where(eq(riskAssessments.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+  
+  // Risk Improvement operations
+  async getRiskImprovement(assessmentId: string): Promise<RiskImprovement | undefined> {
+    const [improvement] = await db
+      .select()
+      .from(riskImprovements)
+      .where(eq(riskImprovements.assessmentId, assessmentId));
+    return improvement;
+  }
+  
+  async createRiskImprovement(improvement: InsertRiskImprovement & { createdBy: string }): Promise<RiskImprovement> {
+    const { calculateFineKinneyScore, getFineKinneyRiskLevel } = await import('@shared/schema');
+    
+    // Calculate post-improvement risk score and level
+    const postRiskScore = calculateFineKinneyScore(
+      improvement.postProbability,
+      improvement.postFrequency,
+      improvement.postSeverity
+    );
+    
+    const postRiskLevel = getFineKinneyRiskLevel(postRiskScore);
+    
+    const [created] = await db
+      .insert(riskImprovements)
+      .values({
+        ...improvement,
+        postRiskScore,
+        postRiskLevel: postRiskLevel.level,
+        postRiskColor: postRiskLevel.color,
+      })
+      .returning();
+    
+    // Update the original assessment status to completed
+    await this.updateRiskAssessment(improvement.assessmentId, { status: 'completed' });
+    
+    // Add regulation to library if provided
+    if (improvement.relatedRegulation) {
+      await this.createOrUpdateRegulation(improvement.relatedRegulation);
+    }
+    
+    return created;
+  }
+  
+  async updateRiskImprovement(assessmentId: string, improvement: Partial<InsertRiskImprovement>): Promise<RiskImprovement> {
+    let updateData = { ...improvement, updatedAt: new Date() };
+    
+    // Recalculate post-improvement risk score if values changed
+    if (improvement.postProbability || improvement.postFrequency || improvement.postSeverity) {
+      const current = await this.getRiskImprovement(assessmentId);
+      if (current) {
+        const { calculateFineKinneyScore, getFineKinneyRiskLevel } = await import('@shared/schema');
+        
+        const postRiskScore = calculateFineKinneyScore(
+          improvement.postProbability ?? current.postProbability,
+          improvement.postFrequency ?? current.postFrequency,
+          improvement.postSeverity ?? current.postSeverity
+        );
+        
+        const postRiskLevel = getFineKinneyRiskLevel(postRiskScore);
+        
+        updateData = {
+          ...updateData,
+          postRiskScore,
+          postRiskLevel: postRiskLevel.level,
+          postRiskColor: postRiskLevel.color,
+        };
+      }
+    }
+    
+    const [updated] = await db
+      .update(riskImprovements)
+      .set(updateData)
+      .where(eq(riskImprovements.assessmentId, assessmentId))
+      .returning();
+    
+    // Add regulation to library if provided
+    if (improvement.relatedRegulation) {
+      await this.createOrUpdateRegulation(improvement.relatedRegulation);
+    }
+    
+    return updated;
+  }
+  
+  // Regulation operations (Auto-complete support)
+  async getRegulations(): Promise<Regulation[]> {
+    return await db
+      .select()
+      .from(regulations)
+      .orderBy(desc(regulations.usageCount), regulations.title);
+  }
+  
+  async getRegulationByTitle(title: string): Promise<Regulation | undefined> {
+    const [regulation] = await db
+      .select()
+      .from(regulations)
+      .where(eq(regulations.title, title));
+    return regulation;
+  }
+  
+  async createOrUpdateRegulation(title: string): Promise<Regulation> {
+    const existing = await this.getRegulationByTitle(title);
+    
+    if (existing) {
+      // Increment usage count
+      const [updated] = await db
+        .update(regulations)
+        .set({ 
+          usageCount: existing.usageCount + 1,
+          updatedAt: new Date()
+        })
+        .where(eq(regulations.id, existing.id))
+        .returning();
+      return updated;
+    } else {
+      // Create new regulation
+      const [created] = await db
+        .insert(regulations)
+        .values({ title })
+        .returning();
+      return created;
+    }
+  }
+  
+  // Risk Assessment Statistics
+  async getRiskAssessmentStats(locationId?: string): Promise<{
+    totalAssessments: number;
+    openAssessments: number;
+    inProgressAssessments: number;
+    completedAssessments: number;
+    highRiskAssessments: number;
+    mediumRiskAssessments: number;
+    lowRiskAssessments: number;
+    avgRiskScore: number;
+  }> {
+    let query = db.select().from(riskAssessments);
+    
+    if (locationId) {
+      query = query.where(eq(riskAssessments.locationId, locationId));
+    }
+    
+    const assessments = await query;
+    
+    const totalAssessments = assessments.length;
+    const openAssessments = assessments.filter(a => a.status === 'open').length;
+    const inProgressAssessments = assessments.filter(a => a.status === 'in_progress').length;
+    const completedAssessments = assessments.filter(a => a.status === 'completed').length;
+    const highRiskAssessments = assessments.filter(a => a.currentRiskScore >= 200).length;
+    const mediumRiskAssessments = assessments.filter(a => a.currentRiskScore >= 70 && a.currentRiskScore < 200).length;
+    const lowRiskAssessments = assessments.filter(a => a.currentRiskScore < 70).length;
+    const avgRiskScore = totalAssessments > 0 
+      ? assessments.reduce((sum, a) => sum + a.currentRiskScore, 0) / totalAssessments 
+      : 0;
+    
+    return {
+      totalAssessments,
+      openAssessments,
+      inProgressAssessments,
+      completedAssessments,
+      highRiskAssessments,
+      mediumRiskAssessments,
+      lowRiskAssessments,
+      avgRiskScore: Math.round(avgRiskScore * 100) / 100,
+    };
+  }
+  
+  async getDepartmentRiskStats(departmentId: string): Promise<{
+    totalAssessments: number;
+    avgRiskScore: number;
+    riskDistribution: { level: string; count: number }[];
+  }> {
+    const assessments = await this.getDepartmentRiskAssessments(departmentId);
+    const totalAssessments = assessments.length;
+    const avgRiskScore = totalAssessments > 0 
+      ? assessments.reduce((sum, a) => sum + a.currentRiskScore, 0) / totalAssessments 
+      : 0;
+    
+    const riskDistribution = [
+      { level: 'Tolerans Gösterilemez Risk', count: assessments.filter(a => a.currentRiskScore >= 400).length },
+      { level: 'Yüksek Risk', count: assessments.filter(a => a.currentRiskScore >= 200 && a.currentRiskScore < 400).length },
+      { level: 'Önemli Risk', count: assessments.filter(a => a.currentRiskScore >= 70 && a.currentRiskScore < 200).length },
+      { level: 'Olası Risk', count: assessments.filter(a => a.currentRiskScore >= 20 && a.currentRiskScore < 70).length },
+      { level: 'Düşük Risk', count: assessments.filter(a => a.currentRiskScore < 20).length },
+    ];
+    
+    return {
+      totalAssessments,
+      avgRiskScore: Math.round(avgRiskScore * 100) / 100,
+      riskDistribution,
+    };
   }
 }
 

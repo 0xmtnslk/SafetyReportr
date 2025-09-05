@@ -1,0 +1,194 @@
+Şimdi seninle hem admin tarafına hem uzman tarafına Risk Değerlendirme Modülü yapacağız. Bu oldukça kapsamlı aşağıdaki açıklamalara göre adımları takip edelim.
+Fine-Kinney Metodu
+
+Risk Skoru(R) =Olasılık(O)*Frekans(F)*Şiddet(Ş) Formülü ile hesaplanıyor.
+
+Olasılık (zararın gerçekleşme olasılığı)
+10 Beklenir, kesin
+6 Yüksek, oldukça mümkün
+3 Olası
+1 Mümkün fakat düşük
+0,5 Beklenmez fakat mümkün
+0,2 Beklenmez
+
+Frekans (tehlikeye zaman içinde maruz kalma tekrarı)
+
+10 Hemen hemen sürekli (bir saatte birkaç defa)
+6 Sık (günde bir veya birkaç defa)
+3 Ara sıra (haftada bir veya birkaç defa)
+2 Sık değil (ayda bir veya birkaç defa)
+1 Seyrek (yılda birkaç defa)
+0,5 Çok seyrek (yılda bir veya daha seyrek)
+
+
+Şiddet (insan ve/veya çevre üzerinde yaratacağı tahmini zarar)
+
+100 Birden fazla ölümlü kaza / Çevresel Felaket
+40 Öldürücü kaza / Ciddi çevresel zarar
+15 Kalıcı hasar - Yaralanma, İş kaybı / Çevresel engel oluşturma, Yakın çevreden şikayet
+7 Önemli hasar / Yaralanma, Dış ilkyardım ihtiyacı / Arazi sınırları dışında çevresel zarar
+3 Küçük hasar / Yaralanma, dahili ilkyardım / Arazi sınırları içinde çevresel zarar
+1 Ucuz atlatma / Çevresel zarar yok
+
+Risk Değeri  (R)
+
+400 =< R Tolerans Gösterilemez Risk (hemen gerekli önlemler alınmalı veya tesis, bina ve çevrenin kapatılması düşünülmelidir. Çok koyu kırmızı renk
+200 =< R < 400 Yüksek Risk (kısa dönemde iyileştirilmelidir. (birkaç ay içinde)) Kırmızı renk
+70 =< R < 200 Önemli Risk (uzun dönemde iyileştirilmelidir. (yıl içinde)) Turuncu Renk
+20=< R < 70 Olası Risk (gözetim altında uygulanmalıdır.) Koyu Sarı Renk
+0,1=< R < 20 Düşük Risk (önlem öncelikli değildir.) Yeşil Renk
+
+Şimdi bu Risk Değerlendirme metodu için Ayrı bir bölüm hazırlayalım. Bu metod sabit şekilde Uygulama içinde olacak. Bu metodu doğru şekilde sisteme entegre edelim.
+
+İş güvenliği uzmanı bu metodu kullanarak hastanesini risk değerlendirmesini yapacak.
+
+Şimdi değerlendirme yaparken hangi verileri girecek ve sen hangisini hesaplayacaksın o kısma geliyorum.
+
+Bu risk değerlendirmesi bölüm bazlı yapılıyor. O yüzden Hastanenin bölümleri olacak.
+Hastane admin tarafından açılıyor onda sorun yok. Ama bölümleri İş güvenliği uzmanı girmeli ve kayıt edip hastane üzerine işlemeli. Burada yetki karmaşına gerek yok admin hastaneyi açar hastanenin bölümleri adresi tehlike sınıfı vs. gibi işlemlerin hepsini iş güvenliği uzmanı yapar. Yetki sistemini kontrol edersin hata var ise düzeltirsin. 
+….. hastanesi (bu zaten ilgili hastanenin uzmanı tarafından sisteme girileceği için oradan alırsın.
+TEHLİKE BELİRLEME VE RİSK DEĞERLENDİRME TABLOSU (FINE KINNEY METODU)
+Değerlendirilen Birim/Bölüm
+(Bu daha önceden uzmanın açtığı bölümler olacak. istersen sana bölümleri yazayım otomatik olarak Hastane açıldığında içine at, gerekli olduğunda uzman ekleyip çıkarabilsin. Sana bırakıyorum.
+
+Birim/Bölümler
+Acil Servis
+Ameliyathane
+Arşiv
+Atık Alanları
+Bilgi Sistemleri
+Biyomedikal
+CCTV Odası
+Doğumhane
+Eczane
+Endoskopi
+Girişimsel Radyoloji
+İdari Ofisler
+Kan Alma
+Laboratuvar (Biyokimya)
+Laboratuvar (Mkirobiyoloji)
+Laboratuvar (Patoloji)
+Laboratuvar (PCR)
+Merkezi Sterilizasyon Ünitesi
+Morg
+Mutfak
+Nükleer Tıp
+Organ Nakli
+Otopark (Açık)
+Otopark (Kapalı)
+Poliklinikler
+Radyasyon Onkolojisi
+Radyoloji
+Santral / Çağrı Merkezi
+Server Odası
+Teknik Alanlar
+Toplanma Alanı
+Transfüzyon Merkezi
+Tüp Bebek (IVF)
+Yatan Hasta Katı
+Yemekhane
+Yoğun Bakım (Erişkin)
+Yoğun Bakım (KVC)
+Yoğun Bakım (NICU)
+Yoğun Bakım (Pediyatrik)
+Yoğun Bakım (Yenidoğan)
+Diğer
+bunun haricinde bir bölüm eklemek istediğinde iş güvenliği uzmanın bölüm eklemesine izin vermeli ve sisteme işlemelisin.
+
+Şimdi Risk Kategorilere geliyorum Burası önemli
+Bu Risk kategorileri benim admin panelinde analizlerimde kullanacağım parametreler bunu ona göre hazırlaman gerekiyor.
+Tıbbi Hizmetler
+Yönetsel Hizmetler
+Tesis Güvenliği
+Çevre Güvenliği
+İş Sağlığı ve Güvenliği
+
+Şimdi de bu Risk kategorilerin Alt Risk kategori başlarını sırasıyla veriyorum.
+
+Tıbbi Hizmetler;
+
+Hizmete erişim ile ilgili  riskler
+Hasta kabul süreci ile ilgili riskler
+Tanı süreci ile ilgili riskler
+Tedavi ve rehabilitasyon süreci ile ilgili riskler
+Tıbbi kayıt ve arşiv süreci ile ilgili riskler
+
+Yönetsel Hizmetler;
+
+İdari süreçler ile ilgili riskler
+Finansal süreçler ile ilgili riskler
+İtibar yönetimi
+Paydaşlarla iletişim süreçlerine yönelik riskler
+Bilgi yönetimi süreçleri ile ilgili riskler
+
+Tesis Güvenliği;
+
+Atık Yönetimi sürecindeki riskler
+Tıbbi Cihaz ve malzeme yönetimi süreci riskleri
+Diğer cihaz ve malzeme yönetim süreci riskleri
+Yangın Güvenliği ile ilgili riskler
+Altyapı Sistemleri ile ilgili riskler
+İnşaat ve Renovasyon ile ilgili riskler
+Acil Durum ve Afet Yönetimi ile ilgili riskler
+Emniyet ile ilgili riskler
+
+Çevre Güvenliği;
+Hava kirliliği oluşturabilecek unsurlar
+Atıkların çevreye zarar vermesi
+Çevreden hastaneye gelecek zararlar
+Tehlikeli atıklardan oluşabilecek zararlar
+
+İş Sağlığı ve Güvenliği;
+Güvenlik - Fiziksel Risk Etmenleri
+Güvenlik - Biyolojik Risk Etmenleri
+Güvenlik - Psikososyal Risk Etmenleri
+Güvenlik - Ergonomik Risk Etmenleri
+Tehlikeli Madde Yönetimi - Kimyasal Risk Etmenleri
+
+Bu Risk kategorisi ve alt risk kategorileri sistem içinde olmalı ve gerektiğinde admin bunlarda düzenleme ve ekleme çıkarma yapabilmelidir. 
+Uzmanların bu kategorilerde değişiklik yapmasına gerek yok.
+
+Bir bölüm/birimi risk değerlendirmesini yaparken
+No (Bunu bölüm içinde girilen riskleri yüksekten düşüğe göre sıraladıktan sonra kendin otomatik verecek şekilde ayarlayabilirsin.)
+Tespit tarihi (Bunu uzman yazarak yada kendisi tarhiten seçerek girebilir.)
+Risk Kategorisi (bu yukarıda verdiğim başlıklardan dropdown benzeri yapıdan seçilebilir.)
+Alt Risk Kategorisi ( bu yukarıda veridiğim alt risk kategorilerinden dropdown benzeri olarak seçilebilir.)
+Alan (bu ilgili bölümde tespit alan ekipman vs. yazman için serbest bölüm uzman dolduracak.)
+Faaliyet (bu yapılan iş yada olayla ilgili uzman tarafından yazılacak)
+Tehlike (uzman tarafından doldurulacak)
+Risk (uzman tarafından doldurulacak)
+Sonuç/Olası Etki Zarar (uzman tarafından doldurulacak)
+Riskten Etkinlecek kişiler (Burada Doktor, Hemşire, YSP, Teknisyen, Hasta, Hasta Yakını, Çalışan, Ziyaretçi gibi seçenekler olsun. En sonda diğer olursa uzman istediği gibi yazabilsin.)
+Mevcut Durum Açıklaması (uzman tarafından doldurulacak)
+Mevcut Durum Görseli (uzman tarafından tespit edilen fotoğraf varsa eklenecek.
+Mevcut Risk Skoru
+Olasılık (metod'da verdiğim olasılık değerleri olsun uzman içinden seçsin.)
+Frekans (metod'da verdiğim frekans değerleri olsun uzman içinden seçsin.)
+Şiddet (metod'da verdiğim şiddet değerleri olsun uzman içinden seçsin.)
+Risk Puanı: Verdiğim formüle göre hesaplama yapacaksın. 
+Risk Seviyesi: Risk Değeri  (R) burada verdiğim değer ve karşılığı tanımlama ve renge göre yazman gerekiyor.
+İyileştirme Planı
+Alınacak Önlemler / İyileştirici Faaliyet: Uzman dolduracak
+İyileştirme Sorumlusu: Uzman tarafından doldurulacak
+Termin Tarihi: Uzman tarafından doldurulacak
+
+Şimdi ikinci tarafa geldik ilk riski tespit ettikten sonra iyileştirme faaliyetlerinin takibi için önemli bir unsur
+İyieştirme Açıklaması(Tespit edilen riske ilişkin yapılan iyileştirmeler) uzman tarafından doldurulacak
+İyileştirme tamamlanma tarihi: uzman dolduracak
+İyileştirme Sonrası Görsel: uzman foto yükleyecek.
+İyileştirme Sonrası Risk Skoru
+Olasılık (metod'da verdiğim olasılık değerleri olsun uzman içinden seçsin.)
+Frekans (metod'da verdiğim frekans değerleri olsun uzman içinden seçsin.)
+Şiddet (metod'da verdiğim şiddet değerleri olsun uzman içinden seçsin.)
+Risk Puanı: Verdiğim formüle göre hesaplama yapacaksın. 
+Risk Seviyesi: Risk Değeri  (R) burada verdiğim değer ve karşılığı tanımlama ve renge göre yazman gerekiyor.
+Etkinlik Ölçüm Yöntemi (burada dropdown seçmeli olabilir. Dropdown da Gösterge takibi, Belgelendirme (Rapor, Tatbikat, Kayıt v.b.), Sınav/Değerlendirme, Diğer)
+İyileştirme Kontrol Sorumlusu: uzman dolduracak
+Sonuç: Uzman dolduracak
+İlgili Mevzuat Uzman dolduracak. (Fakat burada şunu yapmanı istiyorum. Buraya eklenen mevzuatı yasa ve yönetmeliği sisteme kayıt et bir sonraki yazımda sende kayıtlı olanı otomatik tamamlayarak yaz.
+
+Bu sistemde tek tek riskler belirlenip kayıt edildikten sonra bunları yukarıdaki tüm başlıklarla birlikte liste olarak göstermen gerekiyor. Önce altyapısı bir yapalım sonra üzerinde düzeltmeler yaparız.
+
+
+
+
