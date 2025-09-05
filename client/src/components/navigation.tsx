@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { HardHat, Home, Plus, FileText, LogOut, Shield, Menu, X, CheckSquare, BarChart3, TrendingUp, User, ChevronDown, ChevronLeft, ChevronRight, Bell, Building2 } from "lucide-react";
+import { HardHat, Home, Plus, FileText, LogOut, Shield, Menu, X, CheckSquare, BarChart3, TrendingUp, User, ChevronDown, ChevronLeft, ChevronRight, Bell, Building2, AlertTriangle } from "lucide-react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import NotificationDropdown from "./NotificationDropdown";
@@ -48,11 +48,12 @@ export default function Navigation({ children }: NavigationProps) {
       );
     }
     
-    // Safety specialists can see their inspection history and manage hospital
+    // Safety specialists can see their inspection history, manage hospital and risk assessment
     if (['safety_specialist', 'occupational_physician'].includes(user?.role || '')) {
       baseItems.push(
         { path: "/inspection-history", label: "Denetim Geçmişim", icon: BarChart3 },
         { path: "/hospital-management", label: "Hastane Yönetimi", icon: Building2 },
+        { path: "/risk-assessment", label: "Risk Değerlendirme", icon: AlertTriangle },
       );
     }
     
