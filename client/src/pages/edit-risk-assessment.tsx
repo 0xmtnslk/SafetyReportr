@@ -279,6 +279,15 @@ export default function EditRiskAssessmentPage() {
 
   const riskLevel = getRiskLevel(riskScore);
 
+  // Calculate improvement risk score
+  const improvementProbability = form.watch('improvementProbability');
+  const improvementFrequency = form.watch('improvementFrequency');
+  const improvementSeverity = form.watch('improvementSeverity');
+  const improvementRiskScore = (improvementProbability && improvementFrequency && improvementSeverity) 
+    ? improvementProbability * improvementFrequency * improvementSeverity 
+    : 0;
+  const improvementRiskLevel = improvementRiskScore > 0 ? getRiskLevel(improvementRiskScore) : null;
+
   // Handle form submission
   const onSubmit = (data: RiskAssessmentFormData) => {
     updateMutation.mutate(data);
@@ -862,12 +871,13 @@ export default function EditRiskAssessmentPage() {
               <div className="bg-white p-4 rounded-lg border-2 border-dashed border-green-300">
                 <div className="text-center">
                   <div className="text-lg font-semibold text-green-700 mb-2">
-                    İyileştirme Sonrası Risk Skoru: {
-                      (form.watch('improvementProbability') && form.watch('improvementFrequency') && form.watch('improvementSeverity'))
-                      ? (form.watch('improvementProbability') * form.watch('improvementFrequency') * form.watch('improvementSeverity')).toFixed(1)
-                      : '-'
-                    }
+                    İyileştirme Sonrası Risk Skoru: {improvementRiskScore > 0 ? improvementRiskScore.toFixed(1) : '-'}
                   </div>
+                  {improvementRiskLevel && (
+                    <div className={`inline-block px-4 py-2 rounded-full text-white text-sm font-medium ${improvementRiskLevel.color}`}>
+                      {improvementRiskLevel.level}
+                    </div>
+                  )}
                 </div>
               </div>
             </CardContent>
