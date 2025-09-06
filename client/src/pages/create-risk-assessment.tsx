@@ -689,118 +689,6 @@ export default function CreateRiskAssessmentPage() {
               </CardContent>
             </Card>
 
-            {/* Improvement Post-Assessment Card */}
-            <Card className="bg-green-50 border-green-200">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Calculator className="h-5 w-5 text-green-600" />
-                  İyileştirme Sonrası Risk Skoru
-                </CardTitle>
-                <CardDescription>
-                  İyileştirme önlemleri uygulandıktan sonraki beklenen risk seviyesi
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <FormField
-                  control={form.control}
-                  name="improvementProbability"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>İyileştirilmiş Olasılık</FormLabel>
-                      <Select onValueChange={(value) => field.onChange(value ? Number(value) : undefined)}>
-                        <FormControl>
-                          <SelectTrigger data-testid="select-improvement-probability">
-                            <SelectValue placeholder="Seçin..." />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {fineKinneyValues?.probability.map((item) => (
-                            <SelectItem key={item.value} value={item.value.toString()}>
-                              {item.value} - {item.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="improvementFrequency"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>İyileştirilmiş Sıklık</FormLabel>
-                      <Select onValueChange={(value) => field.onChange(value ? Number(value) : undefined)}>
-                        <FormControl>
-                          <SelectTrigger data-testid="select-improvement-frequency">
-                            <SelectValue placeholder="Seçin..." />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {fineKinneyValues?.frequency.map((item) => (
-                            <SelectItem key={item.value} value={item.value.toString()}>
-                              {item.value} - {item.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="improvementSeverity"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>İyileştirilmiş Şiddet</FormLabel>
-                      <Select onValueChange={(value) => field.onChange(value ? Number(value) : undefined)}>
-                        <FormControl>
-                          <SelectTrigger data-testid="select-improvement-severity">
-                            <SelectValue placeholder="Seçin..." />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {fineKinneyValues?.severity.map((item) => (
-                            <SelectItem key={item.value} value={item.value.toString()}>
-                              {item.value} - {item.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Improvement Risk Calculation Result */}
-                {calculatedImprovementRisk && (
-                  <div className="md:col-span-3">
-                    <div className="mt-4 p-4 bg-white rounded-lg border">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm text-gray-600">Hesaplanan İyileştirilmiş Risk Skoru</p>
-                          <p className="text-3xl font-bold" data-testid="calculated-improvement-risk-score">
-                            {calculatedImprovementRisk.score.toFixed(0)}
-                          </p>
-                        </div>
-                        <Badge 
-                          style={{ backgroundColor: calculatedImprovementRisk.color }}
-                          className="text-white text-lg px-4 py-2"
-                          data-testid="calculated-improvement-risk-level"
-                        >
-                          {calculatedImprovementRisk.level}
-                        </Badge>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
             {/* Improvement Plan Card */}
             <Card className="bg-white shadow-sm border border-gray-200">
               <CardHeader>
@@ -957,6 +845,118 @@ export default function CreateRiskAssessmentPage() {
                     </FormItem>
                   )}
                 />
+              </CardContent>
+            </Card>
+
+            {/* Improvement Post-Assessment Card - Moved After Effectiveness */}
+            <Card className="bg-green-50 border-green-200">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Calculator className="h-5 w-5 text-green-600" />
+                  İyileştirme Sonrası Risk Skoru
+                </CardTitle>
+                <CardDescription>
+                  İyileştirme önlemleri uygulandıktan sonraki beklenen risk seviyesi
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <FormField
+                  control={form.control}
+                  name="improvementProbability"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>İyileştirilmiş Olasılık</FormLabel>
+                      <Select onValueChange={(value) => field.onChange(value ? Number(value) : undefined)}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-improvement-probability">
+                            <SelectValue placeholder="Seçin..." />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {fineKinneyValues?.probability.map((item) => (
+                            <SelectItem key={item.value} value={item.value.toString()}>
+                              {item.value} - {item.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="improvementFrequency"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>İyileştirilmiş Sıklık</FormLabel>
+                      <Select onValueChange={(value) => field.onChange(value ? Number(value) : undefined)}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-improvement-frequency">
+                            <SelectValue placeholder="Seçin..." />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {fineKinneyValues?.frequency.map((item) => (
+                            <SelectItem key={item.value} value={item.value.toString()}>
+                              {item.value} - {item.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="improvementSeverity"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>İyileştirilmiş Şiddet</FormLabel>
+                      <Select onValueChange={(value) => field.onChange(value ? Number(value) : undefined)}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-improvement-severity">
+                            <SelectValue placeholder="Seçin..." />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {fineKinneyValues?.severity.map((item) => (
+                            <SelectItem key={item.value} value={item.value.toString()}>
+                              {item.value} - {item.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Improvement Risk Calculation Result */}
+                {calculatedImprovementRisk && (
+                  <div className="md:col-span-3">
+                    <div className="mt-4 p-4 bg-white rounded-lg border">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-gray-600">Hesaplanan İyileştirilmiş Risk Skoru</p>
+                          <p className="text-3xl font-bold" data-testid="calculated-improvement-risk-score">
+                            {calculatedImprovementRisk.score.toFixed(0)}
+                          </p>
+                        </div>
+                        <Badge 
+                          style={{ backgroundColor: calculatedImprovementRisk.color }}
+                          className="text-white text-lg px-4 py-2"
+                          data-testid="calculated-improvement-risk-level"
+                        >
+                          {calculatedImprovementRisk.level}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
