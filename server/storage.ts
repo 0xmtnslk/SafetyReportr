@@ -1975,13 +1975,25 @@ export class DatabaseStorage implements IStorage {
     
     const riskLevel = getFineKinneyRiskLevel(riskScore);
     
-    // Generate assessment number
-    const assessmentCount = await db
-      .select({ count: sql<number>`count(*)` })
+    // Generate assessment number (race condition safe)
+    const lastAssessmentNumber = await db
+      .select({ 
+        assessmentNumber: riskAssessments.assessmentNumber 
+      })
       .from(riskAssessments)
-      .where(eq(riskAssessments.locationId, assessment.locationId));
+      .where(eq(riskAssessments.locationId, assessment.locationId))
+      .orderBy(desc(riskAssessments.createdAt))
+      .limit(1);
     
-    const assessmentNumber = `RSK-${new Date().getFullYear()}-${String(assessmentCount[0]?.count + 1 || 1).padStart(4, '0')}`;
+    let nextNumber = 1;
+    if (lastAssessmentNumber.length > 0 && lastAssessmentNumber[0].assessmentNumber) {
+      const match = lastAssessmentNumber[0].assessmentNumber.match(/RSK-\d{4}-(\d{4})/);
+      if (match) {
+        nextNumber = parseInt(match[1], 10) + 1;
+      }
+    }
+    
+    const assessmentNumber = `RSK-${new Date().getFullYear()}-${String(nextNumber).padStart(4, '0')}`;
     
     const [created] = await db
       .insert(riskAssessments)

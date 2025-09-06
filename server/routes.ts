@@ -2733,6 +2733,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Get single risk assessment
+  app.get('/api/risk/assessments/:id', authenticateToken, requireSafetySpecialist, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const user = (req as any).user;
+      
+      if (!id) {
+        return res.status(400).json({ message: 'Assessment ID gerekli' });
+      }
+
+      const assessment = await storage.getRiskAssessment(id);
+      
+      if (!assessment) {
+        return res.status(404).json({ message: 'Risk değerlendirmesi bulunamadı' });
+      }
+      
+      if (assessment.locationId !== user.locationId) {
+        return res.status(403).json({ message: 'Bu değerlendirmeye erişim yetkiniz yok' });
+      }
+
+      res.json(assessment);
+    } catch (error) {
+      console.error('Get risk assessment error:', error);
+      res.status(500).json({ message: 'Risk değerlendirmesi alınamadı' });
+    }
+  });
+
+  // Update risk assessment
+  app.put('/api/risk/assessments/:id', authenticateToken, requireSafetySpecialist, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const user = (req as any).user;
+      
+      if (!id) {
+        return res.status(400).json({ message: 'Assessment ID gerekli' });
+      }
+
+      // Verify ownership
+      const existing = await storage.getRiskAssessment(id);
+      if (!existing || existing.locationId !== user.locationId) {
+        return res.status(404).json({ message: 'Risk değerlendirmesi bulunamadı veya erişim yetkiniz yok' });
+      }
+
+      // Validate the request body
+      const updateData = {
+        ...req.body,
+        // Map frontend fields to backend fields if needed
+        hazardDescription: req.body.hazardDescription,
+        riskSituation: req.body.riskSituation,
+      };
+
+      const updated = await storage.updateRiskAssessment(id, updateData);
+      res.json(updated);
+    } catch (error) {
+      console.error('Update risk assessment error:', error);
+      res.status(500).json({ message: 'Risk değerlendirmesi güncellenemedi' });
+    }
+  });
+
   app.post('/api/risk/assessments', authenticateToken, requireSafetySpecialist, async (req, res) => {
     try {
       const user = (req as any).user;
