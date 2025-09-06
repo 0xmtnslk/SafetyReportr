@@ -98,6 +98,12 @@ export default function CreateRiskAssessmentPage() {
     level: string;
     color: string;
   } | null>(null);
+  
+  const [calculatedImprovementRisk, setCalculatedImprovementRisk] = useState<{
+    score: number;
+    level: string;
+    color: string;
+  } | null>(null);
 
   const form = useForm<CreateRiskAssessmentForm>({
     resolver: zodResolver(createRiskAssessmentSchema),
@@ -158,8 +164,13 @@ export default function CreateRiskAssessmentPage() {
   const probability = form.watch('currentProbability');
   const frequency = form.watch('currentFrequency');
   const severity = form.watch('currentSeverity');
+  
+  // Watch improvement risk factors for calculation
+  const improvementProbability = form.watch('improvementProbability');
+  const improvementFrequency = form.watch('improvementFrequency');
+  const improvementSeverity = form.watch('improvementSeverity');
 
-  // Calculate risk score and level
+  // Calculate current risk score and level
   useEffect(() => {
     const score = probability * frequency * severity;
     
@@ -185,6 +196,38 @@ export default function CreateRiskAssessmentPage() {
     
     setCalculatedRisk({ score, level, color });
   }, [probability, frequency, severity]);
+
+  // Calculate improvement risk score and level
+  useEffect(() => {
+    if (!improvementProbability || !improvementFrequency || !improvementSeverity) {
+      setCalculatedImprovementRisk(null);
+      return;
+    }
+
+    const score = improvementProbability * improvementFrequency * improvementSeverity;
+    
+    let level = '';
+    let color = '';
+    
+    if (score >= 400) {
+      level = 'Tolerans Gösterilemez Risk';
+      color = '#7c2d12'; // brown-800
+    } else if (score >= 200) {
+      level = 'Yüksek Risk';
+      color = '#dc2626'; // red-600
+    } else if (score >= 70) {
+      level = 'Önemli Risk';
+      color = '#ea580c'; // orange-600
+    } else if (score >= 20) {
+      level = 'Olası Risk';
+      color = '#ca8a04'; // yellow-600
+    } else {
+      level = 'Düşük Risk';
+      color = '#16a34a'; // green-600
+    }
+    
+    setCalculatedImprovementRisk({ score, level, color });
+  }, [improvementProbability, improvementFrequency, improvementSeverity]);
 
   // Create risk assessment mutation
   const createMutation = useMutation({
@@ -732,6 +775,29 @@ export default function CreateRiskAssessmentPage() {
                     </FormItem>
                   )}
                 />
+
+                {/* Improvement Risk Calculation Result */}
+                {calculatedImprovementRisk && (
+                  <div className="md:col-span-3">
+                    <div className="mt-4 p-4 bg-white rounded-lg border">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-gray-600">Hesaplanan İyileştirilmiş Risk Skoru</p>
+                          <p className="text-3xl font-bold" data-testid="calculated-improvement-risk-score">
+                            {calculatedImprovementRisk.score.toFixed(0)}
+                          </p>
+                        </div>
+                        <Badge 
+                          style={{ backgroundColor: calculatedImprovementRisk.color }}
+                          className="text-white text-lg px-4 py-2"
+                          data-testid="calculated-improvement-risk-level"
+                        >
+                          {calculatedImprovementRisk.level}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
