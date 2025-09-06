@@ -65,11 +65,24 @@ const StatusBadge = ({ status }: { status: string }) => {
 };
 
 const RiskLevelBadge = ({ level, color, score }: { level: string, color: string, score: number }) => {
+  // Convert color to proper Tailwind class format if it's hex
+  const getColorClasses = (colorValue: string) => {
+    if (colorValue.startsWith('#')) {
+      // If it's hex color, map to appropriate class
+      if (score >= 400) return 'bg-red-900 text-white';
+      if (score >= 200) return 'bg-red-500 text-white';
+      if (score >= 70) return 'bg-orange-500 text-white';
+      if (score >= 20) return 'bg-yellow-600 text-white';
+      return 'bg-green-500 text-white';
+    }
+    // If it's already a Tailwind class, use it
+    return colorValue + ' text-white';
+  };
+
   return (
     <div className="flex items-center gap-2">
       <Badge 
-        style={{ backgroundColor: color, color: 'white' }}
-        className="text-xs font-medium"
+        className={`text-xs font-medium ${getColorClasses(color)}`}
       >
         {score}
       </Badge>
