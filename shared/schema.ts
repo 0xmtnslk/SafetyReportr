@@ -346,6 +346,16 @@ export const riskAssessments = pgTable("risk_assessments", {
   improvementResponsible: text("improvement_responsible").notNull(), // Person responsible
   targetDate: timestamp("target_date").notNull(), // Deadline for improvement
   
+  // Post-Improvement Fine-Kinney Risk Score (Optional)
+  improvementProbability: integer("improvement_probability"), // New probability after improvement
+  improvementFrequency: integer("improvement_frequency"), // New frequency after improvement  
+  improvementSeverity: integer("improvement_severity"), // New severity after improvement
+  
+  // Effectiveness Measurement and Results (Optional)
+  effectivenessMeasurement: text("effectiveness_measurement"), // How effectiveness will be measured
+  result: text("result"), // Final result/outcome
+  relatedRegulation: text("related_regulation"), // Related laws/regulations
+  
   // Status
   status: text("status").notNull().default("open"), // open, in_progress, completed
   priority: text("priority").notNull().default("medium"), // low, medium, high, critical

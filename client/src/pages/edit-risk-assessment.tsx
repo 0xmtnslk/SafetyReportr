@@ -211,6 +211,13 @@ export default function EditRiskAssessmentPage() {
         targetDate: assessment.targetDate ? format(new Date(assessment.targetDate), 'yyyy-MM-dd') : '',
         status: assessment.status || 'open',
         priority: assessment.priority || 'medium',
+        // İyileştirme sonrası alanları
+        improvementProbability: assessment.improvementProbability || undefined,
+        improvementFrequency: assessment.improvementFrequency || undefined,
+        improvementSeverity: assessment.improvementSeverity || undefined,
+        effectivenessMeasurement: assessment.effectivenessMeasurement || '',
+        result: assessment.result || '',
+        relatedRegulation: assessment.relatedRegulation || '',
       };
 
       console.log('Form data to be set:', formData); // Debug log
