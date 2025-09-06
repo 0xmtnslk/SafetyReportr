@@ -56,12 +56,85 @@ interface HospitalDepartment {
   createdAt: string;
 }
 
+interface DepartmentRiskStats {
+  totalAssessments: number;
+  avgRiskScore: number;
+  riskDistribution: { level: string; count: number }[];
+}
+
 const departmentSchema = z.object({
   name: z.string().min(1, 'Bölüm adı zorunludur'),
   description: z.string().optional(),
 });
 
 type DepartmentForm = z.infer<typeof departmentSchema>;
+
+const DepartmentStatsCard = ({ departmentId }: { departmentId: string }) => {
+  const { data: stats, isLoading } = useQuery<DepartmentRiskStats>({
+    queryKey: ['/api/risk/departments', departmentId, 'stats'],
+    enabled: !!departmentId,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="mt-3 pt-3 border-t border-gray-100 space-y-2">
+        <div className="animate-pulse">
+          <div className="h-4 bg-gray-200 rounded w-full"></div>
+          <div className="h-3 bg-gray-200 rounded w-3/4 mt-1"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!stats || stats.totalAssessments === 0) {
+    return (
+      <div className="mt-3 pt-3 border-t border-gray-100">
+        <div className="text-xs text-gray-500 text-center">
+          Henüz risk değerlendirmesi yok
+        </div>
+      </div>
+    );
+  }
+
+  const highRiskCount = stats.riskDistribution.find(r => r.level === 'Yüksek Risk')?.count || 0;
+  const criticalRiskCount = stats.riskDistribution.find(r => r.level === 'Tolerans Gösterilemez Risk')?.count || 0;
+
+  return (
+    <div className="mt-3 pt-3 border-t border-gray-100 space-y-2">
+      <div className="flex justify-between items-center">
+        <span className="text-xs font-medium text-gray-600">Risk Maddeleri</span>
+        <Badge variant="secondary" className="text-xs">
+          {stats.totalAssessments}
+        </Badge>
+      </div>
+      
+      <div className="flex justify-between items-center">
+        <span className="text-xs text-gray-500">Ortalama Skor</span>
+        <span className="text-xs font-medium text-gray-700">
+          {stats.avgRiskScore.toFixed(1)}
+        </span>
+      </div>
+
+      {(highRiskCount > 0 || criticalRiskCount > 0) && (
+        <div className="flex justify-between items-center">
+          <span className="text-xs text-gray-500">Yüksek Risk</span>
+          <div className="flex gap-1">
+            {criticalRiskCount > 0 && (
+              <Badge variant="destructive" className="text-xs">
+                {criticalRiskCount} Kritik
+              </Badge>
+            )}
+            {highRiskCount > 0 && (
+              <Badge className="bg-red-500 hover:bg-red-600 text-white text-xs">
+                {highRiskCount}
+              </Badge>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default function HospitalDepartmentsManager() {
   const { toast } = useToast();
@@ -385,6 +458,9 @@ export default function HospitalDepartmentsManager() {
                         {department.isActive ? 'Aktif' : 'Pasif'}
                       </Badge>
                     </div>
+
+                    {/* Department Stats */}
+                    <DepartmentStatsCard departmentId={department.id} />
 
                     {/* Click hint */}
                     <div className="mt-3 pt-3 border-t border-gray-100">

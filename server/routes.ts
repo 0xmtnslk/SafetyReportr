@@ -2811,6 +2811,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Department Risk Statistics
+  app.get('/api/risk/departments/:departmentId/stats', authenticateToken, requireSafetySpecialist, async (req, res) => {
+    try {
+      const { departmentId } = req.params;
+      const user = (req as any).user;
+      
+      if (!departmentId) {
+        return res.status(400).json({ message: 'Department ID gerekli' });
+      }
+
+      // Verify department belongs to user's location
+      const department = await storage.getHospitalDepartment(departmentId);
+      if (!department || department.locationId !== user.locationId) {
+        return res.status(403).json({ message: 'Bu bölüme erişim yetkiniz yok' });
+      }
+
+      const stats = await storage.getDepartmentRiskStats(departmentId);
+      res.json(stats);
+    } catch (error) {
+      console.error('Get department risk stats error:', error);
+      res.status(500).json({ message: 'Bölüm risk istatistikleri alınırken hata oluştu' });
+    }
+  });
+  
   // Fine-Kinney Constants (Public access for form UI)
   app.get('/api/risk/fine-kinney-values', (req, res) => {
     res.json({
