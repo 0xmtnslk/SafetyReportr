@@ -1943,8 +1943,14 @@ export class DatabaseStorage implements IStorage {
   
   async getDepartmentRiskAssessments(departmentId: string): Promise<RiskAssessment[]> {
     return await db
-      .select()
+      .select({
+        ...getTableColumns(riskAssessments),
+        categoryName: riskCategories.name,
+        subCategoryName: riskSubCategories.name,
+      })
       .from(riskAssessments)
+      .leftJoin(riskCategories, eq(riskAssessments.categoryId, riskCategories.id))
+      .leftJoin(riskSubCategories, eq(riskAssessments.subCategoryId, riskSubCategories.id))
       .where(eq(riskAssessments.departmentId, departmentId))
       .orderBy(desc(riskAssessments.currentRiskScore), desc(riskAssessments.createdAt));
   }

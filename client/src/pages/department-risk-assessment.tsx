@@ -44,6 +44,8 @@ interface RiskAssessment {
   status: 'open' | 'in_progress' | 'completed';
   createdAt: string;
   updatedAt: string;
+  categoryName?: string;
+  subCategoryName?: string;
 }
 
 const StatusBadge = ({ status }: { status: string }) => {
@@ -242,6 +244,8 @@ export default function DepartmentRiskAssessmentPage() {
                       <TableHead className="w-20">Sıra</TableHead>
                       <TableHead>Tehlike</TableHead>
                       <TableHead>Risk</TableHead>
+                      <TableHead>Risk Kategorisi</TableHead>
+                      <TableHead>Alt Risk Kategorisi</TableHead>
                       <TableHead>Risk Seviyesi</TableHead>
                       <TableHead>Durum</TableHead>
                       <TableHead>Tarih</TableHead>
@@ -267,6 +271,20 @@ export default function DepartmentRiskAssessmentPage() {
                           <div className="max-w-xs">
                             <p className="text-sm text-gray-600 line-clamp-2">
                               {assessment.risk}
+                            </p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="max-w-xs">
+                            <p className="text-sm text-gray-700">
+                              {assessment.categoryName || '-'}
+                            </p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="max-w-xs">
+                            <p className="text-sm text-gray-700">
+                              {assessment.subCategoryName || '-'}
                             </p>
                           </div>
                         </TableCell>
