@@ -174,34 +174,45 @@ export default function EditRiskAssessmentPage() {
   // Update form when assessment data is loaded
   useEffect(() => {
     if (assessment) {
+      console.log('Assessment data:', assessment); // Debug log
+      
       const formData = {
         detectionDate: format(new Date(assessment.detectionDate), 'yyyy-MM-dd'),
-        categoryId: assessment.categoryId,
-        subCategoryId: assessment.subCategoryId,
+        categoryId: assessment.categoryId || '',
+        subCategoryId: assessment.subCategoryId || '',
         area: assessment.area || '',
         activity: assessment.activity || '',
-        hazardDescription: assessment.hazardDescription,
-        riskSituation: assessment.riskSituation,
+        hazardDescription: assessment.hazardDescription || '',
+        riskSituation: assessment.riskSituation || '',
         potentialConsequence: assessment.potentialConsequence || '',
-        affectedPersons: assessment.affectedPersons,
+        affectedPersons: assessment.affectedPersons || [],
         otherAffectedPersons: assessment.otherAffectedPersons || '',
-        currentStateDescription: assessment.currentStateDescription,
-        currentStateImages: assessment.currentStateImages,
-        currentProbability: assessment.currentProbability,
-        currentFrequency: assessment.currentFrequency,
-        currentSeverity: assessment.currentSeverity,
-        improvementMeasures: assessment.improvementMeasures,
-        improvementResponsible: assessment.improvementResponsible,
-        targetDate: format(new Date(assessment.targetDate), 'yyyy-MM-dd'),
-        status: assessment.status,
-        priority: assessment.priority,
+        currentStateDescription: assessment.currentStateDescription || '',
+        currentStateImages: assessment.currentStateImages || [],
+        currentProbability: assessment.currentProbability || 0.2,
+        currentFrequency: assessment.currentFrequency || 0.5,
+        currentSeverity: assessment.currentSeverity || 1,
+        improvementMeasures: assessment.improvementMeasures || '',
+        improvementResponsible: assessment.improvementResponsible || '',
+        targetDate: assessment.targetDate ? format(new Date(assessment.targetDate), 'yyyy-MM-dd') : '',
+        status: assessment.status || 'open',
+        priority: assessment.priority || 'medium',
       };
 
-      // Reset form with new data
-      form.reset(formData);
-      setSelectedCategory(assessment.categoryId);
-      setSelectedAffectedPersons(assessment.affectedPersons);
-      setShowOtherPersons(assessment.affectedPersons.includes('Diğer'));
+      console.log('Form data to be set:', formData); // Debug log
+
+      // Set form values manually for better control
+      Object.entries(formData).forEach(([key, value]) => {
+        form.setValue(key as keyof RiskAssessmentFormData, value);
+      });
+
+      // Set state variables
+      setSelectedCategory(assessment.categoryId || '');
+      setSelectedAffectedPersons(assessment.affectedPersons || []);
+      setShowOtherPersons((assessment.affectedPersons || []).includes('Diğer'));
+      
+      // Force form to trigger validation and re-render
+      form.trigger();
     }
   }, [assessment, form]);
 
