@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useRoute, useLocation } from 'wouter';
+import { useAuth } from '@/hooks/useAuth';
 import {
   Form,
   FormControl,
@@ -84,6 +85,7 @@ export default function CreateRiskAssessmentPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [calculatedRisk, setCalculatedRisk] = useState<{
     score: number;
     level: string;
@@ -182,6 +184,7 @@ export default function CreateRiskAssessmentPage() {
     mutationFn: async (data: CreateRiskAssessmentForm) => {
       const payload = {
         ...data,
+        locationId: user?.locationId || 'cc12b0d8-01d8-41b5-aba0-82754e4a5a1a', // Default locationId
         detectionDate: new Date().toISOString(),
         status: 'open',
         priority: 'medium'

@@ -6,6 +6,7 @@ interface User {
   fullName: string;
   role: 'admin' | 'user';
   location: string;
+  locationId?: string;
   firstLogin: boolean;
   hospital?: {
     id: string;
