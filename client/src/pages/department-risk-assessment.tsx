@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Link, useRoute } from 'wouter';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Link, useRoute, useLocation } from 'wouter';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -26,6 +26,19 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
+import { apiRequest } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 interface HospitalDepartment {
   id: string;
@@ -95,6 +108,9 @@ export default function DepartmentRiskAssessmentPage() {
   const [, params] = useRoute('/risk-assessment/department/:id');
   const departmentId = params?.id;
   const [searchTerm, setSearchTerm] = useState('');
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   // Fetch department info
   const { data: department } = useQuery<HospitalDepartment>({
@@ -126,6 +142,37 @@ export default function DepartmentRiskAssessmentPage() {
     },
     enabled: !!departmentId,
   });
+
+  // Delete assessment mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (assessmentId: string) => {
+      return apiRequest('DELETE', `/api/risk/assessments/${assessmentId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/risk/assessments/department', departmentId] });
+      toast({
+        title: 'Başarılı',
+        description: 'Risk değerlendirmesi silindi',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        variant: 'destructive',
+        title: 'Hata',
+        description: error.message || 'Risk değerlendirmesi silinemedi',
+      });
+    },
+  });
+
+  // Handle edit navigation
+  const handleEdit = (assessmentId: string) => {
+    setLocation(`/risk-assessment/edit/${assessmentId}`);
+  };
+
+  // Handle delete
+  const handleDelete = (assessmentId: string) => {
+    deleteMutation.mutate(assessmentId);
+  };
 
   // Filter and sort assessments by risk score (highest first)
   const filteredAssessments = assessments
@@ -321,6 +368,7 @@ export default function DepartmentRiskAssessmentPage() {
                             <Button
                               variant="ghost"
                               size="sm"
+                              onClick={() => setLocation(`/risk-assessment/view/${assessment.id}`)}
                               data-testid={`button-view-${assessment.id}`}
                             >
                               <Eye className="h-4 w-4" />
@@ -328,17 +376,41 @@ export default function DepartmentRiskAssessmentPage() {
                             <Button
                               variant="ghost"
                               size="sm"
+                              onClick={() => handleEdit(assessment.id)}
                               data-testid={`button-edit-${assessment.id}`}
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              data-testid={`button-delete-${assessment.id}`}
-                            >
-                              <Trash2 className="h-4 w-4 text-red-500" />
-                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  data-testid={`button-delete-${assessment.id}`}
+                                >
+                                  <Trash2 className="h-4 w-4 text-red-500" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Risk Değerlendirmesini Sil</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Bu risk değerlendirmesini silmek istediğinizden emin misiniz? 
+                                    Bu işlem geri alınamaz ve tüm veriler silinecektir.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>İptal</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => handleDelete(assessment.id)}
+                                    className="bg-red-600 hover:bg-red-700"
+                                    data-testid={`button-confirm-delete-${assessment.id}`}
+                                  >
+                                    Sil
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
                           </div>
                         </TableCell>
                       </TableRow>
