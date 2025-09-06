@@ -75,6 +75,13 @@ const createRiskAssessmentSchema = z.object({
   affectedPersons: z.array(z.string()).default([]),
   otherAffectedPersons: z.string().optional(),
   currentStateImages: z.array(z.string()).default([]),
+  // İyileştirme sonrası alanları
+  improvementProbability: z.number().refine(val => [0.2, 0.5, 1, 3, 6, 10].includes(val)).optional(),
+  improvementFrequency: z.number().refine(val => [0.5, 1, 2, 3, 6, 10].includes(val)).optional(),
+  improvementSeverity: z.number().refine(val => [1, 3, 7, 15, 40, 100].includes(val)).optional(),
+  effectivenessMeasurement: z.string().optional(),
+  result: z.string().optional(),
+  relatedRegulation: z.string().optional(),
 });
 
 type CreateRiskAssessmentForm = z.infer<typeof createRiskAssessmentSchema>;
@@ -440,12 +447,99 @@ export default function CreateRiskAssessmentPage() {
               </CardContent>
             </Card>
 
-            {/* Fine-Kinney Assessment Card */}
+            {/* Affected Persons Card */}
+            <Card className="bg-white shadow-sm border border-gray-200">
+              <CardHeader>
+                <CardTitle>Etkilenecek Kişiler</CardTitle>
+                <CardDescription>Risk durumundan etkilenebilecek kişi gruplarını belirtin</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="affectedPersons"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Etkilenecek Kişi Grupları</FormLabel>
+                      <FormControl>
+                        <Input 
+                          {...field} 
+                          value={field.value?.join(', ') || ''}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            field.onChange(value ? value.split(',').map(s => s.trim()) : []);
+                          }}
+                          placeholder="Örn: Hemşireler, Doktorlar, Hasta yakınları..."
+                          data-testid="input-affected-persons"
+                        />
+                      </FormControl>
+                      <p className="text-xs text-gray-500">Virgülle ayırarak birden fazla grup ekleyebilirsiniz</p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="otherAffectedPersons"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Diğer Etkilenecek Kişiler</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          {...field} 
+                          placeholder="Diğer etkilenebilecek kişiler ve özel durumlar..."
+                          rows={2}
+                          data-testid="input-other-affected-persons"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </CardContent>
+            </Card>
+
+            {/* Photo Upload Card */}
+            <Card className="bg-white shadow-sm border border-gray-200">
+              <CardHeader>
+                <CardTitle>Fotoğraflar</CardTitle>
+                <CardDescription>Mevcut durumu gösteren fotoğrafları yükleyin</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <FormField
+                  control={form.control}
+                  name="currentStateImages"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Mevcut Durum Fotoğrafları</FormLabel>
+                      <FormControl>
+                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                          <div className="space-y-2">
+                            <div className="text-gray-400">
+                              <svg className="mx-auto h-12 w-12" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                                <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                              </svg>
+                            </div>
+                            <div className="text-gray-600">
+                              <p className="text-sm">Fotoğraf yükleme özelliği yakında eklenecek</p>
+                              <p className="text-xs text-gray-400">Şimdilik bu alan boş bırakılabilir</p>
+                            </div>
+                          </div>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </CardContent>
+            </Card>
+
+            {/* Current Risk Assessment Card */}
             <Card className="bg-blue-50 border-blue-200">
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
                   <Calculator className="h-5 w-5 text-blue-600" />
-                  Fine-Kinney Risk Değerlendirmesi
+                  Mevcut Risk Skoru
                 </CardTitle>
                 <CardDescription>
                   Olasılık × Sıklık × Şiddet = Risk Skoru
@@ -549,6 +643,161 @@ export default function CreateRiskAssessmentPage() {
                     </div>
                   </div>
                 )}
+              </CardContent>
+            </Card>
+
+            {/* Improvement Post-Assessment Card */}
+            <Card className="bg-green-50 border-green-200">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Calculator className="h-5 w-5 text-green-600" />
+                  İyileştirme Sonrası Risk Skoru
+                </CardTitle>
+                <CardDescription>
+                  İyileştirme önlemleri uygulandıktan sonraki beklenen risk seviyesi
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <FormField
+                  control={form.control}
+                  name="improvementProbability"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>İyileştirilmiş Olasılık</FormLabel>
+                      <Select onValueChange={(value) => field.onChange(value ? Number(value) : undefined)}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-improvement-probability">
+                            <SelectValue placeholder="Seçin..." />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {fineKinneyValues?.probability.map((item) => (
+                            <SelectItem key={item.value} value={item.value.toString()}>
+                              {item.value} - {item.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="improvementFrequency"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>İyileştirilmiş Sıklık</FormLabel>
+                      <Select onValueChange={(value) => field.onChange(value ? Number(value) : undefined)}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-improvement-frequency">
+                            <SelectValue placeholder="Seçin..." />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {fineKinneyValues?.frequency.map((item) => (
+                            <SelectItem key={item.value} value={item.value.toString()}>
+                              {item.value} - {item.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="improvementSeverity"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>İyileştirilmiş Şiddet</FormLabel>
+                      <Select onValueChange={(value) => field.onChange(value ? Number(value) : undefined)}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-improvement-severity">
+                            <SelectValue placeholder="Seçin..." />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {fineKinneyValues?.severity.map((item) => (
+                            <SelectItem key={item.value} value={item.value.toString()}>
+                              {item.value} - {item.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </CardContent>
+            </Card>
+
+            {/* Effectiveness and Results Card */}
+            <Card className="bg-white shadow-sm border border-gray-200">
+              <CardHeader>
+                <CardTitle>İyileştirme Etkinlik Ölçümü ve Sonuç</CardTitle>
+                <CardDescription>İyileştirme önlemlerinin etkinliği ve sonuçları</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <FormField
+                  control={form.control}
+                  name="effectivenessMeasurement"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>İyileştirme Etkinlik Ölçümü</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          {...field} 
+                          placeholder="İyileştirme önlemlerinin etkinliğini nasıl ölçeceğinizi açıklayın..."
+                          rows={3}
+                          data-testid="input-effectiveness-measurement"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="result"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Sonuç</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          {...field} 
+                          placeholder="İyileştirme çalışmalarının genel sonuçlarını açıklayın..."
+                          rows={3}
+                          data-testid="input-result"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="relatedRegulation"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>İlgili Mevzuat</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          {...field} 
+                          placeholder="İlgili kanun, yönetmelik, tebliğ ve standartları belirtin..."
+                          rows={2}
+                          data-testid="input-related-regulation"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </CardContent>
             </Card>
 
