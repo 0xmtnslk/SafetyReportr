@@ -76,6 +76,13 @@ interface RiskAssessment {
   targetDate: string;
   status: string;
   priority: string;
+  // İyileştirme sonrası alanları
+  improvementProbability?: number;
+  improvementFrequency?: number;
+  improvementSeverity?: number;
+  effectivenessMeasurement?: string;
+  result?: string;
+  relatedRegulation?: string;
 }
 
 const AFFECTED_PERSONS_OPTIONS = [
@@ -111,6 +118,13 @@ const riskAssessmentSchema = z.object({
   targetDate: z.string().min(1, 'Hedef tarih zorunludur'),
   status: z.string().default('open'),
   priority: z.string().default('medium'),
+  // İyileştirme sonrası alanları
+  improvementProbability: z.number().refine(val => [0.2, 0.5, 1, 3, 6, 10].includes(val)).optional(),
+  improvementFrequency: z.number().refine(val => [0.5, 1, 2, 3, 6, 10].includes(val)).optional(),
+  improvementSeverity: z.number().refine(val => [1, 3, 7, 15, 40, 100].includes(val)).optional(),
+  effectivenessMeasurement: z.string().optional(),
+  result: z.string().optional(),
+  relatedRegulation: z.string().optional(),
 });
 
 type RiskAssessmentFormData = z.infer<typeof riskAssessmentSchema>;
@@ -544,94 +558,127 @@ export default function EditRiskAssessmentPage() {
                   <p className="text-sm text-red-600">{form.formState.errors.currentStateDescription.message}</p>
                 )}
               </div>
+            </CardContent>
+          </Card>
 
-              {/* Fine-Kinney Risk Assessment */}
-              <div className="bg-gray-50 p-6 rounded-lg">
-                <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
-                  <Calculator className="h-5 w-5" />
-                  Fine-Kinney Risk Skorlaması
-                </h3>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+          {/* Photo Upload Card */}
+          <Card className="bg-white shadow-sm border border-gray-200">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ImageIcon className="h-5 w-5 text-blue-600" />
+                Fotoğraflar
+              </CardTitle>
+              <CardHeader>Mevcut durumu gösteren fotoğrafları yükleyin</CardHeader>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <Label>Mevcut Durum Fotoğrafları</Label>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
                   <div className="space-y-2">
-                    <Label>Olasılık (P) *</Label>
-                    <Select
-                      value={form.watch('currentProbability')?.toString()}
-                      onValueChange={(value) => form.setValue('currentProbability', parseFloat(value))}
-                    >
-                      <SelectTrigger data-testid="select-probability">
-                        <SelectValue placeholder="Olasılık seçin..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {fineKinneyValues?.probability.map((prob) => (
-                          <SelectItem key={prob.value} value={prob.value.toString()}>
-                            {prob.value} - {prob.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {form.formState.errors.currentProbability && (
-                      <p className="text-sm text-red-600">{form.formState.errors.currentProbability.message}</p>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Sıklık (F) *</Label>
-                    <Select
-                      value={form.watch('currentFrequency')?.toString()}
-                      onValueChange={(value) => form.setValue('currentFrequency', parseFloat(value))}
-                    >
-                      <SelectTrigger data-testid="select-frequency">
-                        <SelectValue placeholder="Sıklık seçin..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {fineKinneyValues?.frequency.map((freq) => (
-                          <SelectItem key={freq.value} value={freq.value.toString()}>
-                            {freq.value} - {freq.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {form.formState.errors.currentFrequency && (
-                      <p className="text-sm text-red-600">{form.formState.errors.currentFrequency.message}</p>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Şiddet (S) *</Label>
-                    <Select
-                      value={form.watch('currentSeverity')?.toString()}
-                      onValueChange={(value) => form.setValue('currentSeverity', parseFloat(value))}
-                    >
-                      <SelectTrigger data-testid="select-severity">
-                        <SelectValue placeholder="Şiddet seçin..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {fineKinneyValues?.severity.map((sev) => (
-                          <SelectItem key={sev.value} value={sev.value.toString()}>
-                            {sev.value} - {sev.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {form.formState.errors.currentSeverity && (
-                      <p className="text-sm text-red-600">{form.formState.errors.currentSeverity.message}</p>
-                    )}
+                    <div className="text-gray-400">
+                      <svg className="mx-auto h-12 w-12" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                        <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </div>
+                    <div className="text-gray-600">
+                      <p className="text-sm">Fotoğraf yükleme özelliği yakında eklenecek</p>
+                      <p className="text-xs text-gray-400">Şimdilik bu alan boş bırakılabilir</p>
+                    </div>
                   </div>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
 
-                {/* Risk Score Display */}
-                <div className="bg-white p-4 rounded-lg border-2 border-dashed border-gray-300">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold mb-2" data-testid="text-risk-score">
-                      Risk Skoru: {riskScore > 0 ? riskScore.toFixed(1) : '-'}
-                    </div>
-                    {riskScore > 0 && (
-                      <div className={`inline-block px-4 py-2 rounded-full text-white text-sm font-medium ${riskLevel.color}`}>
-                        {riskLevel.level}
-                      </div>
-                    )}
+          {/* Current Risk Assessment */}
+          <Card className="bg-blue-50 border-blue-200">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Calculator className="h-5 w-5 text-blue-600" />
+                Mevcut Risk Skoru
+              </CardTitle>
+              <CardHeader>Olasılık × Sıklık × Şiddet = Risk Skoru</CardHeader>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div className="space-y-2">
+                  <Label>Olasılık (P) *</Label>
+                  <Select
+                    value={form.watch('currentProbability')?.toString()}
+                    onValueChange={(value) => form.setValue('currentProbability', parseFloat(value))}
+                  >
+                    <SelectTrigger data-testid="select-probability">
+                      <SelectValue placeholder="Olasılık seçin..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {fineKinneyValues?.probability.map((prob) => (
+                        <SelectItem key={prob.value} value={prob.value.toString()}>
+                          {prob.value} - {prob.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {form.formState.errors.currentProbability && (
+                    <p className="text-sm text-red-600">{form.formState.errors.currentProbability.message}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Sıklık (F) *</Label>
+                  <Select
+                    value={form.watch('currentFrequency')?.toString()}
+                    onValueChange={(value) => form.setValue('currentFrequency', parseFloat(value))}
+                  >
+                    <SelectTrigger data-testid="select-frequency">
+                      <SelectValue placeholder="Sıklık seçin..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {fineKinneyValues?.frequency.map((freq) => (
+                        <SelectItem key={freq.value} value={freq.value.toString()}>
+                          {freq.value} - {freq.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {form.formState.errors.currentFrequency && (
+                    <p className="text-sm text-red-600">{form.formState.errors.currentFrequency.message}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Şiddet (S) *</Label>
+                  <Select
+                    value={form.watch('currentSeverity')?.toString()}
+                    onValueChange={(value) => form.setValue('currentSeverity', parseFloat(value))}
+                  >
+                    <SelectTrigger data-testid="select-severity">
+                      <SelectValue placeholder="Şiddet seçin..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {fineKinneyValues?.severity.map((sev) => (
+                        <SelectItem key={sev.value} value={sev.value.toString()}>
+                          {sev.value} - {sev.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {form.formState.errors.currentSeverity && (
+                    <p className="text-sm text-red-600">{form.formState.errors.currentSeverity.message}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Risk Score Display */}
+              <div className="bg-white p-4 rounded-lg border-2 border-dashed border-gray-300">
+                <div className="text-center">
+                  <div className="text-2xl font-bold mb-2" data-testid="text-risk-score">
+                    Risk Skoru: {riskScore > 0 ? riskScore.toFixed(1) : '-'}
                   </div>
+                  {riskScore > 0 && (
+                    <div className={`inline-block px-4 py-2 rounded-full text-white text-sm font-medium ${riskLevel.color}`}>
+                      {riskLevel.level}
+                    </div>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -688,7 +735,146 @@ export default function EditRiskAssessmentPage() {
                   )}
                 </div>
               </div>
+            </CardContent>
+          </Card>
 
+          {/* Improvement Effectiveness and Results */}
+          <Card className="bg-white shadow-sm border border-gray-200">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CheckCircle className="h-5 w-5 text-green-600" />
+                İyileştirme Etkinlik Ölçümü ve Sonuç
+              </CardTitle>
+              <CardHeader>İyileştirme önlemlerinin etkinliği ve sonuçları</CardHeader>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="effectivenessMeasurement">İyileştirme Etkinlik Ölçümü</Label>
+                <Textarea
+                  id="effectivenessMeasurement"
+                  {...form.register('effectivenessMeasurement')}
+                  placeholder="İyileştirme önlemlerinin etkinliğini nasıl ölçeceğinizi açıklayın..."
+                  rows={3}
+                  data-testid="input-effectiveness-measurement"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="result">Sonuç</Label>
+                <Textarea
+                  id="result"
+                  {...form.register('result')}
+                  placeholder="İyileştirme çalışmalarının genel sonuçlarını açıklayın..."
+                  rows={3}
+                  data-testid="input-result"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="relatedRegulation">İlgili Mevzuat</Label>
+                <Textarea
+                  id="relatedRegulation"
+                  {...form.register('relatedRegulation')}
+                  placeholder="İlgili kanun, yönetmelik, tebliğ ve standartları belirtin..."
+                  rows={2}
+                  data-testid="input-related-regulation"
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Improvement Post-Assessment */}
+          <Card className="bg-green-50 border-green-200">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Calculator className="h-5 w-5 text-green-600" />
+                İyileştirme Sonrası Risk Skoru
+              </CardTitle>
+              <CardHeader>İyileştirme önlemleri uygulandıktan sonraki beklenen risk seviyesi</CardHeader>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="space-y-2">
+                  <Label>İyileştirilmiş Olasılık</Label>
+                  <Select
+                    value={form.watch('improvementProbability')?.toString()}
+                    onValueChange={(value) => form.setValue('improvementProbability', parseFloat(value))}
+                  >
+                    <SelectTrigger data-testid="select-improvement-probability">
+                      <SelectValue placeholder="Seçin..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {fineKinneyValues?.probability.map((item) => (
+                        <SelectItem key={item.value} value={item.value.toString()}>
+                          {item.value} - {item.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>İyileştirilmiş Sıklık</Label>
+                  <Select
+                    value={form.watch('improvementFrequency')?.toString()}
+                    onValueChange={(value) => form.setValue('improvementFrequency', parseFloat(value))}
+                  >
+                    <SelectTrigger data-testid="select-improvement-frequency">
+                      <SelectValue placeholder="Seçin..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {fineKinneyValues?.frequency.map((item) => (
+                        <SelectItem key={item.value} value={item.value.toString()}>
+                          {item.value} - {item.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>İyileştirilmiş Şiddet</Label>
+                  <Select
+                    value={form.watch('improvementSeverity')?.toString()}
+                    onValueChange={(value) => form.setValue('improvementSeverity', parseFloat(value))}
+                  >
+                    <SelectTrigger data-testid="select-improvement-severity">
+                      <SelectValue placeholder="Seçin..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {fineKinneyValues?.severity.map((item) => (
+                        <SelectItem key={item.value} value={item.value.toString()}>
+                          {item.value} - {item.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="bg-white p-4 rounded-lg border-2 border-dashed border-green-300">
+                <div className="text-center">
+                  <div className="text-lg font-semibold text-green-700 mb-2">
+                    İyileştirme Sonrası Risk Skoru: {
+                      (form.watch('improvementProbability') && form.watch('improvementFrequency') && form.watch('improvementSeverity'))
+                      ? (form.watch('improvementProbability') * form.watch('improvementFrequency') * form.watch('improvementSeverity')).toFixed(1)
+                      : '-'
+                    }
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Status and Priority */}
+          <Card className="bg-white shadow-sm border border-gray-200">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Target className="h-5 w-5 text-purple-600" />
+                Durum ve Öncelik
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label>Durum</Label>
