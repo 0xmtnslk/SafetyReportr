@@ -43,6 +43,8 @@ import ProfileEdit from "@/pages/profile-edit";
 import NotificationsPage from "@/pages/notifications";
 import HospitalManagement from "@/pages/hospital-management";
 import RiskAssessmentPage from "@/pages/risk-assessment";
+import DepartmentRiskAssessmentPage from "@/pages/department-risk-assessment";
+import CreateRiskAssessmentPage from "@/pages/create-risk-assessment";
 import Navigation from "@/components/navigation";
 import OfflineIndicator from "@/components/offline-indicator";
 import { useOfflineSync } from "./hooks/useOfflineSync";
@@ -182,6 +184,12 @@ function Router() {
             </Route>
             <Route path="/risk-assessment">
               {() => ['safety_specialist', 'occupational_physician'].includes(user?.role || '') ? <RiskAssessmentPage /> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
+            </Route>
+            <Route path="/risk-assessment/department/:id">
+              {() => ['safety_specialist', 'occupational_physician'].includes(user?.role || '') ? <DepartmentRiskAssessmentPage /> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
+            </Route>
+            <Route path="/risk-assessment/create/:departmentId">
+              {() => ['safety_specialist', 'occupational_physician'].includes(user?.role || '') ? <CreateRiskAssessmentPage /> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
             </Route>
             <Route path="/notifications" component={NotificationsPage} />
             <Route component={() => <div className="p-8"><div>404 - Page Not Found</div></div>} />

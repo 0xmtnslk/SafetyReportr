@@ -65,15 +65,23 @@ interface FineKinneyValues {
 
 const createRiskAssessmentSchema = z.object({
   departmentId: z.string().min(1, 'Bölüm seçimi zorunludur'),
-  categoryId: z.string().optional(),
+  categoryId: z.string().min(1, 'Kategori seçimi zorunludur'),
   subCategoryId: z.string().optional(),
-  hazardDescription: z.string().min(1, 'Tehlike tanımı zorunludur'),
-  riskSituation: z.string().min(1, 'Risk durumu açıklaması zorunludur'),
-  currentProbability: z.number().min(0.2).max(10),
-  currentFrequency: z.number().min(0.5).max(10),
-  currentSeverity: z.number().min(1).max(100),
-  affectedPersons: z.string().optional(),
-  existingControls: z.string().optional(),
+  area: z.string().min(1, 'Alan tanımı zorunludur'),
+  activity: z.string().min(1, 'Faaliyet tanımı zorunludur'),
+  hazard: z.string().min(1, 'Tehlike tanımı zorunludur'),
+  risk: z.string().min(1, 'Risk tanımı zorunludur'),
+  potentialConsequence: z.string().min(1, 'Potansiyel sonuç zorunludur'),
+  currentStateDescription: z.string().min(1, 'Mevcut durum açıklaması zorunludur'),
+  currentProbability: z.number().refine(val => [0.2, 0.5, 1, 3, 6, 10].includes(val)),
+  currentFrequency: z.number().refine(val => [0.5, 1, 2, 3, 6, 10].includes(val)),
+  currentSeverity: z.number().refine(val => [1, 3, 7, 15, 40, 100].includes(val)),
+  improvementMeasures: z.string().min(1, 'İyileştirme önlemleri zorunludur'),
+  improvementResponsible: z.string().min(1, 'Sorumlu kişi zorunludur'),
+  targetDate: z.string().min(1, 'Hedef tarih zorunludur'),
+  affectedPersons: z.array(z.string()).default([]),
+  otherAffectedPersons: z.string().optional(),
+  currentStateImages: z.array(z.string()).default([]),
 });
 
 type CreateRiskAssessmentForm = z.infer<typeof createRiskAssessmentSchema>;
