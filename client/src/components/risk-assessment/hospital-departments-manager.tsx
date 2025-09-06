@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Link } from 'wouter';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -300,11 +301,14 @@ export default function HospitalDepartmentsManager() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {departments.map((department) => (
-                <Card 
+                <Link 
                   key={department.id} 
-                  className="bg-gray-50 border border-gray-200 hover:shadow-md transition-shadow"
-                  data-testid={`department-card-${department.id}`}
+                  href={`/risk-assessment/department/${department.id}`}
                 >
+                  <Card 
+                    className="bg-gray-50 border border-gray-200 hover:shadow-lg hover:border-blue-300 transition-all duration-200 cursor-pointer group"
+                    data-testid={`department-card-${department.id}`}
+                  >
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
@@ -321,7 +325,7 @@ export default function HospitalDepartmentsManager() {
                         )}
                       </div>
                       
-                      <div className="flex items-center gap-1 ml-2">
+                      <div className="flex items-center gap-1 ml-2" onClick={(e) => e.stopPropagation()}>
                         <Button
                           variant="ghost"
                           size="sm"
@@ -381,8 +385,19 @@ export default function HospitalDepartmentsManager() {
                         {department.isActive ? 'Aktif' : 'Pasif'}
                       </Badge>
                     </div>
+
+                    {/* Click hint */}
+                    <div className="mt-3 pt-3 border-t border-gray-100">
+                      <div className="flex items-center justify-between text-xs text-gray-500">
+                        <span>Risk maddeleri için tıklayın</span>
+                        <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200">
+                          Bölüme Git →
+                        </Badge>
+                      </div>
+                    </div>
                   </CardContent>
-                </Card>
+                  </Card>
+                </Link>
               ))}
             </div>
           )}
