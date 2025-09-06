@@ -280,6 +280,11 @@ export default function CreateRiskAssessmentDialog({
                                 {subCat.name}
                               </SelectItem>
                             ))}
+                            {(!subCategories || subCategories.length === 0) && (
+                              <div className="px-2 py-1 text-sm text-gray-500">
+                                Alt kategori yükleniyor...
+                              </div>
+                            )}
                           </SelectContent>
                         </Select>
                         <FormMessage />
