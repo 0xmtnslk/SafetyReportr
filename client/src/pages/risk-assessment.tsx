@@ -37,24 +37,14 @@ export default function RiskAssessmentPage() {
       <div className="max-w-7xl mx-auto px-4 py-6">
         {/* Page Header */}
         <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                <Shield className="h-8 w-8 text-red-600" />
-                Risk Değerlendirme
-              </h1>
-              <p className="text-gray-600 mt-2">
-                Fine-Kinney metodolojisi ile kapsamlı risk değerlendirmesi ve yönetimi
-              </p>
-            </div>
-            <Button 
-              onClick={() => setShowCreateDialog(true)}
-              className="bg-red-600 hover:bg-red-700 text-white"
-              data-testid="button-create-assessment"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Yeni Risk Değerlendirmesi
-            </Button>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+              <Shield className="h-8 w-8 text-red-600" />
+              Risk Değerlendirme
+            </h1>
+            <p className="text-gray-600 mt-2">
+              Fine-Kinney metodolojisi ile kapsamlı risk değerlendirmesi ve yönetimi
+            </p>
           </div>
         </div>
 

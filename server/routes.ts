@@ -2761,6 +2761,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // DELETE /api/risk/assessments/:id - Delete risk assessment
+  app.delete('/api/risk/assessments/:id', authenticateToken, requireSafetySpecialist, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const user = (req as any).user;
+      
+      if (!id) {
+        return res.status(400).json({ message: 'Assessment ID gerekli' });
+      }
+
+      // Verify the assessment belongs to user's location
+      const assessment = await storage.getRiskAssessment(id);
+      if (!assessment) {
+        return res.status(404).json({ message: 'Risk değerlendirmesi bulunamadı' });
+      }
+      
+      if (assessment.locationId !== user.locationId) {
+        return res.status(403).json({ message: 'Bu değerlendirmeye erişim yetkiniz yok' });
+      }
+
+      const success = await storage.deleteRiskAssessment(id);
+      
+      if (!success) {
+        return res.status(500).json({ message: 'Risk değerlendirmesi silinemedi' });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Delete risk assessment error:', error);
+      res.status(500).json({ message: 'Risk değerlendirmesi silinemedi' });
+    }
+  });
+  
   // Risk Assessment Statistics 
   app.get('/api/risk/stats', authenticateToken, requireSafetySpecialist, async (req, res) => {
     try {

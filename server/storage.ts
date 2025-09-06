@@ -14,7 +14,7 @@ import {
   calculateQuestionScore, calculateLetterGrade, calculateFineKinneyScore, getFineKinneyRiskLevel
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, inArray, sql, gt, or, isNull } from "drizzle-orm";
+import { eq, desc, and, inArray, sql, gt, or, isNull, getTableColumns } from "drizzle-orm";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
 
@@ -1998,6 +1998,11 @@ export class DatabaseStorage implements IStorage {
       .returning();
     
     return created;
+  }
+  
+  async deleteRiskAssessment(id: string): Promise<boolean> {
+    const result = await db.delete(riskAssessments).where(eq(riskAssessments.id, id));
+    return (result.rowCount || 0) > 0;
   }
   
   async updateRiskAssessment(id: string, assessment: Partial<InsertRiskAssessment>): Promise<RiskAssessment> {
