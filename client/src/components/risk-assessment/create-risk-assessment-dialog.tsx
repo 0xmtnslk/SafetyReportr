@@ -118,7 +118,16 @@ export default function CreateRiskAssessmentDialog({
   const selectedCategoryId = form.watch('categoryId');
   const { data: subCategories } = useQuery<RiskSubCategory[]>({
     queryKey: ['/api/risk/sub-categories', selectedCategoryId],
-    queryParams: selectedCategoryId ? { categoryId: selectedCategoryId } : undefined,
+    queryFn: async () => {
+      if (!selectedCategoryId) return [];
+      const response = await fetch(`/api/risk/sub-categories?categoryId=${selectedCategoryId}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      if (!response.ok) throw new Error('Failed to fetch sub-categories');
+      return response.json();
+    },
     enabled: !!selectedCategoryId,
   });
 
