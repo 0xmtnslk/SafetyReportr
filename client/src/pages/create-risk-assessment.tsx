@@ -735,72 +735,6 @@ export default function CreateRiskAssessmentPage() {
               </CardContent>
             </Card>
 
-            {/* Effectiveness and Results Card */}
-            <Card className="bg-white shadow-sm border border-gray-200">
-              <CardHeader>
-                <CardTitle>İyileştirme Etkinlik Ölçümü ve Sonuç</CardTitle>
-                <CardDescription>İyileştirme önlemlerinin etkinliği ve sonuçları</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <FormField
-                  control={form.control}
-                  name="effectivenessMeasurement"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>İyileştirme Etkinlik Ölçümü</FormLabel>
-                      <FormControl>
-                        <Textarea 
-                          {...field} 
-                          placeholder="İyileştirme önlemlerinin etkinliğini nasıl ölçeceğinizi açıklayın..."
-                          rows={3}
-                          data-testid="input-effectiveness-measurement"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="result"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Sonuç</FormLabel>
-                      <FormControl>
-                        <Textarea 
-                          {...field} 
-                          placeholder="İyileştirme çalışmalarının genel sonuçlarını açıklayın..."
-                          rows={3}
-                          data-testid="input-result"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="relatedRegulation"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>İlgili Mevzuat</FormLabel>
-                      <FormControl>
-                        <Textarea 
-                          {...field} 
-                          placeholder="İlgili kanun, yönetmelik, tebliğ ve standartları belirtin..."
-                          rows={2}
-                          data-testid="input-related-regulation"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </CardContent>
-            </Card>
-
             {/* Improvement Plan Card */}
             <Card className="bg-white shadow-sm border border-gray-200">
               <CardHeader>
@@ -864,6 +798,99 @@ export default function CreateRiskAssessmentPage() {
                     )}
                   />
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Effectiveness and Results Card - Moved After Improvement Plan */}
+            <Card className="bg-white shadow-sm border border-gray-200">
+              <CardHeader>
+                <CardTitle>İyileştirme Etkinlik Ölçümü ve Sonuç</CardTitle>
+                <CardDescription>İyileştirme önlemlerinin etkinliği ve sonuçları</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <FormField
+                  control={form.control}
+                  name="effectivenessMeasurement"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>İyileştirme Etkinlik Ölçümü</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          {...field} 
+                          placeholder="İyileştirme önlemlerinin etkinliğini nasıl ölçeceğinizi açıklayın..."
+                          rows={3}
+                          data-testid="input-effectiveness-measurement"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="result"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Sonuç</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          {...field} 
+                          placeholder="İyileştirme çalışmalarının genel sonuçlarını açıklayın..."
+                          rows={3}
+                          data-testid="input-result"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Second Photo Upload - After Improvement */}
+                <FormField
+                  control={form.control}
+                  name="currentStateImages"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>İyileştirme Sonrası Fotoğrafları</FormLabel>
+                      <FormControl>
+                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                          <div className="space-y-2">
+                            <div className="text-gray-400">
+                              <svg className="mx-auto h-12 w-12" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                                <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                              </svg>
+                            </div>
+                            <div className="text-gray-600">
+                              <p className="text-sm">İyileştirme sonrası fotoğraf yükleme özelliği yakında eklenecek</p>
+                              <p className="text-xs text-gray-400">Şimdilik bu alan boş bırakılabilir</p>
+                            </div>
+                          </div>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="relatedRegulation"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>İlgili Mevzuat</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          {...field} 
+                          placeholder="İlgili kanun, yönetmelik, tebliğ ve standartları belirtin..."
+                          rows={2}
+                          data-testid="input-related-regulation"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </CardContent>
             </Card>
 
