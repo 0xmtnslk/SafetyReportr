@@ -1985,6 +1985,9 @@ export class DatabaseStorage implements IStorage {
         currentRiskScore: riskScore,
         currentRiskLevel: riskLevel.level,
         currentRiskColor: riskLevel.color,
+        // Map frontend fields to database columns
+        hazardDescription: (assessment as any).hazard || 'Belirlenmemiş',
+        riskSituation: (assessment as any).risk || 'Belirlenmemiş',
       })
       .returning();
     

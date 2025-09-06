@@ -316,11 +316,13 @@ export const riskAssessments = pgTable("risk_assessments", {
   subCategoryId: varchar("sub_category_id").references(() => riskSubCategories.id).notNull(),
   
   // Risk Details
-  area: text("area").notNull(), // Equipment, location, etc.
-  activity: text("activity").notNull(), // Work or incident description  
-  hazard: text("hazard").notNull(), // Identified hazard
-  risk: text("risk").notNull(), // Associated risk
-  potentialConsequence: text("potential_consequence").notNull(), // Possible harm/damage
+  area: text("area"), // Equipment, location, etc.
+  activity: text("activity"), // Work or incident description  
+  hazard: text("hazard"), // Identified hazard - optional field
+  risk: text("risk"), // Associated risk - optional field
+  potentialConsequence: text("potential_consequence"), // Possible harm/damage
+  hazardDescription: text("hazard_description").notNull(), // Required hazard description
+  riskSituation: text("risk_situation").notNull(), // Required risk situation
   
   // Affected Persons
   affectedPersons: jsonb("affected_persons").$type<string[]>().default([]), 
