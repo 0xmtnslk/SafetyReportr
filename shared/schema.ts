@@ -360,7 +360,27 @@ export const riskAssessments = pgTable("risk_assessments", {
   status: text("status").notNull().default("open"), // open, in_progress, completed
   priority: text("priority").notNull().default("medium"), // low, medium, high, critical
   
+  // Publishing and Lifecycle Management
+  published: boolean("published").default(false), // Whether assessment is published
+  publishedAt: timestamp("published_at"), // When it was published
+  validityEndDate: timestamp("validity_end_date"), // Expiry date based on hospital risk class
+  lastEditDate: timestamp("last_edit_date"), // Last modification date
+  revisionNotes: text("revision_notes"), // Notes about revisions/updates
+  
   // System fields
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Hospital Sections - Custom section management per hospital
+export const hospitalSections = pgTable("hospital_sections", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  locationId: varchar("location_id").references(() => locations.id).notNull(),
+  categoryId: varchar("category_id").references(() => riskCategories.id).notNull(),
+  subCategoryId: varchar("sub_category_id").references(() => riskSubCategories.id).notNull(),
+  isActive: boolean("is_active").default(true), // Specialist can disable sections
+  addedByUser: boolean("added_by_user").default(false), // true if user added, false if default
+  createdBy: varchar("created_by").references(() => users.id).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -1041,4 +1061,29 @@ export const OLD_EVALUATION_OPTIONS = [
   "Kısmen Karşılıyor", 
   "Karşılamıyor",
   "Kapsam Dışı"
+] as const;
+
+// Hospital section insert schema
+export const insertHospitalSectionSchema = createInsertSchema(hospitalSections).pick({
+  locationId: true,
+  categoryId: true,
+  subCategoryId: true,
+  isActive: true,
+  addedByUser: true,
+});
+
+// Risk assessment update schema for publishing
+export const updateRiskAssessmentPublishSchema = z.object({
+  published: z.boolean(),
+  publishedAt: z.date().optional(),
+  validityEndDate: z.date().optional(),
+  lastEditDate: z.date().optional(),
+  revisionNotes: z.string().optional(),
+});
+
+// Hospital danger class options 
+export const HOSPITAL_DANGER_CLASS_OPTIONS = [
+  { value: "Çok Tehlikeli", label: "Çok Tehlikeli", validityYears: 2 },
+  { value: "Tehlikeli", label: "Tehlikeli", validityYears: 4 },
+  { value: "Az Tehlikeli", label: "Az Tehlikeli", validityYears: 6 }
 ] as const;
