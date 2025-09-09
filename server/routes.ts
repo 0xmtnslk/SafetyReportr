@@ -2705,6 +2705,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Hospital Sections Management (Specialist-managed custom sections per hospital)
+  app.get("/api/risk/hospital-sections", authenticateToken, requireSafetySpecialist, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      if (!user.locationId) {
+        return res.status(400).json({ error: "Kullanıcının hastane ataması bulunamadı" });
+      }
+      
+      const sections = await storage.getHospitalSections(user.locationId);
+      res.json(sections);
+    } catch (error: any) {
+      console.error("Error getting hospital sections:", error);
+      res.status(500).json({ error: "Hospital sections getirilirken hata oluştu" });
+    }
+  });
+  
+  app.post("/api/risk/hospital-sections/initialize", authenticateToken, requireSafetySpecialist, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      if (!user.locationId) {
+        return res.status(400).json({ error: "Kullanıcının hastane ataması bulunamadı" });
+      }
+      
+      await storage.initializeDefaultSections(user.locationId, user.id);
+      res.json({ message: "Default sections başarıyla eklendi" });
+    } catch (error: any) {
+      console.error("Error initializing hospital sections:", error);
+      res.status(500).json({ error: "Default sections eklenirken hata oluştu" });
+    }
+  });
+  
+  app.put("/api/risk/hospital-sections/toggle", authenticateToken, requireSafetySpecialist, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      if (!user.locationId) {
+        return res.status(400).json({ error: "Kullanıcının hastane ataması bulunamadı" });
+      }
+      
+      const { categoryId, subCategoryId, isActive } = req.body;
+      
+      if (!categoryId || !subCategoryId || typeof isActive !== 'boolean') {
+        return res.status(400).json({ error: "categoryId, subCategoryId ve isActive alanları gereklidir" });
+      }
+      
+      await storage.toggleHospitalSection(user.locationId, categoryId, subCategoryId, isActive, user.id);
+      res.json({ message: "Bölüm durumu güncellendi" });
+    } catch (error: any) {
+      console.error("Error toggling hospital section:", error);
+      res.status(500).json({ error: "Bölüm durumu güncellenirken hata oluştu" });
+    }
+  });
+  
   // Risk Assessments (Specialist Access)
   app.get('/api/risk/assessments', authenticateToken, requireSafetySpecialist, async (req, res) => {
     try {

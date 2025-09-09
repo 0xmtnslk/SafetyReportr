@@ -47,6 +47,7 @@ import DepartmentRiskAssessmentPage from "@/pages/department-risk-assessment";
 import CreateRiskAssessmentPage from "@/pages/create-risk-assessment";
 import EditRiskAssessmentPage from "@/pages/edit-risk-assessment";
 import ViewRiskAssessmentPage from "@/pages/view-risk-assessment";
+import HospitalSectionsManagement from "@/pages/hospital-sections-management";
 import Navigation from "@/components/navigation";
 import Footer from "@/components/Footer";
 import OfflineIndicator from "@/components/offline-indicator";
@@ -200,6 +201,9 @@ function Router() {
             </Route>
             <Route path="/risk-assessment/view/:id">
               {() => ['safety_specialist', 'occupational_physician'].includes(user?.role || '') ? <ViewRiskAssessmentPage /> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
+            </Route>
+            <Route path="/hospital-sections">
+              {() => ['safety_specialist', 'occupational_physician'].includes(user?.role || '') ? <HospitalSectionsManagement /> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
             </Route>
             <Route path="/notifications" component={NotificationsPage} />
             <Route component={() => <div className="p-8"><div>404 - Page Not Found</div></div>} />
