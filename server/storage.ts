@@ -1,7 +1,7 @@
 import { 
   reports, findings, users, offlineQueue, locations, notifications,
   checklistTemplates, checklistSections, checklistQuestions, inspections, inspectionAssignments, inspectionResponses,
-  hospitalDepartments, riskCategories, riskSubCategories, riskAssessments, riskImprovements, regulations,
+  hospitalDepartments, riskCategories, riskSubCategories, riskAssessments, riskImprovements, regulations, hospitalSections,
   type User, type InsertUser, type Report, type InsertReport, type Finding, type InsertFinding, 
   type OfflineQueueItem, type InsertOfflineQueueItem, type Location, type InsertLocation,
   type ChecklistTemplate, type InsertChecklistTemplate, type ChecklistSection, type InsertChecklistSection,
@@ -244,6 +244,17 @@ export interface IStorage {
   getRegulations(): Promise<Regulation[]>;
   getRegulationByTitle(title: string): Promise<Regulation | undefined>;
   createOrUpdateRegulation(title: string): Promise<Regulation>;
+  
+  // Hospital Sections operations (Specialist managed custom sections)
+  getHospitalSections(locationId: string): Promise<{ categoryId: string; subCategoryId: string; isActive: boolean }[]>;
+  initializeDefaultSections(locationId: string, createdBy: string): Promise<void>;
+  toggleHospitalSection(locationId: string, categoryId: string, subCategoryId: string, isActive: boolean, createdBy: string): Promise<void>;
+  
+  // Risk Assessment Publishing operations
+  publishRiskAssessment(id: string, validityEndDate: Date, revisionNotes?: string): Promise<RiskAssessment>;
+  unpublishRiskAssessment(id: string): Promise<RiskAssessment>;
+  getPublishedRiskAssessments(locationId?: string): Promise<RiskAssessment[]>;
+  getDepartmentHistoricalAssessments(departmentId: string): Promise<RiskAssessment[]>;
   
   // Risk Assessment Statistics
   getRiskAssessmentStats(locationId?: string): Promise<{
@@ -2248,6 +2259,122 @@ export class DatabaseStorage implements IStorage {
       avgRiskScore: Math.round(avgRiskScore * 100) / 100,
       riskDistribution,
     };
+  }
+
+  // Hospital Sections operations (Specialist managed custom sections)
+  async getHospitalSections(locationId: string): Promise<{ categoryId: string; subCategoryId: string; isActive: boolean }[]> {
+    return db.select({
+      categoryId: hospitalSections.categoryId,
+      subCategoryId: hospitalSections.subCategoryId,
+      isActive: hospitalSections.isActive
+    }).from(hospitalSections)
+      .where(eq(hospitalSections.locationId, locationId))
+      .orderBy(hospitalSections.createdAt);
+  }
+
+  async initializeDefaultSections(locationId: string, createdBy: string): Promise<void> {
+    // Get all existing category/sub-category combinations
+    const allSections = await db.select({
+      categoryId: riskSubCategories.categoryId,
+      subCategoryId: riskSubCategories.id
+    }).from(riskSubCategories);
+
+    // Add all sections as active by default for new hospital
+    const sectionsToInsert = allSections.map(section => ({
+      locationId,
+      categoryId: section.categoryId,
+      subCategoryId: section.subCategoryId,
+      isActive: true,
+      addedByUser: false,
+      createdBy
+    }));
+
+    if (sectionsToInsert.length > 0) {
+      await db.insert(hospitalSections).values(sectionsToInsert);
+    }
+  }
+
+  async toggleHospitalSection(locationId: string, categoryId: string, subCategoryId: string, isActive: boolean, createdBy: string): Promise<void> {
+    // Check if section already exists
+    const [existing] = await db.select()
+      .from(hospitalSections)
+      .where(and(
+        eq(hospitalSections.locationId, locationId),
+        eq(hospitalSections.categoryId, categoryId),
+        eq(hospitalSections.subCategoryId, subCategoryId)
+      ));
+
+    if (existing) {
+      // Update existing section
+      await db.update(hospitalSections)
+        .set({ 
+          isActive, 
+          updatedAt: new Date() 
+        })
+        .where(eq(hospitalSections.id, existing.id));
+    } else {
+      // Create new section
+      await db.insert(hospitalSections).values({
+        locationId,
+        categoryId,
+        subCategoryId,
+        isActive,
+        addedByUser: true,
+        createdBy
+      });
+    }
+  }
+
+  // Risk Assessment Publishing operations
+  async publishRiskAssessment(id: string, validityEndDate: Date, revisionNotes?: string): Promise<RiskAssessment> {
+    const [updated] = await db.update(riskAssessments)
+      .set({
+        published: true,
+        publishedAt: new Date(),
+        validityEndDate,
+        lastEditDate: new Date(),
+        revisionNotes,
+        updatedAt: new Date()
+      })
+      .where(eq(riskAssessments.id, id))
+      .returning();
+    return updated;
+  }
+
+  async unpublishRiskAssessment(id: string): Promise<RiskAssessment> {
+    const [updated] = await db.update(riskAssessments)
+      .set({
+        published: false,
+        publishedAt: null,
+        validityEndDate: null,
+        updatedAt: new Date()
+      })
+      .where(eq(riskAssessments.id, id))
+      .returning();
+    return updated;
+  }
+
+  async getPublishedRiskAssessments(locationId?: string): Promise<RiskAssessment[]> {
+    let query = db.select().from(riskAssessments)
+      .where(eq(riskAssessments.published, true));
+    
+    if (locationId) {
+      query = query.where(and(
+        eq(riskAssessments.published, true),
+        eq(riskAssessments.locationId, locationId)
+      ));
+    }
+    
+    return query.orderBy(desc(riskAssessments.publishedAt));
+  }
+
+  async getDepartmentHistoricalAssessments(departmentId: string): Promise<RiskAssessment[]> {
+    return db.select().from(riskAssessments)
+      .where(and(
+        eq(riskAssessments.departmentId, departmentId),
+        eq(riskAssessments.published, true)
+      ))
+      .orderBy(desc(riskAssessments.publishedAt));
   }
 }
 
