@@ -48,6 +48,7 @@ import CreateRiskAssessmentPage from "@/pages/create-risk-assessment";
 import EditRiskAssessmentPage from "@/pages/edit-risk-assessment";
 import ViewRiskAssessmentPage from "@/pages/view-risk-assessment";
 import Navigation from "@/components/navigation";
+import Footer from "@/components/Footer";
 import OfflineIndicator from "@/components/offline-indicator";
 import { useOfflineSync } from "./hooks/useOfflineSync";
 
@@ -90,10 +91,11 @@ function Router() {
   // If authenticated and on protected route, render with navigation layout
   if (user && !user.firstLogin && isProtectedRoute) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background flex flex-col">
         <Navigation>
           {user && <OfflineIndicator />}
-          <Switch>
+          <div className="flex-1">
+            <Switch>
             <Route path="/dashboard">
               {() => ['safety_specialist', 'occupational_physician'].includes(user?.role || '') ? <SpecialistDashboard /> : <Dashboard />}
             </Route>
@@ -201,8 +203,10 @@ function Router() {
             </Route>
             <Route path="/notifications" component={NotificationsPage} />
             <Route component={() => <div className="p-8"><div>404 - Page Not Found</div></div>} />
-          </Switch>
+            </Switch>
+          </div>
         </Navigation>
+        <Footer />
       </div>
     );
   }
