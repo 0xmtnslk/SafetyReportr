@@ -11,6 +11,7 @@ import {
   type HospitalDepartment, type InsertHospitalDepartment, type RiskCategory, type InsertRiskCategory,
   type RiskSubCategory, type InsertRiskSubCategory, type RiskAssessment, type InsertRiskAssessment,
   type RiskImprovement, type InsertRiskImprovement, type Regulation, type InsertRegulation,
+  type HospitalSection, type InsertHospitalSection,
   calculateQuestionScore, calculateLetterGrade, calculateFineKinneyScore, getFineKinneyRiskLevel
 } from "@shared/schema";
 import { db } from "./db";
@@ -2375,6 +2376,78 @@ export class DatabaseStorage implements IStorage {
         eq(riskAssessments.published, true)
       ))
       .orderBy(desc(riskAssessments.publishedAt));
+  }
+
+  // Hospital Sections Management operations
+  async getHospitalSections(locationId: string): Promise<HospitalSection[]> {
+    return db.select()
+      .from(hospitalSections)
+      .where(eq(hospitalSections.locationId, locationId))
+      .orderBy(hospitalSections.createdAt);
+  }
+
+  async initializeDefaultSections(locationId: string, createdBy: string): Promise<void> {
+    // Get all risk categories and subcategories
+    const categories = await this.getAllRiskCategories();
+    const subCategories = await this.getAllRiskSubCategories();
+
+    // Create default sections for all category+subcategory combinations
+    const sectionsToInsert = categories.flatMap(category =>
+      subCategories
+        .filter(sub => sub.categoryId === category.id)
+        .map(sub => ({
+          locationId,
+          categoryId: category.id,
+          subCategoryId: sub.id,
+          isActive: true,
+          createdBy
+        }))
+    );
+
+    if (sectionsToInsert.length > 0) {
+      await db.insert(hospitalSections).values(sectionsToInsert);
+    }
+  }
+
+  async toggleHospitalSection(
+    locationId: string,
+    categoryId: string,
+    subCategoryId: string,
+    isActive: boolean,
+    updatedBy: string
+  ): Promise<void> {
+    // Check if section already exists
+    const existingSection = await db.select()
+      .from(hospitalSections)
+      .where(and(
+        eq(hospitalSections.locationId, locationId),
+        eq(hospitalSections.categoryId, categoryId),
+        eq(hospitalSections.subCategoryId, subCategoryId)
+      ))
+      .limit(1);
+
+    if (existingSection.length > 0) {
+      // Update existing section
+      await db.update(hospitalSections)
+        .set({
+          isActive,
+          updatedAt: new Date()
+        })
+        .where(and(
+          eq(hospitalSections.locationId, locationId),
+          eq(hospitalSections.categoryId, categoryId),
+          eq(hospitalSections.subCategoryId, subCategoryId)
+        ));
+    } else {
+      // Create new section
+      await db.insert(hospitalSections).values({
+        locationId,
+        categoryId,
+        subCategoryId,
+        isActive,
+        createdBy: updatedBy
+      });
+    }
   }
 }
 
