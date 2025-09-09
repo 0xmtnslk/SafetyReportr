@@ -201,23 +201,23 @@ export default function HospitalDepartmentsManager() {
     },
   });
 
-  // Delete department mutation
-  const deleteMutation = useMutation({
-    mutationFn: async (departmentId: string) => {
-      return apiRequest('DELETE', `/api/risk/hospital-departments/${departmentId}`);
+  // Toggle department active status mutation
+  const toggleActiveMutation = useMutation({
+    mutationFn: async ({ departmentId, isActive }: { departmentId: string; isActive: boolean }) => {
+      return apiRequest('PUT', `/api/risk/hospital-departments/${departmentId}/toggle`, { isActive });
     },
-    onSuccess: () => {
+    onSuccess: (_, { isActive }) => {
       queryClient.invalidateQueries({ queryKey: ['/api/risk/hospital-departments'] });
       toast({
         title: 'Başarılı',
-        description: 'Hastane bölümü silindi',
+        description: isActive ? 'Bölüm aktifleştirildi' : 'Bölüm devre dışı bırakıldı',
       });
     },
     onError: (error: any) => {
       toast({
         variant: 'destructive',
         title: 'Hata',
-        description: error.message || 'Bölüm silinemedi',
+        description: error.message || 'Bölüm durumu değiştirilemedi',
       });
     },
   });
@@ -408,38 +408,38 @@ export default function HospitalDepartmentsManager() {
                           <Edit className="h-4 w-4" />
                         </Button>
                         
-                        {!department.isDefault && (
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                data-testid={`button-delete-department-${department.id}`}
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              data-testid={`button-toggle-department-${department.id}`}
+                            >
+                              <Trash2 className={`h-4 w-4 ${department.isActive ? 'text-red-500' : 'text-green-500'}`} />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>
+                                {department.isActive ? 'Bölümü Devre Dışı Bırak' : 'Bölümü Aktifleştir'}
+                              </AlertDialogTitle>
+                              <AlertDialogDescription>
+                                "{department.name}" bölümünü {department.isActive ? 'devre dışı bırakmak' : 'aktifleştirmek'} istediğinizden emin misiniz?
+                                {department.isActive && ' Bu bölüm risk değerlendirmesi sayfasında görünmeyecektir.'}
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>İptal</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => toggleActiveMutation.mutate({ departmentId: department.id, isActive: !department.isActive })}
+                                className={department.isActive ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}
+                                data-testid={`button-confirm-toggle-${department.id}`}
                               >
-                                <Trash2 className="h-4 w-4 text-red-500" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Bölümü Sil</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  "{department.name}" bölümünü silmek istediğinizden emin misiniz? 
-                                  Bu işlem geri alınamaz ve bu bölümle ilgili tüm risk değerlendirmeleri silinecektir.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>İptal</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => deleteMutation.mutate(department.id)}
-                                  className="bg-red-600 hover:bg-red-700"
-                                  data-testid={`button-confirm-delete-${department.id}`}
-                                >
-                                  Sil
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        )}
+                                {department.isActive ? 'Devre Dışı Bırak' : 'Aktifleştir'}
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
                     </div>
                   </CardHeader>

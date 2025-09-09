@@ -47,7 +47,6 @@ import DepartmentRiskAssessmentPage from "@/pages/department-risk-assessment";
 import CreateRiskAssessmentPage from "@/pages/create-risk-assessment";
 import EditRiskAssessmentPage from "@/pages/edit-risk-assessment";
 import ViewRiskAssessmentPage from "@/pages/view-risk-assessment";
-import HospitalSectionsManagement from "@/pages/hospital-sections-management";
 import Navigation from "@/components/navigation";
 import Footer from "@/components/Footer";
 import OfflineIndicator from "@/components/offline-indicator";
@@ -72,7 +71,7 @@ function Router() {
   }
 
   // Protected routes - require authentication
-  const protectedRoutes = ['/dashboard', '/create-report', '/reports', '/edit-report', '/view-report', '/admin', '/change-password', '/checklist', '/live-checklist', '/inspection-results', '/admin/inspections', '/inspection-history', '/inspection-results-admin', '/hospital-inspections', '/checklist-inspections', '/inspection-title-detail', '/inspection-analysis', '/specialist', '/profile/edit', '/notifications', '/hospital-management', '/risk-assessment', '/hospital-sections'];
+  const protectedRoutes = ['/dashboard', '/create-report', '/reports', '/edit-report', '/view-report', '/admin', '/change-password', '/checklist', '/live-checklist', '/inspection-results', '/admin/inspections', '/inspection-history', '/inspection-results-admin', '/hospital-inspections', '/checklist-inspections', '/inspection-title-detail', '/inspection-analysis', '/specialist', '/profile/edit', '/notifications', '/hospital-management', '/risk-assessment'];
   const isProtectedRoute = protectedRoutes.some(route => location.startsWith(route));
 
   if (isProtectedRoute && !user) {
