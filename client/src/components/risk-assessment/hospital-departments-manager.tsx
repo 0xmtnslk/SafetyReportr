@@ -398,11 +398,15 @@ export default function HospitalDepartmentsManager() {
                         )}
                       </div>
                       
-                      <div className="flex items-center gap-1 ml-2" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center gap-1 ml-2">
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleEdit(department)}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleEdit(department);
+                          }}
                           data-testid={`button-edit-department-${department.id}`}
                         >
                           <Edit className="h-4 w-4" />
@@ -413,6 +417,10 @@ export default function HospitalDepartmentsManager() {
                             <Button
                               variant="ghost"
                               size="sm"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                              }}
                               data-testid={`button-toggle-department-${department.id}`}
                             >
                               <Trash2 className={`h-4 w-4 ${department.isActive ? 'text-red-500' : 'text-green-500'}`} />

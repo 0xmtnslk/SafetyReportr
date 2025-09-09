@@ -273,7 +273,10 @@ export const hospitalDepartments = pgTable("hospital_departments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   locationId: varchar("location_id").references(() => locations.id).notNull(),
   name: text("name").notNull(), // e.g., "Acil Servis", "Ameliyathane"
+  description: text("description"), // Optional description
   isDefault: boolean("is_default").default(false), // Predefined departments vs custom added
+  isActive: boolean("is_active").default(true), // Specialist can enable/disable departments
+  orderIndex: integer("order_index").default(0), // Display order
   createdBy: varchar("created_by").references(() => users.id).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
