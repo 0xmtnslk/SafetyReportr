@@ -100,7 +100,7 @@ export default function ViewRiskAssessmentPage() {
   const { toast } = useToast();
 
   // Fetch assessment data
-  const { data: assessment, isLoading: loadingAssessment } = useQuery({
+  const { data: assessment, isLoading: loadingAssessment } = useQuery<RiskAssessment>({
     queryKey: ['/api/risk/assessments', assessmentId],
     enabled: !!assessmentId,
   });

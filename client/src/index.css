@@ -186,3 +186,22 @@
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--muted-foreground));
 }
+
+/* Fix for select dropdown z-index issues during scroll */
+[data-radix-popper-content-wrapper] {
+  z-index: 50 !important;
+}
+
+[data-radix-select-content] {
+  z-index: 50 !important;
+  position: fixed !important;
+}
+
+/* Additional fix for Radix Select dropdowns */
+.radix-select-content,
+[data-side="top"],
+[data-side="bottom"],
+[data-side="left"], 
+[data-side="right"] {
+  z-index: 50 !important;
+}
