@@ -9,73 +9,33 @@ import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Badge } from "@/components/ui/badge";
 
-interface RiskCategory {
+interface HospitalDepartment {
   id: string;
   name: string;
-  orderIndex: number;
+  description?: string;
   isActive: boolean;
-}
-
-interface RiskSubCategory {
-  id: string;
-  categoryId: string;
-  name: string;
-  orderIndex: number;
-  isActive: boolean;
-}
-
-interface HospitalSection {
-  categoryId: string;
-  subCategoryId: string;
-  isActive: boolean;
+  orderIndex?: number;
 }
 
 export default function HospitalSectionsManagement() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
-  // Fetch categories, subcategories and hospital sections
-  const { data: categories, isLoading: categoriesLoading } = useQuery<RiskCategory[]>({
-    queryKey: ['/api/risk/categories'],
+  // Fetch hospital departments
+  const { data: departments, isLoading: departmentsLoading } = useQuery<HospitalDepartment[]>({
+    queryKey: ['/api/risk/hospital-departments'],
   });
 
-  const { data: subCategories, isLoading: subCategoriesLoading } = useQuery<RiskSubCategory[]>({
-    queryKey: ['/api/risk/sub-categories'],
-  });
-
-  const { data: hospitalSections, isLoading: sectionsLoading } = useQuery<HospitalSection[]>({
-    queryKey: ['/api/risk/hospital-sections'],
-  });
-
-  // Initialize default sections mutation
-  const initializeSectionsMutation = useMutation({
-    mutationFn: () => apiRequest('POST', '/api/risk/hospital-sections/initialize'),
-    onSuccess: () => {
-      toast({
-        title: "Başarılı",
-        description: "Standart bölümler başarıyla eklendi",
-      });
-      queryClient.invalidateQueries({ queryKey: ['/api/risk/hospital-sections'] });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Hata",
-        description: error.message || "Standart bölümler eklenirken hata oluştu",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Toggle section mutation
-  const toggleSectionMutation = useMutation({
-    mutationFn: (data: { categoryId: string; subCategoryId: string; isActive: boolean }) =>
-      apiRequest('PUT', '/api/risk/hospital-sections/toggle', data),
+  // Toggle department mutation
+  const toggleDepartmentMutation = useMutation({
+    mutationFn: (data: { departmentId: string; isActive: boolean }) =>
+      apiRequest('PUT', `/api/risk/hospital-departments/${data.departmentId}/toggle`, { isActive: data.isActive }),
     onSuccess: () => {
       toast({
         title: "Başarılı", 
         description: "Bölüm durumu güncellendi",
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/risk/hospital-sections'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/risk/hospital-departments'] });
     },
     onError: (error: any) => {
       toast({
@@ -86,15 +46,11 @@ export default function HospitalSectionsManagement() {
     },
   });
 
-  const handleToggleSection = (categoryId: string, subCategoryId: string, isActive: boolean) => {
-    toggleSectionMutation.mutate({ categoryId, subCategoryId, isActive });
+  const handleToggleDepartment = (departmentId: string, isActive: boolean) => {
+    toggleDepartmentMutation.mutate({ departmentId, isActive });
   };
 
-  const handleInitialize = () => {
-    initializeSectionsMutation.mutate();
-  };
-
-  if (categoriesLoading || subCategoriesLoading || sectionsLoading) {
+  if (departmentsLoading) {
     return (
       <div className="container mx-auto p-6">
         <div className="flex items-center justify-center h-64">
@@ -105,21 +61,8 @@ export default function HospitalSectionsManagement() {
     );
   }
 
-  // Create a map for faster lookups
-  const hospitalSectionsMap = new Map<string, boolean>();
-  hospitalSections?.forEach(section => {
-    const key = `${section.categoryId}-${section.subCategoryId}`;
-    hospitalSectionsMap.set(key, section.isActive);
-  });
-
-  const categoriesWithSubCategories = categories?.map(category => ({
-    ...category,
-    subCategories: subCategories?.filter(sub => sub.categoryId === category.id) || []
-  })) || [];
-
-  const totalSections = subCategories?.length || 0;
-  const activeSections = Array.from(hospitalSectionsMap.values()).filter(Boolean).length;
-  const hasAnySections = hospitalSections && hospitalSections.length > 0;
+  const totalDepartments = departments?.length || 0;
+  const activeDepartments = departments?.filter(dept => dept.isActive).length || 0;
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -147,110 +90,60 @@ export default function HospitalSectionsManagement() {
         
         <div className="flex items-center space-x-3">
           <Badge variant="outline" className="text-sm">
-            {activeSections}/{totalSections} Aktif
+            {activeDepartments}/{totalDepartments} Aktif
           </Badge>
-          {!hasAnySections && (
-            <Button 
-              onClick={handleInitialize}
-              disabled={initializeSectionsMutation.isPending}
-              className="flex items-center space-x-2"
-              data-testid="button-initialize"
-            >
-              <Settings className="h-4 w-4" />
-              {initializeSectionsMutation.isPending ? (
-                <>
-                  <RefreshCw className="h-4 w-4 animate-spin" />
-                  <span>Ekleniyor...</span>
-                </>
-              ) : (
-                <span>Standart Bölümleri Ekle</span>
-              )}
-            </Button>
-          )}
         </div>
       </div>
 
-      {/* No sections message */}
-      {!hasAnySections ? (
+      {/* Departments list */}
+      <div className="space-y-4">
         <Card>
-          <CardContent className="p-8 text-center">
-            <Settings className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">
-              Henüz Bölüm Tanımlanmamış
-            </h2>
-            <p className="text-gray-600 mb-4">
-              Risk değerlendirmesi yapabilmek için önce standart bölümleri eklemeniz gerekir.
-            </p>
-            <Button onClick={handleInitialize} disabled={initializeSectionsMutation.isPending}>
-              {initializeSectionsMutation.isPending ? (
-                <>
-                  <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-                  Ekleniyor...
-                </>
-              ) : (
-                'Standart Bölümleri Ekle'
-              )}
-            </Button>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <span className="text-lg font-semibold">Hastane Bölümleri</span>
+              <Badge variant="secondary">
+                {activeDepartments}/{totalDepartments} Aktif
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {departments?.map((department) => (
+                <div
+                  key={department.id}
+                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50"
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className="flex-1">
+                      <h3 className="font-medium text-gray-900">{department.name}</h3>
+                      {department.description && (
+                        <p className="text-sm text-gray-600">{department.description}</p>
+                      )}
+                    </div>
+                    {department.isActive && (
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                    )}
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm text-gray-600">
+                      {department.isActive ? 'Aktif' : 'Pasif'}
+                    </span>
+                    <Switch
+                      checked={department.isActive}
+                      onCheckedChange={(checked) => 
+                        handleToggleDepartment(department.id, checked)
+                      }
+                      disabled={toggleDepartmentMutation.isPending}
+                      data-testid={`switch-${department.id}`}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
-      ) : (
-        /* Sections list */
-        <div className="space-y-6">
-          {categoriesWithSubCategories.map((category) => (
-            <Card key={category.id}>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <span className="text-lg font-semibold">{category.name}</span>
-                  <Badge variant="secondary">
-                    {category.subCategories.filter(sub => {
-                      const key = `${category.id}-${sub.id}`;
-                      return hospitalSectionsMap.get(key) === true;
-                    }).length}/{category.subCategories.length} Aktif
-                  </Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {category.subCategories.map((subCategory) => {
-                    const key = `${category.id}-${subCategory.id}`;
-                    const isActive = hospitalSectionsMap.get(key) ?? false;
-                    
-                    return (
-                      <div
-                        key={subCategory.id}
-                        className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50"
-                      >
-                        <div className="flex items-center space-x-3">
-                          <div className="flex-1">
-                            <h3 className="font-medium text-gray-900">{subCategory.name}</h3>
-                          </div>
-                          {isActive && (
-                            <CheckCircle className="h-4 w-4 text-green-600" />
-                          )}
-                        </div>
-                        
-                        <div className="flex items-center space-x-2">
-                          <span className="text-sm text-gray-600">
-                            {isActive ? 'Aktif' : 'Pasif'}
-                          </span>
-                          <Switch
-                            checked={isActive}
-                            onCheckedChange={(checked) => 
-                              handleToggleSection(category.id, subCategory.id, checked)
-                            }
-                            disabled={toggleSectionMutation.isPending}
-                            data-testid={`switch-${subCategory.id}`}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+      </div>
     </div>
   );
 }

@@ -2449,6 +2449,15 @@ export class DatabaseStorage implements IStorage {
       });
     }
   }
+
+  async toggleHospitalDepartment(departmentId: string, isActive: boolean): Promise<void> {
+    await db.update(hospitalDepartments)
+      .set({
+        isActive,
+        updatedAt: new Date()
+      })
+      .where(eq(hospitalDepartments.id, departmentId));
+  }
 }
 
 export const storage = new DatabaseStorage();

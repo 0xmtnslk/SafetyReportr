@@ -2704,6 +2704,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'Risk alt kategorileri alınırken hata oluştu' });
     }
   });
+
+  // Hospital Department Toggle (Enable/Disable departments per hospital)
+  app.put('/api/risk/hospital-departments/:id/toggle', authenticateToken, requireSafetySpecialist, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { isActive } = req.body;
+      const user = (req as any).user;
+
+      if (typeof isActive !== 'boolean') {
+        return res.status(400).json({ message: 'isActive alanı gerekli' });
+      }
+
+      // Check if department belongs to user's location
+      const department = await storage.getHospitalDepartment(id);
+      if (!department || department.locationId !== user.locationId) {
+        return res.status(403).json({ message: 'Bu bölüme erişim yetkiniz yok' });
+      }
+
+      await storage.toggleHospitalDepartment(id, isActive);
+      res.json({ message: 'Bölüm durumu güncellendi' });
+    } catch (error: any) {
+      console.error('Error toggling hospital department:', error);
+      res.status(500).json({ message: 'Bölüm durumu güncellenirken hata oluştu' });
+    }
+  });
   
   // Hospital Sections Management (Specialist-managed custom sections per hospital)
   app.get("/api/risk/hospital-sections", authenticateToken, requireSafetySpecialist, async (req, res) => {
