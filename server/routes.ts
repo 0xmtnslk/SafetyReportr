@@ -3079,11 +3079,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get all locations and their department counts
-      const allLocations = await db.select({
-        id: locations.id,
-        name: locations.name,
-        address: locations.address
-      }).from(locations);
+      const allLocations = await storage.getAllLocations();
 
       const locationStatus = [];
       
