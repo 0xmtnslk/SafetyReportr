@@ -2010,6 +2010,98 @@ export default function AdminPanel() {
 
         </TabsContent>
 
+        <TabsContent value="migration" className="space-y-6">
+          {/* Migration Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Activity className="h-5 w-5" />
+                Database Migration
+              </CardTitle>
+              <CardDescription>
+                Production database'e eksik bölümleri senkronize et
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Migration Status */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div>
+                    <h3 className="font-medium">Migration Durumu</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Production database'deki hastane bölümlerinin durumunu kontrol et
+                    </p>
+                  </div>
+                  <Button 
+                    onClick={() => {
+                      queryClient.invalidateQueries({ queryKey: ['/api/admin/migration-status'] });
+                    }}
+                    variant="outline" 
+                    size="sm"
+                    data-testid="button-check-migration-status"
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    Durumu Kontrol Et
+                  </Button>
+                </div>
+
+                {/* Migration Action */}
+                <div className="flex items-center justify-between p-4 border rounded-lg bg-blue-50 dark:bg-blue-950">
+                  <div>
+                    <h3 className="font-medium text-blue-900 dark:text-blue-100">
+                      Hastane Bölümlerini Senkronize Et
+                    </h3>
+                    <p className="text-sm text-blue-700 dark:text-blue-300">
+                      Production'da eksik olan 41 standart hastane bölümünü otomatik ekle
+                    </p>
+                  </div>
+                  <Button 
+                    onClick={async () => {
+                      try {
+                        const result = await apiRequest('/api/admin/migrate-hospital-departments', {
+                          method: 'POST'
+                        });
+                        toast({
+                          title: "Migration Başarılı",
+                          description: `${result.migrated} hastane güncellendi`
+                        });
+                        queryClient.invalidateQueries({ queryKey: ['/api/admin/migration-status'] });
+                      } catch (error) {
+                        toast({
+                          title: "Migration Hatası",
+                          description: "Migration işlemi başarısız oldu",
+                          variant: "destructive"
+                        });
+                      }
+                    }}
+                    data-testid="button-start-migration"
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    <PlayIcon className="h-4 w-4 mr-2" />
+                    Migration Başlat
+                  </Button>
+                </div>
+
+                {/* Warning */}
+                <div className="p-4 border border-orange-200 rounded-lg bg-orange-50 dark:bg-orange-950 dark:border-orange-800">
+                  <div className="flex items-start gap-3">
+                    <Shield className="h-5 w-5 text-orange-600 mt-0.5" />
+                    <div>
+                      <h4 className="font-medium text-orange-900 dark:text-orange-100">
+                        Güvenlik Uyarısı
+                      </h4>
+                      <p className="text-sm text-orange-700 dark:text-orange-300 mt-1">
+                        Bu işlem sadece eksik bölümleri ekler. Mevcut veriler etkilenmez.
+                        Migration işlemi geri alınamaz, lütfen dikkatli olun.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
       </Tabs>
 
       {/* Edit User Dialog */}
