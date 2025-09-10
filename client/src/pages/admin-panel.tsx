@@ -2058,7 +2058,7 @@ export default function AdminPanel() {
                   <Button 
                     onClick={async () => {
                       try {
-                        const result = await apiRequest('/api/admin/migrate-hospital-departments', 'POST');
+                        const result = await apiRequest('POST', '/api/admin/migrate-hospital-departments');
                         const data = await result.json();
                         toast({
                           title: "Migration Başarılı",
@@ -2299,7 +2299,7 @@ export default function AdminPanel() {
 
                           maxFileSize={5242880} // 5MB
                           onGetUploadParameters={async () => {
-                            const response = await apiRequest('/api/objects/upload', 'POST');
+                            const response = await apiRequest('POST', '/api/objects/upload');
                             const data = await response.json();
                             return {
                               method: 'PUT' as const,
@@ -2593,7 +2593,7 @@ export default function AdminPanel() {
 
                           maxFileSize={5242880} // 5MB
                           onGetUploadParameters={async () => {
-                            const response = await apiRequest('/api/objects/upload', 'POST');
+                            const response = await apiRequest('POST', '/api/objects/upload');
                             const data = await response.json();
                             return {
                               method: 'PUT' as const,
