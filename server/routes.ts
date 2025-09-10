@@ -3024,7 +3024,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let totalDepartments = 0;
       let totalSections = 0;
       
-      // Step 1: Ensure base categories and subcategories exist
+      // Step 1: Basit migration - Manuel kategori ve alt kategori ekleme
       const baseDataResult = {
         categories: 0,
         subcategories: 0
@@ -3034,11 +3034,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Check if risk categories exist
         const existingCategories = await storage.getAllRiskCategories();
         if (existingCategories.length === 0) {
-          // Initialize default risk categories
-          const { DEFAULT_RISK_CATEGORIES } = await import('@shared/schema');
-          for (const categoryData of DEFAULT_RISK_CATEGORIES) {
+          // Manuel kategoriler ekleme
+          const defaultCategories = [
+            { name: "Tıbbi Hizmetler", orderIndex: 1 },
+            { name: "Yönetsel Hizmetler", orderIndex: 2 },
+            { name: "Destek Hizmetleri", orderIndex: 3 },
+            { name: "Fiziksel Çevre", orderIndex: 4 },
+            { name: "İnsan Kaynakları", orderIndex: 5 }
+          ];
+          
+          for (const catData of defaultCategories) {
             await storage.createRiskCategory({
-              ...categoryData,
+              ...catData,
+              isActive: true,
               createdBy: user.id
             });
             baseDataResult.categories++;
@@ -3047,15 +3055,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Check if risk subcategories exist
         const existingSubCategories = await storage.getAllRiskSubCategories();
-        if (existingSubCategories.length === 0) {
-          // Initialize default risk subcategories
-          const { DEFAULT_RISK_SUBCATEGORIES } = await import('@shared/schema');
-          for (const subCategoryData of DEFAULT_RISK_SUBCATEGORIES) {
-            await storage.createRiskSubCategory({
-              ...subCategoryData,
-              createdBy: user.id
-            });
-            baseDataResult.subcategories++;
+        if (existingSubCategories.length === 0 && baseDataResult.categories > 0) {
+          // Get category IDs to create subcategories
+          const categories = await storage.getAllRiskCategories();
+          const medicalCategory = categories.find(c => c.name === "Tıbbi Hizmetler");
+          const managementCategory = categories.find(c => c.name === "Yönetsel Hizmetler");
+          
+          if (medicalCategory && managementCategory) {
+            const defaultSubCategories = [
+              { categoryId: medicalCategory.id, name: "Hasta Güvenliği", orderIndex: 1 },
+              { categoryId: medicalCategory.id, name: "Tıbbi Cihaz Güvenliği", orderIndex: 2 },
+              { categoryId: medicalCategory.id, name: "İlaç Güvenliği", orderIndex: 3 },
+              { categoryId: managementCategory.id, name: "Bilgi Güvenliği", orderIndex: 1 },
+              { categoryId: managementCategory.id, name: "Kalite Yönetimi", orderIndex: 2 }
+            ];
+            
+            for (const subCatData of defaultSubCategories) {
+              await storage.createRiskSubCategory({
+                ...subCatData,
+                isActive: true,
+                createdBy: user.id
+              });
+              baseDataResult.subcategories++;
+            }
           }
         }
       } catch (error: any) {
