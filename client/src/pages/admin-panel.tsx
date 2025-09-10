@@ -2058,12 +2058,11 @@ export default function AdminPanel() {
                   <Button 
                     onClick={async () => {
                       try {
-                        const result = await apiRequest('/api/admin/migrate-hospital-departments', {
-                          method: 'POST'
-                        });
+                        const result = await apiRequest('/api/admin/migrate-hospital-departments', 'POST');
+                        const data = await result.json();
                         toast({
                           title: "Migration Başarılı",
-                          description: `${result.migrated} hastane güncellendi`
+                          description: `${data.migrated || 0} hastane güncellendi`
                         });
                         queryClient.invalidateQueries({ queryKey: ['/api/admin/migration-status'] });
                       } catch (error) {
