@@ -1112,7 +1112,7 @@ export default function AdminPanel() {
                                     }
 
                                     onComplete={(result) => {
-                                      const uploadedFile = result.successful[0];
+                                      const uploadedFile = result.successful?.[0];
                                       if (uploadedFile?.uploadURL) {
                                         // Normalize the object URL to our API format
                                         const normalizedPath = uploadedFile.uploadURL.includes('storage.googleapis.com') 
@@ -2066,9 +2066,10 @@ export default function AdminPanel() {
                         });
                         queryClient.invalidateQueries({ queryKey: ['/api/admin/migration-status'] });
                       } catch (error) {
+                        console.error("Migration error:", error);
                         toast({
                           title: "Migration Hatası",
-                          description: "Migration işlemi başarısız oldu",
+                          description: error instanceof Error ? error.message : "Migration işlemi başarısız oldu",
                           variant: "destructive"
                         });
                       }
@@ -2298,12 +2299,11 @@ export default function AdminPanel() {
 
                           maxFileSize={5242880} // 5MB
                           onGetUploadParameters={async () => {
-                            const response = await apiRequest('/api/objects/upload', {
-                              method: 'POST'
-                            });
+                            const response = await apiRequest('/api/objects/upload', 'POST');
+                            const data = await response.json();
                             return {
                               method: 'PUT' as const,
-                              url: response.uploadURL
+                              url: data.uploadURL
                             };
                           }}
 
@@ -2593,12 +2593,11 @@ export default function AdminPanel() {
 
                           maxFileSize={5242880} // 5MB
                           onGetUploadParameters={async () => {
-                            const response = await apiRequest('/api/objects/upload', {
-                              method: 'POST'
-                            });
+                            const response = await apiRequest('/api/objects/upload', 'POST');
+                            const data = await response.json();
                             return {
                               method: 'PUT' as const,
-                              url: response.uploadURL
+                              url: data.uploadURL
                             };
                           }}
 
