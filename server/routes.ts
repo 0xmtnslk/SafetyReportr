@@ -3034,13 +3034,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Check if risk categories exist
         const existingCategories = await storage.getAllRiskCategories();
         if (existingCategories.length === 0) {
-          // Manuel kategoriler ekleme
+          // DOĞRU kategoriler ekleme
           const defaultCategories = [
             { name: "Tıbbi Hizmetler", orderIndex: 1 },
             { name: "Yönetsel Hizmetler", orderIndex: 2 },
-            { name: "Destek Hizmetleri", orderIndex: 3 },
-            { name: "Fiziksel Çevre", orderIndex: 4 },
-            { name: "İnsan Kaynakları", orderIndex: 5 }
+            { name: "Tesis Güvenliği", orderIndex: 3 },
+            { name: "Çevre Güvenliği", orderIndex: 4 },
+            { name: "İş Sağlığı ve Güvenliği", orderIndex: 5 }
           ];
           
           for (const catData of defaultCategories) {
@@ -3060,24 +3060,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const categories = await storage.getAllRiskCategories();
           const medicalCategory = categories.find(c => c.name === "Tıbbi Hizmetler");
           const managementCategory = categories.find(c => c.name === "Yönetsel Hizmetler");
+          const facilityCategory = categories.find(c => c.name === "Tesis Güvenliği");
+          const environmentCategory = categories.find(c => c.name === "Çevre Güvenliği");
+          const healthSafetyCategory = categories.find(c => c.name === "İş Sağlığı ve Güvenliği");
           
-          if (medicalCategory && managementCategory) {
-            const defaultSubCategories = [
-              { categoryId: medicalCategory.id, name: "Hasta Güvenliği", orderIndex: 1 },
-              { categoryId: medicalCategory.id, name: "Tıbbi Cihaz Güvenliği", orderIndex: 2 },
-              { categoryId: medicalCategory.id, name: "İlaç Güvenliği", orderIndex: 3 },
-              { categoryId: managementCategory.id, name: "Bilgi Güvenliği", orderIndex: 1 },
-              { categoryId: managementCategory.id, name: "Kalite Yönetimi", orderIndex: 2 }
-            ];
-            
-            for (const subCatData of defaultSubCategories) {
-              await storage.createRiskSubCategory({
-                ...subCatData,
-                isActive: true,
-                createdBy: user.id
-              });
-              baseDataResult.subcategories++;
-            }
+          const defaultSubCategories = [];
+          
+          // Tıbbi Hizmetler alt kategorileri
+          if (medicalCategory) {
+            defaultSubCategories.push(
+              { categoryId: medicalCategory.id, name: "Hizmete erişim ile ilgili riskler", orderIndex: 1 },
+              { categoryId: medicalCategory.id, name: "Hasta kabul süreci ile ilgili riskler", orderIndex: 2 },
+              { categoryId: medicalCategory.id, name: "Tanı süreci ile ilgili riskler", orderIndex: 3 },
+              { categoryId: medicalCategory.id, name: "Tedavi ve rehabilitasyon süreci ile ilgili riskler", orderIndex: 4 },
+              { categoryId: medicalCategory.id, name: "Tıbbi kayıt ve arşiv süreci ile ilgili riskler", orderIndex: 5 }
+            );
+          }
+          
+          // Yönetsel Hizmetler alt kategorileri
+          if (managementCategory) {
+            defaultSubCategories.push(
+              { categoryId: managementCategory.id, name: "İdari süreçler ile ilgili riskler", orderIndex: 1 },
+              { categoryId: managementCategory.id, name: "Finansal süreçler ile ilgili riskler", orderIndex: 2 },
+              { categoryId: managementCategory.id, name: "İtibar yönetimi", orderIndex: 3 },
+              { categoryId: managementCategory.id, name: "Paydaşlarla iletişim süreçlerine yönelik riskler", orderIndex: 4 },
+              { categoryId: managementCategory.id, name: "Bilgi yönetimi süreçleri ile ilgili riskler", orderIndex: 5 }
+            );
+          }
+          
+          // Tesis Güvenliği alt kategorileri
+          if (facilityCategory) {
+            defaultSubCategories.push(
+              { categoryId: facilityCategory.id, name: "Atık Yönetimi sürecindeki riskler", orderIndex: 1 },
+              { categoryId: facilityCategory.id, name: "Tıbbi Cihaz ve malzeme yönetimi süreci riskleri", orderIndex: 2 },
+              { categoryId: facilityCategory.id, name: "Diğer cihaz ve malzeme yönetim süreci riskleri", orderIndex: 3 },
+              { categoryId: facilityCategory.id, name: "Yangın Güvenliği ile ilgili riskler", orderIndex: 4 },
+              { categoryId: facilityCategory.id, name: "Altyapı Sistemleri ile ilgili riskler", orderIndex: 5 },
+              { categoryId: facilityCategory.id, name: "İnşaat ve Renovasyon ile ilgili riskler", orderIndex: 6 },
+              { categoryId: facilityCategory.id, name: "Acil Durum ve Afet Yönetimi ile ilgili riskler", orderIndex: 7 },
+              { categoryId: facilityCategory.id, name: "Emniyet ile ilgili riskler", orderIndex: 8 }
+            );
+          }
+          
+          // Çevre Güvenliği alt kategorileri
+          if (environmentCategory) {
+            defaultSubCategories.push(
+              { categoryId: environmentCategory.id, name: "Hava kirliliği oluşturabilecek unsurlar", orderIndex: 1 },
+              { categoryId: environmentCategory.id, name: "Atıkların çevreye zarar vermesi", orderIndex: 2 },
+              { categoryId: environmentCategory.id, name: "Çevreden hastaneye gelecek zararlar", orderIndex: 3 },
+              { categoryId: environmentCategory.id, name: "Tehlikeli atıklardan oluşabilecek zararlar", orderIndex: 4 }
+            );
+          }
+          
+          // İş Sağlığı ve Güvenliği alt kategorileri
+          if (healthSafetyCategory) {
+            defaultSubCategories.push(
+              { categoryId: healthSafetyCategory.id, name: "Güvenlik - Fiziksel Risk Etmenleri", orderIndex: 1 },
+              { categoryId: healthSafetyCategory.id, name: "Güvenlik - Biyolojik Risk Etmenleri", orderIndex: 2 },
+              { categoryId: healthSafetyCategory.id, name: "Güvenlik - Psikososyal Risk Etmenleri", orderIndex: 3 },
+              { categoryId: healthSafetyCategory.id, name: "Güvenlik - Ergonomik Risk Etmenleri", orderIndex: 4 },
+              { categoryId: healthSafetyCategory.id, name: "Tehlikeli Madde Yönetimi - Kimyasal Risk Etmenleri", orderIndex: 5 }
+            );
+          }
+          
+          // Tüm alt kategorileri ekle
+          for (const subCatData of defaultSubCategories) {
+            await storage.createRiskSubCategory({
+              ...subCatData,
+              isActive: true,
+              createdBy: user.id
+            });
+            baseDataResult.subcategories++;
           }
         }
       } catch (error: any) {
