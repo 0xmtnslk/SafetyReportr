@@ -695,7 +695,10 @@ export const insertInspectionResponseSchema = createInsertSchema(inspectionRespo
 export const insertHospitalDepartmentSchema = createInsertSchema(hospitalDepartments).pick({
   locationId: true,
   name: true,
+  description: true,
   isDefault: true,
+  isActive: true,
+  orderIndex: true,
 });
 
 export const insertRiskCategorySchema = createInsertSchema(riskCategories).pick({

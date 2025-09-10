@@ -158,7 +158,13 @@ export default function HospitalDepartmentsManager() {
   // Create department mutation
   const createMutation = useMutation({
     mutationFn: async (data: DepartmentForm) => {
-      return apiRequest('POST', '/api/risk/hospital-departments', data);
+      const departmentData = {
+        ...data,
+        isDefault: false, // Custom departments are not default
+        isActive: true,   // New departments are active by default
+        orderIndex: 0     // Default order
+      };
+      return apiRequest('POST', '/api/risk/hospital-departments', departmentData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/risk/hospital-departments'] });
