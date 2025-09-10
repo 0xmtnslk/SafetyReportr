@@ -115,11 +115,29 @@ export default function CreateRiskAssessmentDialog({
   // Fetch hospital departments
   const { data: departments } = useQuery<HospitalDepartment[]>({
     queryKey: ['/api/risk/hospital-departments'],
+    queryFn: async () => {
+      const response = await fetch('/api/risk/hospital-departments', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      if (!response.ok) throw new Error('Failed to fetch departments');
+      return response.json();
+    },
   });
 
   // Fetch risk categories
   const { data: categories } = useQuery<RiskCategory[]>({
     queryKey: ['/api/risk/categories'],
+    queryFn: async () => {
+      const response = await fetch('/api/risk/categories', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      if (!response.ok) throw new Error('Failed to fetch categories');
+      return response.json();
+    },
   });
 
   // Fetch sub-categories based on selected category
@@ -142,6 +160,15 @@ export default function CreateRiskAssessmentDialog({
   // Fetch Fine-Kinney values
   const { data: fineKinneyValues } = useQuery<FineKinneyValues>({
     queryKey: ['/api/risk/fine-kinney-values'],
+    queryFn: async () => {
+      const response = await fetch('/api/risk/fine-kinney-values', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      if (!response.ok) throw new Error('Failed to fetch Fine-Kinney values');
+      return response.json();
+    },
   });
 
   // Watch risk factors for calculation
