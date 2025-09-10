@@ -3004,6 +3004,117 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ADMIN MIGRATION ENDPOINTS
+  app.post('/api/admin/migrate-hospital-departments', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      
+      // Safety check - only allow superadmin to run migrations
+      if (user.role !== 'central_admin') {
+        return res.status(403).json({ message: 'Sadece merkezi admin migration çalıştırabilir' });
+      }
+
+      const { targetLocationIds } = req.body;
+      
+      if (!targetLocationIds || !Array.isArray(targetLocationIds)) {
+        return res.status(400).json({ message: 'targetLocationIds dizisi gerekli' });
+      }
+
+      const results = [];
+      
+      for (const locationId of targetLocationIds) {
+        try {
+          // Check if location exists
+          const existingDepartments = await storage.getLocationDepartments(locationId);
+          
+          if (existingDepartments.length === 0) {
+            // Initialize default departments for this location
+            const newDepartments = await storage.initializeDefaultDepartments(locationId, user.id);
+            results.push({
+              locationId,
+              status: 'success',
+              message: `${newDepartments.length} department eklendi`,
+              departments: newDepartments.length
+            });
+          } else {
+            results.push({
+              locationId,
+              status: 'skipped',
+              message: `Bu hastanede zaten ${existingDepartments.length} department var`,
+              departments: existingDepartments.length
+            });
+          }
+        } catch (error: any) {
+          results.push({
+            locationId,
+            status: 'error',
+            message: error.message,
+            departments: 0
+          });
+        }
+      }
+
+      res.json({
+        message: 'Migration tamamlandı',
+        results,
+        totalLocations: targetLocationIds.length,
+        successful: results.filter(r => r.status === 'success').length,
+        skipped: results.filter(r => r.status === 'skipped').length,
+        errors: results.filter(r => r.status === 'error').length
+      });
+
+    } catch (error: any) {
+      console.error('Hospital departments migration error:', error);
+      res.status(500).json({ message: 'Migration sırasında hata oluştu: ' + error.message });
+    }
+  });
+
+  // Migration status endpoint - check what needs migration
+  app.get('/api/admin/migration-status', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      
+      if (user.role !== 'central_admin') {
+        return res.status(403).json({ message: 'Sadece merkezi admin migration status görebilir' });
+      }
+
+      // Get all locations and their department counts
+      const allLocations = await db.select({
+        id: locations.id,
+        name: locations.name,
+        address: locations.address
+      }).from(locations);
+
+      const locationStatus = [];
+      
+      for (const location of allLocations) {
+        const departments = await storage.getLocationDepartments(location.id);
+        const departmentCount = departments.length;
+        const needsMigration = departmentCount === 0;
+        
+        locationStatus.push({
+          id: location.id,
+          name: location.name,
+          address: location.address,
+          departmentCount,
+          needsMigration,
+          status: needsMigration ? 'needs_migration' : 'ready'
+        });
+      }
+
+      res.json({
+        totalLocations: allLocations.length,
+        needsMigration: locationStatus.filter(l => l.needsMigration).length,
+        ready: locationStatus.filter(l => !l.needsMigration).length,
+        locations: locationStatus
+      });
+
+    } catch (error: any) {
+      console.error('Migration status error:', error);
+      res.status(500).json({ message: 'Migration status alınırken hata oluştu: ' + error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
