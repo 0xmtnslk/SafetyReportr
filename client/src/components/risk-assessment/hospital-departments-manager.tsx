@@ -394,7 +394,7 @@ export default function HospitalDepartmentsManager() {
                         <CardTitle className="text-lg flex items-center gap-2">
                           {department.name}
                           {department.isDefault && (
-                            <Shield className="h-4 w-4 text-blue-500" title="Varsayılan bölüm" />
+                            <Shield className="h-4 w-4 text-blue-500" />
                           )}
                         </CardTitle>
                         {department.description && (
