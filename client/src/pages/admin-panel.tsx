@@ -2058,11 +2058,32 @@ export default function AdminPanel() {
                   <Button 
                     onClick={async () => {
                       try {
-                        const result = await apiRequest('POST', '/api/admin/migrate-hospital-departments');
+                        // İlk önce migration status'u al
+                        const statusResult = await apiRequest('GET', '/api/admin/migration-status');
+                        const statusData = await statusResult.json();
+                        
+                        // Migration gereken lokasyonları filtrele
+                        const locationsNeedingMigration = statusData.locations
+                          .filter((loc: any) => loc.needsMigration)
+                          .map((loc: any) => loc.id);
+                        
+                        if (locationsNeedingMigration.length === 0) {
+                          toast({
+                            title: "Migration Gerekmiyor",
+                            description: "Tüm hastanelerde bölümler zaten mevcut"
+                          });
+                          return;
+                        }
+                        
+                        // Migration'ı çalıştır
+                        const result = await apiRequest('POST', '/api/admin/migrate-hospital-departments', {
+                          targetLocationIds: locationsNeedingMigration
+                        });
                         const data = await result.json();
+                        
                         toast({
                           title: "Migration Başarılı",
-                          description: `${data.migrated || 0} hastane güncellendi`
+                          description: `${data.successful || 0} hastane güncellendi, ${data.skipped || 0} hastane zaten hazırdı`
                         });
                         queryClient.invalidateQueries({ queryKey: ['/api/admin/migration-status'] });
                       } catch (error) {
