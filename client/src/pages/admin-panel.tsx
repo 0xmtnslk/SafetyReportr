@@ -2049,10 +2049,10 @@ export default function AdminPanel() {
                 <div className="flex items-center justify-between p-4 border rounded-lg bg-blue-50 dark:bg-blue-950">
                   <div>
                     <h3 className="font-medium text-blue-900 dark:text-blue-100">
-                      Hastane Bölümlerini Senkronize Et
+                      Tam Sistem Migration - Production Veritabanını Senkronize Et
                     </h3>
                     <p className="text-sm text-blue-700 dark:text-blue-300">
-                      Production'da eksik olan 41 standart hastane bölümünü otomatik ekle
+                      Risk kategorileri, alt kategoriler, hastane bölümleri ve tüm temel verileri production'a ekle
                     </p>
                   </div>
                   <Button 
@@ -2082,8 +2082,8 @@ export default function AdminPanel() {
                         const data = await result.json();
                         
                         toast({
-                          title: "Migration Başarılı",
-                          description: `${data.successful || 0} hastane güncellendi, ${data.skipped || 0} hastane zaten hazırdı`
+                          title: "Migration Başarılı!",
+                          description: `✅ ${data.summary?.categories || 0} kategori, ${data.summary?.subcategories || 0} alt kategori, ${data.summary?.totalDepartments || 0} bölüm, ${data.summary?.successful || 0} hastane güncellendi`
                         });
                         queryClient.invalidateQueries({ queryKey: ['/api/admin/migration-status'] });
                       } catch (error) {

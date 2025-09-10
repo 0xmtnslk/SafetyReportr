@@ -3004,7 +3004,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // ADMIN MIGRATION ENDPOINTS
+  // ADMIN MIGRATION ENDPOINTS - FULL SYSTEM MIGRATION
   app.post('/api/admin/migrate-hospital-departments', authenticateToken, requireAdmin, async (req, res) => {
     try {
       const user = (req as any).user;
@@ -3021,50 +3021,120 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const results = [];
+      let totalDepartments = 0;
+      let totalSections = 0;
       
+      // Step 1: Ensure base categories and subcategories exist
+      const baseDataResult = {
+        categories: 0,
+        subcategories: 0
+      };
+      
+      try {
+        // Check if risk categories exist
+        const existingCategories = await storage.getAllRiskCategories();
+        if (existingCategories.length === 0) {
+          // Initialize default risk categories
+          const { DEFAULT_RISK_CATEGORIES } = await import('@shared/schema');
+          for (const categoryData of DEFAULT_RISK_CATEGORIES) {
+            await storage.createRiskCategory({
+              ...categoryData,
+              createdBy: user.id
+            });
+            baseDataResult.categories++;
+          }
+        }
+        
+        // Check if risk subcategories exist
+        const existingSubCategories = await storage.getAllRiskSubCategories();
+        if (existingSubCategories.length === 0) {
+          // Initialize default risk subcategories
+          const { DEFAULT_RISK_SUBCATEGORIES } = await import('@shared/schema');
+          for (const subCategoryData of DEFAULT_RISK_SUBCATEGORIES) {
+            await storage.createRiskSubCategory({
+              ...subCategoryData,
+              createdBy: user.id
+            });
+            baseDataResult.subcategories++;
+          }
+        }
+      } catch (error: any) {
+        console.warn('Base data migration warning:', error.message);
+      }
+      
+      // Step 2: Migrate hospital departments and sections
       for (const locationId of targetLocationIds) {
         try {
-          // Check if location exists
+          const location = await storage.getLocationById(locationId);
+          if (!location) {
+            results.push({
+              locationId,
+              status: 'error',
+              message: 'Hastane bulunamadı',
+              departments: 0,
+              sections: 0
+            });
+            continue;
+          }
+
+          // Check existing departments
           const existingDepartments = await storage.getLocationDepartments(locationId);
+          let departmentCount = 0;
+          let sectionCount = 0;
           
           if (existingDepartments.length === 0) {
             // Initialize default departments for this location
             const newDepartments = await storage.initializeDefaultDepartments(locationId, user.id);
-            results.push({
-              locationId,
-              status: 'success',
-              message: `${newDepartments.length} department eklendi`,
-              departments: newDepartments.length
-            });
-          } else {
-            results.push({
-              locationId,
-              status: 'skipped',
-              message: `Bu hastanede zaten ${existingDepartments.length} department var`,
-              departments: existingDepartments.length
-            });
+            departmentCount = newDepartments.length;
+            totalDepartments += departmentCount;
           }
+          
+          // Initialize default sections for risk assessments
+          try {
+            await storage.initializeDefaultSections(locationId, user.id);
+            sectionCount = 1; // Successfully initialized sections
+            totalSections += sectionCount;
+          } catch (error: any) {
+            console.warn(`Section initialization warning for ${locationId}:`, error.message);
+          }
+          
+          results.push({
+            locationId,
+            hospitalName: location.name,
+            status: 'success',
+            message: `${departmentCount} bölüm, ${sectionCount ? 'risk sections' : 'no sections'} eklendi`,
+            departments: departmentCount,
+            sections: sectionCount
+          });
+          
         } catch (error: any) {
           results.push({
             locationId,
             status: 'error',
             message: error.message,
-            departments: 0
+            departments: 0,
+            sections: 0
           });
         }
       }
 
       res.json({
-        message: 'Migration tamamlandı',
+        message: 'Tam sistem migration tamamlandı',
+        baseData: baseDataResult,
         results,
-        totalLocations: targetLocationIds.length,
-        successful: results.filter(r => r.status === 'success').length,
-        skipped: results.filter(r => r.status === 'skipped').length,
-        errors: results.filter(r => r.status === 'error').length
+        summary: {
+          totalLocations: targetLocationIds.length,
+          successful: results.filter(r => r.status === 'success').length,
+          errors: results.filter(r => r.status === 'error').length,
+          totalDepartments,
+          totalSections,
+          categories: baseDataResult.categories,
+          subcategories: baseDataResult.subcategories
+        }
       });
 
     } catch (error: any) {
-      console.error('Hospital departments migration error:', error);
+      console.error('Full system migration error:', error);
       res.status(500).json({ message: 'Migration sırasında hata oluştu: ' + error.message });
     }
   });
