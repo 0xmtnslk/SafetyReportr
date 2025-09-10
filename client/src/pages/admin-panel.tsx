@@ -47,6 +47,7 @@ const getProfileImageOrDefault = (profileImage?: string) => {
   if (profileImage && profileImage.startsWith('/objects/')) {
     return profileImage;
   }
+
   return mlpLogoPath; // Default medicalisg logo
 };
 
@@ -55,6 +56,7 @@ const getHospitalLogoOrDefault = (logo?: string) => {
   if (logo && logo.startsWith('/objects/')) {
     return logo;
   }
+
   return mlpLogoPath; // Default medicalisg logo
 };
 
@@ -147,6 +149,7 @@ interface SearchableSelectProps {
   "data-testid"?: string;
 }
 
+
 function SearchableSelect({ value, onValueChange, options, placeholder, disabled = false, "data-testid": testId }: SearchableSelectProps) {
   const [open, setOpen] = useState(false);
 
@@ -157,11 +160,15 @@ function SearchableSelect({ value, onValueChange, options, placeholder, disabled
           variant="outline"
           role="combobox"
           aria-expanded={open}
+
           className="w-full justify-between"
           disabled={disabled}
+
           data-testid={testId}
+
         >
           {value ? options.find((option) => option.value === value)?.label : placeholder}
+
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
@@ -173,24 +180,31 @@ function SearchableSelect({ value, onValueChange, options, placeholder, disabled
             {options.map((option) => (
               <CommandItem
                 key={option.value}
+
                 value={option.value}
+
                 onSelect={(currentValue) => {
                   onValueChange(currentValue === value ? "" : currentValue);
                   setOpen(false);
                 }}
+
               >
                 <Check
                   className={`mr-2 h-4 w-4 ${value === option.value ? "opacity-100" : "opacity-0"}`}
+
                 />
                 {option.label}
+
               </CommandItem>
             ))}
+
           </CommandGroup>
         </Command>
       </PopoverContent>
     </Popover>
   );
 }
+
 
 // Reusable Search Input Component
 interface SearchInputProps {
@@ -201,6 +215,7 @@ interface SearchInputProps {
   "data-testid"?: string;
 }
 
+
 function SearchInput({ placeholder, value, onChange, className = "", "data-testid": testId }: SearchInputProps) {
   return (
     <div className={`relative ${className}`}>
@@ -208,23 +223,30 @@ function SearchInput({ placeholder, value, onChange, className = "", "data-testi
       <Input
         type="text"
         placeholder={placeholder}
+
         value={value}
+
         onChange={(e) => onChange(e.target.value)}
+
         className="pl-10 pr-10"
         data-testid={testId}
+
       />
       {value && (
         <button
           onClick={() => onChange("")}
+
           className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
           data-testid="clear-search"
         >
           <X className="h-4 w-4" />
         </button>
       )}
+
     </div>
   );
 }
+
 
 // User type from shared schema
 interface User {
@@ -244,6 +266,7 @@ interface User {
   createdAt: string;
   updatedAt: string;
 }
+
 
 // Location type from shared schema
 interface Location {
@@ -266,6 +289,7 @@ interface Location {
   createdAt: string;
   updatedAt: string;
 }
+
 
 // Form schemas
 const createUserSchema = z.object({
@@ -544,6 +568,7 @@ export default function AdminPanel() {
       const newPassword = generatePassword();
       createForm.setValue("password", newPassword);
     }
+
   }, [isCreateDialogOpen]);
 
   // Hospital Forms
@@ -599,6 +624,7 @@ export default function AdminPanel() {
     if (editingUser) {
       updateUserMutation.mutate({ id: editingUser.id, userData: data });
     }
+
   };
 
   // Generate random password
@@ -608,6 +634,7 @@ export default function AdminPanel() {
     for (let i = 0; i < 12; i++) {
       password += charset.charAt(Math.floor(Math.random() * charset.length));
     }
+
     return password;
   };
 
@@ -650,6 +677,7 @@ export default function AdminPanel() {
     if (editingHospital) {
       updateHospitalMutation.mutate({ id: editingHospital.id, hospitalData: data });
     }
+
   };
 
   // Handle edit hospital dialog open
@@ -695,9 +723,11 @@ export default function AdminPanel() {
     );
   }
 
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
+
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Shield className="h-8 w-8 text-blue-600" />
@@ -726,6 +756,7 @@ export default function AdminPanel() {
           </TabsList>
           <Button 
             onClick={() => setLocation('/inspection-results-admin')}
+
             className="flex items-center gap-2"
             variant="outline"
           >
@@ -736,6 +767,7 @@ export default function AdminPanel() {
 
         <TabsContent value="users" className="space-y-6">
           {/* Users Stats */}
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card>
               <CardContent className="p-4">
@@ -756,6 +788,7 @@ export default function AdminPanel() {
                     <p className="text-sm text-muted-foreground">Admin Kullanıcı</p>
                     <p className="text-2xl font-bold">
                       {users?.filter(u => ['central_admin', 'location_manager'].includes(u.role)).length || 0}
+
                     </p>
                   </div>
                 </div>
@@ -769,6 +802,7 @@ export default function AdminPanel() {
                     <p className="text-sm text-muted-foreground">İlk Giriş Bekleyen</p>
                     <p className="text-2xl font-bold">
                       {users?.filter(u => u.firstLogin).length || 0}
+
                     </p>
                   </div>
                 </div>
@@ -777,16 +811,20 @@ export default function AdminPanel() {
           </div>
 
           {/* User Management Header and Search */}
+
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div className="flex items-center gap-4">
               <h2 className="text-xl font-semibold">Kullanıcılar ({filteredUsers?.length || 0})</h2>
               
               {/* View Mode Toggle */}
+
               <div className="flex items-center bg-muted rounded-lg p-1">
                 <Button
                   variant={userViewMode === 'card' ? 'default' : 'ghost'}
+
                   size="sm"
                   onClick={() => setUserViewMode('card')}
+
                   className="h-7 px-2"
                   data-testid="button-card-view"
                 >
@@ -794,8 +832,10 @@ export default function AdminPanel() {
                 </Button>
                 <Button
                   variant={userViewMode === 'list' ? 'default' : 'ghost'}
+
                   size="sm"
                   onClick={() => setUserViewMode('list')}
+
                   className="h-7 px-2"
                   data-testid="button-list-view"
                 >
@@ -808,7 +848,9 @@ export default function AdminPanel() {
               <SearchInput
                 placeholder="Kullanıcı, email, telefon veya rol ara..."
                 value={userSearch}
+
                 onChange={setUserSearch}
+
                 className="w-full sm:w-80"
                 data-testid="search-users"
               />
@@ -817,6 +859,7 @@ export default function AdminPanel() {
                     <Button 
                       className="flex items-center gap-2" 
                       onClick={handleCreateDialogOpen}
+
                       data-testid="button-add-user"
                     >
                       <UserPlus className="h-4 w-4" />
@@ -836,6 +879,7 @@ export default function AdminPanel() {
                     <Form {...createForm}>
                       <form onSubmit={createForm.handleSubmit(onCreateSubmit)} className="space-y-6">
                         {/* Personal Information Section */}
+
                         <div className="space-y-4">
                           <h3 className="font-medium text-base flex items-center gap-2">
                             <User className="h-4 w-4" />
@@ -845,6 +889,7 @@ export default function AdminPanel() {
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <FormField
                               control={createForm.control}
+
                               name="fullName"
                               render={({ field }) => (
                                 <FormItem>
@@ -855,10 +900,12 @@ export default function AdminPanel() {
                                   <FormMessage />
                                 </FormItem>
                               )}
+
                             />
                             
                             <FormField
                               control={createForm.control}
+
                               name="email"
                               render={({ field }) => (
                                 <FormItem>
@@ -876,16 +923,20 @@ export default function AdminPanel() {
                                         if (emailPart) {
                                           createForm.setValue('username', emailPart.toLowerCase().replace(/[^a-z0-9]/g, ''));
                                         }
+
                                       }}
+
                                     />
                                   </FormControl>
                                   <FormMessage />
                                 </FormItem>
                               )}
+
                             />
                             
                             <FormField
                               control={createForm.control}
+
                               name="phone"
                               render={({ field }) => (
                                 <FormItem>
@@ -901,11 +952,13 @@ export default function AdminPanel() {
                                   <FormMessage />
                                 </FormItem>
                               )}
+
                             />
                           </div>
                         </div>
 
                         {/* Role and Organization Section */}
+
                         <div className="space-y-4">
                           <h3 className="font-medium text-base flex items-center gap-2">
                             <Building2 className="h-4 w-4" />
@@ -915,6 +968,7 @@ export default function AdminPanel() {
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <FormField
                               control={createForm.control}
+
                               name="role"
                               render={({ field }) => (
                                 <FormItem>
@@ -936,10 +990,12 @@ export default function AdminPanel() {
                                   <FormMessage />
                                 </FormItem>
                               )}
+
                             />
 
                             <FormField
                               control={createForm.control}
+
                               name="locationId"
                               render={({ field }) => (
                                 <FormItem>
@@ -954,8 +1010,10 @@ export default function AdminPanel() {
                                       {hospitals?.map((hospital) => (
                                         <SelectItem key={hospital.id} value={hospital.id}>
                                           {hospital.name}
+
                                         </SelectItem>
                                       ))}
+
                                     </SelectContent>
                                   </Select>
                                   <FormDescription>
@@ -964,10 +1022,12 @@ export default function AdminPanel() {
                                   <FormMessage />
                                 </FormItem>
                               )}
+
                             />
 
                             <FormField
                               control={createForm.control}
+
                               name="position"
                               render={({ field }) => (
                                 <FormItem>
@@ -977,15 +1037,18 @@ export default function AdminPanel() {
                                       placeholder="Örn: İş Güvenliği Uzmanı, Teknik Müdür" 
                                       data-testid="input-position"
                                       {...field}
+
                                     />
                                   </FormControl>
                                   <FormMessage />
                                 </FormItem>
                               )}
+
                             />
                             
                             <FormField
                               control={createForm.control}
+
                               name="department"
                               render={({ field }) => (
                                 <FormItem>
@@ -995,16 +1058,19 @@ export default function AdminPanel() {
                                       placeholder="Örn: Teknik Hizmetler, İK"
                                       data-testid="input-department"
                                       {...field}
+
                                     />
                                   </FormControl>
                                   <FormMessage />
                                 </FormItem>
                               )}
+
                             />
                           </div>
                         </div>
 
                         {/* Optional Section */}
+
                         <div className="space-y-4">
                           <h3 className="font-medium text-base flex items-center gap-2">
                             <Camera className="h-4 w-4" />
@@ -1013,6 +1079,7 @@ export default function AdminPanel() {
                           
                           <FormField
                             control={createForm.control}
+
                             name="profileImage"
                             render={({ field }) => (
                               <FormItem>
@@ -1027,6 +1094,7 @@ export default function AdminPanel() {
                                       />
                                     </div>
                                   )}
+
                                   <ObjectUploader
                                     folder="profiles"
                                     maxFileSize={2097152} // 2MB
@@ -1036,11 +1104,13 @@ export default function AdminPanel() {
                                         headers: {
                                           'Authorization': `Bearer ${localStorage.getItem('token')}`
                                         }
+
                                       }).then(res => res.json()).then(data => ({
                                         method: 'PUT' as const,
                                         url: data.uploadURL
                                       }))
                                     }
+
                                     onComplete={(result) => {
                                       const uploadedFile = result.successful[0];
                                       if (uploadedFile?.uploadURL) {
@@ -1050,11 +1120,14 @@ export default function AdminPanel() {
                                           : uploadedFile.uploadURL;
                                         field.onChange(normalizedPath);
                                       }
+
                                     }}
+
                                     buttonClassName="text-sm"
                                   >
                                     <Upload className="h-4 w-4 mr-2" />
                                     {field.value ? "Resmi Değiştir" : "Resim Yükle"}
+
                                   </ObjectUploader>
                                 </div>
                                 <FormDescription>
@@ -1063,10 +1136,12 @@ export default function AdminPanel() {
                                 <FormMessage />
                               </FormItem>
                             )}
+
                           />
                         </div>
 
                         {/* Auto-generated Information */}
+
                         <div className="space-y-4">
                           <h3 className="font-medium text-base flex items-center gap-2">
                             <Key className="h-4 w-4" />
@@ -1076,6 +1151,7 @@ export default function AdminPanel() {
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <FormField
                               control={createForm.control}
+
                               name="username"
                               render={({ field }) => (
                                 <FormItem>
@@ -1095,10 +1171,12 @@ export default function AdminPanel() {
                                   <FormMessage />
                                 </FormItem>
                               )}
+
                             />
 
                             <FormField
                               control={createForm.control}
+
                               name="password"
                               render={({ field }) => (
                                 <FormItem>
@@ -1121,6 +1199,7 @@ export default function AdminPanel() {
                                         const newPassword = generatePassword();
                                         createForm.setValue("password", newPassword);
                                       }}
+
                                       data-testid="button-generate-password"
                                     >
                                       Yenile
@@ -1132,10 +1211,12 @@ export default function AdminPanel() {
                                   <FormMessage />
                                 </FormItem>
                               )}
+
                             />
                           </div>
                           
                           {/* Copy Credentials Section */}
+
                           {(createForm.watch("username") || createForm.watch("password")) && (
                             <div className="flex gap-2 pt-2">
                               <Button
@@ -1154,7 +1235,9 @@ export default function AdminPanel() {
                                       description: "Kullanıcı bilgileri panoya kopyalandı",
                                     });
                                   }
+
                                 }}
+
                                 data-testid="button-copy-credentials"
                                 className="flex items-center gap-2"
                               >
@@ -1166,21 +1249,25 @@ export default function AdminPanel() {
                               </span>
                             </div>
                           )}
+
                         </div>
 
                         <div className="flex gap-2 pt-6 border-t">
                           <Button 
                             type="submit" 
                             disabled={createUserMutation.isPending}
+
                             data-testid="button-submit-create"
                             className="flex-1"
                           >
                             {createUserMutation.isPending ? "Oluşturuluyor..." : "Kullanıcı Oluştur"}
+
                           </Button>
                           <Button 
                             type="button" 
                             variant="outline" 
                             onClick={() => setIsCreateDialogOpen(false)}
+
                             data-testid="button-cancel-create"
                           >
                             İptal
@@ -1194,6 +1281,7 @@ export default function AdminPanel() {
             </div>
 
           {/* Users Display */}
+
           <Card>
             <CardContent className="p-6">
               {isLoading ? (
@@ -1206,6 +1294,7 @@ export default function AdminPanel() {
                   <p className="text-muted-foreground">Hiç kullanıcı bulunamadı.</p>
                   <Button 
                     onClick={() => setIsCreateDialogOpen(true)}
+
                     className="mt-4"
                   >
                     İlk Kullanıcıyı Ekle
@@ -1214,6 +1303,7 @@ export default function AdminPanel() {
               ) : (
                 <>
                   {/* Card View */}
+
                   {userViewMode === 'card' && (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {filteredUsers?.map((user) => {
@@ -1221,16 +1311,20 @@ export default function AdminPanel() {
                         return (
                           <div 
                             key={user.id}
+
                             className="border rounded-lg p-4 hover:shadow-md transition-shadow bg-card"
                             data-testid={`user-card-${user.id}`}
+
                           >
                             {/* User Header with Avatar */}
+
                             <div className="flex items-start gap-3 mb-3">
                               <div className="w-12 h-12 rounded-full overflow-hidden bg-muted flex items-center justify-center">
                                 {user.profileImage ? (
                                   <img 
                                     src={getProfileImageOrDefault(user.profileImage)} 
                                     alt={user.fullName}
+
                                     className="w-full h-full object-cover"
                                   />
                                 ) : (
@@ -1240,40 +1334,49 @@ export default function AdminPanel() {
                                     className="w-8 h-8 object-contain opacity-50"
                                   />
                                 )}
+
                               </div>
                               <div className="flex-1 min-w-0">
                                 <h3 className="font-semibold text-sm truncate" data-testid={`text-fullname-${user.id}`}>
                                   {user.fullName}
+
                                 </h3>
                                 <p className="text-xs text-muted-foreground truncate" data-testid={`text-username-${user.id}`}>
                                   @{user.username}
+
                                 </p>
                               </div>
                             </div>
 
                             {/* Role and Status Badges */}
+
                             <div className="flex flex-wrap gap-1 mb-3">
                               <Badge variant={['central_admin', 'safety_specialist', 'occupational_physician'].includes(user.role) ? 'default' : 'secondary'} className="text-xs">
                                 {getRoleDisplayName(user.role)}
+
                               </Badge>
                               {user.firstLogin && (
                                 <Badge variant="outline" className="text-amber-600 text-xs">
                                   İlk Giriş
                                 </Badge>
                               )}
+
                               {!user.isActive && (
                                 <Badge variant="destructive" className="text-xs">
                                   Pasif
                                 </Badge>
                               )}
+
                             </div>
 
                             {/* User Details */}
+
                             <div className="space-y-2 text-xs text-muted-foreground mb-4">
                               <div className="flex items-center gap-1">
                                 <MapPin className="h-3 w-3 flex-shrink-0" />
                                 <span className="truncate">
                                   {getLocationDisplayName(userHospital)}
+
                                 </span>
                               </div>
                               {user.position && (
@@ -1281,26 +1384,33 @@ export default function AdminPanel() {
                                   <User className="h-3 w-3 flex-shrink-0" />
                                   <span className="truncate text-blue-600">
                                     {user.position}
+
                                   </span>
                                 </div>
                               )}
+
                               {user.email && (
                                 <div className="flex items-center gap-1">
                                   <Mail className="h-3 w-3 flex-shrink-0" />
                                   <span className="truncate">
                                     {user.email}
+
                                   </span>
                                 </div>
                               )}
+
                             </div>
 
                             {/* Action Buttons */}
+
                             <div className="flex gap-2">
                               <Button 
                                 variant="outline" 
                                 size="sm"
                                 onClick={() => handleEditUser(user)}
+
                                 data-testid={`button-edit-${user.id}`}
+
                                 className="flex-1"
                               >
                                 <Edit className="h-3 w-3 mr-1" />
@@ -1312,6 +1422,7 @@ export default function AdminPanel() {
                                     variant="outline" 
                                     size="sm"
                                     data-testid={`button-delete-${user.id}`}
+
                                     className="px-3"
                                   >
                                     <Trash2 className="h-3 w-3 text-red-600" />
@@ -1329,8 +1440,10 @@ export default function AdminPanel() {
                                     <AlertDialogCancel>İptal</AlertDialogCancel>
                                     <AlertDialogAction 
                                       onClick={() => handleDeleteUser(user.id)}
+
                                       className="bg-red-600 hover:bg-red-700"
                                       data-testid={`button-confirm-delete-${user.id}`}
+
                                     >
                                       Sil
                                     </AlertDialogAction>
@@ -1341,10 +1454,13 @@ export default function AdminPanel() {
                           </div>
                         );
                       })}
+
                     </div>
                   )}
 
+
                   {/* List View */}
+
                   {userViewMode === 'list' && (
                     <div className="space-y-2">
                       {filteredUsers?.map((user) => {
@@ -1352,8 +1468,10 @@ export default function AdminPanel() {
                         return (
                           <div 
                             key={user.id}
+
                             className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50"
                             data-testid={`user-row-${user.id}`}
+
                           >
                             <div className="flex items-center gap-3 flex-1">
                               <div className="w-8 h-8 rounded-full overflow-hidden bg-muted flex items-center justify-center flex-shrink-0">
@@ -1361,6 +1479,7 @@ export default function AdminPanel() {
                                   <img 
                                     src={getProfileImageOrDefault(user.profileImage)} 
                                     alt={user.fullName}
+
                                     className="w-full h-full object-cover"
                                   />
                                 ) : (
@@ -1370,37 +1489,45 @@ export default function AdminPanel() {
                                     className="w-6 h-6 object-contain opacity-50"
                                   />
                                 )}
+
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-1">
                                   <h3 className="font-semibold truncate" data-testid={`text-fullname-${user.id}`}>
                                     {user.fullName}
+
                                   </h3>
                                   <Badge variant={['central_admin', 'safety_specialist', 'occupational_physician'].includes(user.role) ? 'default' : 'secondary'} className="text-xs">
                                     {getRoleDisplayName(user.role)}
+
                                   </Badge>
                                   {user.firstLogin && (
                                     <Badge variant="outline" className="text-amber-600 text-xs">
                                       İlk Giriş
                                     </Badge>
                                   )}
+
                                   {!user.isActive && (
                                     <Badge variant="destructive" className="text-xs">
                                       Pasif
                                     </Badge>
                                   )}
+
                                 </div>
                                 <div className="flex items-center gap-4 text-sm text-muted-foreground">
                                   <span data-testid={`text-username-${user.id}`}>@{user.username}</span>
                                   <span className="flex items-center gap-1">
                                     <MapPin className="h-3 w-3" />
                                     {getLocationDisplayName(userHospital)}
+
                                   </span>
                                   {user.position && (
                                     <span className="text-blue-600">
                                       {user.position}
+
                                     </span>
                                   )}
+
                                 </div>
                               </div>
                             </div>
@@ -1409,7 +1536,9 @@ export default function AdminPanel() {
                                 variant="ghost" 
                                 size="sm"
                                 onClick={() => handleEditUser(user)}
+
                                 data-testid={`button-edit-${user.id}`}
+
                               >
                                 <Edit className="h-4 w-4" />
                               </Button>
@@ -1419,6 +1548,7 @@ export default function AdminPanel() {
                                     variant="ghost" 
                                     size="sm"
                                     data-testid={`button-delete-${user.id}`}
+
                                   >
                                     <Trash2 className="h-4 w-4 text-red-600" />
                                   </Button>
@@ -1435,8 +1565,10 @@ export default function AdminPanel() {
                                     <AlertDialogCancel>İptal</AlertDialogCancel>
                                     <AlertDialogAction 
                                       onClick={() => handleDeleteUser(user.id)}
+
                                       className="bg-red-600 hover:bg-red-700"
                                       data-testid={`button-confirm-delete-${user.id}`}
+
                                     >
                                       Sil
                                     </AlertDialogAction>
@@ -1447,16 +1579,20 @@ export default function AdminPanel() {
                           </div>
                         );
                       })}
+
                     </div>
                   )}
+
                 </>
               )}
+
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="hospitals" className="space-y-6">
           {/* Hospitals Stats */}
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card>
               <CardContent className="p-6">
@@ -1466,6 +1602,7 @@ export default function AdminPanel() {
                     <p className="text-sm font-medium text-muted-foreground">Toplam Hastane</p>
                     <p className="text-2xl font-bold" data-testid="text-total-hospitals">
                       {hospitals?.length || 0}
+
                     </p>
                   </div>
                 </div>
@@ -1479,6 +1616,7 @@ export default function AdminPanel() {
                     <p className="text-sm font-medium text-muted-foreground">Aktif Hastane</p>
                     <p className="text-2xl font-bold" data-testid="text-active-hospitals">
                       {hospitals?.filter(h => h.isActive).length || 0}
+
                     </p>
                   </div>
                 </div>
@@ -1492,6 +1630,7 @@ export default function AdminPanel() {
                     <p className="text-sm font-medium text-muted-foreground">Şehir Sayısı</p>
                     <p className="text-2xl font-bold" data-testid="text-city-count">
                       {hospitals ? new Set(hospitals.map(h => h.city)).size : 0}
+
                     </p>
                   </div>
                 </div>
@@ -1500,6 +1639,7 @@ export default function AdminPanel() {
           </div>
 
           {/* Hospital Management Header */}
+
           <Card>
             <CardHeader>
               <div className="space-y-4">
@@ -1508,11 +1648,14 @@ export default function AdminPanel() {
                     <h2 className="text-xl font-semibold">Hastaneler ({hospitals?.length || 0})</h2>
                     
                     {/* View Mode Toggle */}
+
                     <div className="flex items-center bg-muted rounded-lg p-1">
                       <Button
                         variant={hospitalViewMode === 'card' ? 'default' : 'ghost'}
+
                         size="sm"
                         onClick={() => setHospitalViewMode('card')}
+
                         className="h-7 px-2"
                         data-testid="button-hospital-card-view"
                       >
@@ -1520,8 +1663,10 @@ export default function AdminPanel() {
                       </Button>
                       <Button
                         variant={hospitalViewMode === 'list' ? 'default' : 'ghost'}
+
                         size="sm"
                         onClick={() => setHospitalViewMode('list')}
+
                         className="h-7 px-2"
                         data-testid="button-hospital-list-view"
                       >
@@ -1537,6 +1682,7 @@ export default function AdminPanel() {
                   </div>
                   <Button 
                     onClick={() => setIsCreateHospitalDialogOpen(true)}
+
                     className="flex items-center gap-2"
                     data-testid="button-add-hospital"
                   >
@@ -1549,7 +1695,9 @@ export default function AdminPanel() {
                   <SearchInput
                     placeholder="Hastane adı, şehir, ilçe veya telefon ara..."
                     value={hospitalSearch}
+
                     onChange={setHospitalSearch}
+
                     className="w-80"
                     data-testid="search-hospitals"
                   />
@@ -1558,102 +1706,128 @@ export default function AdminPanel() {
             </CardHeader>
             <CardContent>
               {/* Hospitals Loading State */}
+
               {isHospitalsLoading && (
                 <div className="text-center py-8">
                   <p>Hastaneler yükleniyor...</p>
                 </div>
               )}
 
+
               {/* Hospitals Error State */}
+
               {hospitalsError && (
                 <div className="text-center py-8 text-red-600">
                   <p>Hastaneler yüklenirken hata oluştu.</p>
                 </div>
               )}
 
+
               {/* No Hospitals Found */}
+
               {!isHospitalsLoading && !hospitalsError && filteredHospitals && filteredHospitals.length === 0 && (
                 <div className="text-center py-8">
                   <p className="text-muted-foreground">
                     {hospitalSearch ? "Arama kriterlerine uygun hastane bulunamadı." : "Hiç hastane bulunamadı."}
+
                   </p>
                 </div>
               )}
 
+
               {/* Hospitals Display */}
+
               {filteredHospitals && filteredHospitals.length > 0 && (
                 <>
                   {/* Card View */}
+
                   {hospitalViewMode === 'card' && (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {filteredHospitals.map((hospital) => (
                         <div 
                           key={hospital.id}
+
                           className="border rounded-lg p-4 hover:shadow-md transition-shadow bg-card"
                           data-testid={`hospital-card-${hospital.id}`}
+
                         >
                           {/* Hospital Header with Logo */}
+
                           <div className="flex items-start gap-3 mb-3">
                             <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted flex items-center justify-center">
                               <img 
                                 src={getHospitalLogoOrDefault(hospital.logo)} 
                                 alt={hospital.name}
+
                                 className="w-8 h-8 object-contain"
                               />
                             </div>
                             <div className="flex-1 min-w-0">
                               <h3 className="font-semibold text-sm truncate" data-testid={`text-hospital-name-${hospital.id}`}>
                                 {hospital.name}
+
                               </h3>
                               {hospital.shortName && (
                                 <p className="text-xs text-muted-foreground truncate">
                                   {hospital.shortName}
+
                                 </p>
                               )}
+
                             </div>
                           </div>
 
                           {/* Type and Status Badges */}
+
                           <div className="flex flex-wrap gap-1 mb-3">
                             <Badge variant="secondary" className="text-xs">
                               {hospital.type === 'hospital' ? 'Hastane' :
                                hospital.type === 'medical_center' ? 'Tıp Merkezi' :
                                hospital.type === 'clinic' ? 'Klinik' : 'Ofis'}
+
                             </Badge>
                             <Badge variant={hospital.isActive ? "default" : "destructive"} className="text-xs">
                               {hospital.isActive ? "Aktif" : "Pasif"}
+
                             </Badge>
                           </div>
 
                           {/* Hospital Details */}
+
                           <div className="space-y-2 text-xs text-muted-foreground mb-4">
                             <div className="flex items-center gap-1">
                               <MapPin className="h-3 w-3 flex-shrink-0" />
                               <span className="truncate">
                                 {hospital.city}, {hospital.district}
+
                               </span>
                             </div>
                             <div className="flex items-center gap-1">
                               <Phone className="h-3 w-3 flex-shrink-0" />
                               <span className="truncate">
                                 {hospital.phone}
+
                               </span>
                             </div>
                             <div className="flex items-center gap-1">
                               <Mail className="h-3 w-3 flex-shrink-0" />
                               <span className="truncate">
                                 {hospital.email}
+
                               </span>
                             </div>
                           </div>
 
                           {/* Action Buttons */}
+
                           <div className="flex gap-2">
                             <Button 
                               variant="outline" 
                               size="sm"
                               onClick={() => handleEditHospital(hospital)}
+
                               data-testid={`button-edit-hospital-${hospital.id}`}
+
                               className="flex-1"
                             >
                               <Edit className="h-3 w-3 mr-1" />
@@ -1665,6 +1839,7 @@ export default function AdminPanel() {
                                   variant="outline" 
                                   size="sm"
                                   data-testid={`button-delete-hospital-${hospital.id}`}
+
                                   className="px-3"
                                 >
                                   <Trash2 className="h-3 w-3 text-red-600" />
@@ -1682,6 +1857,7 @@ export default function AdminPanel() {
                                   <AlertDialogCancel>İptal</AlertDialogCancel>
                                   <AlertDialogAction 
                                     onClick={() => handleDeleteHospital(hospital.id)}
+
                                     className="bg-red-600 hover:bg-red-700"
                                   >
                                     Sil
@@ -1692,23 +1868,29 @@ export default function AdminPanel() {
                           </div>
                         </div>
                       ))}
+
                     </div>
                   )}
 
+
                   {/* List View */}
+
                   {hospitalViewMode === 'list' && (
                     <div className="space-y-2">
                       {filteredHospitals.map((hospital) => (
                         <div 
                           key={hospital.id}
+
                           className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50"
                           data-testid={`hospital-row-${hospital.id}`}
+
                         >
                           <div className="flex items-center gap-3 flex-1">
                             <div className="w-8 h-8 rounded-lg overflow-hidden bg-muted flex items-center justify-center flex-shrink-0">
                               <img 
                                 src={getHospitalLogoOrDefault(hospital.logo)} 
                                 alt={hospital.name}
+
                                 className="w-6 h-6 object-contain"
                               />
                             </div>
@@ -1716,30 +1898,37 @@ export default function AdminPanel() {
                               <div className="flex items-center gap-2 mb-1">
                                 <h3 className="font-semibold truncate" data-testid={`text-hospital-name-${hospital.id}`}>
                                   {hospital.name}
+
                                 </h3>
                                 <Badge variant="secondary" className="text-xs">
                                   {hospital.type === 'hospital' ? 'Hastane' :
                                    hospital.type === 'medical_center' ? 'Tıp Merkezi' :
                                    hospital.type === 'clinic' ? 'Klinik' : 'Ofis'}
+
                                 </Badge>
                                 <Badge variant={hospital.isActive ? "default" : "destructive"} className="text-xs">
                                   {hospital.isActive ? "Aktif" : "Pasif"}
+
                                 </Badge>
                               </div>
                               <div className="flex items-center gap-4 text-sm text-muted-foreground">
                                 <span className="flex items-center gap-1">
                                   <MapPin className="h-3 w-3" />
                                   {hospital.city}, {hospital.district}
+
                                 </span>
                                 <span className="flex items-center gap-1">
                                   <Phone className="h-3 w-3" />
                                   {hospital.phone}
+
                                 </span>
                                 {hospital.shortName && (
                                   <span className="text-blue-600">
                                     {hospital.shortName}
+
                                   </span>
                                 )}
+
                               </div>
                             </div>
                           </div>
@@ -1748,7 +1937,9 @@ export default function AdminPanel() {
                               variant="ghost" 
                               size="sm"
                               onClick={() => handleEditHospital(hospital)}
+
                               data-testid={`button-edit-hospital-${hospital.id}`}
+
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
@@ -1758,6 +1949,7 @@ export default function AdminPanel() {
                                   variant="ghost" 
                                   size="sm"
                                   data-testid={`button-delete-hospital-${hospital.id}`}
+
                                 >
                                   <Trash2 className="h-4 w-4 text-red-600" />
                                 </Button>
@@ -1774,6 +1966,7 @@ export default function AdminPanel() {
                                   <AlertDialogCancel>İptal</AlertDialogCancel>
                                   <AlertDialogAction 
                                     onClick={() => handleDeleteHospital(hospital.id)}
+
                                     className="bg-red-600 hover:bg-red-700"
                                   >
                                     Sil
@@ -1784,34 +1977,43 @@ export default function AdminPanel() {
                           </div>
                         </div>
                       ))}
+
                     </div>
                   )}
+
                 </>
               )}
 
+
               {/* No Hospitals */}
+
               {hospitals && hospitals.length === 0 && (
                 <div className="text-center py-8">
                   <Building2 className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
                   <p className="text-muted-foreground">Henüz hastane eklenmemiş</p>
                   <Button 
                     onClick={() => setIsCreateHospitalDialogOpen(true)}
+
                     className="mt-4"
                   >
                     İlk Hastaneyi Ekle
                   </Button>
                 </div>
               )}
+
             </CardContent>
           </Card>
 
           {/* Hospital Create Dialog Placeholder */}
+
           {/* TODO: Add Hospital Create/Edit Forms */}
+
         </TabsContent>
 
       </Tabs>
 
       {/* Edit User Dialog */}
+
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -1824,6 +2026,7 @@ export default function AdminPanel() {
             <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4">
               <FormField
                 control={editForm.control}
+
                 name="username"
                 render={({ field }) => (
                   <FormItem>
@@ -1834,9 +2037,11 @@ export default function AdminPanel() {
                     <FormMessage />
                   </FormItem>
                 )}
+
               />
               <FormField
                 control={editForm.control}
+
                 name="fullName"
                 render={({ field }) => (
                   <FormItem>
@@ -1847,9 +2052,11 @@ export default function AdminPanel() {
                     <FormMessage />
                   </FormItem>
                 )}
+
               />
               <FormField
                 control={editForm.control}
+
                 name="role"
                 render={({ field }) => (
                   <FormItem>
@@ -1871,9 +2078,11 @@ export default function AdminPanel() {
                     <FormMessage />
                   </FormItem>
                 )}
+
               />
               <FormField
                 control={editForm.control}
+
                 name="locationId"
                 render={({ field }) => (
                   <FormItem>
@@ -1888,26 +2097,32 @@ export default function AdminPanel() {
                         {hospitals?.map((hospital) => (
                           <SelectItem key={hospital.id} value={hospital.id}>
                             {hospital.name}
+
                           </SelectItem>
                         ))}
+
                       </SelectContent>
                     </Select>
                     <FormMessage />
                   </FormItem>
                 )}
+
               />
               <div className="flex gap-2 pt-4">
                 <Button 
                   type="submit" 
                   disabled={updateUserMutation.isPending}
+
                   data-testid="button-submit-edit"
                 >
                   {updateUserMutation.isPending ? "Güncelleniyor..." : "Güncelle"}
+
                 </Button>
                 <Button 
                   type="button" 
                   variant="outline" 
                   onClick={() => setIsEditDialogOpen(false)}
+
                   data-testid="button-cancel-edit"
                 >
                   İptal
@@ -1919,6 +2134,7 @@ export default function AdminPanel() {
       </Dialog>
 
       {/* Create Hospital Dialog */}
+
       <Dialog open={isCreateHospitalDialogOpen} onOpenChange={setIsCreateHospitalDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
@@ -1935,6 +2151,7 @@ export default function AdminPanel() {
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={createHospitalForm.control}
+
                   name="name"
                   render={({ field }) => (
                     <FormItem>
@@ -1945,9 +2162,11 @@ export default function AdminPanel() {
                       <FormMessage />
                     </FormItem>
                   )}
+
                 />
                 <FormField
                   control={createHospitalForm.control}
+
                   name="shortName"
                   render={({ field }) => (
                     <FormItem>
@@ -1958,12 +2177,15 @@ export default function AdminPanel() {
                       <FormMessage />
                     </FormItem>
                   )}
+
                 />
               </div>
               
               {/* Hospital Logo Upload */}
+
               <FormField
                 control={createHospitalForm.control}
+
                 name="logo"
                 render={({ field }) => (
                   <FormItem>
@@ -1979,8 +2201,10 @@ export default function AdminPanel() {
                             />
                           </div>
                         )}
+
                         <ObjectUploader
                           maxNumberOfFiles={1}
+
                           maxFileSize={5242880} // 5MB
                           onGetUploadParameters={async () => {
                             const response = await apiRequest('/api/objects/upload', {
@@ -1991,16 +2215,20 @@ export default function AdminPanel() {
                               url: response.uploadURL
                             };
                           }}
+
                           onComplete={(result) => {
                             if (result.successful?.[0]?.uploadURL) {
                               const objectPath = `/objects/uploads/${result.successful[0].uploadURL.split('/uploads/')[1].split('?')[0]}`;
                               field.onChange(objectPath);
                             }
+
                           }}
+
                           buttonClassName="w-auto"
                         >
                           <Upload className="h-4 w-4 mr-2" />
                           {field.value ? 'Logo Değiştir' : 'Logo Yükle'}
+
                         </ObjectUploader>
                         {field.value && (
                           <Button
@@ -2008,18 +2236,22 @@ export default function AdminPanel() {
                             variant="outline"
                             size="sm"
                             onClick={() => field.onChange("")}
+
                           >
                             <X className="h-4 w-4" />
                           </Button>
                         )}
+
                       </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
+
               />
               <FormField
                 control={createHospitalForm.control}
+
                 name="address"
                 render={({ field }) => (
                   <FormItem>
@@ -2030,10 +2262,12 @@ export default function AdminPanel() {
                     <FormMessage />
                   </FormItem>
                 )}
+
               />
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={createHospitalForm.control}
+
                   name="city"
                   render={({ field }) => {
                     const cityOptions = Object.keys(TURKEY_CITIES).map(city => ({ value: city, label: city }));
@@ -2043,12 +2277,15 @@ export default function AdminPanel() {
                         <FormControl>
                           <SearchableSelect
                             value={field.value}
+
                             onValueChange={(value) => {
                               field.onChange(value);
                               setSelectedCreateCity(value);
                               createHospitalForm.setValue("district", ""); // Reset district when city changes
                             }}
+
                             options={cityOptions}
+
                             placeholder="Şehir seçiniz (arama yapabilirsiniz)"
                             data-testid="select-create-hospital-city"
                           />
@@ -2057,9 +2294,11 @@ export default function AdminPanel() {
                       </FormItem>
                     );
                   }}
+
                 />
                 <FormField
                   control={createHospitalForm.control}
+
                   name="district"
                   render={({ field }) => {
                     const districtOptions = selectedCreateCity ? 
@@ -2071,10 +2310,15 @@ export default function AdminPanel() {
                         <FormControl>
                           <SearchableSelect
                             value={field.value}
+
                             onValueChange={field.onChange}
+
                             options={districtOptions}
+
                             placeholder={selectedCreateCity ? "İlçe seçiniz (arama yapabilirsiniz)" : "Önce şehir seçiniz"}
+
                             disabled={!selectedCreateCity}
+
                             data-testid="select-create-hospital-district"
                           />
                         </FormControl>
@@ -2082,11 +2326,13 @@ export default function AdminPanel() {
                       </FormItem>
                     );
                   }}
+
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={createHospitalForm.control}
+
                   name="phone"
                   render={({ field }) => (
                     <FormItem>
@@ -2097,9 +2343,11 @@ export default function AdminPanel() {
                       <FormMessage />
                     </FormItem>
                   )}
+
                 />
                 <FormField
                   control={createHospitalForm.control}
+
                   name="email"
                   render={({ field }) => (
                     <FormItem>
@@ -2110,11 +2358,13 @@ export default function AdminPanel() {
                       <FormMessage />
                     </FormItem>
                   )}
+
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={createHospitalForm.control}
+
                   name="website"
                   render={({ field }) => (
                     <FormItem>
@@ -2125,9 +2375,11 @@ export default function AdminPanel() {
                       <FormMessage />
                     </FormItem>
                   )}
+
                 />
                 <FormField
                   control={createHospitalForm.control}
+
                   name="type"
                   render={({ field }) => (
                     <FormItem>
@@ -2148,20 +2400,24 @@ export default function AdminPanel() {
                       <FormMessage />
                     </FormItem>
                   )}
+
                 />
               </div>
               <div className="flex gap-2 pt-4">
                 <Button 
                   type="submit" 
                   disabled={createHospitalMutation.isPending}
+
                   data-testid="button-submit-create-hospital"
                 >
                   {createHospitalMutation.isPending ? "Oluşturuluyor..." : "Hastane Oluştur"}
+
                 </Button>
                 <Button 
                   type="button" 
                   variant="outline" 
                   onClick={() => setIsCreateHospitalDialogOpen(false)}
+
                   data-testid="button-cancel-create-hospital"
                 >
                   İptal
@@ -2173,6 +2429,7 @@ export default function AdminPanel() {
       </Dialog>
 
       {/* Edit Hospital Dialog */}
+
       <Dialog open={isEditHospitalDialogOpen} onOpenChange={setIsEditHospitalDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
@@ -2189,6 +2446,7 @@ export default function AdminPanel() {
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={editHospitalForm.control}
+
                   name="name"
                   render={({ field }) => (
                     <FormItem>
@@ -2199,9 +2457,11 @@ export default function AdminPanel() {
                       <FormMessage />
                     </FormItem>
                   )}
+
                 />
                 <FormField
                   control={editHospitalForm.control}
+
                   name="shortName"
                   render={({ field }) => (
                     <FormItem>
@@ -2212,12 +2472,15 @@ export default function AdminPanel() {
                       <FormMessage />
                     </FormItem>
                   )}
+
                 />
               </div>
               
               {/* Hospital Logo Upload */}
+
               <FormField
                 control={editHospitalForm.control}
+
                 name="logo"
                 render={({ field }) => (
                   <FormItem>
@@ -2233,8 +2496,10 @@ export default function AdminPanel() {
                             />
                           </div>
                         )}
+
                         <ObjectUploader
                           maxNumberOfFiles={1}
+
                           maxFileSize={5242880} // 5MB
                           onGetUploadParameters={async () => {
                             const response = await apiRequest('/api/objects/upload', {
@@ -2245,16 +2510,20 @@ export default function AdminPanel() {
                               url: response.uploadURL
                             };
                           }}
+
                           onComplete={(result) => {
                             if (result.successful?.[0]?.uploadURL) {
                               const objectPath = `/objects/uploads/${result.successful[0].uploadURL.split('/uploads/')[1].split('?')[0]}`;
                               field.onChange(objectPath);
                             }
+
                           }}
+
                           buttonClassName="w-auto"
                         >
                           <Upload className="h-4 w-4 mr-2" />
                           {field.value ? 'Logo Değiştir' : 'Logo Yükle'}
+
                         </ObjectUploader>
                         {field.value && (
                           <Button
@@ -2262,18 +2531,22 @@ export default function AdminPanel() {
                             variant="outline"
                             size="sm"
                             onClick={() => field.onChange("")}
+
                           >
                             <X className="h-4 w-4" />
                           </Button>
                         )}
+
                       </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
+
               />
               <FormField
                 control={editHospitalForm.control}
+
                 name="address"
                 render={({ field }) => (
                   <FormItem>
@@ -2284,10 +2557,12 @@ export default function AdminPanel() {
                     <FormMessage />
                   </FormItem>
                 )}
+
               />
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={editHospitalForm.control}
+
                   name="city"
                   render={({ field }) => {
                     const cityOptions = Object.keys(TURKEY_CITIES).map(city => ({ value: city, label: city }));
@@ -2297,12 +2572,15 @@ export default function AdminPanel() {
                         <FormControl>
                           <SearchableSelect
                             value={field.value}
+
                             onValueChange={(value) => {
                               field.onChange(value);
                               setSelectedEditCity(value);
                               editHospitalForm.setValue("district", ""); // Reset district when city changes
                             }}
+
                             options={cityOptions}
+
                             placeholder="Şehir seçiniz (arama yapabilirsiniz)"
                             data-testid="select-edit-hospital-city"
                           />
@@ -2311,9 +2589,11 @@ export default function AdminPanel() {
                       </FormItem>
                     );
                   }}
+
                 />
                 <FormField
                   control={editHospitalForm.control}
+
                   name="district"
                   render={({ field }) => {
                     const districtOptions = selectedEditCity ? 
@@ -2325,10 +2605,15 @@ export default function AdminPanel() {
                         <FormControl>
                           <SearchableSelect
                             value={field.value}
+
                             onValueChange={field.onChange}
+
                             options={districtOptions}
+
                             placeholder={selectedEditCity ? "İlçe seçiniz (arama yapabilirsiniz)" : "Önce şehir seçiniz"}
+
                             disabled={!selectedEditCity}
+
                             data-testid="select-edit-hospital-district"
                           />
                         </FormControl>
@@ -2336,11 +2621,13 @@ export default function AdminPanel() {
                       </FormItem>
                     );
                   }}
+
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={editHospitalForm.control}
+
                   name="phone"
                   render={({ field }) => (
                     <FormItem>
@@ -2351,9 +2638,11 @@ export default function AdminPanel() {
                       <FormMessage />
                     </FormItem>
                   )}
+
                 />
                 <FormField
                   control={editHospitalForm.control}
+
                   name="email"
                   render={({ field }) => (
                     <FormItem>
@@ -2364,11 +2653,13 @@ export default function AdminPanel() {
                       <FormMessage />
                     </FormItem>
                   )}
+
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={editHospitalForm.control}
+
                   name="website"
                   render={({ field }) => (
                     <FormItem>
@@ -2379,9 +2670,11 @@ export default function AdminPanel() {
                       <FormMessage />
                     </FormItem>
                   )}
+
                 />
                 <FormField
                   control={editHospitalForm.control}
+
                   name="type"
                   render={({ field }) => (
                     <FormItem>
@@ -2402,10 +2695,12 @@ export default function AdminPanel() {
                       <FormMessage />
                     </FormItem>
                   )}
+
                 />
               </div>
               <FormField
                 control={editHospitalForm.control}
+
                 name="isActive"
                 render={({ field }) => (
                   <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
@@ -2419,26 +2714,32 @@ export default function AdminPanel() {
                       <input
                         type="checkbox"
                         checked={field.value}
+
                         onChange={field.onChange}
+
                         data-testid="checkbox-edit-hospital-active"
                         className="h-4 w-4"
                       />
                     </FormControl>
                   </FormItem>
                 )}
+
               />
               <div className="flex gap-2 pt-4">
                 <Button 
                   type="submit" 
                   disabled={updateHospitalMutation.isPending}
+
                   data-testid="button-submit-edit-hospital"
                 >
                   {updateHospitalMutation.isPending ? "Güncelleniyor..." : "Hastane Güncelle"}
+
                 </Button>
                 <Button 
                   type="button" 
                   variant="outline" 
                   onClick={() => setIsEditHospitalDialogOpen(false)}
+
                   data-testid="button-cancel-edit-hospital"
                 >
                   İptal
@@ -2458,6 +2759,7 @@ export default function AdminPanel() {
   );
 }
 
+
 // Migration Panel Component
 function MigrationPanel() {
   const { toast } = useToast();
@@ -2471,12 +2773,15 @@ function MigrationPanel() {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
+
       });
       if (!response.ok) {
         throw new Error('Migration status alınamadı');
       }
+
       return response.json();
     }
+
   });
 
   // Migration mutation
@@ -2493,6 +2798,7 @@ function MigrationPanel() {
       if (!response.ok) {
         throw new Error('Migration başarısız');
       }
+
       return response.json();
     },
     onSuccess: (data) => {
@@ -2527,6 +2833,7 @@ function MigrationPanel() {
       return;
     }
 
+
     runMigration.mutate(locationsNeedingMigration);
   };
 
@@ -2543,9 +2850,11 @@ function MigrationPanel() {
     );
   }
 
+
   return (
     <div className="space-y-6">
       {/* Migration Overview */}
+
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
@@ -2560,6 +2869,7 @@ function MigrationPanel() {
           {migrationStatus && (
             <>
               {/* Stats */}
+
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <Card>
                   <CardContent className="p-4">
@@ -2597,6 +2907,7 @@ function MigrationPanel() {
               </div>
 
               {/* Migration Action */}
+
               <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                 <div>
                   <h3 className="font-medium">Department Migration Çalıştır</h3>
@@ -2606,14 +2917,18 @@ function MigrationPanel() {
                 </div>
                 <Button 
                   onClick={handleRunMigration}
+
                   disabled={runMigration.isPending || migrationStatus.needsMigration === 0}
+
                   className="bg-blue-600 hover:bg-blue-700"
                 >
                   {runMigration.isPending ? 'Migration Çalışıyor...' : 'Migration Başlat'}
+
                 </Button>
               </div>
 
               {/* Hospital Status List */}
+
               <div className="space-y-2">
                 <h3 className="font-medium">Hastane Durumu</h3>
                 <div className="max-h-64 overflow-y-auto space-y-2">
@@ -2629,14 +2944,17 @@ function MigrationPanel() {
                         </Badge>
                         <Badge variant={location.needsMigration ? "destructive" : "default"}>
                           {location.status === 'needs_migration' ? 'Migration Gerekli' : 'Güncel'}
+
                         </Badge>
                       </div>
                     </div>
                   ))}
+
                 </div>
               </div>
 
               {/* Migration Results */}
+
               {migrationResults && (
                 <Card>
                   <CardHeader>
@@ -2653,19 +2971,25 @@ function MigrationPanel() {
                           {migrationResults.results.map((result: any, index: number) => (
                             <div key={index} className="text-sm p-2 bg-gray-50 rounded">
                               <strong>{result.status}:</strong> {result.message}
+
                             </div>
                           ))}
+
                         </div>
                       </details>
                     )}
+
                   </CardContent>
                 </Card>
               )}
+
             </>
           )}
+
         </CardContent>
       </Card>
     </div>
   );
 }
+
 
