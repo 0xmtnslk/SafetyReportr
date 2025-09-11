@@ -1,4 +1,5 @@
 import { Switch, Route, useLocation } from "wouter";
+import React from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -57,6 +58,23 @@ import Navigation from "@/components/navigation";
 import Footer from "@/components/Footer";
 import OfflineIndicator from "@/components/offline-indicator";
 import { useOfflineSync } from "./hooks/useOfflineSync";
+
+// Redirect Components
+function RedirectToInspectionResults() {
+  const [, setLocation] = useLocation();
+  React.useEffect(() => {
+    setLocation('/reports?tab=inspection-results');
+  }, [setLocation]);
+  return null;
+}
+
+function RedirectToAdminInspections() {
+  const [, setLocation] = useLocation();
+  React.useEffect(() => {
+    setLocation('/reports?tab=admin-inspections');
+  }, [setLocation]);
+  return null;
+}
 
 function Router() {
   const { user, isLoading } = useAuth();
@@ -164,15 +182,11 @@ function Router() {
             <Route path="/inspection-results/:assignmentId">
               {(params) => <InspectionResults assignmentId={params.assignmentId} />}
             </Route>
-            <Route path="/admin/inspections">
-              {() => ['central_admin', 'admin'].includes(user?.role || '') ? <AdminInspections /> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
-            </Route>
+            <Route path="/admin/inspections" component={RedirectToAdminInspections} />
             <Route path="/inspection-history">
               {() => ['safety_specialist'].includes(user?.role || '') ? <InspectionHistory /> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
             </Route>
-            <Route path="/inspection-results-admin">
-              {() => ['central_admin', 'admin'].includes(user?.role || '') ? <InspectionResultsAdmin /> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
-            </Route>
+            <Route path="/inspection-results-admin" component={RedirectToInspectionResults} />
             <Route path="/hospital-inspections/:hospitalId">
               {() => ['central_admin', 'admin'].includes(user?.role || '') ? <HospitalInspections /> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
             </Route>
@@ -208,7 +222,7 @@ function Router() {
               {() => ['safety_specialist', 'occupational_physician'].includes(user?.role || '') ? <ViewRiskAssessmentPage /> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
             </Route>
             <Route path="/hospital-sections">
-              {() => ['safety_specialist', 'occupational_physician'].includes(user?.role || '') ? <HospitalSectionsManagement /> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
+              {() => ['safety_specialist', 'occupational_physician'].includes(user?.role || '') ? <HospitalManagement /> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
             </Route>
             <Route path="/annual-plans">
               {() => ['central_admin', 'safety_specialist', 'occupational_physician'].includes(user?.role || '') ? <AnnualPlansPage /> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}

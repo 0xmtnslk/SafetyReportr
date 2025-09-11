@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,10 +15,60 @@ import { useAuth } from "@/hooks/useAuth";
 import PDFPreview from "@/components/pdf-preview";
 
 export default function Reports() {
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const { toast } = useToast();
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState("free-reports");
+  
+  // Get initial tab from URL params with role-based access control
+  const getInitialTab = () => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const requestedTab = searchParams.get('tab');
+    const availableTabs = ['free-reports', 'checklist-reports'];
+    
+    // Add admin-only tabs if user has access
+    if (['central_admin', 'admin'].includes(user?.role || '')) {
+      availableTabs.push('inspection-results', 'admin-inspections');
+    }
+    
+    return requestedTab && availableTabs.includes(requestedTab) 
+      ? requestedTab 
+      : 'free-reports';
+  };
+  
+  const [activeTab, setActiveTab] = useState(getInitialTab);
+  
+  // Update URL when tab changes using wouter's setLocation
+  const handleTabChange = (tab: string) => {
+    // Guard against unauthorized admin tabs
+    const availableTabs = ['free-reports', 'checklist-reports'];
+    if (['central_admin', 'admin'].includes(user?.role || '')) {
+      availableTabs.push('inspection-results', 'admin-inspections');
+    }
+    
+    if (!availableTabs.includes(tab)) {
+      toast({
+        title: "Yetkisiz Erişim",
+        description: "Bu sekmeye erişim yetkiniz bulunmamaktadır.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setActiveTab(tab);
+    const newUrl = `/reports${tab !== 'free-reports' ? `?tab=${tab}` : ''}`;
+    setLocation(newUrl);
+  };
+  
+  // Handle browser back/forward navigation
+  React.useEffect(() => {
+    const handlePopState = () => {
+      const newTab = getInitialTab();
+      setActiveTab(newTab);
+    };
+    
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [user?.role]); // Re-run if user role changes
 
   return (
     <div className="container mx-auto p-6">
@@ -53,7 +103,7 @@ export default function Reports() {
         </div>
         
         {/* Main Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
           <TabsList className={`grid w-full ${['central_admin', 'admin'].includes(user?.role || '') ? 'grid-cols-4' : 'grid-cols-2'}`}>
             <TabsTrigger value="free-reports" data-testid="tab-free-reports">
               <FileText className="mr-2 h-4 w-4" />
