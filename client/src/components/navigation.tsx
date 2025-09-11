@@ -55,19 +55,13 @@ export default function Navigation({ children }: NavigationProps) {
       );
     }
     
-    // All authenticated users can view reports
+    // All authenticated users can view reports (now includes all report types)
     baseItems.push({ path: "/reports", label: "Raporlar", icon: FileText });
-    
-    // Checklist system for admin only
-    if (['central_admin', 'admin'].includes(user?.role || '')) {
-      baseItems.push({ path: "/checklist", label: "Kontrol Listeleri Yönetimi", icon: CheckSquare });
-    }
     
     // Only admin users can access admin panel
     if (['central_admin', 'admin'].includes(user?.role || '')) {
       baseItems.push(
-        { path: "/admin", label: "Yönetim Panel", icon: Shield },
-        { path: "/inspection-results-admin", label: "Denetim Sonuçları", icon: TrendingUp }
+        { path: "/admin", label: "Yönetim Panel", icon: Shield }
       );
     }
     
