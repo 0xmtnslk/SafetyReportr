@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { HardHat, Home, Plus, FileText, LogOut, Shield, Menu, X, CheckSquare, BarChart3, TrendingUp, User, ChevronDown, ChevronLeft, ChevronRight, Bell, Building2, AlertTriangle } from "lucide-react";
+import { HardHat, Home, Plus, FileText, LogOut, Shield, Menu, X, CheckSquare, BarChart3, TrendingUp, User, ChevronDown, ChevronLeft, ChevronRight, Bell, Building2, AlertTriangle, Calendar, Siren, Package, Activity, Search, Settings } from "lucide-react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import NotificationDropdown from "./NotificationDropdown";
@@ -41,19 +41,17 @@ export default function Navigation({ children }: NavigationProps) {
       { path: "/dashboard", label: "Ana Sayfa", icon: Home },
     ];
     
-    // Safety specialists, occupational physicians and admin can create reports
+    // Safety specialists, occupational physicians and admin can access all modules
     if (['central_admin', 'safety_specialist', 'occupational_physician'].includes(user?.role || '')) {
       baseItems.push(
+        { path: "/annual-plans", label: "Yıllık Planlar", icon: Calendar },
+        { path: "/emergency-management", label: "Acil Durum Yönetimi", icon: Siren },
+        { path: "/hazardous-materials", label: "Tehlikeli Madde Yönetimi", icon: Package },
+        { path: "/risk-assessment", label: "Risk Değerlendirmesi", icon: AlertTriangle },
+        { path: "/accident-management", label: "İş Kazası ve Ramak Kala", icon: Activity },
+        { path: "/incident-management", label: "Olağandışı Olay Yönetimi", icon: Shield },
+        { path: "/audit-management", label: "Denetim Yönetimi", icon: Search },
         { path: "/create-report", label: "Yeni Rapor", icon: Plus },
-      );
-    }
-    
-    // Safety specialists can see their inspection history, manage hospital and risk assessment
-    if (['safety_specialist', 'occupational_physician'].includes(user?.role || '')) {
-      baseItems.push(
-        { path: "/inspection-history", label: "Denetim Geçmişim", icon: BarChart3 },
-        { path: "/hospital-management", label: "Hastane Yönetimi", icon: Building2 },
-        { path: "/risk-assessment", label: "Risk Değerlendirme", icon: AlertTriangle },
       );
     }
     
@@ -141,6 +139,19 @@ export default function Navigation({ children }: NavigationProps) {
                 <User size={16} className="mr-3" />
                 Profilimi Görüntüle
               </DropdownMenuItem>
+              {['safety_specialist', 'occupational_physician'].includes(user?.role || '') && (
+                <DropdownMenuItem
+                  onClick={() => {
+                    setLocation('/hospital-management');
+                    setIsProfileDropdownOpen(false);
+                  }}
+                  className="flex items-center px-3 py-2 text-gray-700 hover:text-primary hover:bg-gray-50 rounded-lg cursor-pointer"
+                >
+                  <Building2 size={16} className="mr-3" />
+                  Hastane Yönetimi
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={() => {
                   logout();
