@@ -106,26 +106,17 @@ export default function DetectionBookPage({ entryId, mode }: DetectionBookPagePr
 
   // Auto-fill workplace title and SGK number when user location loads
   useEffect(() => {
-    console.log('DEBUG: Location data received:', userLocation);
     if (userLocation && typeof userLocation === 'object' && 'name' in userLocation) {
-      console.log('DEBUG: Setting workplace title:', (userLocation as any).name);
       form.setValue('workplaceTitle', (userLocation as any).name);
       if ('sgkRegistrationNumber' in userLocation && (userLocation as any).sgkRegistrationNumber) {
-        console.log('DEBUG: Setting SGK number:', (userLocation as any).sgkRegistrationNumber);
         form.setValue('sgkRegistrationNumber', (userLocation as any).sgkRegistrationNumber);
-      } else {
-        console.log('DEBUG: No SGK registration number in location data');
       }
-    } else {
-      console.log('DEBUG: No valid location data or missing name field');
     }
   }, [userLocation, form]);
 
   // Reset form when switching to new view
   useEffect(() => {
-    console.log('DEBUG: Current view changed to:', currentView);
     if (currentView === 'new') {
-      console.log('DEBUG: Resetting form for new view');
       form.reset({
         workplaceTitle: userLocation && typeof userLocation === 'object' && 'name' in userLocation ? (userLocation as any).name : '',
         sgkRegistrationNumber: userLocation && typeof userLocation === 'object' && 'sgkRegistrationNumber' in userLocation ? (userLocation as any).sgkRegistrationNumber : '',

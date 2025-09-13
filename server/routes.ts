@@ -3352,6 +3352,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'PDF veya fotoğraf dosyası yüklenmesi zorunludur' });
       }
 
+      // Process form data - convert types from strings
+      const processedData = {
+        ...req.body,
+        pageNumber: parseInt(req.body.pageNumber) || 1
+      };
+      
       // Validate request body
       const validationResult = insertDetectionBookEntrySchema.omit({ 
         documentUrl: true, 
@@ -3359,14 +3365,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         documentName: true,
         userId: true,
         locationId: true
-      }).safeParse(req.body);
+      }).safeParse(processedData);
 
       if (!validationResult.success) {
+        console.error('Detection book validation error:', validationResult.error.issues);
+        console.error('Processed data:', processedData);
         return res.status(400).json({ 
           message: 'Geçersiz form verisi', 
           errors: validationResult.error.issues 
         });
       }
+
+      const validatedData = validationResult.data;
+      console.log('Detection book validated data:', validatedData);
 
       // Get user's location
       const userDetails = await storage.getUser(user.id);
