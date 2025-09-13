@@ -1087,6 +1087,34 @@ export const updateRiskAssessmentPublishSchema = z.object({
   revisionNotes: z.string().optional(),
 });
 
+// Detection Book Entries - İş Sağlığı ve Güvenliğine İlişkin Tespit ve Öneri Defteri
+export const detectionBookEntries = pgTable("detection_book_entries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workplaceTitle: text("workplace_title").notNull(), // İşyeri Ünvanı
+  sgkRegistrationNumber: text("sgk_registration_number").notNull(), // İşyeri SGK Sicil No
+  entryDate: timestamp("entry_date").notNull(), // Tespit tarihi
+  pageNumber: integer("page_number").notNull(), // Defter sayfa numarası
+  evaluationText: text("evaluation_text").notNull(), // Değerlendirmeler metni
+  documentUrl: text("document_url").notNull(), // PDF/Photo URL
+  documentType: text("document_type").notNull(), // "pdf" | "photo"
+  documentName: text("document_name").notNull(), // Dosya adı
+  userId: varchar("user_id").references(() => users.id).notNull(), // Kim ekledi
+  locationId: varchar("location_id").references(() => locations.id).notNull(), // Hangi hastane
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Detection book insert schema
+export const insertDetectionBookEntrySchema = createInsertSchema(detectionBookEntries).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Detection book types
+export type DetectionBookEntry = typeof detectionBookEntries.$inferSelect;
+export type InsertDetectionBookEntry = z.infer<typeof insertDetectionBookEntrySchema>;
+
 // Hospital danger class options 
 export const HOSPITAL_DANGER_CLASS_OPTIONS = [
   { value: "Çok Tehlikeli", label: "Çok Tehlikeli", validityYears: 2 },
