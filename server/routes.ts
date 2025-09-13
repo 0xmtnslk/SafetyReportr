@@ -1072,6 +1072,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get location by ID - for users to access their location data
+  app.get('/api/locations/:id', authenticateToken, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      const locationId = req.params.id;
+      
+      // Security check: Users can only access their own location (except central admin)
+      if (user.role !== 'central_admin' && user.locationId !== locationId) {
+        return res.status(403).json({ message: 'Bu hastane bilgilerine erişim yetkiniz yok' });
+      }
+      
+      const location = await storage.getLocationById(locationId);
+      
+      if (!location) {
+        return res.status(404).json({ message: 'Hastane bulunamadı' });
+      }
+      
+      // Return only necessary fields for security
+      const publicLocationData = {
+        id: location.id,
+        name: location.name,
+        shortName: location.shortName,
+        sgkRegistrationNumber: location.sgkRegistrationNumber,
+        city: location.city,
+        district: location.district,
+        type: location.type
+      };
+      
+      res.json(publicLocationData);
+    } catch (error) {
+      console.error('Get location error:', error);
+      res.status(500).json({ message: 'Hastane bilgileri alınırken hata oluştu' });
+    }
+  });
+
   // Get hospital by ID - Central Admin only
   app.get('/api/admin/hospitals/:id', authenticateToken, requireCentralManagement, async (req, res) => {
     try {
