@@ -1,0 +1,34 @@
+/medical-examinations
+
+şimdi bu sayfaya geldik. 
+Burada yapacağımız işlem aslında temelde bir tane forma dayanıyor. Ama burada şöyle bir sistem yapmamız gerekiyor. Öncelikle yasal gereklilikleri yazmam gerekiyor.
+
+Çok tehlikeli sınıfta yılda bir 
+Tehlikeli sınıfta üç yılda bir 
+Az tehlikeli sınıfta beş yılda bir periyodik muayene yapılır. Bu yasal bir zorunluluk.
+
+İşyeri hekimi bu formu iki türlü kullanır. 
+1. Bir çalışan kayıt olduğunda, işe giriş periyodik muayenesi yapılır. Bir de süresi geldiğinde periyodik muayenesi yapılır. 
+
+/medical-examinations
+
+üç bölüm olmalı;
+
+yan yana üç sütunda olabilir.
+Birinci bölüm;
+ işe giriş yapmış çalışanların periyodik muayenesi eksik diye liste görmesi lazım. 
+
+İkinci bölüm;
+Bulunduğu ay içinde periyodik tekrar muayenesi yaklaşmış olan çalışanların listesini görmeli ve periyodik muayenesini başlatmalı.
+
+
+Üçüncü bölüm ise periyodik muayene süresi geçmiş ve acil olarak periyodik muayenesi yapılması gereken çalışanların listesini görmeli.
+
+İlk bölümde çalışanın yanındaki başlat butonu yada ikonu onu sen tasarlayabilirsin, bastığında 
+işe giriş ve periyodik muayene formu açılmalı (pop-up olarak değil. - detection-book yaptığımız sistem olabilir.) ve formu doldurarak periyodik muayenesini tamamlamalıdır.
+
+İkinci ve üçüncü bölümde ise 
+
+Başlat yada nasıl bir tasarım yaparsan o olur. Yine periyodik muayene formu açılmalı fakat, bir önceki muayenesindeki bilgileri ve bulguları otomatik olarak doldurayım mı diye uyarı vermeli ve hekim onaylarsa önceki muayene formundaki bilgiler gelerek yeni muayene formu açılmalı. hekim istediği gibi yenisinde değişiklikler yaparak periyodik muayene kayıt etmeli, o kullanıcın hem önceki muayeneleri hem de yeni muayenesi o kullanıcı için sistemde kayıtlı olarak kalmalı ve istediğinde eski verilere de güncel verilere detay sayfası olarak ulaşabilmeli. En sonunda kayıt işlemi bittikten sonra işe giriş yada periyodik muayen formunu çıktı olarak alabilmelidir. 
+
+Sana formu da vereceğim formu da ona göre hazırlarsın ve sistemde şablon olarak kayıtlı şekilde durmalı çünkü bu form'da yasal olarak yönetmeliğin ekinde yayınlandığı için tasarımsal olarak kendine göre ayarla ama çıktı olarak aynı şekilde olması gerekiyor. Onu unutma.
