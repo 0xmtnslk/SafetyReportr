@@ -135,6 +135,33 @@ export class ObjectStorageService {
     return `/images/${filename}`;
   }
 
+  // Upload any file to object storage (images, PDFs, etc.)
+  async uploadFile(fileName: string, buffer: Buffer, contentType: string): Promise<string> {
+    const privateObjectDir = this.getPrivateObjectDir();
+    if (!privateObjectDir) {
+      throw new Error("PRIVATE_OBJECT_DIR not set");
+    }
+
+    const objectPath = `${privateObjectDir}/${fileName}`;
+    
+    const { bucketName, objectName } = parseObjectPath(objectPath);
+    const bucket = objectStorageClient.bucket(bucketName);
+    const file = bucket.file(objectName);
+
+    // Upload the file
+    await file.save(buffer, {
+      metadata: {
+        contentType,
+        metadata: {
+          uploadedAt: new Date().toISOString()
+        }
+      }
+    });
+
+    // Return the public URL path
+    return `/${fileName}`;
+  }
+
   // Gets the upload URL for profile images or logos.
   async getUploadURL(folder: 'profiles' | 'logos' = 'profiles'): Promise<string> {
     const privateObjectDir = this.getPrivateObjectDir();
