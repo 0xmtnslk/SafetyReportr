@@ -245,34 +245,34 @@ function Router() {
             
             {/* New Hierarchical Routes */}
             <Route path="/annual-plans/training">
-              {() => ['central_admin', 'safety_specialist', 'occupational_physician'].includes(user?.role || '') ? <div className="p-8"><h1 className="text-2xl font-bold">Yıllık Eğitim Planı</h1><p>Bu sayfa şu anda geliştiriliyor...</p></div> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
+              {() => ['central_admin', 'safety_specialist', 'occupational_physician'].includes(user?.role || '') ? <div className="p-8" data-testid="page-annual-training"><h1 className="text-2xl font-bold" data-testid="title-annual-training">Yıllık Eğitim Planı</h1><p data-testid="content-annual-training">Bu sayfa şu anda geliştiriliyor...</p></div> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
             </Route>
             <Route path="/annual-plans/work">
-              {() => ['central_admin', 'safety_specialist', 'occupational_physician'].includes(user?.role || '') ? <div className="p-8"><h1 className="text-2xl font-bold">Yıllık Çalışma Planı</h1><p>Bu sayfa şu anda geliştiriliyor...</p></div> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
+              {() => ['central_admin', 'safety_specialist', 'occupational_physician'].includes(user?.role || '') ? <div className="p-8" data-testid="page-annual-work"><h1 className="text-2xl font-bold" data-testid="title-annual-work">Yıllık Çalışma Planı</h1><p data-testid="content-annual-work">Bu sayfa şu anda geliştiriliyor...</p></div> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
             </Route>
             <Route path="/emergency-management/hap">
-              {() => ['central_admin', 'safety_specialist', 'occupational_physician'].includes(user?.role || '') ? <div className="p-8"><h1 className="text-2xl font-bold">HAP Yönetimi</h1><p>Bu sayfa şu anda geliştiriliyor...</p></div> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
+              {() => ['central_admin', 'safety_specialist', 'occupational_physician'].includes(user?.role || '') ? <div className="p-8" data-testid="page-hap-management"><h1 className="text-2xl font-bold" data-testid="title-hap-management">HAP Yönetimi</h1><p data-testid="content-hap-management">Bu sayfa şu anda geliştiriliyor...</p></div> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
             </Route>
             <Route path="/emergency-management/teams">
-              {() => ['central_admin', 'safety_specialist', 'occupational_physician'].includes(user?.role || '') ? <div className="p-8"><h1 className="text-2xl font-bold">Acil Durum Ekipleri</h1><p>Bu sayfa şu anda geliştiriliyor...</p></div> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
+              {() => ['central_admin', 'safety_specialist', 'occupational_physician'].includes(user?.role || '') ? <div className="p-8" data-testid="page-emergency-teams"><h1 className="text-2xl font-bold" data-testid="title-emergency-teams">Acil Durum Ekipleri</h1><p data-testid="content-emergency-teams">Bu sayfa şu anda geliştiriliyor...</p></div> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
             </Route>
             <Route path="/emergency-management/drills">
-              {() => ['central_admin', 'safety_specialist', 'occupational_physician'].includes(user?.role || '') ? <div className="p-8"><h1 className="text-2xl font-bold">Tatbikatlar</h1><p>Bu sayfa şu anda geliştiriliyor...</p></div> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
+              {() => ['central_admin', 'safety_specialist', 'occupational_physician'].includes(user?.role || '') ? <div className="p-8" data-testid="page-drills"><h1 className="text-2xl font-bold" data-testid="title-drills">Tatbikatlar</h1><p data-testid="content-drills">Bu sayfa şu anda geliştiriliyor...</p></div> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
             </Route>
             <Route path="/hazardous-materials/inventory">
-              {() => ['central_admin', 'safety_specialist', 'occupational_physician'].includes(user?.role || '') ? <div className="p-8"><h1 className="text-2xl font-bold">Tesis Envanteri</h1><p>Bu sayfa şu anda geliştiriliyor...</p></div> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
+              {() => ['central_admin', 'safety_specialist', 'occupational_physician'].includes(user?.role || '') ? <div className="p-8" data-testid="page-facility-inventory"><h1 className="text-2xl font-bold" data-testid="title-facility-inventory">Tesis Envanteri</h1><p data-testid="content-facility-inventory">Bu sayfa şu anda geliştiriliyor...</p></div> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
             </Route>
             <Route path="/hazardous-materials/safety-cards">
-              {() => ['central_admin', 'safety_specialist', 'occupational_physician'].includes(user?.role || '') ? <div className="p-8"><h1 className="text-2xl font-bold">Güvenlik Bilgi Kartları</h1><p>Bu sayfa şu anda geliştiriliyor...</p></div> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
+              {() => ['central_admin', 'safety_specialist', 'occupational_physician'].includes(user?.role || '') ? <div className="p-8" data-testid="page-safety-cards"><h1 className="text-2xl font-bold" data-testid="title-safety-cards">Güvenlik Bilgi Kartları</h1><p data-testid="content-safety-cards">Bu sayfa şu anda geliştiriliyor...</p></div> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
             </Route>
             <Route path="/hazardous-materials/amounts">
-              {() => ['central_admin', 'safety_specialist', 'occupational_physician'].includes(user?.role || '') ? <div className="p-8"><h1 className="text-2xl font-bold">Envanter Miktarı</h1><p>Bu sayfa şu anda geliştiriliyor...</p></div> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
+              {() => ['central_admin', 'safety_specialist', 'occupational_physician'].includes(user?.role || '') ? <div className="p-8" data-testid="page-inventory-amounts"><h1 className="text-2xl font-bold" data-testid="title-inventory-amounts">Envanter Miktarı</h1><p data-testid="content-inventory-amounts">Bu sayfa şu anda geliştiriliyor...</p></div> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
             </Route>
             <Route path="/risk-assessment/evaluations">
-              {() => ['central_admin', 'safety_specialist', 'occupational_physician'].includes(user?.role || '') ? <div className="p-8"><h1 className="text-2xl font-bold">Risk Değerlendirmeleri</h1><p>Bu sayfa şu anda geliştiriliyor...</p></div> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
+              {() => ['central_admin', 'safety_specialist', 'occupational_physician'].includes(user?.role || '') ? <div className="p-8" data-testid="page-risk-evaluations"><h1 className="text-2xl font-bold" data-testid="title-risk-evaluations">Risk Değerlendirmeleri</h1><p data-testid="content-risk-evaluations">Bu sayfa şu anda geliştiriliyor...</p></div> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
             </Route>
             <Route path="/risk-assessment/departments">
-              {() => ['central_admin', 'safety_specialist', 'occupational_physician'].includes(user?.role || '') ? <div className="p-8"><h1 className="text-2xl font-bold">Risk Bölümleri</h1><p>Bu sayfa şu anda geliştiriliyor...</p></div> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
+              {() => ['central_admin', 'safety_specialist', 'occupational_physician'].includes(user?.role || '') ? <div className="p-8" data-testid="page-risk-departments"><h1 className="text-2xl font-bold" data-testid="title-risk-departments">Risk Bölümleri</h1><p data-testid="content-risk-departments">Bu sayfa şu anda geliştiriliyor...</p></div> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
             </Route>
             <Route path="/risk-assessment/reports">
               {() => ['central_admin', 'safety_specialist', 'occupational_physician'].includes(user?.role || '') ? <div className="p-8"><h1 className="text-2xl font-bold">Risk Raporları</h1><p>Bu sayfa şu anda geliştiriliyor...</p></div> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
