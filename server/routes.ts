@@ -27,6 +27,7 @@ import {
   insertRiskSubCategorySchema,
   insertRiskAssessmentSchema,
   insertRiskImprovementSchema,
+  insertDetectionBookEntrySchema,
   CHECKLIST_CATEGORIES,
   EVALUATION_OPTIONS,
   FINE_KINNEY_PROBABILITY,
@@ -3253,6 +3254,222 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Migration status error:', error);
       res.status(500).json({ message: 'Migration status alınırken hata oluştu: ' + error.message });
+    }
+  });
+
+  // Detection Book Routes
+  // Get detection book entries based on user role
+  app.get('/api/detection-book', authenticateToken, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      
+      if (!user) {
+        return res.status(401).json({ message: 'Yetkisiz erişim' });
+      }
+
+      let entries;
+      if (user.role === 'central_admin') {
+        entries = await storage.getAllDetectionBookEntries();
+      } else {
+        entries = await storage.getRoleBasedDetectionBookEntries(user.id, user.role);
+      }
+
+      res.json(entries);
+    } catch (error: any) {
+      console.error('Detection book entries fetch error:', error);
+      res.status(500).json({ message: 'Tespit defteri kayıtları alınırken hata oluştu: ' + error.message });
+    }
+  });
+
+  // Get single detection book entry
+  app.get('/api/detection-book/:id', authenticateToken, async (req: Request, res: Response) => {
+    try {
+      const entry = await storage.getDetectionBookEntry(req.params.id);
+      
+      if (!entry) {
+        return res.status(404).json({ message: 'Tespit defteri kaydı bulunamadı' });
+      }
+
+      res.json(entry);
+    } catch (error: any) {
+      console.error('Detection book entry fetch error:', error);
+      res.status(500).json({ message: 'Tespit defteri kaydı alınırken hata oluştu: ' + error.message });
+    }
+  });
+
+  // Create new detection book entry
+  app.post('/api/detection-book', authenticateToken, upload.single('document'), async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      
+      if (!user || !['safety_specialist', 'occupational_physician', 'central_admin'].includes(user.role)) {
+        return res.status(403).json({ message: 'Bu işlem için yetkiniz bulunmamaktadır' });
+      }
+
+      // Check if document is uploaded
+      if (!req.file) {
+        return res.status(400).json({ message: 'PDF veya fotoğraf dosyası yüklenmesi zorunludur' });
+      }
+
+      // Validate request body
+      const validationResult = insertDetectionBookEntrySchema.omit({ 
+        documentUrl: true, 
+        documentType: true, 
+        documentName: true,
+        userId: true,
+        locationId: true
+      }).safeParse(req.body);
+
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: 'Geçersiz form verisi', 
+          errors: validationResult.error.issues 
+        });
+      }
+
+      // Get user's location
+      const userDetails = await storage.getUser(user.id);
+      if (!userDetails?.locationId) {
+        return res.status(400).json({ message: 'Kullanıcının hastane bilgisi bulunamadı' });
+      }
+
+      // Upload file to object storage
+      const objectStorageService = new ObjectStorageService();
+      const fileExtension = path.extname(req.file.originalname);
+      const fileName = `detection-book/${crypto.randomUUID()}${fileExtension}`;
+      
+      let processedBuffer = req.file.buffer;
+      let documentType = 'pdf';
+
+      // If it's an image, compress it
+      if (req.file.mimetype.startsWith('image/')) {
+        processedBuffer = await sharp(req.file.buffer)
+          .jpeg({ quality: 80 })
+          .toBuffer();
+        documentType = 'photo';
+      }
+
+      const documentUrl = await objectStorageService.uploadFile(fileName, processedBuffer, req.file.mimetype);
+
+      // Create detection book entry
+      const entry = await storage.createDetectionBookEntry({
+        ...validationResult.data,
+        documentUrl,
+        documentType,
+        documentName: req.file.originalname,
+        userId: user.id,
+        locationId: userDetails.locationId
+      });
+
+      res.status(201).json(entry);
+    } catch (error: any) {
+      console.error('Detection book entry creation error:', error);
+      res.status(500).json({ message: 'Tespit defteri kaydı oluşturulurken hata oluştu: ' + error.message });
+    }
+  });
+
+  // Update detection book entry
+  app.put('/api/detection-book/:id', authenticateToken, upload.single('document'), async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      
+      if (!user || !['safety_specialist', 'occupational_physician', 'central_admin'].includes(user.role)) {
+        return res.status(403).json({ message: 'Bu işlem için yetkiniz bulunmamaktadır' });
+      }
+
+      // Check if entry exists
+      const existingEntry = await storage.getDetectionBookEntry(req.params.id);
+      if (!existingEntry) {
+        return res.status(404).json({ message: 'Tespit defteri kaydı bulunamadı' });
+      }
+
+      // Check if user owns this entry or is admin
+      if (user.role !== 'central_admin' && existingEntry.userId !== user.id) {
+        return res.status(403).json({ message: 'Bu kaydı düzenleme yetkiniz bulunmamaktadır' });
+      }
+
+      // Validate request body
+      const validationResult = insertDetectionBookEntrySchema.omit({ 
+        documentUrl: true, 
+        documentType: true, 
+        documentName: true,
+        userId: true,
+        locationId: true
+      }).partial().safeParse(req.body);
+
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: 'Geçersiz form verisi', 
+          errors: validationResult.error.issues 
+        });
+      }
+
+      let updateData = validationResult.data;
+
+      // Handle new document upload
+      if (req.file) {
+        const objectStorageService = new ObjectStorageService();
+        const fileExtension = path.extname(req.file.originalname);
+        const fileName = `detection-book/${crypto.randomUUID()}${fileExtension}`;
+        
+        let processedBuffer = req.file.buffer;
+        let documentType = 'pdf';
+
+        if (req.file.mimetype.startsWith('image/')) {
+          processedBuffer = await sharp(req.file.buffer)
+            .jpeg({ quality: 80 })
+            .toBuffer();
+          documentType = 'photo';
+        }
+
+        const documentUrl = await objectStorageService.uploadFile(fileName, processedBuffer, req.file.mimetype);
+
+        updateData = {
+          ...updateData,
+          documentUrl,
+          documentType,
+          documentName: req.file.originalname
+        };
+      }
+
+      const updatedEntry = await storage.updateDetectionBookEntry(req.params.id, updateData);
+      res.json(updatedEntry);
+    } catch (error: any) {
+      console.error('Detection book entry update error:', error);
+      res.status(500).json({ message: 'Tespit defteri kaydı güncellenirken hata oluştu: ' + error.message });
+    }
+  });
+
+  // Delete detection book entry
+  app.delete('/api/detection-book/:id', authenticateToken, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      
+      if (!user || !['safety_specialist', 'occupational_physician', 'central_admin'].includes(user.role)) {
+        return res.status(403).json({ message: 'Bu işlem için yetkiniz bulunmamaktadır' });
+      }
+
+      // Check if entry exists
+      const existingEntry = await storage.getDetectionBookEntry(req.params.id);
+      if (!existingEntry) {
+        return res.status(404).json({ message: 'Tespit defteri kaydı bulunamadı' });
+      }
+
+      // Check if user owns this entry or is admin
+      if (user.role !== 'central_admin' && existingEntry.userId !== user.id) {
+        return res.status(403).json({ message: 'Bu kaydı silme yetkiniz bulunmamaktadır' });
+      }
+
+      const deleted = await storage.deleteDetectionBookEntry(req.params.id);
+      
+      if (deleted) {
+        res.json({ message: 'Tespit defteri kaydı başarıyla silindi' });
+      } else {
+        res.status(500).json({ message: 'Tespit defteri kaydı silinirken hata oluştu' });
+      }
+    } catch (error: any) {
+      console.error('Detection book entry delete error:', error);
+      res.status(500).json({ message: 'Tespit defteri kaydı silinirken hata oluştu: ' + error.message });
     }
   });
 
