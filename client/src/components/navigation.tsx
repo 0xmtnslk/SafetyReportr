@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { HardHat, Home, Plus, FileText, LogOut, Shield, Menu, X, CheckSquare, BarChart3, TrendingUp, User, ChevronDown, ChevronLeft, ChevronRight, Bell, Building2, AlertTriangle, Calendar, Siren, Package, Activity, Search, Settings } from "lucide-react";
+import { HardHat, Home, Plus, FileText, LogOut, Shield, Menu, X, CheckSquare, BarChart3, TrendingUp, User, ChevronDown, ChevronLeft, ChevronRight, Bell, Building2, AlertTriangle, Calendar, Siren, Package, Activity, Search, Settings, ClipboardList, Zap, Truck, BookOpen, Factory, FileBarChart } from "lucide-react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import NotificationDropdown from "./NotificationDropdown";
@@ -11,6 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 // Helper function to get role display names
 const getRoleDisplayName = (role?: string) => {
@@ -24,6 +25,35 @@ const getRoleDisplayName = (role?: string) => {
   return roleNames[role || ''] || role || 'Normal Kullanıcı';
 };
 
+// Navigation hierarchy types
+interface SubActivity {
+  id: string;
+  label: string;
+  path: string;
+  icon?: any;
+}
+
+interface Subsection {
+  id: string;
+  label: string;
+  path?: string;
+  icon: any;
+  subActivities?: SubActivity[];
+}
+
+interface MainSection {
+  id: string;
+  label: string;
+  icon: any;
+  subsections: Subsection[];
+}
+
+interface FlatNavItem {
+  path: string;
+  label: string;
+  icon: any;
+}
+
 interface NavigationProps {
   children: React.ReactNode;
 }
@@ -34,28 +64,160 @@ export default function Navigation({ children }: NavigationProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true); // Varsayılan olarak daraltılmış
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
+  const [expandedSubsections, setExpandedSubsections] = useState<Record<string, boolean>>({});
 
-  // Role-based navigation items
-  const getNavItems = () => {
-    const baseItems = [
+  // Hierarchical navigation structure for specialists
+  const getHierarchicalNavigation = (): MainSection[] => {
+    if (!['central_admin', 'safety_specialist', 'occupational_physician'].includes(user?.role || '')) {
+      return [];
+    }
+
+    return [
+      {
+        id: 'safety-management',
+        label: 'İş Güvenliği Yönetimi',
+        icon: Shield,
+        subsections: [
+          {
+            id: 'annual-plans',
+            label: 'Yıllık Planlar',
+            icon: Calendar,
+            path: '/annual-plans',
+            subActivities: [
+              { id: 'training-plan', label: 'Yıllık Eğitim Planı', path: '/annual-plans/training' },
+              { id: 'work-plan', label: 'Yıllık Çalışma Planı', path: '/annual-plans/work' }
+            ]
+          },
+          {
+            id: 'emergency-management',
+            label: 'Acil Durum Yönetimi',
+            icon: Siren,
+            path: '/emergency-management',
+            subActivities: [
+              { id: 'hap-management', label: 'HAP Yönetimi', path: '/emergency-management/hap' },
+              { id: 'emergency-teams', label: 'Acil Durum Ekipleri', path: '/emergency-management/teams' },
+              { id: 'drills', label: 'Tatbikatlar', path: '/emergency-management/drills' }
+            ]
+          },
+          {
+            id: 'hazardous-materials',
+            label: 'Tehlikeli Madde Yönetimi',
+            icon: Package,
+            path: '/hazardous-materials',
+            subActivities: [
+              { id: 'facility-inventory', label: 'Tesis Envanteri', path: '/hazardous-materials/inventory' },
+              { id: 'safety-cards', label: 'Güvenlik Bilgi Kartları', path: '/hazardous-materials/safety-cards' },
+              { id: 'inventory-amount', label: 'Envanter Miktarı', path: '/hazardous-materials/amounts' }
+            ]
+          },
+          {
+            id: 'risk-assessment',
+            label: 'Risk Değerlendirmesi',
+            icon: AlertTriangle,
+            path: '/risk-assessment',
+            subActivities: [
+              { id: 'risk-dashboard', label: 'Dashboard', path: '/risk-assessment' },
+              { id: 'risk-evaluations', label: 'Değerlendirmeler', path: '/risk-assessment/evaluations' },
+              { id: 'risk-departments', label: 'Bölümler', path: '/risk-assessment/departments' },
+              { id: 'risk-reports', label: 'Raporlar', path: '/risk-assessment/reports' }
+            ]
+          },
+          {
+            id: 'accident-management',
+            label: 'İş Kazası ve Ramak Kala',
+            icon: Activity,
+            path: '/accident-management',
+            subActivities: [
+              { id: 'accident-dashboard', label: 'Dashboard', path: '/accident-management' },
+              { id: 'accidents', label: 'İş Kazası', path: '/accident-management/accidents' },
+              { id: 'near-miss', label: 'Ramak Kala', path: '/accident-management/near-miss' }
+            ]
+          },
+          {
+            id: 'incident-management',
+            label: 'Olağandışı Olay Yönetimi',
+            icon: Zap,
+            path: '/incident-management'
+          },
+          {
+            id: 'audit-management',
+            label: 'Denetim Yönetimi',
+            icon: Search,
+            path: '/reports' // Consolidated reports page
+          },
+          {
+            id: 'annual-evaluation',
+            label: 'Yıllık Değerlendirme Raporu',
+            icon: FileBarChart,
+            path: '/annual-evaluation'
+          },
+          {
+            id: 'detection-book',
+            label: 'İSG Tespit ve Öneri Defteri',
+            icon: BookOpen,
+            path: '/detection-book'
+          }
+        ]
+      },
+      {
+        id: 'occupational-health',
+        label: 'İş Sağlığı Yönetimi',
+        icon: Activity,
+        subsections: [
+          {
+            id: 'medical-examinations',
+            label: 'İşe Giriş ve Periyodik Muayene',
+            icon: ClipboardList,
+            path: '/medical-examinations'
+          }
+        ]
+      },
+      {
+        id: 'environmental-management',
+        label: 'Çevre Yönetimi',
+        icon: Factory,
+        subsections: [
+          {
+            id: 'env-reports',
+            label: 'Raporlar',
+            icon: FileText,
+            path: '/environmental/reports'
+          },
+          {
+            id: 'waste-management',
+            label: 'Atık Yönetimi',
+            icon: Truck,
+            path: '/environmental/waste',
+            subActivities: [
+              { id: 'waste-declarations', label: 'Atık Beyanları', path: '/environmental/waste/declarations' },
+              { id: 'waste-process', label: 'Atık Süreci', path: '/environmental/waste/process' }
+            ]
+          },
+          {
+            id: 'documentation',
+            label: 'Dokümantasyon',
+            icon: FileText,
+            path: '/environmental/documentation'
+          },
+          {
+            id: 'env-audit',
+            label: 'Denetim Yönetimi',
+            icon: Search,
+            path: '/environmental/audit'
+          }
+        ]
+      }
+    ];
+  };
+
+  // Flat navigation items for basic users
+  const getFlatNavItems = (): FlatNavItem[] => {
+    const baseItems: FlatNavItem[] = [
       { path: "/dashboard", label: "Ana Sayfa", icon: Home },
     ];
     
-    // Safety specialists, occupational physicians and admin can access all modules
-    if (['central_admin', 'safety_specialist', 'occupational_physician'].includes(user?.role || '')) {
-      baseItems.push(
-        { path: "/annual-plans", label: "Yıllık Planlar", icon: Calendar },
-        { path: "/emergency-management", label: "Acil Durum Yönetimi", icon: Siren },
-        { path: "/hazardous-materials", label: "Tehlikeli Madde Yönetimi", icon: Package },
-        { path: "/risk-assessment", label: "Risk Değerlendirmesi", icon: AlertTriangle },
-        { path: "/accident-management", label: "İş Kazası ve Ramak Kala", icon: Activity },
-        { path: "/incident-management", label: "Olağandışı Olay Yönetimi", icon: Shield },
-        { path: "/audit-management", label: "Denetim Yönetimi", icon: Search },
-        { path: "/create-report", label: "Yeni Rapor", icon: Plus },
-      );
-    }
-    
-    // All authenticated users can view reports (now includes all report types)
+    // All authenticated users can view reports
     baseItems.push({ path: "/reports", label: "Raporlar", icon: FileText });
     
     // Only admin users can access admin panel
@@ -68,7 +230,31 @@ export default function Navigation({ children }: NavigationProps) {
     return baseItems;
   };
 
-  const navItems = getNavItems();
+  const hierarchicalNav = getHierarchicalNavigation();
+  const flatNavItems = getFlatNavItems();
+  const isSpecialist = ['central_admin', 'safety_specialist', 'occupational_physician'].includes(user?.role || '');
+  
+  // Handle section expansion
+  const toggleSection = (sectionId: string) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [sectionId]: !prev[sectionId]
+    }));
+  };
+  
+  // Handle subsection expansion
+  const toggleSubsection = (subsectionId: string) => {
+    setExpandedSubsections(prev => ({
+      ...prev,
+      [subsectionId]: !prev[subsectionId]
+    }));
+  };
+  
+  // Get current path for active state checks
+  const isPathActive = (path?: string) => {
+    if (!path) return false;
+    return (path === "/dashboard" && (location === "/" || location === "/dashboard")) || location === path;
+  };
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -167,10 +353,129 @@ export default function Navigation({ children }: NavigationProps) {
         <div className="flex flex-col flex-1">
 
           {/* Navigation Items */}
-          <nav className={`flex-1 py-4 space-y-1 ${isSidebarCollapsed ? 'px-2' : 'px-4'}`}>
-            {navItems.map((item) => {
+          <nav className={`flex-1 py-4 space-y-1 ${isSidebarCollapsed ? 'px-2' : 'px-4'} overflow-y-auto`}>
+            {/* Always show Home */}
+            <button
+              className={`w-full flex items-center rounded-lg text-left transition-all duration-200 ${
+                isSidebarCollapsed ? 'px-3 py-3 justify-center' : 'px-4 py-3'
+              } ${
+                isPathActive('/dashboard')
+                  ? "bg-primary text-white"
+                  : "text-gray-600 hover:text-primary hover:bg-gray-50"
+              }`}
+              onClick={() => setLocation('/dashboard')}
+              data-testid="nav-dashboard"
+              title={isSidebarCollapsed ? 'Ana Sayfa' : undefined}
+            >
+              <Home size={20} className={isPathActive('/dashboard') ? "text-white" : "text-current"} />
+              {!isSidebarCollapsed && (
+                <span className="font-medium ml-3">Ana Sayfa</span>
+              )}
+            </button>
+
+            {/* Hierarchical Navigation for Specialists */}
+            {isSpecialist && !isSidebarCollapsed && hierarchicalNav.map((section) => (
+              <Collapsible
+                key={section.id}
+                open={expandedSections[section.id]}
+                onOpenChange={() => toggleSection(section.id)}
+              >
+                <CollapsibleTrigger asChild>
+                  <button
+                    className="w-full flex items-center justify-between px-4 py-3 rounded-lg text-left transition-colors text-gray-700 hover:text-primary hover:bg-gray-50 font-medium"
+                    data-testid={`nav-section-${section.id}`}
+                  >
+                    <div className="flex items-center">
+                      <section.icon size={20} className="text-current" />
+                      <span className="ml-3">{section.label}</span>
+                    </div>
+                    <ChevronDown 
+                      size={16} 
+                      className={`text-current transition-transform ${
+                        expandedSections[section.id] ? 'rotate-180' : ''
+                      }`} 
+                    />
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-1 mt-1">
+                  {section.subsections.map((subsection) => (
+                    <div key={subsection.id} className="ml-4">
+                      {subsection.subActivities ? (
+                        <Collapsible
+                          open={expandedSubsections[subsection.id]}
+                          onOpenChange={() => toggleSubsection(subsection.id)}
+                        >
+                          <CollapsibleTrigger asChild>
+                            <button
+                              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-left transition-colors ${
+                                subsection.path && isPathActive(subsection.path)
+                                  ? "bg-primary/10 text-primary"
+                                  : "text-gray-600 hover:text-primary hover:bg-gray-50"
+                              }`}
+                              onClick={() => {
+                                if (subsection.path) {
+                                  setLocation(subsection.path);
+                                }
+                              }}
+                              data-testid={`nav-subsection-${subsection.id}`}
+                            >
+                              <div className="flex items-center">
+                                <subsection.icon size={18} className="text-current" />
+                                <span className="ml-3 text-sm">{subsection.label}</span>
+                              </div>
+                              <ChevronDown 
+                                size={14} 
+                                className={`text-current transition-transform ${
+                                  expandedSubsections[subsection.id] ? 'rotate-180' : ''
+                                }`} 
+                              />
+                            </button>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent className="space-y-1 mt-1">
+                            {subsection.subActivities.map((activity) => (
+                              <button
+                                key={activity.id}
+                                className={`w-full flex items-center px-6 py-2 rounded-lg text-left transition-colors ${
+                                  isPathActive(activity.path)
+                                    ? "bg-primary text-white"
+                                    : "text-gray-500 hover:text-primary hover:bg-gray-50"
+                                }`}
+                                onClick={() => setLocation(activity.path)}
+                                data-testid={`nav-activity-${activity.id}`}
+                              >
+                                <span className="text-xs">{activity.label}</span>
+                              </button>
+                            ))}
+                          </CollapsibleContent>
+                        </Collapsible>
+                      ) : (
+                        <button
+                          className={`w-full flex items-center px-3 py-2 rounded-lg text-left transition-colors ${
+                            subsection.path && isPathActive(subsection.path)
+                              ? "bg-primary text-white"
+                              : "text-gray-600 hover:text-primary hover:bg-gray-50"
+                          }`}
+                          onClick={() => {
+                            if (subsection.path) {
+                              setLocation(subsection.path);
+                            }
+                          }}
+                          data-testid={`nav-subsection-${subsection.id}`}
+                        >
+                          <subsection.icon size={18} className={subsection.path && isPathActive(subsection.path) ? "text-white" : "text-current"} />
+                          <span className={`ml-3 text-sm ${subsection.path && isPathActive(subsection.path) ? "text-white" : ""}`}>{subsection.label}</span>
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </CollapsibleContent>
+              </Collapsible>
+            ))}
+
+            {/* Flat Navigation for Other Users or Collapsed Sidebar */}
+            {(!isSpecialist || isSidebarCollapsed) && flatNavItems.slice(1).map((item: FlatNavItem) => {
               const Icon = item.icon;
-              const isActive = (item.path === "/dashboard" && (location === "/" || location === "/dashboard")) || location === item.path;
+              const isActive = isPathActive(item.path);
               
               return (
                 <button
@@ -266,9 +571,27 @@ export default function Navigation({ children }: NavigationProps) {
 
               {/* Mobile Navigation */}
               <nav className="flex-1 px-3 py-3 space-y-1 overflow-y-auto">
-                {navItems.map((item) => {
+                {/* Always show Home */}
+                <button
+                  className={`w-full flex items-center px-3 py-2 rounded-lg text-left transition-colors ${
+                    isPathActive('/dashboard')
+                      ? "bg-primary text-white"
+                      : "text-gray-700 hover:bg-gray-100"
+                  }`}
+                  onClick={() => {
+                    setLocation('/dashboard');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  data-testid="nav-mobile-dashboard"
+                >
+                  <Home size={18} className={isPathActive('/dashboard') ? "text-white" : "text-current"} />
+                  <span className="ml-3 text-sm">Ana Sayfa</span>
+                </button>
+
+                {/* Mobile flat navigation for all users */}
+                {flatNavItems.slice(1).map((item: FlatNavItem) => {
                   const Icon = item.icon;
-                  const isActive = (item.path === "/dashboard" && (location === "/" || location === "/dashboard")) || location === item.path;
+                  const isActive = isPathActive(item.path);
                   
                   return (
                     <button
