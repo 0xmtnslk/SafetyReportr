@@ -3258,8 +3258,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Detection Book Routes
-  // Get detection book entries based on user role
-  app.get('/api/detection-book', authenticateToken, async (req: Request, res: Response) => {
+  // Get detection book entries based on user role and location
+  app.get('/api/detection-book', authenticateToken, addLocationFilter, async (req: Request, res: Response) => {
     try {
       const user = (req as any).user;
       
@@ -3267,10 +3267,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: 'Yetkisiz erişim' });
       }
 
+      const locationFilter = (req as any).locationFilter;
+      
       let entries;
       if (user.role === 'central_admin') {
         entries = await storage.getAllDetectionBookEntries();
+      } else if (locationFilter) {
+        // Location-based users see their location entries
+        entries = await storage.getDetectionBookEntriesByLocation(locationFilter, user.role);
       } else {
+        // Fallback to role-based entries
         entries = await storage.getRoleBasedDetectionBookEntries(user.id, user.role);
       }
 
@@ -3282,7 +3288,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get single detection book entry
-  app.get('/api/detection-book/:id', authenticateToken, async (req: Request, res: Response) => {
+  app.get('/api/detection-book/:id', authenticateToken, addLocationFilter, async (req: Request, res: Response) => {
     try {
       const entry = await storage.getDetectionBookEntry(req.params.id);
       
@@ -3298,7 +3304,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create new detection book entry
-  app.post('/api/detection-book', authenticateToken, upload.single('document'), async (req: Request, res: Response) => {
+  app.post('/api/detection-book', authenticateToken, addLocationFilter, upload.single('document'), async (req: Request, res: Response) => {
     try {
       const user = (req as any).user;
       

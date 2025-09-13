@@ -2474,6 +2474,45 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(detectionBookEntries).orderBy(desc(detectionBookEntries.createdAt));
   }
 
+  async getDetectionBookEntriesByLocation(locationId: string, userRole: string): Promise<DetectionBookEntry[]> {
+    if (userRole === 'safety_specialist') {
+      // Show only entries created by safety specialists in this location
+      const specialistUsers = await db.select({ id: users.id })
+        .from(users)
+        .where(and(eq(users.role, 'safety_specialist'), eq(users.locationId, locationId)));
+      const specialistIds = specialistUsers.map(u => u.id);
+      
+      if (specialistIds.length === 0) return [];
+      
+      return await db.select().from(detectionBookEntries)
+        .where(and(
+          inArray(detectionBookEntries.userId, specialistIds),
+          eq(detectionBookEntries.locationId, locationId)
+        ))
+        .orderBy(desc(detectionBookEntries.createdAt));
+    } else if (userRole === 'occupational_physician') {
+      // Show only entries created by occupational physicians in this location
+      const physicianUsers = await db.select({ id: users.id })
+        .from(users)
+        .where(and(eq(users.role, 'occupational_physician'), eq(users.locationId, locationId)));
+      const physicianIds = physicianUsers.map(u => u.id);
+      
+      if (physicianIds.length === 0) return [];
+      
+      return await db.select().from(detectionBookEntries)
+        .where(and(
+          inArray(detectionBookEntries.userId, physicianIds),
+          eq(detectionBookEntries.locationId, locationId)
+        ))
+        .orderBy(desc(detectionBookEntries.createdAt));
+    } else {
+      // For other roles, show all entries from this location
+      return await db.select().from(detectionBookEntries)
+        .where(eq(detectionBookEntries.locationId, locationId))
+        .orderBy(desc(detectionBookEntries.createdAt));
+    }
+  }
+
   async getRoleBasedDetectionBookEntries(userId: string, userRole: string): Promise<DetectionBookEntry[]> {
     if (userRole === 'safety_specialist') {
       // Show only entries created by safety specialists

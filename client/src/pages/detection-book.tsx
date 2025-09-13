@@ -56,12 +56,12 @@ export default function DetectionBookPage({ entryId, mode }: DetectionBookPagePr
   const [location, setLocation] = useLocation();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [activeTab, setActiveTab] = useState("liste");
   const { toast } = useToast();
 
-  // Determine current view based on props and route
-  const currentView = mode === 'new' ? 'new' : entryId ? 'detail' : 'list';
-  const selectedEntryId = entryId;
+  // Determine current view based on route
+  const currentView = location.includes('/new') ? 'new' : 
+                     location.match(/\/detection-book\/([^?/]+)/) ? 'detail' : 'list';
+  const selectedEntryId = entryId || location.match(/\/detection-book\/([^?/]+)/)?.[1];
 
   // Get current user to determine role
   const { data: user } = useQuery({
@@ -69,7 +69,14 @@ export default function DetectionBookPage({ entryId, mode }: DetectionBookPagePr
     staleTime: 5 * 60 * 1000
   });
 
-  // Fetch detection book entries
+  // Get user's location info for workplace title
+  const { data: userLocation } = useQuery({
+    queryKey: ['/api/locations', user?.locationId],
+    enabled: !!user?.locationId,
+    staleTime: 10 * 60 * 1000
+  });
+
+  // Fetch detection book entries (filtered by user's location)
   const { data: entries, isLoading } = useQuery({
     queryKey: ['/api/detection-book'],
     staleTime: 2 * 60 * 1000
@@ -96,6 +103,13 @@ export default function DetectionBookPage({ entryId, mode }: DetectionBookPagePr
       evaluationText: '6331 sayılı yasa gereği yetkilendirilen işyeri hekimi ve İş Güvenliği Uzmanı tarafından ilgili tespitler yapılmış ve İşveren önerilmiştir.\n\n'
     }
   });
+
+  // Auto-fill workplace title when user location loads
+  useEffect(() => {
+    if (userLocation && typeof userLocation === 'object' && 'name' in userLocation) {
+      form.setValue('workplaceTitle', (userLocation as any).name);
+    }
+  }, [userLocation, form]);
 
   // Reset form when switching to new view
   useEffect(() => {
@@ -301,6 +315,8 @@ export default function DetectionBookPage({ entryId, mode }: DetectionBookPagePr
                     <Input 
                       placeholder="Hastane adını girin" 
                       {...field}
+                      value={field.value}
+                      readOnly={!!userLocation}
                       data-testid="input-workplace-title"
                     />
                   </FormControl>
