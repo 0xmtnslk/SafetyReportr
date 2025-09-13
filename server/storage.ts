@@ -16,7 +16,7 @@ import {
   calculateQuestionScore, calculateLetterGrade, calculateFineKinneyScore, getFineKinneyRiskLevel
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, inArray, sql, gt, or, isNull, getTableColumns } from "drizzle-orm";
+import { eq, desc, and, inArray, sql, gt, or, isNull, getTableColumns, leftJoin } from "drizzle-orm";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
 
@@ -2543,8 +2543,29 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getDetectionBookEntry(id: string): Promise<DetectionBookEntry | undefined> {
-    const [entry] = await db.select().from(detectionBookEntries).where(eq(detectionBookEntries.id, id));
-    return entry;
+    const [result] = await db
+      .select({
+        ...getTableColumns(detectionBookEntries),
+        creator: {
+          id: users.id,
+          fullName: users.fullName,
+          role: users.role,
+          safetySpecialistClass: users.safetySpecialistClass,
+          certificateNumber: users.certificateNumber,
+        }
+      })
+      .from(detectionBookEntries)
+      .leftJoin(users, eq(detectionBookEntries.userId, users.id))
+      .where(eq(detectionBookEntries.id, id));
+    
+    if (!result) return undefined;
+    
+    // Combine the entry with creator info
+    const { creator, ...entry } = result;
+    return {
+      ...entry,
+      creator
+    } as DetectionBookEntry & { creator: any };
   }
 
   async createDetectionBookEntry(entry: InsertDetectionBookEntry): Promise<DetectionBookEntry> {

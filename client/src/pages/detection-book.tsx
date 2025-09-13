@@ -37,6 +37,13 @@ type DetectionBookEntry = {
   locationId: string;
   createdAt: string;
   updatedAt: string;
+  creator?: {
+    id: string;
+    fullName: string;
+    role: string;
+    safetySpecialistClass?: string;
+    certificateNumber?: string;
+  };
 };
 
 // Form schema - omit auto-generated fields and add file validation
@@ -589,7 +596,24 @@ export default function DetectionBookPage({ entryId, mode }: DetectionBookPagePr
                 <div>
                   <div className="font-medium text-sm">Ekleyen</div>
                   <div className="text-gray-600">
-                    {user && typeof user === 'object' && 'id' in user && (user as any).id === selectedEntry.userId ? 'Siz' : 'Uzman/Hekim'}
+                    {selectedEntry.creator ? (
+                      <div>
+                        <div className="font-medium">{selectedEntry.creator.fullName}</div>
+                        <div className="text-xs text-gray-500">
+                          {selectedEntry.creator.safetySpecialistClass && selectedEntry.creator.certificateNumber ? (
+                            <>
+                              {selectedEntry.creator.safetySpecialistClass} - Belge No: {selectedEntry.creator.certificateNumber}
+                            </>
+                          ) : (
+                            <>{selectedEntry.creator.role === 'safety_specialist' ? 'İş Güvenliği Uzmanı' : 
+                              selectedEntry.creator.role === 'occupational_physician' ? 'İşyeri Hekimi' : 
+                              selectedEntry.creator.role}</>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      user && typeof user === 'object' && 'id' in user && (user as any).id === selectedEntry.userId ? 'Siz' : 'Uzman/Hekim'
+                    )}
                   </div>
                 </div>
               </div>
