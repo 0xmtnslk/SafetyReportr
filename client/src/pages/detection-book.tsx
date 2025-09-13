@@ -83,13 +83,9 @@ export default function DetectionBookPage({ entryId, mode }: DetectionBookPagePr
   });
 
   // Fetch single entry for detail view  
-  const { data: selectedEntry, isLoading: isLoadingEntry } = useQuery({
+  const { data: selectedEntry, isLoading: isLoadingEntry } = useQuery<DetectionBookEntry>({
     queryKey: ['/api/detection-book', selectedEntryId],
     enabled: !!selectedEntryId && currentView === 'detail',
-    queryFn: async () => {
-      if (!entries || !Array.isArray(entries)) return null;
-      return entries.find((entry: DetectionBookEntry) => entry.id === selectedEntryId) || null;
-    }
   });
 
   // Form setup
