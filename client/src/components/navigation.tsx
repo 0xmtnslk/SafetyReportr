@@ -498,6 +498,31 @@ export default function Navigation({ children }: NavigationProps) {
                 </button>
               );
             })}
+            
+            {/* Additional flat navigation for specialists when collapsed */}
+            {isSpecialist && isSidebarCollapsed && hierarchicalNav.map((section) => 
+              section.subsections.map((subsection) => {
+                if (!subsection.path) return null;
+                const Icon = subsection.icon;
+                const isActive = isPathActive(subsection.path);
+                
+                return (
+                  <button
+                    key={subsection.path}
+                    className={`w-full flex items-center rounded-lg text-left transition-all duration-200 px-3 py-3 justify-center ${
+                      isActive
+                        ? "bg-primary text-white"
+                        : "text-gray-600 hover:text-primary hover:bg-gray-50"
+                    }`}
+                    onClick={() => subsection.path && setLocation(subsection.path)}
+                    data-testid={`nav-collapsed-${subsection.id}`}
+                    title={subsection.label}
+                  >
+                    <Icon size={20} className={isActive ? "text-white" : "text-current"} />
+                  </button>
+                );
+              })
+            )}
           </nav>
 
           {/* Logout Button */}
@@ -588,30 +613,137 @@ export default function Navigation({ children }: NavigationProps) {
                   <span className="ml-3 text-sm">Ana Sayfa</span>
                 </button>
 
-                {/* Mobile flat navigation for all users */}
-                {flatNavItems.slice(1).map((item: FlatNavItem) => {
-                  const Icon = item.icon;
-                  const isActive = isPathActive(item.path);
-                  
-                  return (
-                    <button
-                      key={item.path}
-                      className={`w-full flex items-center px-3 py-2 rounded-lg text-left transition-colors ${
-                        isActive
-                          ? "bg-primary text-white"
-                          : "text-gray-700 hover:bg-gray-100"
-                      }`}
-                      onClick={() => {
-                        setLocation(item.path);
-                        setIsMobileMenuOpen(false);
-                      }}
-                      data-testid={`nav-mobile-${item.path.slice(1) || "home"}`}
+                {/* Mobile navigation based on user role */}
+                {isSpecialist ? (
+                  /* Hierarchical navigation for specialists on mobile */
+                  hierarchicalNav.map((section) => (
+                    <Collapsible
+                      key={section.id}
+                      open={expandedSections[section.id]}
+                      onOpenChange={() => toggleSection(section.id)}
                     >
-                      <Icon size={18} className={isActive ? "text-white" : "text-current"} />
-                      <span className="ml-3 text-sm">{item.label}</span>
-                    </button>
-                  );
-                })}
+                      <CollapsibleTrigger asChild>
+                        <button
+                          className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-left transition-colors text-gray-700 hover:text-primary hover:bg-gray-50 font-medium"
+                          data-testid={`nav-mobile-section-${section.id}`}
+                        >
+                          <div className="flex items-center">
+                            <section.icon size={18} className="text-current" />
+                            <span className="ml-3 text-sm">{section.label}</span>
+                          </div>
+                          <ChevronDown 
+                            size={14} 
+                            className={`text-current transition-transform ${
+                              expandedSections[section.id] ? 'rotate-180' : ''
+                            }`} 
+                          />
+                        </button>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="space-y-1 mt-1">
+                        {section.subsections.map((subsection) => (
+                          <div key={subsection.id} className="ml-4">
+                            {subsection.subActivities ? (
+                              <Collapsible
+                                open={expandedSubsections[subsection.id]}
+                                onOpenChange={() => toggleSubsection(subsection.id)}
+                              >
+                                <CollapsibleTrigger asChild>
+                                  <button
+                                    className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-left transition-colors ${
+                                      subsection.path && isPathActive(subsection.path)
+                                        ? "bg-primary/10 text-primary"
+                                        : "text-gray-600 hover:text-primary hover:bg-gray-50"
+                                    }`}
+                                    onClick={() => {
+                                      if (subsection.path) {
+                                        setLocation(subsection.path);
+                                        setIsMobileMenuOpen(false);
+                                      }
+                                    }}
+                                    data-testid={`nav-mobile-subsection-${subsection.id}`}
+                                  >
+                                    <div className="flex items-center">
+                                      <subsection.icon size={16} className="text-current" />
+                                      <span className="ml-2 text-xs">{subsection.label}</span>
+                                    </div>
+                                    <ChevronDown 
+                                      size={12} 
+                                      className={`text-current transition-transform ${
+                                        expandedSubsections[subsection.id] ? 'rotate-180' : ''
+                                      }`} 
+                                    />
+                                  </button>
+                                </CollapsibleTrigger>
+                                <CollapsibleContent className="space-y-1 mt-1">
+                                  {subsection.subActivities.map((activity) => (
+                                    <button
+                                      key={activity.id}
+                                      className={`w-full flex items-center px-4 py-1.5 rounded-lg text-left transition-colors ${
+                                        isPathActive(activity.path)
+                                          ? "bg-primary text-white"
+                                          : "text-gray-500 hover:text-primary hover:bg-gray-50"
+                                      }`}
+                                      onClick={() => {
+                                        setLocation(activity.path);
+                                        setIsMobileMenuOpen(false);
+                                      }}
+                                      data-testid={`nav-mobile-activity-${activity.id}`}
+                                    >
+                                      <span className="text-xs">{activity.label}</span>
+                                    </button>
+                                  ))}
+                                </CollapsibleContent>
+                              </Collapsible>
+                            ) : (
+                              <button
+                                className={`w-full flex items-center px-2 py-1.5 rounded-lg text-left transition-colors ${
+                                  subsection.path && isPathActive(subsection.path)
+                                    ? "bg-primary text-white"
+                                    : "text-gray-600 hover:text-primary hover:bg-gray-50"
+                                }`}
+                                onClick={() => {
+                                  if (subsection.path) {
+                                    setLocation(subsection.path);
+                                    setIsMobileMenuOpen(false);
+                                  }
+                                }}
+                                data-testid={`nav-mobile-subsection-${subsection.id}`}
+                              >
+                                <subsection.icon size={16} className={subsection.path && isPathActive(subsection.path) ? "text-white" : "text-current"} />
+                                <span className={`ml-2 text-xs ${subsection.path && isPathActive(subsection.path) ? "text-white" : ""}`}>{subsection.label}</span>
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </CollapsibleContent>
+                    </Collapsible>
+                  ))
+                ) : (
+                  /* Flat navigation for non-specialists on mobile */
+                  flatNavItems.slice(1).map((item: FlatNavItem) => {
+                    const Icon = item.icon;
+                    const isActive = isPathActive(item.path);
+                    
+                    return (
+                      <button
+                        key={item.path}
+                        className={`w-full flex items-center px-3 py-2 rounded-lg text-left transition-colors ${
+                          isActive
+                            ? "bg-primary text-white"
+                            : "text-gray-700 hover:bg-gray-100"
+                        }`}
+                        onClick={() => {
+                          setLocation(item.path);
+                          setIsMobileMenuOpen(false);
+                        }}
+                        data-testid={`nav-mobile-${item.path.slice(1) || "home"}`}
+                      >
+                        <Icon size={18} className={isActive ? "text-white" : "text-current"} />
+                        <span className="ml-3 text-sm">{item.label}</span>
+                      </button>
+                    );
+                  })
+                )}
               </nav>
 
               {/* Mobile Bottom Section */}
@@ -669,7 +801,7 @@ export default function Navigation({ children }: NavigationProps) {
               <DropdownMenuTrigger asChild>
                 <button
                   className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center hover:bg-primary/90 transition-colors"
-                  data-testid="button-mobile-profile"
+                  data-testid="button-mobile-profile-dropdown"
                 >
                   <span className="text-white text-xs font-bold">
                     {(user?.fullName || user?.username || 'U').charAt(0).toUpperCase()}
@@ -687,18 +819,33 @@ export default function Navigation({ children }: NavigationProps) {
                     <span className="text-sm font-semibold text-gray-900">
                       {user?.fullName || user?.username}
                     </span>
+                    <span className="text-xs text-primary">
+                      {getRoleDisplayName(user?.role)}
+                    </span>
                   </div>
                 </div>
                 <DropdownMenuItem
                   onClick={() => setLocation('/profile/edit')}
                   className="flex items-center px-3 py-2 text-gray-700 hover:text-primary hover:bg-gray-50 rounded-lg cursor-pointer"
+                  data-testid="menu-mobile-profile-edit"
                 >
                   <User size={14} className="mr-3" />
                   Profil
                 </DropdownMenuItem>
+                {['safety_specialist', 'occupational_physician'].includes(user?.role || '') && (
+                  <DropdownMenuItem
+                    onClick={() => setLocation('/hospital-management')}
+                    className="flex items-center px-3 py-2 text-gray-700 hover:text-primary hover:bg-gray-50 rounded-lg cursor-pointer"
+                    data-testid="menu-mobile-hospital-management"
+                  >
+                    <Building2 size={14} className="mr-3" />
+                    Hastane Yönetimi
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem
                   onClick={logout}
                   className="flex items-center px-3 py-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg cursor-pointer"
+                  data-testid="menu-mobile-logout"
                 >
                   <LogOut size={14} className="mr-3" />
                   Çıkış
