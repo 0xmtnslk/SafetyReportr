@@ -348,7 +348,9 @@ export default function DetectionBookPage({ entryId, mode }: DetectionBookPagePr
                       placeholder="Hastane adını girin" 
                       {...field}
                       value={field.value}
-                      readOnly={!!userLocation}
+                      readOnly={true}
+                      disabled={true}
+                      className="bg-gray-50 cursor-not-allowed"
                       data-testid="input-workplace-title"
                     />
                   </FormControl>
@@ -367,7 +369,9 @@ export default function DetectionBookPage({ entryId, mode }: DetectionBookPagePr
                     <Input 
                       placeholder="SGK sicil numarasını girin" 
                       {...field}
-                      readOnly={!!userLocation && !!(userLocation as any).sgkRegistrationNumber}
+                      readOnly={true}
+                      disabled={true}
+                      className="bg-gray-50 cursor-not-allowed"
                       data-testid="input-sgk-number"
                     />
                   </FormControl>

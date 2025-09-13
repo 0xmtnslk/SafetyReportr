@@ -3355,7 +3355,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Process form data - convert types from strings
       const processedData = {
         ...req.body,
-        pageNumber: parseInt(req.body.pageNumber) || 1
+        pageNumber: parseInt(req.body.pageNumber) || 1,
+        entryDate: new Date(req.body.entryDate)
       };
       
       // Validate request body
