@@ -349,11 +349,11 @@ export default function Navigation({ children }: NavigationProps) {
       {/* Left Sidebar */}
       <aside className={`hidden md:flex md:flex-col md:fixed md:inset-y-0 md:top-16 bg-white border-r border-gray-200 shadow-sm transition-all duration-300 z-20 ${
         isSidebarCollapsed ? 'md:w-16' : 'md:w-64'
-      } md:h-screen md:max-h-screen`}>
-        <div className="flex flex-col flex-1">
+      } md:h-[calc(100vh-4rem)]`}>
+        <div className="flex flex-col h-full">
 
           {/* Navigation Items */}
-          <nav className={`flex-1 py-4 space-y-1 ${isSidebarCollapsed ? 'px-2' : 'px-4'} overflow-y-auto max-h-screen`}>
+          <nav className={`flex-1 py-4 space-y-1 ${isSidebarCollapsed ? 'px-2' : 'px-4'} overflow-y-auto`}>
             {/* Always show Home */}
             <button
               className={`w-full flex items-center rounded-lg text-left transition-all duration-200 ${
@@ -422,8 +422,36 @@ export default function Navigation({ children }: NavigationProps) {
               </Collapsible>
             ))}
 
-            {/* Flat Navigation for Other Users or Collapsed Sidebar */}
-            {(!isSpecialist || isSidebarCollapsed) && flatNavItems.slice(1).map((item: FlatNavItem) => {
+            {/* Collapsed Sidebar - Show only main sections */}
+            {isSpecialist && isSidebarCollapsed && (
+              <>
+                {/* Main Sections Only for Collapsed State */}
+                {hierarchicalNav.map((section) => {
+                  const SectionIcon = section.icon;
+                  // Check if any subsection path is active to highlight main section
+                  const isMainSectionActive = section.subsections.some(sub => sub.path && isPathActive(sub.path));
+                  
+                  return (
+                    <button
+                      key={section.id}
+                      className={`w-full flex items-center justify-center px-3 py-3 rounded-lg transition-all duration-200 ${
+                        isMainSectionActive
+                          ? "bg-primary text-white"
+                          : "text-gray-600 hover:text-primary hover:bg-gray-50"
+                      }`}
+                      onClick={() => setIsSidebarCollapsed(false)} // Expand on click
+                      data-testid={`nav-collapsed-${section.id}`}
+                      title={section.label}
+                    >
+                      <SectionIcon size={20} className={isMainSectionActive ? "text-white" : "text-current"} />
+                    </button>
+                  );
+                })}
+              </>
+            )}
+            
+            {/* Flat Navigation for Other Users */}
+            {!isSpecialist && flatNavItems.slice(1).map((item: FlatNavItem) => {
               const Icon = item.icon;
               const isActive = isPathActive(item.path);
               
@@ -475,8 +503,8 @@ export default function Navigation({ children }: NavigationProps) {
             )}
           </nav>
 
-          {/* Logout Button */}
-          <div className={`border-t border-gray-200 ${isSidebarCollapsed ? 'px-2 py-2' : 'px-4 py-2'}`}>
+          {/* Bottom Section - Fixed at bottom */}
+          <div className={`flex-shrink-0 border-t border-gray-200 ${isSidebarCollapsed ? 'px-2 py-2' : 'px-4 py-2'}`}>
             <button
               onClick={logout}
               className={`w-full flex items-center rounded-lg text-left transition-all duration-200 text-red-600 hover:text-red-700 hover:bg-red-50 ${
@@ -493,7 +521,7 @@ export default function Navigation({ children }: NavigationProps) {
           </div>
 
           {/* Sidebar Toggle Arrow */}
-          <div className={`border-t border-gray-200 ${isSidebarCollapsed ? 'px-2 py-2' : 'px-4 py-4'}`}>
+          <div className={`flex-shrink-0 border-t border-gray-200 ${isSidebarCollapsed ? 'px-2 py-2' : 'px-4 py-2'}`}>
             <button
               onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
               className={`w-full flex items-center rounded-lg text-gray-600 hover:text-primary hover:bg-gray-50 transition-colors ${
