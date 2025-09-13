@@ -2,6 +2,7 @@ import {
   reports, findings, users, offlineQueue, locations, notifications,
   checklistTemplates, checklistSections, checklistQuestions, inspections, inspectionAssignments, inspectionResponses,
   hospitalDepartments, riskCategories, riskSubCategories, riskAssessments, riskImprovements, regulations, hospitalSections,
+  detectionBookEntries,
   type User, type InsertUser, type Report, type InsertReport, type Finding, type InsertFinding, 
   type OfflineQueueItem, type InsertOfflineQueueItem, type Location, type InsertLocation,
   type ChecklistTemplate, type InsertChecklistTemplate, type ChecklistSection, type InsertChecklistSection,
@@ -11,7 +12,7 @@ import {
   type HospitalDepartment, type InsertHospitalDepartment, type RiskCategory, type InsertRiskCategory,
   type RiskSubCategory, type InsertRiskSubCategory, type RiskAssessment, type InsertRiskAssessment,
   type RiskImprovement, type InsertRiskImprovement, type Regulation, type InsertRegulation,
-  type HospitalSection, type InsertHospitalSection,
+  type DetectionBookEntry, type InsertDetectionBookEntry,
   calculateQuestionScore, calculateLetterGrade, calculateFineKinneyScore, getFineKinneyRiskLevel
 } from "@shared/schema";
 import { db } from "./db";
@@ -274,6 +275,15 @@ export interface IStorage {
     avgRiskScore: number;
     riskDistribution: { level: string; count: number }[];
   }>;
+
+  // Detection Book operations
+  getAllDetectionBookEntries(): Promise<DetectionBookEntry[]>;
+  getRoleBasedDetectionBookEntries(userId: string, userRole: string): Promise<DetectionBookEntry[]>;
+  getUserDetectionBookEntries(userId: string): Promise<DetectionBookEntry[]>;
+  getDetectionBookEntry(id: string): Promise<DetectionBookEntry | undefined>;
+  createDetectionBookEntry(entry: InsertDetectionBookEntry): Promise<DetectionBookEntry>;
+  updateDetectionBookEntry(id: string, entry: Partial<InsertDetectionBookEntry>): Promise<DetectionBookEntry>;
+  deleteDetectionBookEntry(id: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2457,6 +2467,63 @@ export class DatabaseStorage implements IStorage {
         updatedAt: new Date()
       })
       .where(eq(hospitalDepartments.id, departmentId));
+  }
+
+  // Detection Book operations implementation
+  async getAllDetectionBookEntries(): Promise<DetectionBookEntry[]> {
+    return await db.select().from(detectionBookEntries).orderBy(desc(detectionBookEntries.createdAt));
+  }
+
+  async getRoleBasedDetectionBookEntries(userId: string, userRole: string): Promise<DetectionBookEntry[]> {
+    if (userRole === 'safety_specialist') {
+      // Show only entries created by safety specialists
+      const specialistUsers = await db.select({ id: users.id }).from(users).where(eq(users.role, 'safety_specialist'));
+      const specialistIds = specialistUsers.map(u => u.id);
+      
+      return await db.select().from(detectionBookEntries)
+        .where(inArray(detectionBookEntries.userId, specialistIds))
+        .orderBy(desc(detectionBookEntries.createdAt));
+    } else if (userRole === 'occupational_physician') {
+      // Show only entries created by occupational physicians
+      const physicianUsers = await db.select({ id: users.id }).from(users).where(eq(users.role, 'occupational_physician'));
+      const physicianIds = physicianUsers.map(u => u.id);
+      
+      return await db.select().from(detectionBookEntries)
+        .where(inArray(detectionBookEntries.userId, physicianIds))
+        .orderBy(desc(detectionBookEntries.createdAt));
+    } else {
+      // Central admin can see all
+      return await this.getAllDetectionBookEntries();
+    }
+  }
+
+  async getUserDetectionBookEntries(userId: string): Promise<DetectionBookEntry[]> {
+    return await db.select().from(detectionBookEntries)
+      .where(eq(detectionBookEntries.userId, userId))
+      .orderBy(desc(detectionBookEntries.createdAt));
+  }
+
+  async getDetectionBookEntry(id: string): Promise<DetectionBookEntry | undefined> {
+    const [entry] = await db.select().from(detectionBookEntries).where(eq(detectionBookEntries.id, id));
+    return entry;
+  }
+
+  async createDetectionBookEntry(entry: InsertDetectionBookEntry): Promise<DetectionBookEntry> {
+    const [newEntry] = await db.insert(detectionBookEntries).values(entry).returning();
+    return newEntry;
+  }
+
+  async updateDetectionBookEntry(id: string, entry: Partial<InsertDetectionBookEntry>): Promise<DetectionBookEntry> {
+    const [updatedEntry] = await db.update(detectionBookEntries)
+      .set({ ...entry, updatedAt: new Date() })
+      .where(eq(detectionBookEntries.id, id))
+      .returning();
+    return updatedEntry;
+  }
+
+  async deleteDetectionBookEntry(id: string): Promise<boolean> {
+    const result = await db.delete(detectionBookEntries).where(eq(detectionBookEntries.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
   }
 }
 
