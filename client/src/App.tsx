@@ -287,6 +287,12 @@ function Router() {
             <Route path="/annual-evaluation">
               {() => ['central_admin', 'safety_specialist', 'occupational_physician'].includes(user?.role || '') ? <div className="p-8"><h1 className="text-2xl font-bold">Yıllık Değerlendirme Raporu</h1><p>Bu sayfa şu anda geliştiriliyor...</p></div> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
             </Route>
+            <Route path="/detection-book/:id">
+              {(params) => ['central_admin', 'safety_specialist', 'occupational_physician'].includes(user?.role || '') ? <DetectionBookPage entryId={params.id} /> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
+            </Route>
+            <Route path="/detection-book/new">
+              {() => ['central_admin', 'safety_specialist', 'occupational_physician'].includes(user?.role || '') ? <DetectionBookPage mode="new" /> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
+            </Route>
             <Route path="/detection-book">
               {() => ['central_admin', 'safety_specialist', 'occupational_physician'].includes(user?.role || '') ? <DetectionBookPage /> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
             </Route>
