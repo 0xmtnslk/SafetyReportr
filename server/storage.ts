@@ -16,7 +16,7 @@ import {
   calculateQuestionScore, calculateLetterGrade, calculateFineKinneyScore, getFineKinneyRiskLevel
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, inArray, sql, gt, or, isNull, getTableColumns, leftJoin } from "drizzle-orm";
+import { eq, desc, and, inArray, sql, gt, or, isNull, getTableColumns } from "drizzle-orm";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
 
@@ -2471,7 +2471,20 @@ export class DatabaseStorage implements IStorage {
 
   // Detection Book operations implementation
   async getAllDetectionBookEntries(): Promise<DetectionBookEntry[]> {
-    return await db.select().from(detectionBookEntries).orderBy(desc(detectionBookEntries.createdAt));
+    return await db
+      .select({
+        ...getTableColumns(detectionBookEntries),
+        creator: {
+          id: users.id,
+          fullName: users.fullName,
+          role: users.role,
+          safetySpecialistClass: users.safetySpecialistClass,
+          certificateNumber: users.certificateNumber,
+        }
+      })
+      .from(detectionBookEntries)
+      .leftJoin(users, eq(detectionBookEntries.userId, users.id))
+      .orderBy(desc(detectionBookEntries.createdAt));
   }
 
   async getDetectionBookEntriesByLocation(locationId: string, userRole: string): Promise<DetectionBookEntry[]> {
@@ -2484,7 +2497,19 @@ export class DatabaseStorage implements IStorage {
       
       if (specialistIds.length === 0) return [];
       
-      return await db.select().from(detectionBookEntries)
+      return await db
+        .select({
+          ...getTableColumns(detectionBookEntries),
+          creator: {
+            id: users.id,
+            fullName: users.fullName,
+            role: users.role,
+            safetySpecialistClass: users.safetySpecialistClass,
+            certificateNumber: users.certificateNumber,
+          }
+        })
+        .from(detectionBookEntries)
+        .leftJoin(users, eq(detectionBookEntries.userId, users.id))
         .where(and(
           inArray(detectionBookEntries.userId, specialistIds),
           eq(detectionBookEntries.locationId, locationId)
@@ -2499,7 +2524,19 @@ export class DatabaseStorage implements IStorage {
       
       if (physicianIds.length === 0) return [];
       
-      return await db.select().from(detectionBookEntries)
+      return await db
+        .select({
+          ...getTableColumns(detectionBookEntries),
+          creator: {
+            id: users.id,
+            fullName: users.fullName,
+            role: users.role,
+            safetySpecialistClass: users.safetySpecialistClass,
+            certificateNumber: users.certificateNumber,
+          }
+        })
+        .from(detectionBookEntries)
+        .leftJoin(users, eq(detectionBookEntries.userId, users.id))
         .where(and(
           inArray(detectionBookEntries.userId, physicianIds),
           eq(detectionBookEntries.locationId, locationId)
@@ -2507,7 +2544,19 @@ export class DatabaseStorage implements IStorage {
         .orderBy(desc(detectionBookEntries.createdAt));
     } else {
       // For other roles, show all entries from this location
-      return await db.select().from(detectionBookEntries)
+      return await db
+        .select({
+          ...getTableColumns(detectionBookEntries),
+          creator: {
+            id: users.id,
+            fullName: users.fullName,
+            role: users.role,
+            safetySpecialistClass: users.safetySpecialistClass,
+            certificateNumber: users.certificateNumber,
+          }
+        })
+        .from(detectionBookEntries)
+        .leftJoin(users, eq(detectionBookEntries.userId, users.id))
         .where(eq(detectionBookEntries.locationId, locationId))
         .orderBy(desc(detectionBookEntries.createdAt));
     }
@@ -2519,7 +2568,19 @@ export class DatabaseStorage implements IStorage {
       const specialistUsers = await db.select({ id: users.id }).from(users).where(eq(users.role, 'safety_specialist'));
       const specialistIds = specialistUsers.map(u => u.id);
       
-      return await db.select().from(detectionBookEntries)
+      return await db
+        .select({
+          ...getTableColumns(detectionBookEntries),
+          creator: {
+            id: users.id,
+            fullName: users.fullName,
+            role: users.role,
+            safetySpecialistClass: users.safetySpecialistClass,
+            certificateNumber: users.certificateNumber,
+          }
+        })
+        .from(detectionBookEntries)
+        .leftJoin(users, eq(detectionBookEntries.userId, users.id))
         .where(inArray(detectionBookEntries.userId, specialistIds))
         .orderBy(desc(detectionBookEntries.createdAt));
     } else if (userRole === 'occupational_physician') {
@@ -2527,7 +2588,19 @@ export class DatabaseStorage implements IStorage {
       const physicianUsers = await db.select({ id: users.id }).from(users).where(eq(users.role, 'occupational_physician'));
       const physicianIds = physicianUsers.map(u => u.id);
       
-      return await db.select().from(detectionBookEntries)
+      return await db
+        .select({
+          ...getTableColumns(detectionBookEntries),
+          creator: {
+            id: users.id,
+            fullName: users.fullName,
+            role: users.role,
+            safetySpecialistClass: users.safetySpecialistClass,
+            certificateNumber: users.certificateNumber,
+          }
+        })
+        .from(detectionBookEntries)
+        .leftJoin(users, eq(detectionBookEntries.userId, users.id))
         .where(inArray(detectionBookEntries.userId, physicianIds))
         .orderBy(desc(detectionBookEntries.createdAt));
     } else {
@@ -2537,7 +2610,19 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserDetectionBookEntries(userId: string): Promise<DetectionBookEntry[]> {
-    return await db.select().from(detectionBookEntries)
+    return await db
+      .select({
+        ...getTableColumns(detectionBookEntries),
+        creator: {
+          id: users.id,
+          fullName: users.fullName,
+          role: users.role,
+          safetySpecialistClass: users.safetySpecialistClass,
+          certificateNumber: users.certificateNumber,
+        }
+      })
+      .from(detectionBookEntries)
+      .leftJoin(users, eq(detectionBookEntries.userId, users.id))
       .where(eq(detectionBookEntries.userId, userId))
       .orderBy(desc(detectionBookEntries.createdAt));
   }
