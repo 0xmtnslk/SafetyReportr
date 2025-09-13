@@ -349,11 +349,11 @@ export default function Navigation({ children }: NavigationProps) {
       {/* Left Sidebar */}
       <aside className={`hidden md:flex md:flex-col md:fixed md:inset-y-0 md:top-16 bg-white border-r border-gray-200 shadow-sm transition-all duration-300 z-20 ${
         isSidebarCollapsed ? 'md:w-16' : 'md:w-64'
-      }`}>
+      } md:h-screen md:max-h-screen`}>
         <div className="flex flex-col flex-1">
 
           {/* Navigation Items */}
-          <nav className={`flex-1 py-4 space-y-1 ${isSidebarCollapsed ? 'px-2' : 'px-4'} overflow-y-auto`}>
+          <nav className={`flex-1 py-4 space-y-1 ${isSidebarCollapsed ? 'px-2' : 'px-4'} overflow-y-auto max-h-screen`}>
             {/* Always show Home */}
             <button
               className={`w-full flex items-center rounded-lg text-left transition-all duration-200 ${
@@ -400,72 +400,22 @@ export default function Navigation({ children }: NavigationProps) {
                 <CollapsibleContent className="space-y-1 mt-1">
                   {section.subsections.map((subsection) => (
                     <div key={subsection.id} className="ml-4">
-                      {subsection.subActivities ? (
-                        <Collapsible
-                          open={expandedSubsections[subsection.id]}
-                          onOpenChange={() => toggleSubsection(subsection.id)}
-                        >
-                          <CollapsibleTrigger asChild>
-                            <button
-                              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-left transition-colors ${
-                                subsection.path && isPathActive(subsection.path)
-                                  ? "bg-primary/10 text-primary"
-                                  : "text-gray-600 hover:text-primary hover:bg-gray-50"
-                              }`}
-                              onClick={() => {
-                                if (subsection.path) {
-                                  setLocation(subsection.path);
-                                }
-                              }}
-                              data-testid={`nav-subsection-${subsection.id}`}
-                            >
-                              <div className="flex items-center">
-                                <subsection.icon size={18} className="text-current" />
-                                <span className="ml-3 text-sm">{subsection.label}</span>
-                              </div>
-                              <ChevronDown 
-                                size={14} 
-                                className={`text-current transition-transform ${
-                                  expandedSubsections[subsection.id] ? 'rotate-180' : ''
-                                }`} 
-                              />
-                            </button>
-                          </CollapsibleTrigger>
-                          <CollapsibleContent className="space-y-1 mt-1">
-                            {subsection.subActivities.map((activity) => (
-                              <button
-                                key={activity.id}
-                                className={`w-full flex items-center px-6 py-2 rounded-lg text-left transition-colors ${
-                                  isPathActive(activity.path)
-                                    ? "bg-primary text-white"
-                                    : "text-gray-500 hover:text-primary hover:bg-gray-50"
-                                }`}
-                                onClick={() => setLocation(activity.path)}
-                                data-testid={`nav-activity-${activity.id}`}
-                              >
-                                <span className="text-xs">{activity.label}</span>
-                              </button>
-                            ))}
-                          </CollapsibleContent>
-                        </Collapsible>
-                      ) : (
-                        <button
-                          className={`w-full flex items-center px-3 py-2 rounded-lg text-left transition-colors ${
-                            subsection.path && isPathActive(subsection.path)
-                              ? "bg-primary text-white"
-                              : "text-gray-600 hover:text-primary hover:bg-gray-50"
-                          }`}
-                          onClick={() => {
-                            if (subsection.path) {
-                              setLocation(subsection.path);
-                            }
-                          }}
-                          data-testid={`nav-subsection-${subsection.id}`}
-                        >
-                          <subsection.icon size={18} className={subsection.path && isPathActive(subsection.path) ? "text-white" : "text-current"} />
-                          <span className={`ml-3 text-sm ${subsection.path && isPathActive(subsection.path) ? "text-white" : ""}`}>{subsection.label}</span>
-                        </button>
-                      )}
+                      <button
+                        className={`w-full flex items-center px-3 py-2 rounded-lg text-left transition-colors ${
+                          subsection.path && isPathActive(subsection.path)
+                            ? "bg-primary text-white"
+                            : "text-gray-600 hover:text-primary hover:bg-gray-50"
+                        }`}
+                        onClick={() => {
+                          if (subsection.path) {
+                            setLocation(subsection.path);
+                          }
+                        }}
+                        data-testid={`nav-subsection-${subsection.id}`}
+                      >
+                        <subsection.icon size={18} className={subsection.path && isPathActive(subsection.path) ? "text-white" : "text-current"} />
+                        <span className={`ml-3 text-sm ${subsection.path && isPathActive(subsection.path) ? "text-white" : ""}`}>{subsection.label}</span>
+                      </button>
                     </div>
                   ))}
                 </CollapsibleContent>
@@ -595,7 +545,7 @@ export default function Navigation({ children }: NavigationProps) {
               </div>
 
               {/* Mobile Navigation */}
-              <nav className="flex-1 px-3 py-3 space-y-1 overflow-y-auto">
+              <nav className="flex-1 px-3 py-3 space-y-1 overflow-y-auto max-h-full">
                 {/* Always show Home */}
                 <button
                   className={`w-full flex items-center px-3 py-2 rounded-lg text-left transition-colors ${
@@ -642,77 +592,23 @@ export default function Navigation({ children }: NavigationProps) {
                       <CollapsibleContent className="space-y-1 mt-1">
                         {section.subsections.map((subsection) => (
                           <div key={subsection.id} className="ml-4">
-                            {subsection.subActivities ? (
-                              <Collapsible
-                                open={expandedSubsections[subsection.id]}
-                                onOpenChange={() => toggleSubsection(subsection.id)}
-                              >
-                                <CollapsibleTrigger asChild>
-                                  <button
-                                    className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-left transition-colors ${
-                                      subsection.path && isPathActive(subsection.path)
-                                        ? "bg-primary/10 text-primary"
-                                        : "text-gray-600 hover:text-primary hover:bg-gray-50"
-                                    }`}
-                                    onClick={() => {
-                                      if (subsection.path) {
-                                        setLocation(subsection.path);
-                                        setIsMobileMenuOpen(false);
-                                      }
-                                    }}
-                                    data-testid={`nav-mobile-subsection-${subsection.id}`}
-                                  >
-                                    <div className="flex items-center">
-                                      <subsection.icon size={16} className="text-current" />
-                                      <span className="ml-2 text-xs">{subsection.label}</span>
-                                    </div>
-                                    <ChevronDown 
-                                      size={12} 
-                                      className={`text-current transition-transform ${
-                                        expandedSubsections[subsection.id] ? 'rotate-180' : ''
-                                      }`} 
-                                    />
-                                  </button>
-                                </CollapsibleTrigger>
-                                <CollapsibleContent className="space-y-1 mt-1">
-                                  {subsection.subActivities.map((activity) => (
-                                    <button
-                                      key={activity.id}
-                                      className={`w-full flex items-center px-4 py-1.5 rounded-lg text-left transition-colors ${
-                                        isPathActive(activity.path)
-                                          ? "bg-primary text-white"
-                                          : "text-gray-500 hover:text-primary hover:bg-gray-50"
-                                      }`}
-                                      onClick={() => {
-                                        setLocation(activity.path);
-                                        setIsMobileMenuOpen(false);
-                                      }}
-                                      data-testid={`nav-mobile-activity-${activity.id}`}
-                                    >
-                                      <span className="text-xs">{activity.label}</span>
-                                    </button>
-                                  ))}
-                                </CollapsibleContent>
-                              </Collapsible>
-                            ) : (
-                              <button
-                                className={`w-full flex items-center px-2 py-1.5 rounded-lg text-left transition-colors ${
-                                  subsection.path && isPathActive(subsection.path)
-                                    ? "bg-primary text-white"
-                                    : "text-gray-600 hover:text-primary hover:bg-gray-50"
-                                }`}
-                                onClick={() => {
-                                  if (subsection.path) {
-                                    setLocation(subsection.path);
-                                    setIsMobileMenuOpen(false);
-                                  }
-                                }}
-                                data-testid={`nav-mobile-subsection-${subsection.id}`}
-                              >
-                                <subsection.icon size={16} className={subsection.path && isPathActive(subsection.path) ? "text-white" : "text-current"} />
-                                <span className={`ml-2 text-xs ${subsection.path && isPathActive(subsection.path) ? "text-white" : ""}`}>{subsection.label}</span>
-                              </button>
-                            )}
+                            <button
+                              className={`w-full flex items-center px-2 py-1.5 rounded-lg text-left transition-colors ${
+                                subsection.path && isPathActive(subsection.path)
+                                  ? "bg-primary text-white"
+                                  : "text-gray-600 hover:text-primary hover:bg-gray-50"
+                              }`}
+                              onClick={() => {
+                                if (subsection.path) {
+                                  setLocation(subsection.path);
+                                  setIsMobileMenuOpen(false);
+                                }
+                              }}
+                              data-testid={`nav-mobile-subsection-${subsection.id}`}
+                            >
+                              <subsection.icon size={16} className={subsection.path && isPathActive(subsection.path) ? "text-white" : "text-current"} />
+                              <span className={`ml-2 text-xs ${subsection.path && isPathActive(subsection.path) ? "text-white" : ""}`}>{subsection.label}</span>
+                            </button>
                           </div>
                         ))}
                       </CollapsibleContent>
