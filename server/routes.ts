@@ -3402,7 +3402,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         documentType = 'photo';
       }
 
-      const documentUrl = await objectStorageService.uploadFile(fileName, processedBuffer, req.file.mimetype);
+      const uploadPath = await objectStorageService.uploadFile(fileName, processedBuffer, req.file.mimetype);
+      const documentUrl = `/files${uploadPath}`; // Convert to accessible URL
 
       // Create detection book entry
       const entry = await storage.createDetectionBookEntry({
@@ -3475,7 +3476,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           documentType = 'photo';
         }
 
-        const documentUrl = await objectStorageService.uploadFile(fileName, processedBuffer, req.file.mimetype);
+        const uploadPath = await objectStorageService.uploadFile(fileName, processedBuffer, req.file.mimetype);
+      const documentUrl = `/files${uploadPath}`; // Convert to accessible URL
 
         updateData = {
           ...updateData,
@@ -3523,6 +3525,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Detection book entry delete error:', error);
       res.status(500).json({ message: 'Tespit defteri kaydı silinirken hata oluştu: ' + error.message });
+    }
+  });
+
+  // Download detection book document
+  app.get('/files/detection-book/:filename', async (req: Request, res: Response) => {
+    try {
+      const filename = req.params.filename;
+      
+      // Construct the file path
+      const filePath = `detection-book/${filename}`;
+      
+      const objectStorageService = new ObjectStorageService();
+      const file = await objectStorageService.getImageFile(filePath);
+      
+      if (!file) {
+        return res.status(404).json({ message: 'Dosya bulunamadı' });
+      }
+
+      // Download the file
+      await objectStorageService.downloadObject(file, res);
+    } catch (error: any) {
+      console.error('File download error:', error);
+      res.status(500).json({ message: 'Dosya indirme hatası: ' + error.message });
     }
   });
 
