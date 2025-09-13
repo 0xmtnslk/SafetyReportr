@@ -95,7 +95,7 @@ function Router() {
   }
 
   // Protected routes - require authentication
-  const protectedRoutes = ['/dashboard', '/create-report', '/reports', '/edit-report', '/view-report', '/admin', '/change-password', '/checklist', '/live-checklist', '/inspection-results', '/admin/inspections', '/inspection-history', '/inspection-results-admin', '/hospital-inspections', '/checklist-inspections', '/inspection-title-detail', '/inspection-analysis', '/specialist', '/profile/edit', '/notifications', '/hospital-management', '/risk-assessment', '/annual-plans', '/emergency-management', '/hazardous-materials', '/accident-management', '/incident-management', '/audit-management'];
+  const protectedRoutes = ['/dashboard', '/create-report', '/reports', '/edit-report', '/view-report', '/admin', '/change-password', '/checklist', '/live-checklist', '/inspection-results', '/admin/inspections', '/inspection-history', '/inspection-results-admin', '/hospital-inspections', '/checklist-inspections', '/inspection-title-detail', '/inspection-analysis', '/specialist', '/profile/edit', '/notifications', '/hospital-management', '/risk-assessment', '/annual-plans', '/emergency-management', '/hazardous-materials', '/accident-management', '/incident-management', '/audit-management', '/environmental', '/annual-evaluation', '/detection-book', '/medical-examinations', '/hospital-sections'];
   const isProtectedRoute = protectedRoutes.some(route => location.startsWith(route));
 
   if (isProtectedRoute && !user) {
