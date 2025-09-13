@@ -54,6 +54,7 @@ import HazardousMaterialsPage from "@/pages/hazardous-materials";
 import AccidentManagementPage from "@/pages/accident-management";
 import IncidentManagementPage from "@/pages/incident-management";
 import AuditManagementPage from "@/pages/audit-management";
+import DetectionBookPage from "@/pages/detection-book";
 import Navigation from "@/components/navigation";
 import Footer from "@/components/Footer";
 import OfflineIndicator from "@/components/offline-indicator";
@@ -287,7 +288,7 @@ function Router() {
               {() => ['central_admin', 'safety_specialist', 'occupational_physician'].includes(user?.role || '') ? <div className="p-8"><h1 className="text-2xl font-bold">Yıllık Değerlendirme Raporu</h1><p>Bu sayfa şu anda geliştiriliyor...</p></div> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
             </Route>
             <Route path="/detection-book">
-              {() => ['central_admin', 'safety_specialist', 'occupational_physician'].includes(user?.role || '') ? <div className="p-8"><h1 className="text-2xl font-bold">İSG Tespit ve Öneri Defteri</h1><p>Bu sayfa şu anda geliştiriliyor...</p></div> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
+              {() => ['central_admin', 'safety_specialist', 'occupational_physician'].includes(user?.role || '') ? <DetectionBookPage /> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
             </Route>
             <Route path="/medical-examinations">
               {() => ['central_admin', 'safety_specialist', 'occupational_physician'].includes(user?.role || '') ? <div className="p-8"><h1 className="text-2xl font-bold">İşe Giriş ve Periyodik Muayene</h1><p>Bu sayfa şu anda geliştiriliyor...</p></div> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
