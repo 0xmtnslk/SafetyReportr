@@ -104,10 +104,13 @@ export default function DetectionBookPage({ entryId, mode }: DetectionBookPagePr
     }
   });
 
-  // Auto-fill workplace title when user location loads
+  // Auto-fill workplace title and SGK number when user location loads
   useEffect(() => {
     if (userLocation && typeof userLocation === 'object' && 'name' in userLocation) {
       form.setValue('workplaceTitle', (userLocation as any).name);
+      if ('sgkRegistrationNumber' in userLocation && (userLocation as any).sgkRegistrationNumber) {
+        form.setValue('sgkRegistrationNumber', (userLocation as any).sgkRegistrationNumber);
+      }
     }
   }, [userLocation, form]);
 
@@ -210,7 +213,7 @@ export default function DetectionBookPage({ entryId, mode }: DetectionBookPagePr
   const canAddEntry = user && typeof user === 'object' && 'role' in user && 
     ['safety_specialist', 'occupational_physician', 'central_admin'].includes((user as any).role);
 
-  // Filter entries based on search term
+  // Filter and group entries by year
   const filteredEntries = entries && Array.isArray(entries) 
     ? entries.filter((entry: DetectionBookEntry) => 
         entry.workplaceTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -218,6 +221,17 @@ export default function DetectionBookPage({ entryId, mode }: DetectionBookPagePr
         entry.evaluationText.toLowerCase().includes(searchTerm.toLowerCase())
       )
     : [];
+
+  // Group entries by year (newest first)
+  const entriesByYear = filteredEntries.reduce((acc: Record<string, DetectionBookEntry[]>, entry) => {
+    const year = new Date(entry.entryDate).getFullYear().toString();
+    if (!acc[year]) acc[year] = [];
+    acc[year].push(entry);
+    return acc;
+  }, {});
+
+  // Sort years in descending order (newest first)
+  const sortedYears = Object.keys(entriesByYear).sort((a, b) => parseInt(b) - parseInt(a));
 
   // Entry List Component
   const EntryList = () => (
@@ -251,35 +265,47 @@ export default function DetectionBookPage({ entryId, mode }: DetectionBookPagePr
           </p>
         </div>
       ) : (
-        <div className="space-y-3">
-          {filteredEntries.map((entry: DetectionBookEntry) => (
-            <Card 
-              key={entry.id} 
-              className={`cursor-pointer hover:shadow-md transition-shadow ${
-                selectedEntryId === entry.id ? 'ring-2 ring-primary' : ''
-              }`}
-              onClick={() => setLocation(`/detection-book/${entry.id}`)}
-              data-testid={`card-entry-${entry.id}`}
-            >
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between mb-2">
-                  <h3 className="font-medium text-sm line-clamp-1">{entry.workplaceTitle}</h3>
-                  <Badge variant={entry.documentType === 'pdf' ? 'default' : 'secondary'} className="ml-2">
-                    {entry.documentType === 'pdf' ? (
-                      <FileText className="h-3 w-3 mr-1" />
-                    ) : (
-                      <Image className="h-3 w-3 mr-1" />
-                    )}
-                    {entry.documentType === 'pdf' ? 'PDF' : 'Foto'}
-                  </Badge>
-                </div>
-                <div className="text-xs text-gray-600 space-y-1">
-                  <div>SGK: {entry.sgkRegistrationNumber}</div>
-                  <div>Sayfa: {entry.pageNumber}</div>
-                  <div>{format(new Date(entry.entryDate), 'dd.MM.yyyy', { locale: tr })}</div>
-                </div>
-              </CardContent>
-            </Card>
+        <div className="space-y-4">
+          {sortedYears.map((year) => (
+            <div key={year}>
+              <div className="sticky top-0 bg-background border-b pb-2 mb-3">
+                <h3 className="font-semibold text-lg text-gray-700">{year}</h3>
+                <p className="text-xs text-gray-500">{entriesByYear[year].length} kayıt</p>
+              </div>
+              <div className="space-y-3">
+                {entriesByYear[year]
+                  .sort((a, b) => new Date(b.entryDate).getTime() - new Date(a.entryDate).getTime())
+                  .map((entry: DetectionBookEntry) => (
+                  <Card 
+                    key={entry.id} 
+                    className={`cursor-pointer hover:shadow-md transition-shadow ${
+                      selectedEntryId === entry.id ? 'ring-2 ring-primary' : ''
+                    }`}
+                    onClick={() => setLocation(`/detection-book/${entry.id}`)}
+                    data-testid={`card-entry-${entry.id}`}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between mb-2">
+                        <h3 className="font-medium text-sm line-clamp-1">{entry.workplaceTitle}</h3>
+                        <Badge variant={entry.documentType === 'pdf' ? 'default' : 'secondary'} className="ml-2">
+                          {entry.documentType === 'pdf' ? (
+                            <FileText className="h-3 w-3 mr-1" />
+                          ) : (
+                            <Image className="h-3 w-3 mr-1" />
+                          )}
+                          {entry.documentType === 'pdf' ? 'PDF' : 'Foto'}
+                        </Badge>
+                      </div>
+                      <div className="text-xs text-gray-600 space-y-1">
+                        <div>SGK: {entry.sgkRegistrationNumber}</div>
+                        <div>Sayfa: {entry.pageNumber}</div>
+                        <div>{format(new Date(entry.entryDate), 'dd.MM.yyyy', { locale: tr })}</div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
           ))}
         </div>
       )}
@@ -335,6 +361,7 @@ export default function DetectionBookPage({ entryId, mode }: DetectionBookPagePr
                     <Input 
                       placeholder="SGK sicil numarasını girin" 
                       {...field}
+                      readOnly={!!userLocation && !!(userLocation as any).sgkRegistrationNumber}
                       data-testid="input-sgk-number"
                     />
                   </FormControl>
