@@ -1407,7 +1407,7 @@ export const EMERGENCY_TEAM_TYPES = [
     title: "Söndürme Ekibi", 
     icon: "Flame",
     hasMinimumRequirement: true,
-    ratios: { "Çok Tehlikeli": 20, "Tehlikeli": 30, "Az Tehlikeli": 50 },
+    ratios: { "Çok Tehlikeli": 30, "Tehlikeli": 30, "Az Tehlikeli": 50 },
     description: "Yangın söndürme ve müdahale"
   },
   { 
@@ -1415,7 +1415,7 @@ export const EMERGENCY_TEAM_TYPES = [
     title: "Kurtarma Ekibi", 
     icon: "Shield",
     hasMinimumRequirement: true,
-    ratios: { "Çok Tehlikeli": 20, "Tehlikeli": 30, "Az Tehlikeli": 50 },
+    ratios: { "Çok Tehlikeli": 30, "Tehlikeli": 30, "Az Tehlikeli": 50 },
     description: "Acil kurtarma ve tahliye"
   },
   { 
@@ -1423,7 +1423,7 @@ export const EMERGENCY_TEAM_TYPES = [
     title: "Koruma Ekibi", 
     icon: "ShieldCheck",
     hasMinimumRequirement: true,
-    ratios: { "Çok Tehlikeli": 20, "Tehlikeli": 30, "Az Tehlikeli": 50 },
+    ratios: { "Çok Tehlikeli": 30, "Tehlikeli": 30, "Az Tehlikeli": 50 },
     description: "Güvenlik ve koruma"
   },
   { 
