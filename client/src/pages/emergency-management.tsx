@@ -387,14 +387,155 @@ export default function EmergencyManagementPage() {
                           {team.lastTraining}
                         </span>
                       </div>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="w-full mt-3"
-                        data-testid={`button-manage-${team.type}`}
-                      >
-                        Ekip Yönetimi
-                      </Button>
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="w-full mt-3"
+                            onClick={() => setSelectedTeam(team.type as TeamType)}
+                            data-testid={`button-manage-${team.type}`}
+                          >
+                            Ekip Yönetimi
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                          <DialogHeader>
+                            <DialogTitle>{team.title} - Ekip Yönetimi</DialogTitle>
+                            <DialogDescription>
+                              Ekip üyelerini yönetin, rol ve eğitim durumlarını güncelleyin
+                            </DialogDescription>
+                          </DialogHeader>
+                          
+                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            {/* Current Team Members */}
+                            <div className="space-y-4">
+                              <h3 className="font-semibold text-lg">Mevcut Ekip Üyeleri</h3>
+                              {selectedTeam && teamMembers[selectedTeam]?.length > 0 ? (
+                                <div className="space-y-2">
+                                  {teamMembers[selectedTeam].map((member) => (
+                                    <div key={member.id} className="border rounded-lg p-3 space-y-2">
+                                      <div className="flex justify-between items-start">
+                                        <div>
+                                          <p className="font-medium" data-testid={`text-member-name-${member.id}`}>
+                                            {member.fullName}
+                                          </p>
+                                          <p className="text-sm text-gray-600">{member.department} - {member.position}</p>
+                                          <p className="text-sm text-gray-500">{member.phone}</p>
+                                        </div>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => removeTeamMember(selectedTeam, member.id)}
+                                          data-testid={`button-remove-${member.id}`}
+                                        >
+                                          <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                      </div>
+                                      
+                                      <div className="flex gap-2 items-center">
+                                        <Select
+                                          value={member.role}
+                                          onValueChange={(value: Role) => updateMemberRole(selectedTeam, member.id, value)}
+                                        >
+                                          <SelectTrigger className="w-32" data-testid={`select-role-${member.id}`}>
+                                            <SelectValue />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value="leader">Lider</SelectItem>
+                                            <SelectItem value="member">Üye</SelectItem>
+                                          </SelectContent>
+                                        </Select>
+                                        
+                                        <Badge 
+                                          variant="outline" 
+                                          className={member.trained ? "bg-green-50 text-green-800" : "bg-red-50 text-red-800"}
+                                          data-testid={`badge-training-${member.id}`}
+                                        >
+                                          {member.trained ? "Eğitimli" : "Eğitimsiz"}
+                                        </Badge>
+                                        
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => updateMemberTraining(selectedTeam, member.id, !member.trained, member.trained ? null : new Date().toISOString().split('T')[0])}
+                                          data-testid={`button-training-${member.id}`}
+                                        >
+                                          {member.trained ? "Eğitimi Kaldır" : "Eğitimi Tamamla"}
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="text-gray-500 italic">Bu ekipte henüz üye bulunmuyor</p>
+                              )}
+                            </div>
+
+                            {/* Available Employees */}
+                            <div className="space-y-4">
+                              <h3 className="font-semibold text-lg">Yeni Üye Ekle</h3>
+                              
+                              {/* Search */}
+                              <div className="relative">
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                                <Input
+                                  placeholder="Çalışan ara..."
+                                  value={searchTerm}
+                                  onChange={(e) => setSearchTerm(e.target.value)}
+                                  className="pl-10"
+                                  data-testid="input-search-employee"
+                                />
+                              </div>
+
+                              {/* Available employees list */}
+                              {selectedTeam && (
+                                <div className="space-y-2 max-h-96 overflow-y-auto">
+                                  {getFilteredEmployees(getAvailableEmployees(selectedTeam)).map((employee) => (
+                                    <div key={employee.id} className="border rounded-lg p-3 hover:bg-gray-50">
+                                      <div className="flex justify-between items-start">
+                                        <div className="flex-1">
+                                          <p className="font-medium" data-testid={`text-available-name-${employee.id}`}>
+                                            {employee.fullName}
+                                          </p>
+                                          <p className="text-sm text-gray-600">{employee.department} - {employee.position}</p>
+                                          <p className="text-sm text-gray-500">{employee.phone}</p>
+                                        </div>
+                                        <div className="flex gap-2">
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => addTeamMember(selectedTeam, employee, "member")}
+                                            data-testid={`button-add-member-${employee.id}`}
+                                          >
+                                            <UserPlus className="h-4 w-4 mr-1" />
+                                            Üye Ekle
+                                          </Button>
+                                          <Button
+                                            variant="default"
+                                            size="sm"
+                                            onClick={() => addTeamMember(selectedTeam, employee, "leader")}
+                                            data-testid={`button-add-leader-${employee.id}`}
+                                          >
+                                            <Shield className="h-4 w-4 mr-1" />
+                                            Lider Ekle
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                  
+                                  {getFilteredEmployees(getAvailableEmployees(selectedTeam)).length === 0 && (
+                                    <p className="text-gray-500 italic text-center py-4">
+                                      {searchTerm ? "Arama kriterlerine uygun çalışan bulunamadı" : "Eklenebilecek çalışan bulunmuyor"}
+                                    </p>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
                     </CardContent>
                   </Card>
                 );
