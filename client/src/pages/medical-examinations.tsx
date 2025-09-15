@@ -17,7 +17,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
-import { CalendarIcon, FileText, AlertTriangle, Calendar as CalendarIconLucide } from "lucide-react";
+import { CalendarIcon, FileText, AlertTriangle, Calendar as CalendarIconLucide, User } from "lucide-react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -273,7 +273,7 @@ export default function MedicalExaminations() {
           <Card className="h-fit">
             <CardHeader className="pb-4">
               <div className="flex items-center gap-2">
-                <UserPlus className="w-5 h-5 text-blue-500" />
+                <User className="w-5 h-5 text-blue-500" />
                 <div>
                   <CardTitle className="text-lg">İlk Muayene Gereken</CardTitle>
                   <CardDescription>Hiç muayene olmamış çalışanlar</CardDescription>
