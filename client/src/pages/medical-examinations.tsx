@@ -18,7 +18,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { CalendarIcon, FileText, AlertTriangle, Calendar as CalendarIconLucide, User } from "lucide-react";
-import { format } from "date-fns";
+import { format, isValid, parseISO } from "date-fns";
 import { tr } from "date-fns/locale";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { insertMedicalExaminationSchema } from "@shared/schema";
@@ -220,8 +220,13 @@ export default function MedicalExaminations() {
     }
   };
 
-  const formatDate = (date: Date | string) => {
-    return format(new Date(date), "dd.MM.yyyy", { locale: tr });
+  const formatDate = (value?: Date | string | number | null) => {
+    if (!value) return "-";
+    let d: Date;
+    if (value instanceof Date) d = value;
+    else if (typeof value === "string") d = parseISO(value);
+    else d = new Date(value);
+    return isValid(d) ? format(d, "dd.MM.yyyy", { locale: tr }) : "-";
   };
 
   const getDangerClassBadgeVariant = (dangerClass: string) => {
