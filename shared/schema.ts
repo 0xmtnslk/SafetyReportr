@@ -423,6 +423,7 @@ export const riskImprovements = pgTable("risk_improvements", {
   effectivenessVerificationMethod: text("effectiveness_verification_method"), // Legacy - to be deprecated
   isImplemented: boolean("is_implemented"), // Legacy - to be deprecated
   implementationDate: timestamp("implementation_date"), // Legacy - to be deprecated
+  verificationDate: timestamp("verification_date"), // Legacy - temporary to prevent DrizzleKit drop prompt
   
   // System fields  
   createdBy: varchar("created_by").references(() => users.id).notNull(),
@@ -1358,3 +1359,116 @@ export const HOSPITAL_DANGER_CLASS_OPTIONS = [
   { value: "Tehlikeli", label: "Tehlikeli", validityYears: 4 },
   { value: "Az Tehlikeli", label: "Az Tehlikeli", validityYears: 6 }
 ] as const;
+
+// Emergency Teams - Acil Durum Ekipleri (Turkish Emergency Team Management)
+export const emergencyTeams = pgTable("emergency_teams", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  locationId: varchar("location_id").references(() => locations.id).notNull(),
+  type: text("type").notNull(), // "coordination" | "firefighting" | "rescue" | "protection" | "firstAid"
+  title: text("title").notNull(), // Team display name
+  notes: text("notes"), // Additional notes about the team
+  
+  // System fields
+  isActive: boolean("is_active").default(true),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Emergency Team Members - Acil Durum Ekip Üyeleri
+export const emergencyTeamMembers = pgTable("emergency_team_members", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  teamId: varchar("team_id").references(() => emergencyTeams.id).notNull(),
+  employeeId: varchar("employee_id").references(() => employees.id).notNull(),
+  role: text("role").notNull().default("member"), // "leader" | "member"
+  
+  // Training information
+  trained: boolean("trained").default(false), // Has received training
+  trainingDate: timestamp("training_date"), // When training was completed
+  trainingNotes: text("training_notes"), // Training details/notes
+  
+  // System fields
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Emergency team types with Turkish regulatory requirements
+export const EMERGENCY_TEAM_TYPES = [
+  { 
+    type: "coordination", 
+    title: "Koordinasyon Ekibi", 
+    icon: "Users",
+    hasMinimumRequirement: false, // No minimum requirement
+    description: "Acil durum koordinasyonu ve yönetimi"
+  },
+  { 
+    type: "firefighting", 
+    title: "Söndürme Ekibi", 
+    icon: "Flame",
+    hasMinimumRequirement: true,
+    ratios: { "Çok Tehlikeli": 20, "Tehlikeli": 30, "Az Tehlikeli": 50 },
+    description: "Yangın söndürme ve müdahale"
+  },
+  { 
+    type: "rescue", 
+    title: "Kurtarma Ekibi", 
+    icon: "Shield",
+    hasMinimumRequirement: true,
+    ratios: { "Çok Tehlikeli": 20, "Tehlikeli": 30, "Az Tehlikeli": 50 },
+    description: "Acil kurtarma ve tahliye"
+  },
+  { 
+    type: "protection", 
+    title: "Koruma Ekibi", 
+    icon: "ShieldCheck",
+    hasMinimumRequirement: true,
+    ratios: { "Çok Tehlikeli": 20, "Tehlikeli": 30, "Az Tehlikeli": 50 },
+    description: "Güvenlik ve koruma"
+  },
+  { 
+    type: "firstAid", 
+    title: "İlk Yardım Ekibi", 
+    icon: "Heart",
+    hasMinimumRequirement: true,
+    ratios: { "Çok Tehlikeli": 10, "Tehlikeli": 15, "Az Tehlikeli": 20 },
+    description: "İlk yardım ve tıbbi müdahale"
+  }
+] as const;
+
+// Emergency team insert schemas
+export const insertEmergencyTeamSchema = createInsertSchema(emergencyTeams).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertEmergencyTeamMemberSchema = createInsertSchema(emergencyTeamMembers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Emergency team types
+export type EmergencyTeam = typeof emergencyTeams.$inferSelect;
+export type InsertEmergencyTeam = z.infer<typeof insertEmergencyTeamSchema>;
+export type EmergencyTeamMember = typeof emergencyTeamMembers.$inferSelect;
+export type InsertEmergencyTeamMember = z.infer<typeof insertEmergencyTeamMemberSchema>;
+
+// Helper function to calculate required team members based on danger class and employee count
+export const calculateRequiredTeamMembers = (
+  teamType: string, 
+  dangerClass: string, 
+  totalEmployees: number
+): number => {
+  const teamConfig = EMERGENCY_TEAM_TYPES.find(t => t.type === teamType);
+  
+  if (!teamConfig?.hasMinimumRequirement) {
+    return 0; // No requirement for coordination team
+  }
+  
+  const ratio = teamConfig.ratios?.[dangerClass as keyof typeof teamConfig.ratios];
+  if (!ratio) return 0;
+  
+  return Math.ceil(totalEmployees / ratio);
+};
