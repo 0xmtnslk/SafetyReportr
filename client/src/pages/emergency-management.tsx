@@ -3,16 +3,128 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Shield, Users, Siren, FileText, Clock, PlusCircle, AlertTriangle, CheckCircle, Flame, ShieldCheck, Heart } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Shield, Users, Siren, FileText, Clock, PlusCircle, AlertTriangle, CheckCircle, Flame, ShieldCheck, Heart, X, Plus, Search, UserPlus, Trash2 } from "lucide-react";
+
+// TypeScript types for emergency team management
+type TeamType = 'coordination' | 'firefighting' | 'rescue' | 'protection' | 'firstAid';
+type Role = 'leader' | 'member';
+
+interface Employee {
+  id: string;
+  fullName: string;
+  department: string;
+  position: string;
+  phone: string;
+}
+
+type TeamMember = Employee & {
+  role: Role;
+  trained: boolean;
+  trainingDate: string | null;
+};
+
+type TeamMembersState = Record<TeamType, TeamMember[]>;
 
 export default function EmergencyManagementPage() {
   const [activeTab, setActiveTab] = useState("hap");
+  const [selectedTeam, setSelectedTeam] = useState<TeamType | null>(null);
+  const [searchTerm, setSearchTerm] = useState<string>("");
 
-  // Mock data - Türk mevzuatına uygun ekip hesaplamaları
+  // Mock data - Türk mevzuatına uygun ekip hesaplamaları  
   const dangerClass = "Çok Tehlikeli"; // From location settings
   const totalEmployees = 120; // Total hospital employees
-  
-  // Turkish regulation emergency teams with requirements
+
+  // Mock employees data
+  const allEmployees = [
+    { id: "1", fullName: "Dr. Mehmet Yılmaz", department: "Acil Tıp", position: "Acil Tıp Uzmanı", phone: "0532-123-4567" },
+    { id: "2", fullName: "Hemşire Ayşe Kaya", department: "Acil Servis", position: "Başhemşire", phone: "0533-234-5678" },
+    { id: "3", fullName: "Teknisyen Ahmet Özkan", department: "Teknik", position: "Elektrik Teknisyeni", phone: "0534-345-6789" },
+    { id: "4", fullName: "Güvenlik Müdürü Can Demir", department: "Güvenlik", position: "Güvenlik Müdürü", phone: "0535-456-7890" },
+    { id: "5", fullName: "İtfaiyeci Murat Şen", department: "Teknik", position: "İtfaiye Teknisyeni", phone: "0536-567-8901" },
+    { id: "6", fullName: "Dr. Fatma Arslan", department: "Anestezi", position: "Anestezi Uzmanı", phone: "0537-678-9012" },
+    { id: "7", fullName: "Hemşire Emre Kılıç", department: "Yoğun Bakım", position: "Yoğun Bakım Hemşiresi", phone: "0538-789-0123" },
+    { id: "8", fullName: "Güvenlik Görevlisi Ali Yurt", department: "Güvenlik", position: "Güvenlik Görevlisi", phone: "0539-890-1234" },
+    { id: "9", fullName: "Dr. Zeynep Çelik", department: "Acil Tıp", position: "Acil Tıp Uzmanı", phone: "0540-901-2345" },
+    { id: "10", fullName: "Teknisyen Burcu Ay", department: "Teknik", position: "Biomedical Teknisyen", phone: "0541-012-3456" },
+    { id: "11", fullName: "İdari Personel Oğuz Tan", department: "İdari", position: "İnsan Kaynakları Uzmanı", phone: "0542-123-4567" },
+    { id: "12", fullName: "Dr. Kemal Balcı", department: "Kardiyoloji", position: "Kardiyoloji Uzmanı", phone: "0543-234-5678" },
+    { id: "13", fullName: "Hemşire Deniz Acar", department: "Ameliyathane", position: "Ameliyathane Hemşiresi", phone: "0544-345-6789" },
+    { id: "14", fullName: "Güvenlik Görevlisi Serkan Polat", department: "Güvenlik", position: "Güvenlik Görevlisi", phone: "0545-456-7890" },
+    { id: "15", fullName: "Dr. Elif Korkmaz", department: "İç Hastalıkları", position: "İç Hastalıkları Uzmanı", phone: "0546-567-8901" }
+  ];
+
+  // Mock initial team members (properly typed)
+  const initialTeamMembers: TeamMembersState = {
+    coordination: [
+      { ...allEmployees[0], role: "leader", trained: true, trainingDate: "2024-07-15" },
+      { ...allEmployees[1], role: "member", trained: true, trainingDate: "2024-07-20" },
+      { ...allEmployees[10], role: "member", trained: false, trainingDate: null }
+    ],
+    firefighting: [
+      { ...allEmployees[4], role: "leader", trained: true, trainingDate: "2024-06-10" },
+      { ...allEmployees[2], role: "member", trained: true, trainingDate: "2024-06-15" },
+      { ...allEmployees[9], role: "member", trained: false, trainingDate: null }
+    ],
+    rescue: [
+      { ...allEmployees[3], role: "leader", trained: true, trainingDate: "2024-07-01" },
+      { ...allEmployees[7], role: "member", trained: true, trainingDate: "2024-07-05" }
+    ],
+    protection: [
+      { ...allEmployees[3], role: "leader", trained: true, trainingDate: "2024-07-01" },
+      { ...allEmployees[7], role: "member", trained: true, trainingDate: "2024-07-05" },
+      { ...allEmployees[13], role: "member", trained: true, trainingDate: "2024-07-10" }
+    ],
+    firstAid: [
+      { ...allEmployees[5], role: "leader", trained: true, trainingDate: "2024-08-01" },
+      { ...allEmployees[6], role: "member", trained: true, trainingDate: "2024-08-01" },
+      { ...allEmployees[8], role: "member", trained: true, trainingDate: "2024-08-01" },
+      { ...allEmployees[11], role: "member", trained: false, trainingDate: null },
+      { ...allEmployees[12], role: "member", trained: true, trainingDate: "2024-08-01" },
+      { ...allEmployees[14], role: "member", trained: false, trainingDate: null }
+    ]
+  };
+
+  // Initialize team members state (properly typed)
+  const [teamMembers, setTeamMembers] = useState<TeamMembersState>(initialTeamMembers);
+
+  // Helper functions for team management (properly typed)
+  const addTeamMember = (teamType: TeamType, employee: Employee, role: Role = "member"): void => {
+    setTeamMembers(prev => ({
+      ...prev,
+      [teamType]: [...prev[teamType], { ...employee, role, trained: false, trainingDate: null }]
+    }));
+  };
+
+  const removeTeamMember = (teamType: TeamType, employeeId: string): void => {
+    setTeamMembers(prev => ({
+      ...prev,
+      [teamType]: prev[teamType].filter(member => member.id !== employeeId)
+    }));
+  };
+
+  const updateMemberRole = (teamType: TeamType, employeeId: string, newRole: Role): void => {
+    setTeamMembers(prev => ({
+      ...prev,
+      [teamType]: prev[teamType].map(member => 
+        member.id === employeeId ? { ...member, role: newRole } : member
+      )
+    }));
+  };
+
+  const updateMemberTraining = (teamType: TeamType, employeeId: string, trained: boolean, trainingDate: string | null = null): void => {
+    setTeamMembers(prev => ({
+      ...prev,
+      [teamType]: prev[teamType].map(member => 
+        member.id === employeeId ? { ...member, trained, trainingDate } : member
+      )
+    }));
+  };
+
+  // Turkish regulation emergency teams with DYNAMIC actual counts
   const emergencyTeams = [
     {
       type: "coordination",
@@ -20,7 +132,7 @@ export default function EmergencyManagementPage() {
       icon: Users,
       iconColor: "text-blue-600",
       required: null, // No minimum requirement
-      actual: 8,
+      actual: (teamMembers.coordination || []).length,
       description: "Acil durum koordinasyonu ve yönetimi",
       lastTraining: "10.08.2024",
       status: "active"
@@ -31,7 +143,7 @@ export default function EmergencyManagementPage() {
       icon: Flame,
       iconColor: "text-red-600",
       required: Math.ceil(totalEmployees / (dangerClass === "Çok Tehlikeli" ? 30 : dangerClass === "Tehlikeli" ? 30 : 50)),
-      actual: 5,
+      actual: (teamMembers.firefighting || []).length,
       description: "Yangın söndürme ve müdahale",
       lastTraining: "15.07.2024",
       status: "deficit"
@@ -42,7 +154,7 @@ export default function EmergencyManagementPage() {
       icon: Shield,
       iconColor: "text-orange-600",
       required: Math.ceil(totalEmployees / (dangerClass === "Çok Tehlikeli" ? 30 : dangerClass === "Tehlikeli" ? 30 : 50)),
-      actual: 4,
+      actual: (teamMembers.rescue || []).length,
       description: "Acil kurtarma ve tahliye",
       lastTraining: "22.07.2024", 
       status: "deficit"
@@ -53,7 +165,7 @@ export default function EmergencyManagementPage() {
       icon: ShieldCheck, 
       iconColor: "text-green-600",
       required: Math.ceil(totalEmployees / (dangerClass === "Çok Tehlikeli" ? 30 : dangerClass === "Tehlikeli" ? 30 : 50)),
-      actual: 6,
+      actual: (teamMembers.protection || []).length,
       description: "Güvenlik ve koruma",
       lastTraining: "05.08.2024",
       status: "active"
@@ -64,12 +176,28 @@ export default function EmergencyManagementPage() {
       icon: Heart,
       iconColor: "text-pink-600", 
       required: Math.ceil(totalEmployees / (dangerClass === "Çok Tehlikeli" ? 10 : dangerClass === "Tehlikeli" ? 15 : 20)),
-      actual: 15,
+      actual: (teamMembers.firstAid || []).length,
       description: "İlk yardım ve tıbbi müdahale",
       lastTraining: "28.07.2024",
       status: "active"
     }
   ];
+
+  // Filter available employees (not already in the selected team)
+  const getAvailableEmployees = (teamType: TeamType): Employee[] => {
+    const currentTeamMemberIds = teamMembers[teamType].map(member => member.id);
+    return allEmployees.filter(emp => !currentTeamMemberIds.includes(emp.id));
+  };
+
+  // Filter employees by search term
+  const getFilteredEmployees = (employees: Employee[]): Employee[] => {
+    if (!searchTerm) return employees;
+    return employees.filter(emp => 
+      emp.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      emp.department.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      emp.position.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  };
 
   return (
       <div className="container mx-auto p-6 space-y-6">
