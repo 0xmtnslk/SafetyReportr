@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar } from "@/components/ui/calendar";
@@ -91,6 +92,7 @@ export default function MedicalExaminations() {
   const { toast } = useToast();
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [showExaminationDialog, setShowExaminationDialog] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [selectedExamination, setSelectedExamination] = useState<MedicalExamination | null>(null);
 
@@ -192,16 +194,34 @@ export default function MedicalExaminations() {
   };
 
   const handleStartExamination = (employee: Employee) => {
+    // Employee selection is now explicit - show confirmation dialog
     setSelectedEmployee(employee);
+    setShowConfirmDialog(true);
+  };
+
+  const handleConfirmExamination = () => {
+    if (!selectedEmployee) return;
+    
+    setShowConfirmDialog(false);
+    
+    // TODO: Navigate to dedicated examination page instead of dialog
+    // setLocation(`/medical-examinations/new?employeeId=${selectedEmployee.id}`);
+    
+    // Temporary: Show dialog until dedicated pages are ready
+    toast({
+      title: "Muayene Başlatılıyor",
+      description: `${selectedEmployee.fullName} için muayene formu açılıyor...`,
+    });
+    
     setShowExaminationDialog(true);
     
     // Auto-fill some examination data based on employee
     examinationForm.setValue("examinationDate", new Date());
-    if (employee.dangerClass === "Çok Tehlikeli") {
+    if (selectedEmployee.dangerClass === "Çok Tehlikeli") {
       const nextDate = new Date();
       nextDate.setFullYear(nextDate.getFullYear() + 1);
       examinationForm.setValue("nextExaminationDate", nextDate);
-    } else if (employee.dangerClass === "Tehlikeli") {
+    } else if (selectedEmployee.dangerClass === "Tehlikeli") {
       const nextDate = new Date();
       nextDate.setFullYear(nextDate.getFullYear() + 3);
       examinationForm.setValue("nextExaminationDate", nextDate);
@@ -210,6 +230,11 @@ export default function MedicalExaminations() {
       nextDate.setFullYear(nextDate.getFullYear() + 5);
       examinationForm.setValue("nextExaminationDate", nextDate);
     }
+  };
+
+  const handleCancelExamination = () => {
+    setShowConfirmDialog(false);
+    setSelectedEmployee(null);
   };
 
   const formatDate = (value?: Date | string | number | null) => {
@@ -494,6 +519,37 @@ export default function MedicalExaminations() {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Employee Selection Confirmation Dialog */}
+        <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Muayene Başlat</AlertDialogTitle>
+              <AlertDialogDescription>
+                {selectedEmployee && (
+                  <>
+                    <strong>{selectedEmployee.fullName}</strong> için tıbbi muayene başlatmak istediğinizden emin misiniz?
+                    <div className="mt-2 text-sm">
+                      <div>Pozisyon: {selectedEmployee.profession}</div>
+                      <div>Departman: {selectedEmployee.workDepartment}</div>
+                      <Badge variant={getDangerClassBadgeVariant(selectedEmployee.dangerClass)} className="mt-1">
+                        {selectedEmployee.dangerClass}
+                      </Badge>
+                    </div>
+                  </>
+                )}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={handleCancelExamination} data-testid="button-cancel-examination">
+                İptal
+              </AlertDialogCancel>
+              <AlertDialogAction onClick={handleConfirmExamination} data-testid="button-confirm-examination">
+                Muayene Başlat
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         {/* Medical Examination Dialog */}
         <Dialog open={showExaminationDialog} onOpenChange={setShowExaminationDialog}>
