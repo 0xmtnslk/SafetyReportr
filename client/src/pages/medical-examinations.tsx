@@ -264,209 +264,236 @@ export default function MedicalExaminations() {
           </div>
         </div>
 
-        {/* Dashboard Cards */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* İlk Muayene Gereken Çalışanlar */}
-          <Card className="h-fit">
-            <CardHeader className="pb-4">
-              <div className="flex items-center gap-2">
-                <User className="w-5 h-5 text-blue-500" />
-                <div>
-                  <CardTitle className="text-lg">İlk Muayene Gereken</CardTitle>
-                  <CardDescription>Hiç muayene olmamış çalışanlar</CardDescription>
-                </div>
-              </div>
-              <Badge variant="secondary" className="w-fit">
-                {initialExamEmployees.length} kişi
-              </Badge>
+        {/* Statistics Header */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription className="text-xs text-gray-600">Toplam Çalışan</CardDescription>
+              <CardTitle className="text-2xl">{allEmployees.length}</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              {loadingInitial ? (
-                <div className="text-sm text-gray-500">Yükleniyor...</div>
-              ) : initialExamEmployees.length === 0 ? (
-                <div className="text-sm text-gray-500 py-4 text-center">
-                  İlk muayene gereken çalışan yok
-                </div>
-              ) : (
-                initialExamEmployees.map((employee: Employee) => (
-                  <div 
-                    key={employee.id} 
-                    className="p-3 border rounded-lg bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800"
-                  >
-                    <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <h4 className="font-medium text-gray-900 dark:text-white">
-                          {employee.fullName}
-                        </h4>
-                        <p className="text-sm text-gray-600 dark:text-gray-300">
-                          {employee.profession} - {employee.workDepartment}
-                        </p>
-                      </div>
-                      <Badge 
-                        variant={getDangerClassBadgeVariant(employee.dangerClass)}
-                        className="text-xs"
-                      >
-                        {employee.dangerClass}
-                      </Badge>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs text-gray-500">
-                        İşe Başlama: {formatDate(employee.hireDate)}
-                      </span>
-                      <Button
-                        size="sm"
-                        onClick={() => handleStartExamination(employee)}
-                        data-testid={`button-start-initial-exam-${employee.id}`}
-                      >
-                        <FileText className="w-3 h-3 mr-1" />
-                        Muayene Başlat
-                      </Button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </CardContent>
           </Card>
-
-          {/* Periyodik Muayene Gereken Çalışanlar */}
-          <Card className="h-fit">
-            <CardHeader className="pb-4">
-              <div className="flex items-center gap-2">
-                <CalendarIconLucide className="w-5 h-5 text-yellow-500" />
-                <div>
-                  <CardTitle className="text-lg">Periyodik Muayene</CardTitle>
-                  <CardDescription>Muayene zamanı gelen çalışanlar</CardDescription>
-                </div>
-              </div>
-              <Badge variant="secondary" className="w-fit">
-                {periodicExamEmployees.length} kişi
-              </Badge>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription className="text-xs text-gray-600">İlk Muayene Gereken</CardDescription>
+              <CardTitle className="text-2xl text-blue-600">{initialExamEmployees.length}</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              {loadingPeriodic ? (
-                <div className="text-sm text-gray-500">Yükleniyor...</div>
-              ) : periodicExamEmployees.length === 0 ? (
-                <div className="text-sm text-gray-500 py-4 text-center">
-                  Periyodik muayene gereken çalışan yok
-                </div>
-              ) : (
-                periodicExamEmployees.map((employee: EmployeeWithExamInfo) => (
-                  <div 
-                    key={employee.id} 
-                    className="p-3 border rounded-lg bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200 dark:border-yellow-800"
-                  >
-                    <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <h4 className="font-medium text-gray-900 dark:text-white">
-                          {employee.fullName}
-                        </h4>
-                        <p className="text-sm text-gray-600 dark:text-gray-300">
-                          {employee.profession} - {employee.workDepartment}
-                        </p>
-                      </div>
-                      <Badge 
-                        variant={getDangerClassBadgeVariant(employee.dangerClass)}
-                        className="text-xs"
-                      >
-                        {employee.dangerClass}
-                      </Badge>
-                    </div>
-                    {employee.lastExamination && (
-                      <div className="text-xs text-gray-500 mb-2">
-                        Son Muayene: {formatDate(employee.lastExamination.examinationDate)}
-                      </div>
-                    )}
-                    {employee.nextExamDate && (
-                      <div className="text-xs text-yellow-600 dark:text-yellow-400 mb-2">
-                        Hedef Tarih: {formatDate(employee.nextExamDate)}
-                      </div>
-                    )}
-                    <div className="flex justify-end">
-                      <Button
-                        size="sm"
-                        onClick={() => handleStartExamination(employee)}
-                        data-testid={`button-start-periodic-exam-${employee.id}`}
-                      >
-                        <FileText className="w-3 h-3 mr-1" />
-                        Muayene Başlat
-                      </Button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </CardContent>
           </Card>
-
-          {/* Süresi Geçmiş Muayeneli Çalışanlar */}
-          <Card className="h-fit">
-            <CardHeader className="pb-4">
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="w-5 h-5 text-red-500" />
-                <div>
-                  <CardTitle className="text-lg">Gecikmiş Muayeneler</CardTitle>
-                  <CardDescription>Süresi geçmiş muayeneli çalışanlar</CardDescription>
-                </div>
-              </div>
-              <Badge variant="destructive" className="w-fit">
-                {overdueExamEmployees.length} kişi
-              </Badge>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription className="text-xs text-gray-600">Periyodik Yaklaşan</CardDescription>
+              <CardTitle className="text-2xl text-amber-600">{periodicExamEmployees.length}</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              {loadingOverdue ? (
-                <div className="text-sm text-gray-500">Yükleniyor...</div>
-              ) : overdueExamEmployees.length === 0 ? (
-                <div className="text-sm text-gray-500 py-4 text-center">
-                  Gecikmiş muayene yok
-                </div>
-              ) : (
-                overdueExamEmployees.map((employee: EmployeeWithExamInfo) => (
-                  <div 
-                    key={employee.id} 
-                    className="p-3 border rounded-lg bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800"
-                  >
-                    <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <h4 className="font-medium text-gray-900 dark:text-white">
-                          {employee.fullName}
-                        </h4>
-                        <p className="text-sm text-gray-600 dark:text-gray-300">
-                          {employee.profession} - {employee.workDepartment}
-                        </p>
-                      </div>
-                      <Badge 
-                        variant={getDangerClassBadgeVariant(employee.dangerClass)}
-                        className="text-xs"
-                      >
-                        {employee.dangerClass}
-                      </Badge>
-                    </div>
-                    {employee.lastExamination && (
-                      <div className="text-xs text-gray-500 mb-2">
-                        Son Muayene: {formatDate(employee.lastExamination.examinationDate)}
-                      </div>
-                    )}
-                    {employee.daysPastDue && (
-                      <div className="text-xs text-red-600 dark:text-red-400 mb-2 font-medium">
-                        {employee.daysPastDue} gün gecikmiş
-                      </div>
-                    )}
-                    <div className="flex justify-end">
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => handleStartExamination(employee)}
-                        data-testid={`button-start-overdue-exam-${employee.id}`}
-                      >
-                        <AlertTriangle className="w-3 h-3 mr-1" />
-                        Acil Muayene
-                      </Button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription className="text-xs text-gray-600">Gecikmiş Muayene</CardDescription>
+              <CardTitle className="text-2xl text-red-600">{overdueExamEmployees.length}</CardTitle>
+            </CardHeader>
           </Card>
         </div>
+
+        {/* Tabbed Dashboard */}
+        <Tabs defaultValue="initial" className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="initial" className="data-[state=active]:bg-blue-100">İlk Muayene</TabsTrigger>
+            <TabsTrigger value="periodic" className="data-[state=active]:bg-amber-100">Periyodik</TabsTrigger>
+            <TabsTrigger value="overdue" className="data-[state=active]:bg-red-100">Gecikmiş</TabsTrigger>
+          </TabsList>
+          
+          {/* İlk Muayene Tab */}
+          <TabsContent value="initial" className="mt-6">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <User className="w-5 h-5 text-blue-500" />
+                  <div>
+                    <CardTitle className="text-lg">İlk Muayene Gereken Çalışanlar</CardTitle>
+                    <CardDescription>Hiç muayene olmamış çalışanlar</CardDescription>
+                  </div>
+                </div>
+                <Badge variant="secondary" className="w-fit">
+                  {initialExamEmployees.length} kişi
+                </Badge>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {loadingInitial ? (
+                  <div className="text-sm text-gray-500">Yükleniyor...</div>
+                ) : initialExamEmployees.length === 0 ? (
+                  <div className="text-sm text-gray-500 py-4 text-center">
+                    İlk muayene gereken çalışan yok
+                  </div>
+                ) : (
+                  initialExamEmployees.map((employee: Employee) => (
+                    <div 
+                      key={employee.id} 
+                      className="p-3 border rounded-lg bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800"
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <h4 className="font-medium text-gray-900 dark:text-white">
+                            {employee.fullName}
+                          </h4>
+                          <p className="text-sm text-gray-600 dark:text-gray-300">
+                            {employee.profession} - {employee.workDepartment}
+                          </p>
+                        </div>
+                        <Badge 
+                          variant={getDangerClassBadgeVariant(employee.dangerClass)}
+                          className="text-xs"
+                        >
+                          {employee.dangerClass}
+                        </Badge>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-gray-500">
+                          İşe Başlama: {formatDate(employee.hireDate)}
+                        </span>
+                        <Button
+                          size="sm"
+                          onClick={() => handleStartExamination(employee)}
+                          data-testid={`button-start-initial-exam-${employee.id}`}
+                        >
+                          <FileText className="w-3 h-3 mr-1" />
+                          Muayene Başlat
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Periyodik Muayene Tab */}
+          <TabsContent value="periodic" className="mt-6">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <CalendarIconLucide className="w-5 h-5 text-amber-500" />
+                  <div>
+                    <CardTitle className="text-lg">Periyodik Muayene Gereken Çalışanlar</CardTitle>
+                    <CardDescription>Muayene zamanı gelen çalışanlar</CardDescription>
+                  </div>
+                </div>
+                <Badge variant="secondary" className="w-fit">
+                  {periodicExamEmployees.length} kişi
+                </Badge>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {loadingPeriodic ? (
+                  <div className="text-sm text-gray-500">Yükleniyor...</div>
+                ) : periodicExamEmployees.length === 0 ? (
+                  <div className="text-sm text-gray-500 py-4 text-center">
+                    Periyodik muayene gereken çalışan yok
+                  </div>
+                ) : (
+                  periodicExamEmployees.map((employee: EmployeeWithExamInfo) => (
+                    <div 
+                      key={employee.id} 
+                      className="p-3 border rounded-lg bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800"
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <h4 className="font-medium text-gray-900 dark:text-white">
+                            {employee.fullName}
+                          </h4>
+                          <p className="text-sm text-gray-600 dark:text-gray-300">
+                            {employee.profession} - {employee.workDepartment}
+                          </p>
+                        </div>
+                        <Badge 
+                          variant={getDangerClassBadgeVariant(employee.dangerClass)}
+                          className="text-xs"
+                        >
+                          {employee.dangerClass}
+                        </Badge>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <div className="text-xs text-gray-500">
+                          <div>Son Muayene: {formatDate(employee.lastExamination?.examinationDate)}</div>
+                          <div>Gelecek Muayene: {formatDate(employee.nextExamDate)}</div>
+                        </div>
+                        <Button
+                          size="sm"
+                          onClick={() => handleStartExamination(employee)}
+                          data-testid={`button-start-periodic-exam-${employee.id}`}
+                        >
+                          <FileText className="w-3 h-3 mr-1" />
+                          Muayene Başlat
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Gecikmiş Muayene Tab */}
+          <TabsContent value="overdue" className="mt-6">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="w-5 h-5 text-red-500" />
+                  <div>
+                    <CardTitle className="text-lg">Gecikmiş Muayene Çalışanları</CardTitle>
+                    <CardDescription>Muayene tarihi geçmiş çalışanlar</CardDescription>
+                  </div>
+                </div>
+                <Badge variant="secondary" className="w-fit">
+                  {overdueExamEmployees.length} kişi
+                </Badge>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {loadingOverdue ? (
+                  <div className="text-sm text-gray-500">Yükleniyor...</div>
+                ) : overdueExamEmployees.length === 0 ? (
+                  <div className="text-sm text-gray-500 py-4 text-center">
+                    Gecikmiş muayene yok
+                  </div>
+                ) : (
+                  overdueExamEmployees.map((employee: EmployeeWithExamInfo) => (
+                    <div 
+                      key={employee.id} 
+                      className="p-3 border rounded-lg bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800"
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <h4 className="font-medium text-gray-900 dark:text-white">
+                            {employee.fullName}
+                          </h4>
+                          <p className="text-sm text-gray-600 dark:text-gray-300">
+                            {employee.profession} - {employee.workDepartment}
+                          </p>
+                        </div>
+                        <Badge 
+                          variant={getDangerClassBadgeVariant(employee.dangerClass)}
+                          className="text-xs"
+                        >
+                          {employee.dangerClass}
+                        </Badge>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <div className="text-xs text-gray-500">
+                          <div>Son Muayene: {formatDate(employee.lastExamination?.examinationDate)}</div>
+                          <div className="text-red-600">Gecikmiş: {formatDate(employee.nextExamDate)}</div>
+                        </div>
+                        <Button
+                          size="sm"
+                          onClick={() => handleStartExamination(employee)}
+                          data-testid={`button-start-overdue-exam-${employee.id}`}
+                        >
+                          <FileText className="w-3 h-3 mr-1" />
+                          Muayene Başlat
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
 
         {/* Medical Examination Dialog */}
         <Dialog open={showExaminationDialog} onOpenChange={setShowExaminationDialog}>

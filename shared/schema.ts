@@ -414,6 +414,16 @@ export const riskImprovements = pgTable("risk_improvements", {
   result: text("result").notNull(), // Final result/outcome
   relatedRegulation: text("related_regulation"), // Related laws/regulations
   
+  // Legacy columns (temporarily added to resolve rename detection conflict)
+  improvementMeasures: text("improvement_measures"), // Legacy - to be deprecated
+  implementationTimeline: text("implementation_timeline"), // Legacy - to be deprecated
+  responsiblePerson: text("responsible_person"), // Legacy - to be deprecated
+  completionTargetDate: timestamp("completion_target_date"), // Legacy - to be deprecated
+  implementationCostEstimate: text("implementation_cost_estimate"), // Legacy - to be deprecated
+  effectivenessVerificationMethod: text("effectiveness_verification_method"), // Legacy - to be deprecated
+  isImplemented: boolean("is_implemented"), // Legacy - to be deprecated
+  implementationDate: timestamp("implementation_date"), // Legacy - to be deprecated
+  
   // System fields  
   createdBy: varchar("created_by").references(() => users.id).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
@@ -1267,6 +1277,47 @@ export const medicalExaminations = pgTable("medical_examinations", {
   
   // Notlar
   notes: text("notes"),
+  
+  // Ek-2 Formu Detayları (Genişletilmiş tıbbi muayene bilgileri)
+  ek2Details: jsonb("ek2_details").$type<{
+    // Kişisel/Meslek Geçmişi
+    personalHistory?: {
+      previousOccupationalExposures?: string;
+      occupationalDiseaseHistory?: string;
+      immunizationStatus?: { [vaccine: string]: { date?: string; status?: string } };
+      reproductiveHealth?: { status?: string; pregnancyCount?: number; livebirthCount?: number };
+    };
+    
+    // Detaylı Fizik Muayene 
+    detailedPhysicalExam?: {
+      anthropometrics?: { height?: number; weight?: number; bmi?: number };
+      vision?: { rightEye?: string; leftEye?: string; colorVision?: string };
+      hearing?: { rightEar?: string; leftEar?: string; audiometry?: string };
+      dermatological?: string;
+      respiratory?: { inspection?: string; auscultation?: string; spirometry?: string };
+      cardiovascular?: { inspection?: string; auscultation?: string; ecg?: string };
+      abdominal?: string;
+      neurological?: string;
+      musculoskeletal?: string;
+    };
+    
+    // Test Sonuçları
+    testResults?: {
+      laboratoryTests?: { [test: string]: { value?: string; referenceRange?: string; status?: string } };
+      radiologicalTests?: { [test: string]: { result?: string; date?: string } };
+      specialTests?: { [test: string]: { result?: string; interpretation?: string } };
+    };
+    
+    // Hekim Kanaati ve İmzalar
+    physicianConclusion?: {
+      detailed_assessment?: string;
+      work_fitness_opinion?: string;
+      restrictions_recommendations?: string;
+      next_exam_recommendations?: string;
+      physician_signature?: string;
+      signature_date?: string;
+    };
+  }>(),
   
   // System fields
   locationId: varchar("location_id").references(() => locations.id).notNull(),
