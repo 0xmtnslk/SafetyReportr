@@ -1189,8 +1189,10 @@ export const medicalExaminations = pgTable("medical_examinations", {
   examinationDate: timestamp("examination_date").notNull(),
   nextExaminationDate: timestamp("next_examination_date").notNull(), // Otomatik hesaplanır
   
-  // Muayeneyi yapan hekim
-  physicianId: varchar("physician_id").references(() => users.id).notNull(),
+  // Muayeneyi yapan hekim (ID'li sistem veya manuel giriş)
+  physicianId: varchar("physician_id").references(() => users.id),
+  physicianName: text("physician_name"), // Manuel hekim adı girişi
+  physicianTitle: text("physician_title"), // Hekim unvanı
   
   // Tıbbi anamnez (PDF'deki 10 soru - JSON)
   medicalHistory: jsonb("medical_history").$type<{
