@@ -17,11 +17,11 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
-import { CalendarIcon, Plus, UserPlus, FileText, AlertTriangle, Calendar as CalendarIconLucide, Clock, CheckCircle } from "lucide-react";
+import { CalendarIcon, FileText, AlertTriangle, Calendar as CalendarIconLucide } from "lucide-react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { insertEmployeeSchema, insertMedicalExaminationSchema, DANGER_CLASS_OPTIONS } from "@shared/schema";
+import { insertMedicalExaminationSchema } from "@shared/schema";
 
 type Employee = {
   id: string;
@@ -87,14 +87,6 @@ type EmployeeWithExamInfo = Employee & {
   daysPastDue?: number;
 };
 
-const employeeFormSchema = insertEmployeeSchema.extend({
-  birthDate: z.date({
-    required_error: "Doğum tarihi gereklidir",
-  }).optional(),
-  startDate: z.date({
-    required_error: "İşe başlama tarihi gereklidir",
-  }).optional(),
-});
 
 const examinationFormSchema = insertMedicalExaminationSchema.extend({
   examinationDate: z.date({
@@ -106,7 +98,6 @@ const examinationFormSchema = insertMedicalExaminationSchema.extend({
 export default function MedicalExaminations() {
   const { toast } = useToast();
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
-  const [showEmployeeDialog, setShowEmployeeDialog] = useState(false);
   const [showExaminationDialog, setShowExaminationDialog] = useState(false);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [selectedExamination, setSelectedExamination] = useState<MedicalExamination | null>(null);
@@ -128,20 +119,6 @@ export default function MedicalExaminations() {
     queryKey: ['/api/employees'],
   });
 
-  // Employee form
-  const employeeForm = useForm<z.infer<typeof employeeFormSchema>>({
-    resolver: zodResolver(employeeFormSchema),
-    defaultValues: {
-      tcKimlikNo: "",
-      fullName: "",
-      phoneNumber: "",
-      homeAddress: "",
-      profession: "",
-      workDepartment: "",
-      dangerClass: "Az Tehlikeli",
-      isActive: true,
-    },
-  });
 
   // Medical examination form
   const examinationForm = useForm<z.infer<typeof examinationFormSchema>>({
@@ -176,30 +153,6 @@ export default function MedicalExaminations() {
   });
 
   // Mutations
-  const createEmployeeMutation = useMutation({
-    mutationFn: (data: z.infer<typeof employeeFormSchema>) => apiRequest('/api/employees', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    }),
-    onSuccess: () => {
-      toast({
-        title: "Başarılı",
-        description: "Çalışan başarıyla oluşturuldu",
-      });
-      setShowEmployeeDialog(false);
-      employeeForm.reset();
-      queryClient.invalidateQueries({ queryKey: ['/api/employees'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/medical-examinations/dashboard/initial'] });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Hata",
-        description: error.message || "Çalışan oluşturulurken hata oluştu",
-        variant: "destructive",
-      });
-    },
-  });
 
   const createExaminationMutation = useMutation({
     mutationFn: (data: z.infer<typeof examinationFormSchema>) => apiRequest('/api/medical-examinations', {
@@ -229,9 +182,6 @@ export default function MedicalExaminations() {
     },
   });
 
-  const handleCreateEmployee = (data: z.infer<typeof employeeFormSchema>) => {
-    createEmployeeMutation.mutate(data);
-  };
 
   const handleCreateExamination = (data: z.infer<typeof examinationFormSchema>) => {
     if (!selectedEmployee) {
@@ -312,260 +262,8 @@ export default function MedicalExaminations() {
             </p>
           </div>
           
-          <div className="flex gap-2">
-            <Dialog open={showEmployeeDialog} onOpenChange={setShowEmployeeDialog}>
-              <DialogTrigger asChild>
-                <Button data-testid="button-add-employee">
-                  <UserPlus className="w-4 h-4 mr-2" />
-                  Yeni Çalışan
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Yeni Çalışan Ekle</DialogTitle>
-                  <DialogDescription>
-                    Yeni çalışan bilgilerini girin
-                  </DialogDescription>
-                </DialogHeader>
-                <Form {...employeeForm}>
-                  <form onSubmit={employeeForm.handleSubmit(handleCreateEmployee)} className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <FormField
-                        control={employeeForm.control}
-                        name="tcKimlikNo"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>TC Kimlik No</FormLabel>
-                            <FormControl>
-                              <Input data-testid="input-tc-kimlik" placeholder="12345678901" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={employeeForm.control}
-                        name="fullName"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Ad Soyad</FormLabel>
-                            <FormControl>
-                              <Input data-testid="input-full-name" placeholder="Ad Soyad" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={employeeForm.control}
-                        name="birthDate"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-col">
-                            <FormLabel>Doğum Tarihi</FormLabel>
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <FormControl>
-                                  <Button
-                                    data-testid="button-birth-date"
-                                    variant={"outline"}
-                                    className={cn(
-                                      "w-full pl-3 text-left font-normal",
-                                      !field.value && "text-muted-foreground"
-                                    )}
-                                  >
-                                    {field.value ? (
-                                      format(field.value, "dd.MM.yyyy", { locale: tr })
-                                    ) : (
-                                      <span>Tarih seçin</span>
-                                    )}
-                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                  </Button>
-                                </FormControl>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0" align="start">
-                                <Calendar
-                                  mode="single"
-                                  selected={field.value}
-                                  onSelect={field.onChange}
-                                  disabled={(date) =>
-                                    date > new Date() || date < new Date("1900-01-01")
-                                  }
-                                  initialFocus
-                                />
-                              </PopoverContent>
-                            </Popover>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={employeeForm.control}
-                        name="phoneNumber"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Telefon</FormLabel>
-                            <FormControl>
-                              <Input data-testid="input-phone" placeholder="05XX XXX XX XX" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={employeeForm.control}
-                        name="email"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>E-posta</FormLabel>
-                            <FormControl>
-                              <Input data-testid="input-email" type="email" placeholder="ornek@email.com" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={employeeForm.control}
-                        name="profession"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Meslek</FormLabel>
-                            <FormControl>
-                              <Input data-testid="input-profession" placeholder="Meslek" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={employeeForm.control}
-                        name="workDepartment"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Çalışma Departmanı</FormLabel>
-                            <FormControl>
-                              <Input data-testid="input-work-department" placeholder="Departman" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={employeeForm.control}
-                        name="startDate"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-col">
-                            <FormLabel>İşe Başlama Tarihi</FormLabel>
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <FormControl>
-                                  <Button
-                                    data-testid="button-start-date"
-                                    variant={"outline"}
-                                    className={cn(
-                                      "w-full pl-3 text-left font-normal",
-                                      !field.value && "text-muted-foreground"
-                                    )}
-                                  >
-                                    {field.value ? (
-                                      format(field.value, "dd.MM.yyyy", { locale: tr })
-                                    ) : (
-                                      <span>Tarih seçin</span>
-                                    )}
-                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                  </Button>
-                                </FormControl>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0" align="start">
-                                <Calendar
-                                  mode="single"
-                                  selected={field.value}
-                                  onSelect={field.onChange}
-                                  disabled={(date) =>
-                                    date > new Date() || date < new Date("1900-01-01")
-                                  }
-                                  initialFocus
-                                />
-                              </PopoverContent>
-                            </Popover>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={employeeForm.control}
-                        name="dangerClass"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Tehlike Sınıfı</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                              <FormControl>
-                                <SelectTrigger data-testid="select-danger-class">
-                                  <SelectValue placeholder="Tehlike sınıfı seçin" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {DANGER_CLASS_OPTIONS.map((option) => (
-                                  <SelectItem key={option.value} value={option.value}>
-                                    {option.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                    
-                    <FormField
-                      control={employeeForm.control}
-                      name="homeAddress"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Ev Adresi</FormLabel>
-                          <FormControl>
-                            <Textarea 
-                              data-testid="textarea-home-address"
-                              placeholder="Ev adresi bilgileri..." 
-                              className="min-h-[80px]"
-                              {...field} 
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <div className="flex justify-end gap-2 pt-4">
-                      <Button 
-                        type="button" 
-                        variant="outline" 
-                        onClick={() => setShowEmployeeDialog(false)}
-                        data-testid="button-cancel-employee"
-                      >
-                        İptal
-                      </Button>
-                      <Button 
-                        type="submit" 
-                        disabled={createEmployeeMutation.isPending}
-                        data-testid="button-save-employee"
-                      >
-                        {createEmployeeMutation.isPending ? "Kaydediliyor..." : "Kaydet"}
-                      </Button>
-                    </div>
-                  </form>
-                </Form>
-              </DialogContent>
-            </Dialog>
+          <div className="text-sm text-gray-600 dark:text-gray-300">
+            Çalışan kayıtları sistem yöneticisi tarafından yönetilmektedir.
           </div>
         </div>
 
