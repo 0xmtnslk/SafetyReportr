@@ -25,21 +25,18 @@ import { insertMedicalExaminationSchema } from "@shared/schema";
 
 type Employee = {
   id: string;
-  tcKimlikNo: string;
-  firstName: string;
-  lastName: string;
-  birthDate: Date;
-  phoneNumber?: string;
-  email?: string;
-  address?: string;
-  position: string;
-  department: string;
-  startDate: Date;
+  fullName: string;
+  profession: string; // position için kullanılacak
+  workDepartment: string; // department için kullanılacak  
   dangerClass: "Çok Tehlikeli" | "Tehlikeli" | "Az Tehlikeli";
+  hireDate?: Date;
   isActive: boolean;
-  locationId: string;
-  createdAt?: Date;
-  updatedAt?: Date;
+  lastExamination?: MedicalExamination;
+};
+
+type EmployeeWithExamInfo = Employee & {
+  lastExamination?: MedicalExamination;
+  nextExamDate?: Date;
 };
 
 type MedicalExamination = {
@@ -81,11 +78,6 @@ type MedicalExamination = {
   updatedAt?: Date;
 };
 
-type EmployeeWithExamInfo = Employee & {
-  lastExamination?: MedicalExamination;
-  nextExamDate?: Date;
-  daysPastDue?: number;
-};
 
 
 const examinationFormSchema = insertMedicalExaminationSchema.extend({
@@ -103,19 +95,19 @@ export default function MedicalExaminations() {
   const [selectedExamination, setSelectedExamination] = useState<MedicalExamination | null>(null);
 
   // Queries for dashboard data
-  const { data: initialExamEmployees = [], isLoading: loadingInitial } = useQuery({
+  const { data: initialExamEmployees = [], isLoading: loadingInitial } = useQuery<Employee[]>({
     queryKey: ['/api/medical-examinations/dashboard/initial'],
   });
 
-  const { data: periodicExamEmployees = [], isLoading: loadingPeriodic } = useQuery({
+  const { data: periodicExamEmployees = [], isLoading: loadingPeriodic } = useQuery<EmployeeWithExamInfo[]>({
     queryKey: ['/api/medical-examinations/dashboard/periodic'],
   });
 
-  const { data: overdueExamEmployees = [], isLoading: loadingOverdue } = useQuery({
+  const { data: overdueExamEmployees = [], isLoading: loadingOverdue } = useQuery<EmployeeWithExamInfo[]>({
     queryKey: ['/api/medical-examinations/dashboard/overdue'],
   });
 
-  const { data: allEmployees = [] } = useQuery({
+  const { data: allEmployees = [] } = useQuery<Employee[]>({
     queryKey: ['/api/employees'],
   });
 
@@ -304,10 +296,10 @@ export default function MedicalExaminations() {
                     <div className="flex justify-between items-start mb-2">
                       <div>
                         <h4 className="font-medium text-gray-900 dark:text-white">
-                          {employee.firstName} {employee.lastName}
+                          {employee.fullName}
                         </h4>
                         <p className="text-sm text-gray-600 dark:text-gray-300">
-                          {employee.position} - {employee.department}
+                          {employee.profession} - {employee.workDepartment}
                         </p>
                       </div>
                       <Badge 
@@ -319,7 +311,7 @@ export default function MedicalExaminations() {
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-xs text-gray-500">
-                        İşe Başlama: {formatDate(employee.startDate)}
+                        İşe Başlama: {formatDate(employee.hireDate)}
                       </span>
                       <Button
                         size="sm"
@@ -366,10 +358,10 @@ export default function MedicalExaminations() {
                     <div className="flex justify-between items-start mb-2">
                       <div>
                         <h4 className="font-medium text-gray-900 dark:text-white">
-                          {employee.firstName} {employee.lastName}
+                          {employee.fullName}
                         </h4>
                         <p className="text-sm text-gray-600 dark:text-gray-300">
-                          {employee.position} - {employee.department}
+                          {employee.profession} - {employee.workDepartment}
                         </p>
                       </div>
                       <Badge 
@@ -435,10 +427,10 @@ export default function MedicalExaminations() {
                     <div className="flex justify-between items-start mb-2">
                       <div>
                         <h4 className="font-medium text-gray-900 dark:text-white">
-                          {employee.firstName} {employee.lastName}
+                          {employee.fullName}
                         </h4>
                         <p className="text-sm text-gray-600 dark:text-gray-300">
-                          {employee.position} - {employee.department}
+                          {employee.profession} - {employee.workDepartment}
                         </p>
                       </div>
                       <Badge 
@@ -484,7 +476,7 @@ export default function MedicalExaminations() {
               <DialogDescription>
                 {selectedEmployee && (
                   <>
-                    {selectedEmployee.firstName} {selectedEmployee.lastName} - {selectedEmployee.position}
+                    {selectedEmployee.fullName} - {selectedEmployee.profession}
                     <Badge variant={getDangerClassBadgeVariant(selectedEmployee.dangerClass)} className="ml-2">
                       {selectedEmployee.dangerClass}
                     </Badge>
