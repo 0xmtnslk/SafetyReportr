@@ -1115,6 +1115,190 @@ export const insertDetectionBookEntrySchema = createInsertSchema(detectionBookEn
 export type DetectionBookEntry = typeof detectionBookEntries.$inferSelect;
 export type InsertDetectionBookEntry = z.infer<typeof insertDetectionBookEntrySchema>;
 
+// Employees - Çalışan bilgileri
+export const employees = pgTable("employees", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Temel bilgiler (PDF'deki ÇALIŞANIN bölümünden)
+  fullName: text("full_name").notNull(), // Adı ve Soyadı
+  tcKimlikNo: text("tc_kimlik_no").notNull().unique(), // T.C. Kimlik No
+  birthPlace: text("birth_place"), // Doğum Yeri
+  birthDate: timestamp("birth_date"), // Doğum Tarihi
+  gender: text("gender"), // Cinsiyeti: "Erkek", "Kadın"
+  educationLevel: text("education_level"), // Eğitim Durumu
+  maritalStatus: text("marital_status"), // Medeni Durumu
+  childrenCount: integer("children_count"), // Çocuk Sayısı
+  
+  // İletişim bilgileri
+  homeAddress: text("home_address"), // Ev Adresi
+  phoneNumber: text("phone_number"), // Tel No
+  
+  // İş bilgileri
+  profession: text("profession"), // Mesleği
+  jobDescription: text("job_description"), // Yaptığı iş (Ayrıntılı)
+  workDepartment: text("work_department"), // Çalıştığı bölüm
+  hireDate: timestamp("hire_date"), // İşe giriş tarihi
+  
+  // Tehlike sınıfı - muayene periyodunu belirler
+  dangerClass: text("danger_class").notNull().default("Az Tehlikeli"), // "Çok Tehlikeli", "Tehlikeli", "Az Tehlikeli"
+  
+  // Çalışma geçmişi (JSON)
+  workHistory: jsonb("work_history").$type<Array<{
+    company: string;
+    job: string;
+    startDate: string;
+    endDate: string;
+  }>>().default([]),
+  
+  // Sağlık özgeçmişi
+  bloodGroup: text("blood_group"), // Kan grubu
+  chronicDiseases: text("chronic_diseases"), // Konjenital/kronik hastalık
+  
+  // Bağışıklama bilgileri (JSON)
+  vaccinations: jsonb("vaccinations").$type<{
+    tetanus?: string;
+    hepatitis?: string;
+    other?: string;
+  }>(),
+  
+  // Soy geçmişi (JSON)
+  familyHistory: jsonb("family_history").$type<{
+    mother?: string;
+    father?: string;
+    siblings?: string;
+    children?: string;
+  }>(),
+  
+  // Lokasyon bilgileri
+  locationId: varchar("location_id").references(() => locations.id).notNull(),
+  
+  // System fields
+  isActive: boolean("is_active").default(true),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Medical Examinations - Periyodik muayene kayıtları
+export const medicalExaminations = pgTable("medical_examinations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Temel bilgiler
+  employeeId: varchar("employee_id").references(() => employees.id).notNull(),
+  examinationType: text("examination_type").notNull(), // "initial" (işe giriş) | "periodic" (periyodik)
+  examinationDate: timestamp("examination_date").notNull(),
+  nextExaminationDate: timestamp("next_examination_date").notNull(), // Otomatik hesaplanır
+  
+  // Muayeneyi yapan hekim
+  physicianId: varchar("physician_id").references(() => users.id).notNull(),
+  
+  // Tıbbi anamnez (PDF'deki 10 soru - JSON)
+  medicalHistory: jsonb("medical_history").$type<{
+    symptoms: { [key: string]: boolean }; // Yakınmalar
+    diagnoses: { [key: string]: boolean }; // Teşhis konulan hastalıklar
+    hospitalization: { hasHistory: boolean; diagnosis?: string };
+    surgery: { hasHistory: boolean; reason?: string };
+    workAccident: { hasHistory: boolean; description?: string };
+    occupationalDiseaseExam: { hasHistory: boolean; result?: string };
+    disability: { hasHistory: boolean; reasonAndRate?: string };
+    currentTreatment: { hasHistory: boolean; treatment?: string };
+    smoking: { 
+      status: "never" | "quit" | "current";
+      quitTime?: string;
+      smokingDuration?: string;
+      dailyAmount?: string;
+    };
+    alcohol: {
+      status: "never" | "quit" | "current";
+      quitTime?: string;
+      drinkingDuration?: string;
+      frequency?: string;
+    };
+  }>(),
+  
+  // Fizik muayene sonuçları (JSON)
+  physicalExamination: jsonb("physical_examination").$type<{
+    sensoryOrgans: {
+      eyes?: string;
+      earNoseThroat?: string;
+      skin?: string;
+    };
+    cardiovascular?: string;
+    respiratory?: string;
+    digestive?: string;
+    urogenital?: string;
+    musculoskeletal?: string;
+    neurological?: string;
+    psychiatric?: string;
+    other?: string;
+    vitals: {
+      bloodPressure?: string; // TA
+      pulse?: string; // Nb
+      height?: number; // Boy
+      weight?: number; // Kilo
+      bmi?: number; // Vücut Kitle İndeksi
+    };
+  }>(),
+  
+  // Laboratuvar bulguları (JSON)
+  laboratoryFindings: jsonb("laboratory_findings").$type<{
+    biologicalTests: {
+      blood?: string;
+      urine?: string;
+    };
+    radiological?: string;
+    physiological: {
+      audiometry?: string; // Odyometre
+      spirometry?: string; // SFT
+    };
+    psychologicalTests?: string;
+    other?: string;
+  }>(),
+  
+  // Kanaat ve sonuç
+  conclusion: text("conclusion").notNull(), // "elverişli" | "şartlı elverişli"
+  conclusionDetails: text("conclusion_details"), // Şart varsa detayı
+  workingConditionsNote: text("working_conditions_note"), // Gece/vardiya çalışma vs. kanaati
+  
+  // Durum
+  status: text("status").notNull().default("completed"), // "completed", "scheduled", "overdue"
+  
+  // Notlar
+  notes: text("notes"),
+  
+  // System fields
+  locationId: varchar("location_id").references(() => locations.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Employee insert schema
+export const insertEmployeeSchema = createInsertSchema(employees).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Medical examination insert schema
+export const insertMedicalExaminationSchema = createInsertSchema(medicalExaminations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Types
+export type Employee = typeof employees.$inferSelect;
+export type InsertEmployee = z.infer<typeof insertEmployeeSchema>;
+export type MedicalExamination = typeof medicalExaminations.$inferSelect;
+export type InsertMedicalExamination = z.infer<typeof insertMedicalExaminationSchema>;
+
+// Danger class options with examination frequency
+export const DANGER_CLASS_OPTIONS = [
+  { value: "Çok Tehlikeli", label: "Çok Tehlikeli", examinationFrequencyMonths: 12 },
+  { value: "Tehlikeli", label: "Tehlikeli", examinationFrequencyMonths: 36 },
+  { value: "Az Tehlikeli", label: "Az Tehlikeli", examinationFrequencyMonths: 60 }
+] as const;
+
 // Hospital danger class options 
 export const HOSPITAL_DANGER_CLASS_OPTIONS = [
   { value: "Çok Tehlikeli", label: "Çok Tehlikeli", validityYears: 2 },
