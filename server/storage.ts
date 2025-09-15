@@ -2,9 +2,10 @@ import {
   reports, findings, users, offlineQueue, locations, notifications,
   checklistTemplates, checklistSections, checklistQuestions, inspections, inspectionAssignments, inspectionResponses,
   hospitalDepartments, riskCategories, riskSubCategories, riskAssessments, riskImprovements, regulations, hospitalSections,
-  detectionBookEntries,
+  detectionBookEntries, employees, medicalExaminations,
   type User, type InsertUser, type Report, type InsertReport, type Finding, type InsertFinding, 
   type OfflineQueueItem, type InsertOfflineQueueItem, type Location, type InsertLocation,
+  type Employee, type InsertEmployee, type MedicalExamination, type InsertMedicalExamination,
   type ChecklistTemplate, type InsertChecklistTemplate, type ChecklistSection, type InsertChecklistSection,
   type ChecklistQuestion, type InsertChecklistQuestion, 
   type Inspection, type InsertInspection, type InspectionAssignment, type InsertInspectionAssignment,
@@ -284,6 +285,28 @@ export interface IStorage {
   createDetectionBookEntry(entry: InsertDetectionBookEntry): Promise<DetectionBookEntry>;
   updateDetectionBookEntry(id: string, entry: Partial<InsertDetectionBookEntry>): Promise<DetectionBookEntry>;
   deleteDetectionBookEntry(id: string): Promise<boolean>;
+  
+  // Employee operations
+  getAllEmployees(locationId?: string): Promise<Employee[]>;
+  getEmployee(id: string): Promise<Employee | undefined>;
+  getEmployeeByTcKimlik(tcKimlikNo: string, locationId: string): Promise<Employee | undefined>;
+  createEmployee(employee: InsertEmployee): Promise<Employee>;
+  updateEmployee(id: string, employee: Partial<InsertEmployee>): Promise<Employee>;
+  deleteEmployee(id: string): Promise<boolean>;
+  
+  // Medical Examination operations  
+  getAllMedicalExaminations(locationId?: string): Promise<MedicalExamination[]>;
+  getMedicalExamination(id: string): Promise<MedicalExamination | undefined>;
+  getEmployeeMedicalExaminations(employeeId: string): Promise<MedicalExamination[]>;
+  getLatestMedicalExamination(employeeId: string): Promise<MedicalExamination | undefined>;
+  createMedicalExamination(examination: InsertMedicalExamination): Promise<MedicalExamination>;
+  updateMedicalExamination(id: string, examination: Partial<InsertMedicalExamination>): Promise<MedicalExamination>;
+  deleteMedicalExamination(id: string): Promise<boolean>;
+  
+  // Medical examination dashboard operations
+  getEmployeesNeedingInitialExam(locationId: string): Promise<Employee[]>;
+  getEmployeesNeedingPeriodicExam(locationId: string, currentMonth?: boolean): Promise<(Employee & { lastExamination?: MedicalExamination; nextExamDate?: Date })[]>;
+  getEmployeesWithOverdueExams(locationId: string): Promise<(Employee & { lastExamination?: MedicalExamination; daysPastDue?: number })[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2669,6 +2692,229 @@ export class DatabaseStorage implements IStorage {
   async deleteDetectionBookEntry(id: string): Promise<boolean> {
     const result = await db.delete(detectionBookEntries).where(eq(detectionBookEntries.id, id));
     return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  // Employee operations implementation
+  async getAllEmployees(locationId?: string): Promise<Employee[]> {
+    const query = db.select().from(employees).orderBy(desc(employees.createdAt));
+    
+    if (locationId) {
+      return await query.where(eq(employees.locationId, locationId));
+    }
+    
+    return await query;
+  }
+
+  async getEmployee(id: string): Promise<Employee | undefined> {
+    const [employee] = await db.select().from(employees).where(eq(employees.id, id));
+    return employee;
+  }
+
+  async getEmployeeByTcKimlik(tcKimlikNo: string, locationId: string): Promise<Employee | undefined> {
+    const [employee] = await db.select().from(employees)
+      .where(and(eq(employees.tcKimlikNo, tcKimlikNo), eq(employees.locationId, locationId)));
+    return employee;
+  }
+
+  async createEmployee(employee: InsertEmployee): Promise<Employee> {
+    const [newEmployee] = await db.insert(employees).values(employee).returning();
+    return newEmployee;
+  }
+
+  async updateEmployee(id: string, employee: Partial<InsertEmployee>): Promise<Employee> {
+    const [updatedEmployee] = await db.update(employees)
+      .set({ ...employee, updatedAt: new Date() })
+      .where(eq(employees.id, id))
+      .returning();
+    return updatedEmployee;
+  }
+
+  async deleteEmployee(id: string): Promise<boolean> {
+    const result = await db.delete(employees).where(eq(employees.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  // Medical Examination operations implementation
+  async getAllMedicalExaminations(locationId?: string): Promise<MedicalExamination[]> {
+    const query = db.select().from(medicalExaminations).orderBy(desc(medicalExaminations.createdAt));
+    
+    if (locationId) {
+      return await query.where(eq(medicalExaminations.locationId, locationId));
+    }
+    
+    return await query;
+  }
+
+  async getMedicalExamination(id: string): Promise<MedicalExamination | undefined> {
+    const [examination] = await db.select().from(medicalExaminations).where(eq(medicalExaminations.id, id));
+    return examination;
+  }
+
+  async getEmployeeMedicalExaminations(employeeId: string): Promise<MedicalExamination[]> {
+    return await db.select().from(medicalExaminations)
+      .where(eq(medicalExaminations.employeeId, employeeId))
+      .orderBy(desc(medicalExaminations.examinationDate));
+  }
+
+  async getLatestMedicalExamination(employeeId: string): Promise<MedicalExamination | undefined> {
+    const [examination] = await db.select().from(medicalExaminations)
+      .where(eq(medicalExaminations.employeeId, employeeId))
+      .orderBy(desc(medicalExaminations.examinationDate))
+      .limit(1);
+    return examination;
+  }
+
+  async createMedicalExamination(examination: InsertMedicalExamination): Promise<MedicalExamination> {
+    const [newExamination] = await db.insert(medicalExaminations).values(examination).returning();
+    return newExamination;
+  }
+
+  async updateMedicalExamination(id: string, examination: Partial<InsertMedicalExamination>): Promise<MedicalExamination> {
+    const [updatedExamination] = await db.update(medicalExaminations)
+      .set({ ...examination, updatedAt: new Date() })
+      .where(eq(medicalExaminations.id, id))
+      .returning();
+    return updatedExamination;
+  }
+
+  async deleteMedicalExamination(id: string): Promise<boolean> {
+    const result = await db.delete(medicalExaminations).where(eq(medicalExaminations.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  // Medical examination dashboard operations implementation
+  async getEmployeesNeedingInitialExam(locationId: string): Promise<Employee[]> {
+    // Employees who have never had a medical examination
+    const employeesWithoutExam = await db
+      .select()
+      .from(employees)
+      .leftJoin(medicalExaminations, eq(employees.id, medicalExaminations.employeeId))
+      .where(and(
+        eq(employees.locationId, locationId),
+        eq(employees.isActive, true),
+        isNull(medicalExaminations.id)
+      ));
+
+    return employeesWithoutExam.map(result => result.employees);
+  }
+
+  async getEmployeesNeedingPeriodicExam(locationId: string, currentMonth?: boolean): Promise<(Employee & { lastExamination?: MedicalExamination; nextExamDate?: Date })[]> {
+    const employeesWithLastExam = await db
+      .select({
+        employee: employees,
+        lastExam: medicalExaminations
+      })
+      .from(employees)
+      .leftJoin(
+        medicalExaminations,
+        and(
+          eq(employees.id, medicalExaminations.employeeId),
+          eq(medicalExaminations.id, 
+            sql`(SELECT id FROM medical_examinations me2 
+                 WHERE me2.employee_id = employees.id 
+                 ORDER BY me2.examination_date DESC LIMIT 1)`
+          )
+        )
+      )
+      .where(and(
+        eq(employees.locationId, locationId),
+        eq(employees.isActive, true)
+      ));
+
+    const results = [];
+    const currentDate = new Date();
+
+    for (const row of employeesWithLastExam) {
+      const employee = row.employee;
+      const lastExam = row.lastExam;
+
+      if (lastExam) {
+        // Calculate next examination date based on danger class
+        const dangerClass = employee.dangerClass;
+        const frequencyMonths = dangerClass === "Çok Tehlikeli" ? 12 : 
+                              dangerClass === "Tehlikeli" ? 36 : 60;
+        
+        const nextExamDate = new Date(lastExam.examinationDate);
+        nextExamDate.setMonth(nextExamDate.getMonth() + frequencyMonths);
+
+        if (currentMonth) {
+          // Only return if next exam is due this month
+          if (nextExamDate.getFullYear() === currentDate.getFullYear() && 
+              nextExamDate.getMonth() === currentDate.getMonth()) {
+            results.push({
+              ...employee,
+              lastExamination: lastExam,
+              nextExamDate
+            });
+          }
+        } else {
+          // Return all upcoming exams
+          if (nextExamDate >= currentDate) {
+            results.push({
+              ...employee,
+              lastExamination: lastExam,
+              nextExamDate
+            });
+          }
+        }
+      }
+    }
+
+    return results;
+  }
+
+  async getEmployeesWithOverdueExams(locationId: string): Promise<(Employee & { lastExamination?: MedicalExamination; daysPastDue?: number })[]> {
+    const employeesWithLastExam = await db
+      .select({
+        employee: employees,
+        lastExam: medicalExaminations
+      })
+      .from(employees)
+      .leftJoin(
+        medicalExaminations,
+        and(
+          eq(employees.id, medicalExaminations.employeeId),
+          eq(medicalExaminations.id, 
+            sql`(SELECT id FROM medical_examinations me2 
+                 WHERE me2.employee_id = employees.id 
+                 ORDER BY me2.examination_date DESC LIMIT 1)`
+          )
+        )
+      )
+      .where(and(
+        eq(employees.locationId, locationId),
+        eq(employees.isActive, true)
+      ));
+
+    const results = [];
+    const currentDate = new Date();
+
+    for (const row of employeesWithLastExam) {
+      const employee = row.employee;
+      const lastExam = row.lastExam;
+
+      if (lastExam) {
+        // Calculate next examination date based on danger class
+        const dangerClass = employee.dangerClass;
+        const frequencyMonths = dangerClass === "Çok Tehlikeli" ? 12 : 
+                              dangerClass === "Tehlikeli" ? 36 : 60;
+        
+        const nextExamDate = new Date(lastExam.examinationDate);
+        nextExamDate.setMonth(nextExamDate.getMonth() + frequencyMonths);
+
+        // Check if overdue
+        if (nextExamDate < currentDate) {
+          const daysPastDue = Math.floor((currentDate.getTime() - nextExamDate.getTime()) / (1000 * 60 * 60 * 24));
+          results.push({
+            ...employee,
+            lastExamination: lastExam,
+            daysPastDue
+          });
+        }
+      }
+    }
+
+    return results;
   }
 }
 
