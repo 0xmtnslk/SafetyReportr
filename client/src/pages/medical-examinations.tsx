@@ -18,6 +18,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
 import { CalendarIcon, FileText, AlertTriangle, Calendar as CalendarIconLucide, User } from "lucide-react";
 import { format, isValid, parseISO } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -90,6 +91,7 @@ const examinationFormSchema = insertMedicalExaminationSchema.extend({
 
 export default function MedicalExaminations() {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [showExaminationDialog, setShowExaminationDialog] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
@@ -204,32 +206,13 @@ export default function MedicalExaminations() {
     
     setShowConfirmDialog(false);
     
-    // TODO: Navigate to dedicated examination page instead of dialog
-    // setLocation(`/medical-examinations/new?employeeId=${selectedEmployee.id}`);
-    
-    // Temporary: Show dialog until dedicated pages are ready
+    // Navigate to dedicated examination page with employee ID
     toast({
-      title: "Muayene Başlatılıyor",
-      description: `${selectedEmployee.fullName} için muayene formu açılıyor...`,
+      title: "Yönlendiriliyor",
+      description: `${selectedEmployee.fullName} için muayene sayfasına yönlendiriliyorsunuz...`,
     });
     
-    setShowExaminationDialog(true);
-    
-    // Auto-fill some examination data based on employee
-    examinationForm.setValue("examinationDate", new Date());
-    if (selectedEmployee.dangerClass === "Çok Tehlikeli") {
-      const nextDate = new Date();
-      nextDate.setFullYear(nextDate.getFullYear() + 1);
-      examinationForm.setValue("nextExaminationDate", nextDate);
-    } else if (selectedEmployee.dangerClass === "Tehlikeli") {
-      const nextDate = new Date();
-      nextDate.setFullYear(nextDate.getFullYear() + 3);
-      examinationForm.setValue("nextExaminationDate", nextDate);
-    } else {
-      const nextDate = new Date();
-      nextDate.setFullYear(nextDate.getFullYear() + 5);
-      examinationForm.setValue("nextExaminationDate", nextDate);
-    }
+    setLocation(`/medical-examinations/new?employeeId=${selectedEmployee.id}`);
   };
 
   const handleCancelExamination = () => {
