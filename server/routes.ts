@@ -28,11 +28,14 @@ import {
   insertRiskAssessmentSchema,
   insertRiskImprovementSchema,
   insertDetectionBookEntrySchema,
+  insertEmployeeSchema,
+  insertMedicalExaminationSchema,
   CHECKLIST_CATEGORIES,
   EVALUATION_OPTIONS,
   FINE_KINNEY_PROBABILITY,
   FINE_KINNEY_FREQUENCY,
   FINE_KINNEY_SEVERITY,
+  DANGER_CLASS_OPTIONS,
   Location
 } from "@shared/schema";
 import { ReactPdfService } from "./pdfService";
@@ -3548,6 +3551,339 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('File download error:', error);
       res.status(500).json({ message: 'Dosya indirme hatası: ' + error.message });
+    }
+  });
+
+  // =======================
+  // EMPLOYEE MANAGEMENT ROUTES
+  // =======================
+
+  // Get all employees (location specific)
+  app.get('/api/employees', authenticateToken, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      const locationId = req.query.locationId as string;
+      
+      // Use location from query or user's location
+      const targetLocationId = locationId || user.locationId;
+      
+      const employees = await storage.getAllEmployees(targetLocationId);
+      res.json(employees);
+    } catch (error: any) {
+      console.error('Get employees error:', error);
+      res.status(500).json({ message: 'Çalışanlar getirilirken hata oluştu: ' + error.message });
+    }
+  });
+
+  // Get single employee
+  app.get('/api/employees/:id', authenticateToken, async (req: Request, res: Response) => {
+    try {
+      const employee = await storage.getEmployee(req.params.id);
+      
+      if (!employee) {
+        return res.status(404).json({ message: 'Çalışan bulunamadı' });
+      }
+      
+      res.json(employee);
+    } catch (error: any) {
+      console.error('Get employee error:', error);
+      res.status(500).json({ message: 'Çalışan getirilirken hata oluştu: ' + error.message });
+    }
+  });
+
+  // Create new employee
+  app.post('/api/employees', authenticateToken, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      
+      // Validate request body
+      const validatedData = insertEmployeeSchema.parse(req.body);
+      
+      // Set location if not provided
+      if (!validatedData.locationId) {
+        validatedData.locationId = user.locationId;
+      }
+      
+      // Check if TC Kimlik No already exists in this location
+      const existingEmployee = await storage.getEmployeeByTcKimlik(validatedData.tcKimlikNo, validatedData.locationId);
+      if (existingEmployee) {
+        return res.status(400).json({ message: 'Bu TC Kimlik No ile kayıtlı çalışan zaten mevcut' });
+      }
+      
+      const newEmployee = await storage.createEmployee(validatedData);
+      res.status(201).json(newEmployee);
+    } catch (error: any) {
+      console.error('Create employee error:', error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: 'Geçersiz veri formatı', errors: error.errors });
+      }
+      res.status(500).json({ message: 'Çalışan oluşturulurken hata oluştu: ' + error.message });
+    }
+  });
+
+  // Update employee
+  app.put('/api/employees/:id', authenticateToken, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      
+      // Check if employee exists
+      const existingEmployee = await storage.getEmployee(req.params.id);
+      if (!existingEmployee) {
+        return res.status(404).json({ message: 'Çalışan bulunamadı' });
+      }
+      
+      // Check access permissions
+      if (user.role !== 'central_admin' && existingEmployee.locationId !== user.locationId) {
+        return res.status(403).json({ message: 'Bu çalışanı güncelleme yetkiniz bulunmamaktadır' });
+      }
+      
+      // Validate request body
+      const validatedData = insertEmployeeSchema.partial().parse(req.body);
+      
+      // If TC Kimlik is being updated, check for duplicates
+      if (validatedData.tcKimlikNo && validatedData.tcKimlikNo !== existingEmployee.tcKimlikNo) {
+        const duplicate = await storage.getEmployeeByTcKimlik(validatedData.tcKimlikNo, existingEmployee.locationId);
+        if (duplicate) {
+          return res.status(400).json({ message: 'Bu TC Kimlik No ile kayıtlı çalışan zaten mevcut' });
+        }
+      }
+      
+      const updatedEmployee = await storage.updateEmployee(req.params.id, validatedData);
+      res.json(updatedEmployee);
+    } catch (error: any) {
+      console.error('Update employee error:', error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: 'Geçersiz veri formatı', errors: error.errors });
+      }
+      res.status(500).json({ message: 'Çalışan güncellenirken hata oluştu: ' + error.message });
+    }
+  });
+
+  // Delete employee
+  app.delete('/api/employees/:id', authenticateToken, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      
+      // Check if employee exists
+      const existingEmployee = await storage.getEmployee(req.params.id);
+      if (!existingEmployee) {
+        return res.status(404).json({ message: 'Çalışan bulunamadı' });
+      }
+      
+      // Check access permissions
+      if (user.role !== 'central_admin' && existingEmployee.locationId !== user.locationId) {
+        return res.status(403).json({ message: 'Bu çalışanı silme yetkiniz bulunmamaktadır' });
+      }
+      
+      const deleted = await storage.deleteEmployee(req.params.id);
+      
+      if (deleted) {
+        res.json({ message: 'Çalışan başarıyla silindi' });
+      } else {
+        res.status(500).json({ message: 'Çalışan silinirken hata oluştu' });
+      }
+    } catch (error: any) {
+      console.error('Delete employee error:', error);
+      res.status(500).json({ message: 'Çalışan silinirken hata oluştu: ' + error.message });
+    }
+  });
+
+  // =======================
+  // MEDICAL EXAMINATIONS ROUTES
+  // =======================
+
+  // Get all medical examinations (location specific)
+  app.get('/api/medical-examinations', authenticateToken, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      const locationId = req.query.locationId as string;
+      
+      // Use location from query or user's location
+      const targetLocationId = locationId || user.locationId;
+      
+      const examinations = await storage.getAllMedicalExaminations(targetLocationId);
+      res.json(examinations);
+    } catch (error: any) {
+      console.error('Get medical examinations error:', error);
+      res.status(500).json({ message: 'Tıbbi muayeneler getirilirken hata oluştu: ' + error.message });
+    }
+  });
+
+  // Get medical examinations for specific employee
+  app.get('/api/employees/:employeeId/medical-examinations', authenticateToken, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      
+      // Check if employee exists and user has access
+      const employee = await storage.getEmployee(req.params.employeeId);
+      if (!employee) {
+        return res.status(404).json({ message: 'Çalışan bulunamadı' });
+      }
+      
+      if (user.role !== 'central_admin' && employee.locationId !== user.locationId) {
+        return res.status(403).json({ message: 'Bu çalışanın muayenelerine erişim yetkiniz bulunmamaktadır' });
+      }
+      
+      const examinations = await storage.getEmployeeMedicalExaminations(req.params.employeeId);
+      res.json(examinations);
+    } catch (error: any) {
+      console.error('Get employee medical examinations error:', error);
+      res.status(500).json({ message: 'Çalışan muayeneleri getirilirken hata oluştu: ' + error.message });
+    }
+  });
+
+  // Get single medical examination
+  app.get('/api/medical-examinations/:id', authenticateToken, async (req: Request, res: Response) => {
+    try {
+      const examination = await storage.getMedicalExamination(req.params.id);
+      
+      if (!examination) {
+        return res.status(404).json({ message: 'Tıbbi muayene bulunamadı' });
+      }
+      
+      res.json(examination);
+    } catch (error: any) {
+      console.error('Get medical examination error:', error);
+      res.status(500).json({ message: 'Tıbbi muayene getirilirken hata oluştu: ' + error.message });
+    }
+  });
+
+  // Create new medical examination
+  app.post('/api/medical-examinations', authenticateToken, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      
+      // Validate request body
+      const validatedData = insertMedicalExaminationSchema.parse(req.body);
+      
+      // Verify employee exists and user has access
+      const employee = await storage.getEmployee(validatedData.employeeId);
+      if (!employee) {
+        return res.status(400).json({ message: 'Geçersiz çalışan ID' });
+      }
+      
+      if (user.role !== 'central_admin' && employee.locationId !== user.locationId) {
+        return res.status(403).json({ message: 'Bu çalışan için muayene oluşturma yetkiniz bulunmamaktadır' });
+      }
+      
+      // Set location and creator
+      validatedData.locationId = employee.locationId;
+      validatedData.createdBy = user.id;
+      
+      const newExamination = await storage.createMedicalExamination(validatedData);
+      res.status(201).json(newExamination);
+    } catch (error: any) {
+      console.error('Create medical examination error:', error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: 'Geçersiz veri formatı', errors: error.errors });
+      }
+      res.status(500).json({ message: 'Tıbbi muayene oluşturulurken hata oluştu: ' + error.message });
+    }
+  });
+
+  // Update medical examination
+  app.put('/api/medical-examinations/:id', authenticateToken, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      
+      // Check if examination exists
+      const existingExamination = await storage.getMedicalExamination(req.params.id);
+      if (!existingExamination) {
+        return res.status(404).json({ message: 'Tıbbi muayene bulunamadı' });
+      }
+      
+      // Check access permissions
+      if (user.role !== 'central_admin' && existingExamination.locationId !== user.locationId) {
+        return res.status(403).json({ message: 'Bu muayeneyi güncelleme yetkiniz bulunmamaktadır' });
+      }
+      
+      // Validate request body
+      const validatedData = insertMedicalExaminationSchema.partial().parse(req.body);
+      
+      const updatedExamination = await storage.updateMedicalExamination(req.params.id, validatedData);
+      res.json(updatedExamination);
+    } catch (error: any) {
+      console.error('Update medical examination error:', error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: 'Geçersiz veri formatı', errors: error.errors });
+      }
+      res.status(500).json({ message: 'Tıbbi muayene güncellenirken hata oluştu: ' + error.message });
+    }
+  });
+
+  // Delete medical examination
+  app.delete('/api/medical-examinations/:id', authenticateToken, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      
+      // Check if examination exists
+      const existingExamination = await storage.getMedicalExamination(req.params.id);
+      if (!existingExamination) {
+        return res.status(404).json({ message: 'Tıbbi muayene bulunamadı' });
+      }
+      
+      // Check access permissions
+      if (user.role !== 'central_admin' && existingExamination.locationId !== user.locationId) {
+        return res.status(403).json({ message: 'Bu muayeneyi silme yetkiniz bulunmamaktadır' });
+      }
+      
+      const deleted = await storage.deleteMedicalExamination(req.params.id);
+      
+      if (deleted) {
+        res.json({ message: 'Tıbbi muayene başarıyla silindi' });
+      } else {
+        res.status(500).json({ message: 'Tıbbi muayene silinirken hata oluştu' });
+      }
+    } catch (error: any) {
+      console.error('Delete medical examination error:', error);
+      res.status(500).json({ message: 'Tıbbi muayene silinirken hata oluştu: ' + error.message });
+    }
+  });
+
+  // =======================
+  // MEDICAL EXAMINATIONS DASHBOARD ROUTES
+  // =======================
+
+  // Get employees needing initial examination
+  app.get('/api/medical-examinations/dashboard/initial', authenticateToken, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      const locationId = req.query.locationId as string || user.locationId;
+      
+      const employees = await storage.getEmployeesNeedingInitialExam(locationId);
+      res.json(employees);
+    } catch (error: any) {
+      console.error('Get employees needing initial exam error:', error);
+      res.status(500).json({ message: 'İlk muayene gereken çalışanlar getirilirken hata oluştu: ' + error.message });
+    }
+  });
+
+  // Get employees needing periodic examination
+  app.get('/api/medical-examinations/dashboard/periodic', authenticateToken, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      const locationId = req.query.locationId as string || user.locationId;
+      const currentMonth = req.query.currentMonth === 'true';
+      
+      const employees = await storage.getEmployeesNeedingPeriodicExam(locationId, currentMonth);
+      res.json(employees);
+    } catch (error: any) {
+      console.error('Get employees needing periodic exam error:', error);
+      res.status(500).json({ message: 'Periyodik muayene gereken çalışanlar getirilirken hata oluştu: ' + error.message });
+    }
+  });
+
+  // Get employees with overdue examinations
+  app.get('/api/medical-examinations/dashboard/overdue', authenticateToken, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      const locationId = req.query.locationId as string || user.locationId;
+      
+      const employees = await storage.getEmployeesWithOverdueExams(locationId);
+      res.json(employees);
+    } catch (error: any) {
+      console.error('Get employees with overdue exams error:', error);
+      res.status(500).json({ message: 'Süresi geçmiş muayeneli çalışanlar getirilirken hata oluştu: ' + error.message });
     }
   });
 
