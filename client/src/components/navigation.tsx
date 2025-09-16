@@ -69,11 +69,42 @@ export default function Navigation({ children }: NavigationProps) {
 
   // Hierarchical navigation structure for specialists
   const getHierarchicalNavigation = (): MainSection[] => {
-    if (!['central_admin', 'safety_specialist', 'occupational_physician'].includes(user?.role || '')) {
+    if (!['central_admin', 'admin', 'safety_specialist', 'occupational_physician'].includes(user?.role || '')) {
       return [];
     }
 
-    return [
+    const sections: MainSection[] = [];
+
+    // Admin-specific section for central_admin/admin users
+    if (['central_admin', 'admin'].includes(user?.role || '')) {
+      sections.push({
+        id: 'admin-management',
+        label: 'Yönetim',
+        icon: Shield,
+        subsections: [
+          {
+            id: 'admin-panel',
+            label: 'Admin Panel',
+            icon: Shield,
+            path: '/admin'
+          },
+          {
+            id: 'inspection-results-admin',
+            label: 'Denetim Sonuçları',
+            icon: CheckSquare,
+            path: '/inspection-results-admin'
+          },
+          {
+            id: 'admin-reports',
+            label: 'Admin Raporları',
+            icon: FileBarChart,
+            path: '/reports?tab=inspection-results'
+          }
+        ]
+      });
+    }
+
+    sections.push(...[
       {
         id: 'safety-management',
         label: 'İş Güvenliği Yönetimi',
@@ -208,7 +239,9 @@ export default function Navigation({ children }: NavigationProps) {
           }
         ]
       }
-    ];
+    ]);
+
+    return sections;
   };
 
   // Flat navigation items for basic users
@@ -220,10 +253,11 @@ export default function Navigation({ children }: NavigationProps) {
     // All authenticated users can view reports
     baseItems.push({ path: "/reports", label: "Raporlar", icon: FileText });
     
-    // Only admin users can access admin panel
+    // Only admin users can access admin panel and inspection results
     if (['central_admin', 'admin'].includes(user?.role || '')) {
       baseItems.push(
-        { path: "/admin", label: "Yönetim Panel", icon: Shield }
+        { path: "/admin", label: "Yönetim Panel", icon: Shield },
+        { path: "/inspection-results-admin", label: "Denetim Sonuçları", icon: CheckSquare }
       );
     }
     
@@ -232,7 +266,7 @@ export default function Navigation({ children }: NavigationProps) {
 
   const hierarchicalNav = getHierarchicalNavigation();
   const flatNavItems = getFlatNavItems();
-  const isSpecialist = ['central_admin', 'safety_specialist', 'occupational_physician'].includes(user?.role || '');
+  const isSpecialist = ['central_admin', 'admin', 'safety_specialist', 'occupational_physician'].includes(user?.role || '');
   
   // Handle section expansion
   const toggleSection = (sectionId: string) => {

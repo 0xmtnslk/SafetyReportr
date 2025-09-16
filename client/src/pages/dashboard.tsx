@@ -429,6 +429,58 @@ export default function Dashboard() {
         </Card>
       </div>
 
+      {/* Admin Quick Access - Only for admin users */}
+      {['central_admin', 'admin'].includes(user?.role || '') && (
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5 text-primary" />
+              Yönetim Paneli - Hızlı Erişim
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <Button
+                onClick={() => setLocation('/admin')}
+                className="h-20 flex flex-col items-center justify-center gap-2"
+                variant="outline"
+                data-testid="dashboard-admin-panel"
+              >
+                <Shield className="h-6 w-6" />
+                <span>Admin Panel</span>
+              </Button>
+              <Button
+                onClick={() => setLocation('/inspection-results-admin')}
+                className="h-20 flex flex-col items-center justify-center gap-2"
+                variant="outline"
+                data-testid="dashboard-inspection-results"
+              >
+                <TrendingUp className="h-6 w-6" />
+                <span>Denetim Sonuçları</span>
+              </Button>
+              <Button
+                onClick={() => setLocation('/reports?tab=inspection-results')}
+                className="h-20 flex flex-col items-center justify-center gap-2"
+                variant="outline"
+                data-testid="dashboard-admin-inspections"
+              >
+                <FileText className="h-6 w-6" />
+                <span>Admin Denetimler</span>
+              </Button>
+              <Button
+                onClick={() => setLocation('/reports')}
+                className="h-20 flex flex-col items-center justify-center gap-2"
+                variant="outline"
+                data-testid="dashboard-all-reports"
+              >
+                <Building2 className="h-6 w-6" />
+                <span>Tüm Raporlar</span>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Reports by Hospital */}
       <Card>
         <CardHeader>
