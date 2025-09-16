@@ -273,7 +273,7 @@ export default function Navigation({ children }: NavigationProps) {
             <div className="bg-primary w-8 h-8 rounded-lg flex items-center justify-center mr-3">
               <HardHat className="text-white" size={16} />
             </div>
-            <span className="text-lg font-bold text-gray-900">İSG Rapor Sistemi</span>
+            <span className="text-lg font-bold text-gray-900">Sağlık, Eminyet Çevre Yönetim Sistemi</span>
           </div>
         </div>
 
@@ -561,7 +561,7 @@ export default function Navigation({ children }: NavigationProps) {
                   <div className="bg-primary w-8 h-8 rounded-lg flex items-center justify-center mr-3">
                     <HardHat className="text-white" size={16} />
                   </div>
-                  <span className="font-bold text-gray-900">İSG Rapor</span>
+                  <span className="font-bold text-gray-900">Sağlık, Eminyet Çevre Yönetim Sistemi</span>
                 </div>
                 <button
                   onClick={() => setIsMobileMenuOpen(false)}
@@ -715,7 +715,7 @@ export default function Navigation({ children }: NavigationProps) {
               <div className="bg-primary w-7 h-7 rounded flex items-center justify-center mr-2">
                 <HardHat className="text-white" size={14} />
               </div>
-              <span className="font-semibold text-gray-900 text-sm">İSG Rapor</span>
+              <span className="font-semibold text-gray-900 text-sm">Sağlık, Eminyet Çevre Yönetim Sistemi</span>
             </div>
           </div>
           
