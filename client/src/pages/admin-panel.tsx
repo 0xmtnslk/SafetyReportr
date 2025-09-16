@@ -749,6 +749,14 @@ export default function AdminPanel() {
               <Building2 className="h-4 w-4" />
               Hastane Yönetimi
             </TabsTrigger>
+            <TabsTrigger value="inspections" className="flex items-center gap-2">
+              <CheckSquare className="h-4 w-4" />
+              Denetim Sonuçları
+            </TabsTrigger>
+            <TabsTrigger value="reports" className="flex items-center gap-2">
+              <FileBarChart className="h-4 w-4" />
+              Admin Raporları
+            </TabsTrigger>
             <TabsTrigger value="migration" className="flex items-center gap-2">
               <Activity className="h-4 w-4" />
               Database Migration
@@ -2116,6 +2124,162 @@ export default function AdminPanel() {
                         Migration işlemi geri alınamaz, lütfen dikkatli olun.
                       </p>
                     </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="inspections" className="space-y-6">
+          {/* Inspection Results Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CheckSquare className="h-5 w-5" />
+                Denetim Sonuçları Yönetimi
+              </CardTitle>
+              <CardDescription>
+                Hastane denetim sonuçlarını görüntüleyin ve yönetin
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Button
+                  onClick={() => setLocation('/reports?tab=inspection-results')}
+                  className="h-20 flex flex-col items-center justify-center gap-2"
+                  variant="outline"
+                  data-testid="button-admin-inspection-results"
+                >
+                  <Eye className="h-6 w-6" />
+                  <span>Denetim Sonuçları Görüntüle</span>
+                </Button>
+                <Button
+                  onClick={() => setLocation('/reports?tab=admin-inspections')}
+                  className="h-20 flex flex-col items-center justify-center gap-2"
+                  variant="outline"
+                  data-testid="button-admin-inspections"
+                >
+                  <FileBarChart className="h-6 w-6" />
+                  <span>Hastane Bazlı Denetimler</span>
+                </Button>
+              </div>
+              <div className="pt-4 border-t">
+                <h4 className="font-medium mb-2">Hızlı Erişim</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <Button
+                    onClick={() => setLocation('/inspection-results-admin')}
+                    variant="ghost"
+                    className="justify-start"
+                    data-testid="button-inspection-results-admin"
+                  >
+                    <TrendingUp className="h-4 w-4 mr-2" />
+                    Admin Denetim Analizi
+                  </Button>
+                  <Button
+                    onClick={() => setLocation('/reports')}
+                    variant="ghost"
+                    className="justify-start"
+                    data-testid="button-all-reports"
+                  >
+                    <FileBarChart className="h-4 w-4 mr-2" />
+                    Tüm Raporlar
+                  </Button>
+                  <Button
+                    onClick={() => setLocation('/dashboard')}
+                    variant="ghost"
+                    className="justify-start"
+                    data-testid="button-dashboard"
+                  >
+                    <Activity className="h-4 w-4 mr-2" />
+                    Dashboard
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="reports" className="space-y-6">
+          {/* Admin Reports Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileBarChart className="h-5 w-5" />
+                Admin Rapor Yönetimi
+              </CardTitle>
+              <CardDescription>
+                Sistem geneli raporları ve analizleri yönetin
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <Button
+                  onClick={() => setLocation('/reports?tab=free-reports')}
+                  className="h-24 flex flex-col items-center justify-center gap-2"
+                  variant="outline"
+                  data-testid="button-free-reports"
+                >
+                  <FileBarChart className="h-6 w-6" />
+                  <span className="text-center">Serbest Raporlar</span>
+                </Button>
+                <Button
+                  onClick={() => setLocation('/reports?tab=checklist-reports')}
+                  className="h-24 flex flex-col items-center justify-center gap-2"
+                  variant="outline"
+                  data-testid="button-checklist-reports"
+                >
+                  <CheckSquare className="h-6 w-6" />
+                  <span className="text-center">Checklist Raporları</span>
+                </Button>
+                <Button
+                  onClick={() => setLocation('/reports?tab=inspection-results')}
+                  className="h-24 flex flex-col items-center justify-center gap-2"
+                  variant="default"
+                  data-testid="button-admin-only-inspections"
+                >
+                  <Shield className="h-6 w-6" />
+                  <span className="text-center">Admin Denetim Sonuçları</span>
+                </Button>
+              </div>
+              <div className="pt-4 border-t">
+                <h4 className="font-medium mb-3">Rapor Kategorileri</h4>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <Users className="h-5 w-5 text-blue-600" />
+                      <div>
+                        <p className="font-medium">Kullanıcı Raporları</p>
+                        <p className="text-sm text-gray-600">Kullanıcı aktiviteleri ve performans</p>
+                      </div>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={() => setLocation('/admin')}>
+                      Görüntüle
+                    </Button>
+                  </div>
+                  <div className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <Building2 className="h-5 w-5 text-green-600" />
+                      <div>
+                        <p className="font-medium">Hastane Raporları</p>
+                        <p className="text-sm text-gray-600">Hastane performansları ve istatistikler</p>
+                      </div>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={() => setLocation('/admin')}>
+                      Görüntüle
+                    </Button>
+                  </div>
+                  <div className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <Activity className="h-5 w-5 text-orange-600" />
+                      <div>
+                        <p className="font-medium">Sistem Raporları</p>
+                        <p className="text-sm text-gray-600">Sistem kullanımı ve performans metrikleri</p>
+                      </div>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={() => setLocation('/dashboard')}>
+                      Görüntüle
+                    </Button>
                   </div>
                 </div>
               </div>
