@@ -100,6 +100,25 @@ export interface IStorage {
   deleteLocation(id: string): Promise<boolean>;
   getUsersByLocationId(locationId: string): Promise<User[]>;
 
+  // Accident operations
+  getAllAccidents(): Promise<Accident[]>;
+  getAccident(id: string): Promise<Accident | undefined>;
+  getAccidentsByLocation(locationId: string): Promise<Accident[]>;
+  getUserAccidents(userId: string): Promise<Accident[]>;
+  createAccident(accident: InsertAccident & { reportedBy: string }): Promise<Accident>;
+  updateAccident(id: string, accident: Partial<InsertAccident>): Promise<Accident>;
+  deleteAccident(id: string): Promise<boolean>;
+  getAccidentsByType(eventType: string): Promise<Accident[]>;
+  getAccidentsByStatus(status: string): Promise<Accident[]>;
+  getAccidentStats(): Promise<{
+    totalAccidents: number;
+    workAccidents: number;
+    nearMisses: number;
+    activeAccidents: number;
+    resolvedAccidents: number;
+    criticalAccidents: number;
+  }>;
+
   // Checklist Template operations
   getAllChecklistTemplates(): Promise<ChecklistTemplate[]>;
   getChecklistTemplate(id: string): Promise<ChecklistTemplate | undefined>;
