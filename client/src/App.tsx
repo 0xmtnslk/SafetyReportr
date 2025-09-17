@@ -50,6 +50,7 @@ import EditRiskAssessmentPage from "@/pages/edit-risk-assessment";
 import ViewRiskAssessmentPage from "@/pages/view-risk-assessment";
 import AnnualPlansPage from "@/pages/annual-plans";
 import EmergencyManagementPage from "@/pages/emergency-management";
+import TeamDetailPage from "@/pages/team-detail";
 import HazardousMaterialsPage from "@/pages/hazardous-materials";
 import AccidentManagementPage from "@/pages/accident-management";
 import IncidentManagementPage from "@/pages/incident-management";
@@ -256,8 +257,8 @@ function Router() {
             <Route path="/emergency-management/hap">
               {() => ['central_admin', 'safety_specialist', 'occupational_physician'].includes(user?.role || '') ? <div className="p-8" data-testid="page-hap-management"><h1 className="text-2xl font-bold" data-testid="title-hap-management">HAP Yönetimi</h1><p data-testid="content-hap-management">Bu sayfa şu anda geliştiriliyor...</p></div> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
             </Route>
-            <Route path="/emergency-management/teams">
-              {() => ['central_admin', 'safety_specialist', 'occupational_physician'].includes(user?.role || '') ? <div className="p-8" data-testid="page-emergency-teams"><h1 className="text-2xl font-bold" data-testid="title-emergency-teams">Acil Durum Ekipleri</h1><p data-testid="content-emergency-teams">Bu sayfa şu anda geliştiriliyor...</p></div> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
+            <Route path="/emergency-management/teams/:teamId">
+              {(params) => ['central_admin', 'safety_specialist', 'occupational_physician'].includes(user?.role || '') ? <TeamDetailPage teamId={params.teamId} /> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
             </Route>
             <Route path="/emergency-management/drills">
               {() => ['central_admin', 'safety_specialist', 'occupational_physician'].includes(user?.role || '') ? <div className="p-8" data-testid="page-drills"><h1 className="text-2xl font-bold" data-testid="title-drills">Tatbikatlar</h1><p data-testid="content-drills">Bu sayfa şu anda geliştiriliyor...</p></div> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}

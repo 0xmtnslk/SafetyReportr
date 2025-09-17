@@ -50,7 +50,8 @@ interface LiveChecklistProps {
   templateId?: string;
 }
 
-export default function LiveChecklist({ templateId }: LiveChecklistProps) {
+export default function LiveChecklist(props: any = {}) {
+  const { templateId } = props;
   const [location, setLocation] = useLocation();
   const { toast } = useToast();
   const { user } = useAuth();
@@ -655,7 +656,6 @@ export default function LiveChecklist({ templateId }: LiveChecklistProps) {
                 </div>
 
                 {/* Image Thumbnails - Compact */}
-                {console.log('🖼️ Rendering thumbnails for question:', question.id, 'Answer:', answer, 'Files:', answer?.files) || null}
                 {answer?.files && answer.files.length > 0 && (
                   <div className="flex flex-wrap gap-1">
                     <div className="text-xs text-gray-500 w-full mb-1">
