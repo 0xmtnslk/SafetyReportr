@@ -2,10 +2,12 @@ import {
   reports, findings, users, offlineQueue, locations, notifications,
   checklistTemplates, checklistSections, checklistQuestions, inspections, inspectionAssignments, inspectionResponses,
   hospitalDepartments, riskCategories, riskSubCategories, riskAssessments, riskImprovements, regulations, hospitalSections,
-  detectionBookEntries, employees, medicalExaminations,
+  detectionBookEntries, employees, medicalExaminations, emergencyTeams, emergencyTeamMembers, accidents,
   type User, type InsertUser, type Report, type InsertReport, type Finding, type InsertFinding, 
   type OfflineQueueItem, type InsertOfflineQueueItem, type Location, type InsertLocation,
   type Employee, type InsertEmployee, type MedicalExamination, type InsertMedicalExamination,
+  type EmergencyTeam, type InsertEmergencyTeam, type EmergencyTeamMember, type InsertEmergencyTeamMember,
+  type Accident, type InsertAccident,
   type ChecklistTemplate, type InsertChecklistTemplate, type ChecklistSection, type InsertChecklistSection,
   type ChecklistQuestion, type InsertChecklistQuestion, 
   type Inspection, type InsertInspection, type InspectionAssignment, type InsertInspectionAssignment,
@@ -14,6 +16,7 @@ import {
   type RiskSubCategory, type InsertRiskSubCategory, type RiskAssessment, type InsertRiskAssessment,
   type RiskImprovement, type InsertRiskImprovement, type Regulation, type InsertRegulation,
   type DetectionBookEntry, type InsertDetectionBookEntry,
+  EMERGENCY_TEAM_TYPES, calculateRequiredTeamMembers,
   calculateQuestionScore, calculateLetterGrade, calculateFineKinneyScore, getFineKinneyRiskLevel
 } from "@shared/schema";
 import { db } from "./db";
@@ -118,6 +121,37 @@ export interface IStorage {
     resolvedAccidents: number;
     criticalAccidents: number;
   }>;
+
+  // Emergency Team operations
+  getAllEmergencyTeams(): Promise<EmergencyTeam[]>;
+  getEmergencyTeam(id: string): Promise<EmergencyTeam | undefined>;
+  getLocationEmergencyTeams(locationId: string): Promise<EmergencyTeam[]>;
+  getTeamsByType(type: string, locationId?: string): Promise<EmergencyTeam[]>;
+  createEmergencyTeam(team: InsertEmergencyTeam & { createdBy: string }): Promise<EmergencyTeam>;
+  updateEmergencyTeam(id: string, team: Partial<InsertEmergencyTeam>): Promise<EmergencyTeam>;
+  deleteEmergencyTeam(id: string): Promise<boolean>;
+
+  // Emergency Team Member operations
+  getAllTeamMembers(): Promise<EmergencyTeamMember[]>;
+  getTeamMembers(teamId: string): Promise<EmergencyTeamMember[]>;
+  getTeamMember(id: string): Promise<EmergencyTeamMember | undefined>;
+  getEmployeeTeamMemberships(employeeId: string): Promise<EmergencyTeamMember[]>;
+  addTeamMember(member: InsertEmergencyTeamMember & { createdBy: string }): Promise<EmergencyTeamMember>;
+  updateTeamMember(id: string, member: Partial<InsertEmergencyTeamMember>): Promise<EmergencyTeamMember>;
+  removeTeamMember(id: string): Promise<boolean>;
+  
+  // Emergency Team Business Rules
+  getTeamRequirements(locationId: string): Promise<{
+    teamType: string;
+    title: string;
+    required: number;
+    current: number;
+    deficit: number;
+    hasRequirement: boolean;
+  }[]>;
+  
+  getLocationEmployeeCount(locationId: string): Promise<number>;
+  getLocationDangerClass(locationId: string): Promise<string | null>;
 
   // Checklist Template operations
   getAllChecklistTemplates(): Promise<ChecklistTemplate[]>;
@@ -2934,6 +2968,211 @@ export class DatabaseStorage implements IStorage {
     }
 
     return results;
+  }
+
+  // Emergency Team operations
+  async getAllEmergencyTeams(): Promise<EmergencyTeam[]> {
+    return await db
+      .select()
+      .from(emergencyTeams)
+      .where(eq(emergencyTeams.isActive, true))
+      .orderBy(desc(emergencyTeams.createdAt));
+  }
+
+  async getEmergencyTeam(id: string): Promise<EmergencyTeam | undefined> {
+    const [team] = await db
+      .select()
+      .from(emergencyTeams)
+      .where(and(eq(emergencyTeams.id, id), eq(emergencyTeams.isActive, true)));
+    return team;
+  }
+
+  async getLocationEmergencyTeams(locationId: string): Promise<EmergencyTeam[]> {
+    return await db
+      .select()
+      .from(emergencyTeams)
+      .where(and(
+        eq(emergencyTeams.locationId, locationId),
+        eq(emergencyTeams.isActive, true)
+      ))
+      .orderBy(emergencyTeams.type);
+  }
+
+  async getTeamsByType(type: string, locationId?: string): Promise<EmergencyTeam[]> {
+    let query = db
+      .select()
+      .from(emergencyTeams)
+      .where(and(
+        eq(emergencyTeams.type, type),
+        eq(emergencyTeams.isActive, true)
+      ));
+
+    if (locationId) {
+      query = query.where(eq(emergencyTeams.locationId, locationId));
+    }
+
+    return await query.orderBy(desc(emergencyTeams.createdAt));
+  }
+
+  async createEmergencyTeam(team: InsertEmergencyTeam & { createdBy: string }): Promise<EmergencyTeam> {
+    const [newTeam] = await db
+      .insert(emergencyTeams)
+      .values({
+        ...team,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      })
+      .returning();
+    return newTeam;
+  }
+
+  async updateEmergencyTeam(id: string, team: Partial<InsertEmergencyTeam>): Promise<EmergencyTeam> {
+    const [updated] = await db
+      .update(emergencyTeams)
+      .set({ ...team, updatedAt: new Date() })
+      .where(eq(emergencyTeams.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteEmergencyTeam(id: string): Promise<boolean> {
+    const result = await db
+      .update(emergencyTeams)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(eq(emergencyTeams.id, id));
+    return result.rowCount > 0;
+  }
+
+  // Emergency Team Member operations
+  async getAllTeamMembers(): Promise<EmergencyTeamMember[]> {
+    return await db
+      .select()
+      .from(emergencyTeamMembers)
+      .orderBy(desc(emergencyTeamMembers.createdAt));
+  }
+
+  async getTeamMembers(teamId: string): Promise<EmergencyTeamMember[]> {
+    return await db
+      .select()
+      .from(emergencyTeamMembers)
+      .where(eq(emergencyTeamMembers.teamId, teamId))
+      .orderBy(emergencyTeamMembers.role, desc(emergencyTeamMembers.createdAt));
+  }
+
+  async getTeamMember(id: string): Promise<EmergencyTeamMember | undefined> {
+    const [member] = await db
+      .select()
+      .from(emergencyTeamMembers)
+      .where(eq(emergencyTeamMembers.id, id));
+    return member;
+  }
+
+  async getEmployeeTeamMemberships(employeeId: string): Promise<EmergencyTeamMember[]> {
+    return await db
+      .select()
+      .from(emergencyTeamMembers)
+      .where(eq(emergencyTeamMembers.employeeId, employeeId));
+  }
+
+  async addTeamMember(member: InsertEmergencyTeamMember & { createdBy: string }): Promise<EmergencyTeamMember> {
+    try {
+      const [newMember] = await db
+        .insert(emergencyTeamMembers)
+        .values({
+          ...member,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        })
+        .returning();
+      return newMember;
+    } catch (error: any) {
+      // Handle unique constraint violation for duplicate memberships
+      if (error?.code === '23505' && error?.constraint === 'emergency_team_members_unique_membership') {
+        throw new Error('Employee is already a member of this team');
+      }
+      throw error;
+    }
+  }
+
+  async updateTeamMember(id: string, member: Partial<InsertEmergencyTeamMember>): Promise<EmergencyTeamMember> {
+    const [updated] = await db
+      .update(emergencyTeamMembers)
+      .set({ ...member, updatedAt: new Date() })
+      .where(eq(emergencyTeamMembers.id, id))
+      .returning();
+    return updated;
+  }
+
+  async removeTeamMember(id: string): Promise<boolean> {
+    const result = await db
+      .delete(emergencyTeamMembers)
+      .where(eq(emergencyTeamMembers.id, id));
+    return result.rowCount > 0;
+  }
+
+  // Emergency Team Business Rules
+  async getTeamRequirements(locationId: string): Promise<{
+    teamType: string;
+    title: string;
+    required: number;
+    current: number;
+    deficit: number;
+    hasRequirement: boolean;
+  }[]> {
+    // Get location info and employee count
+    const location = await this.getLocationById(locationId);
+    const employeeCount = await this.getLocationEmployeeCount(locationId);
+    
+    if (!location?.dangerClass) {
+      throw new Error("Location danger class not found");
+    }
+
+    // Get current team members count by type
+    const teams = await this.getLocationEmergencyTeams(locationId);
+    const teamMemberCounts: Record<string, number> = {};
+
+    for (const team of teams) {
+      const members = await this.getTeamMembers(team.id);
+      teamMemberCounts[team.type] = (teamMemberCounts[team.type] || 0) + members.length;
+    }
+
+    // Calculate requirements for each team type
+    const requirements = EMERGENCY_TEAM_TYPES.map(teamType => {
+      const required = calculateRequiredTeamMembers(
+        teamType.type, 
+        location.dangerClass, 
+        employeeCount
+      );
+      const current = teamMemberCounts[teamType.type] || 0;
+      const deficit = Math.max(0, required - current);
+
+      return {
+        teamType: teamType.type,
+        title: teamType.title,
+        required,
+        current,
+        deficit,
+        hasRequirement: teamType.hasMinimumRequirement || false
+      };
+    });
+
+    return requirements;
+  }
+
+  async getLocationEmployeeCount(locationId: string): Promise<number> {
+    const result = await db
+      .select({ count: sql`count(*)` })
+      .from(employees)
+      .where(and(
+        eq(employees.locationId, locationId),
+        eq(employees.isActive, true)
+      ));
+    return Number(result[0]?.count) || 0;
+  }
+
+  async getLocationDangerClass(locationId: string): Promise<string | null> {
+    const location = await this.getLocationById(locationId);
+    return location?.dangerClass || null;
   }
 }
 
