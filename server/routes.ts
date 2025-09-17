@@ -30,6 +30,9 @@ import {
   insertDetectionBookEntrySchema,
   insertEmployeeSchema,
   insertMedicalExaminationSchema,
+  insertEmergencyTeamSchema,
+  insertEmergencyTeamMemberSchema,
+  EMERGENCY_TEAM_TYPES,
   CHECKLIST_CATEGORIES,
   EVALUATION_OPTIONS,
   FINE_KINNEY_PROBABILITY,
@@ -49,7 +52,56 @@ import sharp from "sharp";
 import path from "path";
 import crypto from "crypto";
 
-const JWT_SECRET = "dev-secret-key";
+const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-key";
+
+// UUID validation schema
+const uuidSchema = z.string().uuid({ message: 'Geçersiz ID formatı' });
+
+// Parameter validation middleware
+const validateUuidParam = (paramName: string) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const value = req.params[paramName];
+    const result = uuidSchema.safeParse(value);
+    if (!result.success) {
+      return res.status(400).json({ message: `Geçersiz ${paramName} formatı` });
+    }
+    next();
+  };
+};
+
+// Multiple UUID parameter validation
+const validateUuidParams = (...paramNames: string[]) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    for (const paramName of paramNames) {
+      const value = req.params[paramName];
+      if (value) {
+        const result = uuidSchema.safeParse(value);
+        if (!result.success) {
+          return res.status(400).json({ message: `Geçersiz ${paramName} formatı` });
+        }
+      }
+    }
+    next();
+  };
+};
+
+// Enhanced location-based access control middleware
+const enforceLocationAccess = (req: Request, res: Response, next: NextFunction) => {
+  const user = (req as any).user;
+  
+  // Central admin has access to everything
+  if (user && user.role === 'central_admin') {
+    return next();
+  }
+  
+  // All other users must have a locationId
+  if (!user?.locationId) {
+    return res.status(403).json({ message: 'Konum erişim yetkisi gerekli' });
+  }
+  
+  (req as any).userLocationId = user.locationId;
+  next();
+};
 
 // Multer setup for image uploads
 const storage_multer = multer.memoryStorage();
@@ -3886,6 +3938,371 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'Süresi geçmiş muayeneli çalışanlar getirilirken hata oluştu: ' + error.message });
     }
   });
+
+  // =======================
+  // EMERGENCY TEAM MANAGEMENT ROUTES
+  // =======================
+
+  // Get all emergency teams (location-filtered)
+  app.get('/api/emergency-teams', authenticateToken, enforceLocationAccess, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      const userLocationId = (req as any).userLocationId;
+
+      let teams;
+      if (user.role === 'central_admin') {
+        teams = await storage.getAllEmergencyTeams();
+      } else {
+        teams = await storage.getLocationEmergencyTeams(userLocationId);
+      }
+
+      res.json(teams);
+    } catch (error: any) {
+      console.error('Get emergency teams error:', error);
+      res.status(500).json({ message: 'Acil durum ekipleri getirilirken hata oluştu: ' + error.message });
+    }
+  });
+
+  // Get teams by type with optional location filter (must come before :id route)
+  app.get('/api/emergency-teams/type/:type', authenticateToken, enforceLocationAccess, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      const userLocationId = (req as any).userLocationId;
+      const teamType = req.params.type;
+
+      // Validate team type against allowed types
+      const validTypes = EMERGENCY_TEAM_TYPES.map(t => t.type);
+      if (!validTypes.includes(teamType)) {
+        return res.status(400).json({ message: 'Geçersiz ekip tipi' });
+      }
+
+      let teams;
+      if (user.role === 'central_admin') {
+        teams = await storage.getTeamsByType(teamType);
+      } else {
+        teams = await storage.getTeamsByType(teamType, userLocationId);
+      }
+
+      res.json(teams);
+    } catch (error: any) {
+      console.error('Get teams by type error:', error);
+      res.status(500).json({ message: 'Ekip tipi getirilirken hata oluştu: ' + error.message });
+    }
+  });
+
+  // Get emergency team types (configuration data) - must come before :id route  
+  app.get('/api/emergency-teams/types', authenticateToken, (req: Request, res: Response) => {
+    res.json(EMERGENCY_TEAM_TYPES);
+  });
+
+  // Get team requirements for location - must come before :id route
+  app.get('/api/emergency-teams/requirements/:locationId', authenticateToken, validateUuidParam('locationId'), enforceLocationAccess, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      const userLocationId = (req as any).userLocationId;
+      const locationId = req.params.locationId;
+
+      // Location-based access control
+      if (user.role !== 'central_admin' && locationId !== userLocationId) {
+        return res.status(403).json({ message: 'Bu konumun ekip gereksinimlerine erişim yetkiniz bulunmamaktadır' });
+      }
+
+      const requirements = await storage.getTeamRequirements(locationId);
+      res.json(requirements);
+    } catch (error: any) {
+      console.error('Get team requirements error:', error);
+      res.status(500).json({ message: 'Ekip gereksinimleri getirilirken hata oluştu: ' + error.message });
+    }
+  });
+
+  // Get emergency team by ID (must come after specific routes)
+  app.get('/api/emergency-teams/:id', authenticateToken, validateUuidParam('id'), enforceLocationAccess, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      const userLocationId = (req as any).userLocationId;
+      const team = await storage.getEmergencyTeam(req.params.id);
+
+      if (!team) {
+        return res.status(404).json({ message: 'Acil durum ekibi bulunamadı' });
+      }
+
+      // Location-based access control
+      if (user.role !== 'central_admin' && team.locationId !== userLocationId) {
+        return res.status(403).json({ message: 'Bu ekibe erişim yetkiniz bulunmamaktadır' });
+      }
+
+      res.json(team);
+    } catch (error: any) {
+      console.error('Get emergency team error:', error);
+      res.status(500).json({ message: 'Acil durum ekibi getirilirken hata oluştu: ' + error.message });
+    }
+  });
+
+  // Create emergency team (Safety Specialists and Admins only)
+  app.post('/api/emergency-teams', authenticateToken, requireSafetySpecialist, enforceLocationAccess, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      const userLocationId = (req as any).userLocationId;
+      const validatedData = insertEmergencyTeamSchema.parse(req.body);
+
+      // Enforce location-based access for non-central admins
+      if (user.role !== 'central_admin') {
+        validatedData.locationId = userLocationId;
+      }
+
+      const newTeam = await storage.createEmergencyTeam({
+        ...validatedData,
+        createdBy: user.id
+      });
+
+      res.status(201).json(newTeam);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: 'Geçersiz veri', errors: error.errors });
+      }
+      console.error('Create emergency team error:', error);
+      res.status(500).json({ message: 'Acil durum ekibi oluşturulurken hata oluştu: ' + error.message });
+    }
+  });
+
+  // Update emergency team (Safety Specialists and Admins only)
+  app.put('/api/emergency-teams/:id', authenticateToken, requireSafetySpecialist, validateUuidParam('id'), enforceLocationAccess, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      const userLocationId = (req as any).userLocationId;
+      const teamId = req.params.id;
+      
+      // Check if team exists and user has access
+      const existingTeam = await storage.getEmergencyTeam(teamId);
+      if (!existingTeam) {
+        return res.status(404).json({ message: 'Acil durum ekibi bulunamadı' });
+      }
+
+      if (user.role !== 'central_admin' && existingTeam.locationId !== userLocationId) {
+        return res.status(403).json({ message: 'Bu ekibi güncelleme yetkiniz bulunmamaktadır' });
+      }
+
+      const validatedData = insertEmergencyTeamSchema.partial().parse(req.body);
+      
+      // Prevent location change for non-central admins
+      if (user.role !== 'central_admin' && validatedData.locationId) {
+        delete validatedData.locationId;
+      }
+
+      const updatedTeam = await storage.updateEmergencyTeam(teamId, validatedData);
+      res.json(updatedTeam);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: 'Geçersiz veri', errors: error.errors });
+      }
+      console.error('Update emergency team error:', error);
+      res.status(500).json({ message: 'Acil durum ekibi güncellenirken hata oluştu: ' + error.message });
+    }
+  });
+
+  // Delete emergency team (Safety Specialists and Admins only)
+  app.delete('/api/emergency-teams/:id', authenticateToken, requireSafetySpecialist, validateUuidParam('id'), enforceLocationAccess, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      const userLocationId = (req as any).userLocationId;
+      const teamId = req.params.id;
+
+      // Check if team exists and user has access
+      const existingTeam = await storage.getEmergencyTeam(teamId);
+      if (!existingTeam) {
+        return res.status(404).json({ message: 'Acil durum ekibi bulunamadı' });
+      }
+
+      if (user.role !== 'central_admin' && existingTeam.locationId !== userLocationId) {
+        return res.status(403).json({ message: 'Bu ekibi silme yetkiniz bulunmamaktadır' });
+      }
+
+      const deleted = await storage.deleteEmergencyTeam(teamId);
+      if (deleted) {
+        res.json({ message: 'Acil durum ekibi başarıyla silindi' });
+      } else {
+        res.status(500).json({ message: 'Acil durum ekibi silinirken hata oluştu' });
+      }
+    } catch (error: any) {
+      console.error('Delete emergency team error:', error);
+      res.status(500).json({ message: 'Acil durum ekibi silinirken hata oluştu: ' + error.message });
+    }
+  });
+
+  // =======================
+  // EMERGENCY TEAM MEMBER ROUTES
+  // =======================
+
+  // Get team members
+  app.get('/api/emergency-teams/:teamId/members', authenticateToken, validateUuidParam('teamId'), enforceLocationAccess, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      const userLocationId = (req as any).userLocationId;
+      const teamId = req.params.teamId;
+
+      // Check team access
+      const team = await storage.getEmergencyTeam(teamId);
+      if (!team) {
+        return res.status(404).json({ message: 'Acil durum ekibi bulunamadı' });
+      }
+
+      if (user.role !== 'central_admin' && team.locationId !== userLocationId) {
+        return res.status(403).json({ message: 'Bu ekip üyelerine erişim yetkiniz bulunmamaktadır' });
+      }
+
+      const members = await storage.getTeamMembers(teamId);
+      res.json(members);
+    } catch (error: any) {
+      console.error('Get team members error:', error);
+      res.status(500).json({ message: 'Ekip üyeleri getirilirken hata oluştu: ' + error.message });
+    }
+  });
+
+  // Add team member (Safety Specialists and Admins only)
+  app.post('/api/emergency-teams/:teamId/members', authenticateToken, requireSafetySpecialist, validateUuidParam('teamId'), enforceLocationAccess, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      const userLocationId = (req as any).userLocationId;
+      const teamId = req.params.teamId;
+
+      // Check team access
+      const team = await storage.getEmergencyTeam(teamId);
+      if (!team) {
+        return res.status(404).json({ message: 'Acil durum ekibi bulunamadı' });
+      }
+
+      if (user.role !== 'central_admin' && team.locationId !== userLocationId) {
+        return res.status(403).json({ message: 'Bu ekibe üye ekleme yetkiniz bulunmamaktadır' });
+      }
+
+      const validatedData = insertEmergencyTeamMemberSchema.parse(req.body);
+      validatedData.teamId = teamId; // Ensure teamId matches route
+
+      const newMember = await storage.addTeamMember({
+        ...validatedData,
+        createdBy: user.id
+      });
+
+      res.status(201).json(newMember);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: 'Geçersiz veri', errors: error.errors });
+      }
+      // Enhanced error mapping for storage-level constraints
+      if (error.message?.includes('already a member') || error.code === '23505' || error.constraint?.includes('unique')) {
+        return res.status(409).json({ message: 'Çalışan zaten bu ekibin üyesi' });
+      }
+      if (error.message?.includes('Employee not found') || error.code === '23503') {
+        return res.status(400).json({ message: 'Geçersiz çalışan ID' });
+      }
+      console.error('Add team member error:', error);
+      res.status(500).json({ message: 'Ekip üyesi eklenirken hata oluştu: ' + error.message });
+    }
+  });
+
+  // Update team member (Safety Specialists and Admins only)
+  app.put('/api/emergency-team-members/:memberId', authenticateToken, requireSafetySpecialist, validateUuidParam('memberId'), enforceLocationAccess, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      const userLocationId = (req as any).userLocationId;
+      const memberId = req.params.memberId;
+
+      // Get member and check team access
+      const member = await storage.getTeamMember(memberId);
+      if (!member) {
+        return res.status(404).json({ message: 'Ekip üyesi bulunamadı' });
+      }
+
+      const team = await storage.getEmergencyTeam(member.teamId);
+      if (!team) {
+        return res.status(404).json({ message: 'Acil durum ekibi bulunamadı' });
+      }
+
+      if (user.role !== 'central_admin' && team.locationId !== userLocationId) {
+        return res.status(403).json({ message: 'Bu ekip üyesini güncelleme yetkiniz bulunmamaktadır' });
+      }
+
+      const validatedData = insertEmergencyTeamMemberSchema.partial().parse(req.body);
+      
+      // Prevent teamId and employeeId changes
+      delete validatedData.teamId;
+      delete validatedData.employeeId;
+
+      const updatedMember = await storage.updateTeamMember(memberId, validatedData);
+      res.json(updatedMember);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: 'Geçersiz veri', errors: error.errors });
+      }
+      console.error('Update team member error:', error);
+      res.status(500).json({ message: 'Ekip üyesi güncellenirken hata oluştu: ' + error.message });
+    }
+  });
+
+  // Remove team member (Safety Specialists and Admins only)
+  app.delete('/api/emergency-team-members/:memberId', authenticateToken, requireSafetySpecialist, validateUuidParam('memberId'), enforceLocationAccess, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      const userLocationId = (req as any).userLocationId;
+      const memberId = req.params.memberId;
+
+      // Get member and check team access
+      const member = await storage.getTeamMember(memberId);
+      if (!member) {
+        return res.status(404).json({ message: 'Ekip üyesi bulunamadı' });
+      }
+
+      const team = await storage.getEmergencyTeam(member.teamId);
+      if (!team) {
+        return res.status(404).json({ message: 'Acil durum ekibi bulunamadı' });
+      }
+
+      if (user.role !== 'central_admin' && team.locationId !== userLocationId) {
+        return res.status(403).json({ message: 'Bu ekip üyesini silme yetkiniz bulunmamaktadır' });
+      }
+
+      const removed = await storage.removeTeamMember(memberId);
+      if (removed) {
+        res.json({ message: 'Ekip üyesi başarıyla silindi' });
+      } else {
+        res.status(500).json({ message: 'Ekip üyesi silinirken hata oluştu' });
+      }
+    } catch (error: any) {
+      console.error('Remove team member error:', error);
+      res.status(500).json({ message: 'Ekip üyesi silinirken hata oluştu: ' + error.message });
+    }
+  });
+
+  // Get employee team memberships
+  app.get('/api/employees/:employeeId/teams', authenticateToken, validateUuidParam('employeeId'), enforceLocationAccess, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      const userLocationId = (req as any).userLocationId;
+      const employeeId = req.params.employeeId;
+
+      // Get employee to check location-based access
+      const employee = await storage.getEmployee(employeeId);
+      if (!employee) {
+        return res.status(404).json({ message: 'Çalışan bulunamadı' });
+      }
+
+      // Location-based access control - non-central admins can only access employees from their location
+      if (user.role !== 'central_admin' && employee.locationId !== userLocationId) {
+        return res.status(403).json({ message: 'Bu çalışanın ekip üyeliklerine erişim yetkiniz bulunmamaktadır' });
+      }
+      
+      const memberships = await storage.getEmployeeTeamMemberships(employeeId);
+      res.json(memberships);
+    } catch (error: any) {
+      console.error('Get employee team memberships error:', error);
+      res.status(500).json({ message: 'Çalışan ekip üyelikleri getirilirken hata oluştu: ' + error.message });
+    }
+  });
+
+  // =======================
+  // EMERGENCY TEAM BUSINESS RULES ROUTES
+  // =======================
+  // Note: Specific routes (types, requirements) are defined before generic :id route above
 
   const httpServer = createServer(app);
   return httpServer;
