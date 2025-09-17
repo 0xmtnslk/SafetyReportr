@@ -78,9 +78,9 @@ export default function Login() {
             <HardHat className="text-2xl text-white" size={32} />
           </div>
           <CardTitle className="text-2xl font-bold text-gray-900 mb-2">
-            İSG Rapor Sistemi
+            Sağlık, Emniyet Çevre Yönetimi
           </CardTitle>
-          <p className="text-gray-600">İş Sağlığı ve Güvenliği Rapor Yönetimi</p>
+          <p className="text-gray-600">Sağlık, Emniyet Çevre Yönetimi</p>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">

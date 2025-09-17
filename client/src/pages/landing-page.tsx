@@ -91,9 +91,9 @@ export default function LandingPage() {
             </Badge>
             
             <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
-              Sağlık, Eminyet Çevre
+              Sağlık, Emniyet Çevre
               <span className="block text-blue-600">
-                Yönetim Sistemi
+                Yönetimi
               </span>
             </h1>
             

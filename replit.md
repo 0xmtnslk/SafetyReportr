@@ -1,8 +1,8 @@
-# ISG Report System
+# Sağlık, Emniyet Çevre Yönetimi
 
 ## Overview
 
-This is a Turkish occupational health and safety (İş Sağlığı ve Güvenliği - İSG) report management system. The application allows users to create, manage, and track workplace safety inspection reports with findings, images, and risk assessments. The system supports offline functionality with automatic synchronization when connectivity is restored.
+This is a Turkish health, safety and environmental management system. The application allows users to create, manage, and track workplace safety inspection reports with findings, images, and risk assessments. The system supports offline functionality with automatic synchronization when connectivity is restored.
 
 ## User Preferences
 

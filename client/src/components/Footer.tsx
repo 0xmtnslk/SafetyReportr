@@ -6,7 +6,7 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
           <div className="flex items-center space-x-2 text-sm text-gray-600">
-            <span>© 2025 Sağlık, Eminyet Çevre Yönetim Sistemi</span>
+            <span>© 2025 Sağlık, Emniyet Çevre Yönetimi</span>
             <span>•</span>
             <span>Tüm hakları saklıdır</span>
           </div>
@@ -19,7 +19,7 @@ export default function Footer() {
         </div>
         
         <div className="mt-4 pt-4 border-t border-gray-100 text-center text-xs text-gray-400">
-          <p>Sağlık, Eminyet Çevre Yönetim Sistemi</p>
+          <p>Sağlık, Emniyet Çevre Yönetimi</p>
           <p className="mt-1">Fine-Kinney Risk Analizi • Kapsamlı Raporlama • Gerçek Zamanlı Takip</p>
         </div>
       </div>
