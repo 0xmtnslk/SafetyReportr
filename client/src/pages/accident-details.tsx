@@ -40,6 +40,58 @@ import {
   getDangerousOptions
 } from "@/constants/complete-accident-data";
 
+// Safe date formatter to prevent runtime errors
+const safeFormatDate = (dateString: string | null | undefined, formatStr: string = 'dd MMMM yyyy'): string => {
+  if (!dateString) return '—';
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '—';
+    return format(date, formatStr, { locale: tr });
+  } catch {
+    return '—';
+  }
+};
+
+// Safe date input formatter for form fields (returns YYYY-MM-DD or empty string)
+const safeDateForInput = (dateString: string | null | undefined): string => {
+  if (!dateString) return '';
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '';
+    return date.toISOString().split('T')[0]; // Convert to YYYY-MM-DD format
+  } catch {
+    return '';
+  }
+};
+
+// Authenticated document download helper
+const downloadDocument = async (recordId: string, documentType: 'sgk-form' | 'analysis-form', fileName: string) => {
+  try {
+    const response = await fetch(`/api/accident-records/${recordId}/documents/${documentType}`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}` || ''
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error('Download failed');
+    }
+    
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  } catch (error) {
+    console.error('Document download failed:', error);
+    // Could show toast error here
+  }
+};
+
 // Form Schema
 const accidentFormSchema = z.object({
   // Basic Event Information
@@ -181,7 +233,7 @@ export default function AccidentDetailsPage() {
       const record = existingRecord;
       
       form.reset({
-        eventDate: record.eventDate ? format(new Date(record.eventDate), 'yyyy-MM-dd') : "",
+        eventDate: safeDateForInput(record.eventDate),
         eventTime: record.eventTime || "",
         eventType: record.eventType || "İş Kazası",
         workShift: record.workShift || "",
@@ -189,7 +241,7 @@ export default function AccidentDetailsPage() {
         eventPlace: record.eventPlace || "",
         personnelNumber: record.employeeRegistrationNumber || "",
         fullName: record.employeeName || "",
-        startWorkDate: record.employeeStartDate ? format(new Date(record.employeeStartDate), 'yyyy-MM-dd') : "",
+        startWorkDate: safeDateForInput(record.employeeStartDate),
         employeeStatus: record.employeeStatus || "",
         professionGroup: record.professionGroup || "",
         department: record.department || "",
@@ -201,7 +253,7 @@ export default function AccidentDetailsPage() {
         dangerousSelection: record.dangerousSelection || "",
         dangerousSelection2: record.dangerousSelection2 || "",
         workDayLoss: record.workDayLoss || 0,
-        additionalTrainingDate: record.additionalTrainingDate ? format(new Date(record.additionalTrainingDate), 'yyyy-MM-dd') : "",
+        additionalTrainingDate: safeDateForInput(record.additionalTrainingDate),
         eventDescription: record.eventDescription || "",
         sgkNotificationFormUrl: record.sgkNotificationFormUrl || "",
         accidentAnalysisFormUrl: record.accidentAnalysisFormUrl || ""
@@ -358,7 +410,7 @@ export default function AccidentDetailsPage() {
                     <span className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-3 py-1 rounded-full font-medium">
                       Rapor ID: {existingRecord.id?.slice(0, 8).toUpperCase()}
                     </span>
-                    <span>Oluşturulma: {existingRecord.createdAt ? format(new Date(existingRecord.createdAt), 'dd MMMM yyyy, HH:mm', { locale: tr }) : ''}</span>
+                    <span>Oluşturulma: {safeFormatDate(existingRecord.createdAt, 'dd MMMM yyyy, HH:mm')}</span>
                   </div>
                 </div>
                 <Button 
@@ -407,7 +459,7 @@ export default function AccidentDetailsPage() {
                       <div>
                         <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Tarih:</span>
                         <p className="text-gray-900 dark:text-white font-medium">
-                          {existingRecord.eventDate ? format(new Date(existingRecord.eventDate), 'dd MMMM yyyy', { locale: tr }) : '—'}
+                          {safeFormatDate(existingRecord.eventDate)}
                         </p>
                       </div>
                       <div>
@@ -450,7 +502,7 @@ export default function AccidentDetailsPage() {
                       <div>
                         <span className="text-sm font-medium text-gray-600 dark:text-gray-400">İşe Başlama Tarihi:</span>
                         <p className="text-gray-900 dark:text-white font-medium">
-                          {existingRecord.employeeStartDate ? format(new Date(existingRecord.employeeStartDate), 'dd MMMM yyyy', { locale: tr }) : '—'}
+                          {safeFormatDate(existingRecord.employeeStartDate)}
                         </p>
                       </div>
                       <div>
@@ -479,8 +531,8 @@ export default function AccidentDetailsPage() {
                   </div>
                 </div>
 
-                {/* 3. Kaza Detayları */}
-                {existingRecord.eventType === "İş Kazası" && (
+                {/* 3. Kaza Detayları veya Ramak Kala Analizi */}
+                {existingRecord.eventType === "İş Kazası" ? (
                   <div>
                     <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4 border-b border-gray-200 dark:border-gray-700 pb-2">
                       3. Kaza Detayları
@@ -508,6 +560,34 @@ export default function AccidentDetailsPage() {
                         <div>
                           <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Kaza Nedeni Türü:</span>
                           <p className="text-gray-900 dark:text-white font-medium">{existingRecord.accidentCauseType || '—'}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4 border-b border-gray-200 dark:border-gray-700 pb-2">
+                      3. Ramak Kala Analizi
+                    </h2>
+                    <div className="grid md:grid-cols-2 gap-6">
+                      <div className="space-y-3">
+                        <div>
+                          <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Tehlikeli Durum:</span>
+                          <p className="text-gray-900 dark:text-white font-medium">{existingRecord.dangerousSelection || '—'}</p>
+                        </div>
+                        <div>
+                          <span className="text-sm font-medium text-gray-600 dark:text-gray-400">İkincil Tehlikeli Durum:</span>
+                          <p className="text-gray-900 dark:text-white font-medium">{existingRecord.dangerousSelection2 || '—'}</p>
+                        </div>
+                      </div>
+                      <div className="space-y-3">
+                        <div>
+                          <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Olası Sonuçlar:</span>
+                          <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-3 border-l-4 border-yellow-500">
+                            <p className="text-yellow-800 dark:text-yellow-200 text-sm">
+                              Bu ramak kala olayının gerçekleşmesi halinde yaralanma veya hasara neden olabilecek potansiyel durumlar analiz edilmiştir.
+                            </p>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -562,7 +642,7 @@ export default function AccidentDetailsPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => window.open(`/api/accident-records/${existingRecord.id}/documents/sgk-form`, '_blank')}
+                          onClick={() => downloadDocument(existingRecord.id!, 'sgk-form', 'SGK_Bildirim_Formu.pdf')}
                           data-testid="button-download-sgk-form"
                         >
                           İndir
@@ -590,7 +670,7 @@ export default function AccidentDetailsPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => window.open(`/api/accident-records/${existingRecord.id}/documents/analysis-form`, '_blank')}
+                          onClick={() => downloadDocument(existingRecord.id!, 'analysis-form', 'Kaza_Analiz_Formu.pdf')}
                           data-testid="button-download-analysis-form"
                         >
                           İndir
@@ -619,7 +699,7 @@ export default function AccidentDetailsPage() {
                         <div>
                           <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Oluşturulma Tarihi:</span>
                           <p className="text-gray-900 dark:text-white font-medium">
-                            {existingRecord.createdAt ? format(new Date(existingRecord.createdAt), 'dd MMMM yyyy, HH:mm', { locale: tr }) : '—'}
+                            {safeFormatDate(existingRecord.createdAt, 'dd MMMM yyyy, HH:mm')}
                           </p>
                         </div>
                       </div>
@@ -628,14 +708,14 @@ export default function AccidentDetailsPage() {
                           <div>
                             <span className="text-sm font-medium text-gray-600 dark:text-gray-400">SGK Bildirim Tarihi:</span>
                             <p className="text-gray-900 dark:text-white font-medium">
-                              {format(new Date(existingRecord.sgkNotificationDate), 'dd MMMM yyyy', { locale: tr })}
+                              {safeFormatDate(existingRecord.sgkNotificationDate)}
                             </p>
                           </div>
                         )}
                         <div>
                           <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Son Güncelleme:</span>
                           <p className="text-gray-900 dark:text-white font-medium">
-                            {existingRecord.updatedAt ? format(new Date(existingRecord.updatedAt), 'dd MMMM yyyy, HH:mm', { locale: tr }) : '—'}
+                            {safeFormatDate(existingRecord.updatedAt, 'dd MMMM yyyy, HH:mm')}
                           </p>
                         </div>
                       </div>
