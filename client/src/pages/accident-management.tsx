@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
@@ -34,6 +35,13 @@ export default function AccidentManagementPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // Delete confirmation dialog state
+  const [deleteDialog, setDeleteDialog] = useState<{isOpen: boolean; recordId: string; recordTitle: string}>({
+    isOpen: false,
+    recordId: "",
+    recordTitle: ""
+  });
   
   // Get current user for role-based permissions
   const { data: currentUser } = useQuery({
@@ -80,9 +88,16 @@ export default function AccidentManagementPage() {
   });
 
   const handleDeleteAccident = (recordId: string, recordTitle: string) => {
-    if (window.confirm(`"${recordTitle}" kaydını silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`)) {
-      deleteAccidentMutation.mutate(recordId);
-    }
+    setDeleteDialog({
+      isOpen: true,
+      recordId,
+      recordTitle
+    });
+  };
+
+  const confirmDelete = () => {
+    deleteAccidentMutation.mutate(deleteDialog.recordId);
+    setDeleteDialog({isOpen: false, recordId: "", recordTitle: ""});
   };
 
   const getSeverityColor = (severity: string) => {
@@ -514,6 +529,35 @@ export default function AccidentManagementPage() {
           </TabsContent>
 
         </Tabs>
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={deleteDialog.isOpen} onOpenChange={(open) => setDeleteDialog({...deleteDialog, isOpen: open})}>
+          <AlertDialogContent className="max-w-md">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2 text-red-600">
+                <Trash2 className="h-5 w-5" />
+                Kaza Kaydını Sil
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-gray-600">
+                <strong>"{deleteDialog.recordTitle}"</strong> kaydını silmek istediğinizden emin misiniz?
+                <br />
+                <br />
+                <span className="text-red-600 font-medium">⚠️ Bu işlem geri alınamaz.</span>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel className="border-gray-300" data-testid="button-cancel-delete">İptal</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={confirmDelete}
+                className="bg-red-600 hover:bg-red-700 text-white"
+                disabled={deleteAccidentMutation.isPending}
+                data-testid="button-confirm-delete"
+              >
+                {deleteAccidentMutation.isPending ? "Siliniyor..." : "Sil"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
-  );
-}
+    );
+  }

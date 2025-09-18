@@ -172,6 +172,12 @@ export default function AccidentDetailsPage() {
     queryKey: ["/api/auth/me"],
     enabled: true
   }) as { data: any };
+  
+  // Get reporter user data (who created the record)
+  const { data: reporterUser } = useQuery({
+    queryKey: ["/api/admin/users", existingRecord?.reportedBy],
+    enabled: !!existingRecord?.reportedBy,
+  });
 
   // Fetch existing accident record if in edit/view mode
   const { data: existingRecord, isLoading: isLoadingRecord } = useQuery({
@@ -717,14 +723,19 @@ export default function AccidentDetailsPage() {
                               </svg>
                             </div>
                             <div>
-                              <p className="font-medium text-gray-900 dark:text-white">{currentUser?.name || existingRecord.reportedBy || '—'}</p>
+                              <p className="font-medium text-gray-900 dark:text-white">{currentUser?.fullName || currentUser?.name || existingRecord.reportedBy || '—'}</p>
                               <p className="text-sm text-gray-600 dark:text-gray-400">
-                                {currentUser?.role === 'central_admin' ? 'Merkez Yönetici' :
-                                 currentUser?.role === 'safety_specialist' ? 'İş Güvenliği Uzmanı' :
-                                 currentUser?.role === 'occupational_physician' ? 'İş Yeri Hekimi' :
-                                 currentUser?.role === 'responsible_manager' ? 'Sorumlu Müdür' :
-                                 currentUser?.role || 'Kullanıcı'}
+                                {currentUser?.safetySpecialistClass || (
+                                  currentUser?.role === 'central_admin' ? 'Merkez Yönetici' :
+                                  currentUser?.role === 'safety_specialist' ? 'İş Güvenliği Uzmanı' :
+                                  currentUser?.role === 'occupational_physician' ? 'İş Yeri Hekimi' :
+                                  currentUser?.role === 'responsible_manager' ? 'Sorumlu Müdür' :
+                                  currentUser?.role || 'Kullanıcı'
+                                )}
                               </p>
+                              {currentUser?.certificateNumber && (
+                                <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">Belge No: {currentUser.certificateNumber}</p>
+                              )}
                               {currentUser?.hospital && (
                                 <p className="text-xs text-gray-500 dark:text-gray-400">{currentUser.hospital}</p>
                               )}
