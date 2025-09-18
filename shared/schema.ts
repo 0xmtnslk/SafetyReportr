@@ -1542,6 +1542,8 @@ export const insertAccidentRecordSchema = createInsertSchema(accidentRecords).om
   eventTime: z.string().min(1, "Event time is required"),
   employeeRegistrationNumber: z.string().min(1, "Employee registration number is required"),
   employeeName: z.string().min(1, "Employee name is required"),
+  sgkNotificationFormUrl: z.string().optional(),
+  accidentAnalysisFormUrl: z.string().optional(),
 });
 
 // Accident Record types

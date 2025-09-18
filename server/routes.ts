@@ -1216,11 +1216,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Serve objects (profiles, logos, and all uploaded files)
+  // Get upload URL for accident documents (SGK forms, analysis forms) with validation
+  app.post("/api/objects/upload/accident-docs", authenticateToken, async (req, res) => {
+    try {
+      const currentUser = (req as any).user;
+      const { contentType, fileName } = req.body;
+      
+      // Check if user has permission to upload accident documents
+      if (!['central_admin', 'safety_specialist', 'occupational_physician'].includes(currentUser.role)) {
+        return res.status(403).json({ error: 'Bu işlem için yetkiniz yok' });
+      }
+      
+      // Server-side file type validation
+      const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
+      if (contentType && !allowedTypes.includes(contentType)) {
+        return res.status(400).json({ error: 'Sadece PDF, JPEG ve PNG dosyaları yüklenebilir' });
+      }
+      
+      // File extension validation as additional security
+      if (fileName) {
+        const extension = fileName.toLowerCase().split('.').pop();
+        const allowedExtensions = ['pdf', 'jpeg', 'jpg', 'png'];
+        if (!allowedExtensions.includes(extension || '')) {
+          return res.status(400).json({ error: 'Geçersiz dosya uzantısı. Sadece PDF, JPEG ve PNG dosyaları desteklenir.' });
+        }
+      }
+      
+      const uploadURL = await objectStorageService.getUploadURL('accident-docs');
+      res.json({ uploadURL });
+    } catch (error: any) {
+      console.error("Error getting accident docs upload URL:", error);
+      res.status(500).json({ error: "Error getting upload URL" });
+    }
+  });
+
+  // Serve objects (profiles, logos, and all uploaded files) - BLOCKING ACCIDENT-DOCS
   app.get("/objects/:objectPath(*)", async (req, res) => {
     try {
       const objectPath = req.params.objectPath;
       console.log('Serving object:', objectPath);
+      
+      // Block public access to accident documents for security
+      if (objectPath.includes('accident-docs/')) {
+        return res.status(403).json({ error: 'Bu dosyalara doğrudan erişim engellendi. Lütfen güvenli indirme linkini kullanın.' });
+      }
       
       // Try to get the file directly from private storage
       const privateObjectDir = process.env.PRIVATE_OBJECT_DIR || '';
@@ -3889,8 +3928,106 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // =======================
-  // ACCIDENT RECORDS ROUTES
+  // SECURE ACCIDENT DOCUMENT ROUTES
   // =======================
+
+  // Secure download route for accident documents
+  app.get('/api/accident-records/:recordId/documents/:documentType', authenticateToken, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      const { recordId, documentType } = req.params;
+      
+      // Validate document type
+      if (!['sgk-form', 'analysis-form'].includes(documentType)) {
+        return res.status(400).json({ error: 'Geçersiz döküman tipi' });
+      }
+      
+      // Get accident record and verify access
+      const record = await storage.getAccidentRecord(recordId);
+      if (!record) {
+        return res.status(404).json({ error: 'Kaza kaydı bulunamadı' });
+      }
+      
+      // Check authorization - user must have access to the location
+      if (user.role !== 'central_admin' && record.locationId !== user.locationId) {
+        return res.status(403).json({ error: 'Bu dosyaya erişim yetkiniz yok' });
+      }
+      
+      // Get document URL from record
+      const documentUrl = documentType === 'sgk-form' 
+        ? record.sgkNotificationFormUrl 
+        : record.accidentAnalysisFormUrl;
+        
+      if (!documentUrl) {
+        return res.status(404).json({ error: 'Döküman bulunamadı' });
+      }
+      
+      // Extract object path from URL for secure serving
+      const urlParts = documentUrl.split('/');
+      const objectPath = urlParts.slice(-2).join('/'); // Get last two parts (bucket/objectname)
+      
+      console.log('Serving secure accident document:', objectPath);
+      
+      // Set secure headers for document download
+      res.set({
+        'Content-Disposition': 'attachment',
+        'Cache-Control': 'private, no-cache',
+        'X-Content-Type-Options': 'nosniff'
+      });
+      
+      // Serve the file through existing object serving logic but with security
+      const { Storage } = require('@google-cloud/storage');
+      const storage = new Storage({
+        credentials: {
+          audience: "replit",
+          subject_token_type: "access_token",
+          token_url: `http://127.0.0.1:1106/token`,
+          type: "external_account",
+          credential_source: {
+            url: `http://127.0.0.1:1106/credential`,
+            format: {
+              type: "json",
+              subject_token_field_name: "access_token",
+            },
+          },
+          universe_domain: "googleapis.com",
+        },
+        projectId: "",
+      });
+      
+      const [bucketName, objectName] = objectPath.split('/', 2);
+      const bucket = storage.bucket(bucketName);
+      const file = bucket.file(objectName);
+
+      const [exists] = await file.exists();
+      if (!exists) {
+        return res.status(404).json({ error: "Dosya bulunamadı" });
+      }
+
+      // Get file metadata and validate content type
+      const [metadata] = await file.getMetadata();
+      const contentType = metadata.contentType;
+      
+      // Only allow safe document types
+      if (!['application/pdf', 'image/jpeg', 'image/png'].includes(contentType)) {
+        return res.status(400).json({ error: 'Güvenlik nedeniyle bu dosya tipi indirilemez' });
+      }
+      
+      res.set('Content-Type', contentType);
+      
+      // Stream the file
+      const stream = file.createReadStream();
+      stream.pipe(res);
+      
+    } catch (error: any) {
+      console.error('Secure document download error:', error);
+      res.status(500).json({ error: 'Dosya indirilemedi' });
+    }
+  });
+
+  // =======================
+  // ACCIDENT RECORDS ROUTES
+  // ======================="
 
   // Get all accident records
   app.get('/api/accident-records', authenticateToken, async (req: Request, res: Response) => {

@@ -101,15 +101,30 @@ export default function AccidentDetailsPage() {
   const [sgkFormUploaded, setSgkFormUploaded] = useState<string>("");
   const [analysisFormUploaded, setAnalysisFormUploaded] = useState<string>("");
 
-  // Function to get upload parameters for documents
-  const getUploadParameters = async (): Promise<{ method: "PUT"; url: string; }> => {
-    const response = await fetch('/api/objects/upload', {
+  // Function to get upload parameters for documents with file validation
+  const getUploadParameters = async (file?: any): Promise<{ method: "PUT"; url: string; }> => {
+    const requestBody: any = {};
+    
+    // Add file information for server-side validation if available
+    if (file) {
+      requestBody.contentType = file.type;
+      requestBody.fileName = file.name;
+    }
+    
+    const response = await fetch('/api/objects/upload/accident-docs', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`,
         'Content-Type': 'application/json'
-      }
+      },
+      body: JSON.stringify(requestBody)
     });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Upload URL alınamadı');
+    }
+    
     const data = await response.json();
     return {
       method: "PUT",
