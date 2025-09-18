@@ -4,7 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import { AlertTriangle, Activity, FileText, TrendingUp, Users, Clock, PlusCircle, Shield, Search } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { AlertTriangle, Activity, FileText, TrendingUp, Users, Clock, PlusCircle, Shield, Search, Eye, Edit, Download } from "lucide-react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { format, isSameMonth } from "date-fns";
@@ -25,7 +26,24 @@ export default function AccidentManagementPage() {
   };
 
   const handleViewAccidentDetails = (recordId: string) => {
-    setLocation(`/accident-details?id=${recordId}`);
+    setLocation(`/accident-details?id=${recordId}&mode=view`);
+  };
+
+  const handleEditAccidentDetails = (recordId: string) => {
+    setLocation(`/accident-details?id=${recordId}&mode=edit`);
+  };
+
+  const getSeverityColor = (severity: string) => {
+    switch (severity) {
+      case "Yüksek Ciddiyet":
+        return "bg-red-100 text-red-800 border-red-200";
+      case "Orta Ciddiyet":
+        return "bg-orange-100 text-orange-800 border-orange-200";
+      case "Düşük Ciddiyet":
+        return "bg-yellow-100 text-yellow-800 border-yellow-200";
+      default:
+        return "bg-gray-100 text-gray-800 border-gray-200";
+    }
   };
 
   // Safe date formatter
@@ -186,209 +204,225 @@ export default function AccidentManagementPage() {
           </TabsList>
 
           <TabsContent value="accidents" className="space-y-4">
-            <div className="space-y-4">
-              {isLoading ? (
-                <div className="text-center py-8">
-                  <p className="text-gray-500">Kayıtlar yüklüyor...</p>
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <AlertTriangle className="h-5 w-5 text-red-600" />
+                      İş Kazaları
+                    </CardTitle>
+                    <CardDescription>
+                      {workAccidents.length} kaza kaydı listeleniyor
+                    </CardDescription>
+                  </div>
                 </div>
-              ) : isError ? (
-                <div className="text-center py-8">
-                  <AlertTriangle className="h-16 w-16 text-red-300 mx-auto mb-4" />
-                  <p className="text-red-500">Kayıtlar yüklenirken hata oluştu. Lütfen sayfayı yenileyin.</p>
-                </div>
-              ) : workAccidents.length === 0 ? (
-                <div className="text-center py-8">
-                  <AlertTriangle className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-500">
-                    {searchTerm ? "Arama kriterlerine uygun iş kazası bulunamadı." : "Henüz iş kazası kaydı bulunmuyor."}
-                  </p>
-                </div>
-              ) : (
-                workAccidents.map((record) => (
-                  <Card key={record.id} data-testid={`card-accident-${record.id}`}>
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2">
-                          <AlertTriangle className="h-5 w-5 text-red-600" />
-                          <CardTitle className="text-lg" data-testid={`text-accident-title-${record.id}`}>
-                            {record.eventDescription || "İş Kazası"}
-                          </CardTitle>
-                        </div>
-                        {record.accidentSeverity && (
-                          <Badge 
-                            variant="outline" 
-                            className={
-                              record.accidentSeverity === "Yüksek Ciddiyet" ? "bg-red-50 text-red-700" :
-                              record.accidentSeverity === "Orta Ciddiyet" ? "bg-orange-50 text-orange-700" :
-                              "bg-yellow-50 text-yellow-700"
-                            }
-                            data-testid={`badge-severity-${record.id}`}
-                          >
-                            {record.accidentSeverity}
-                          </Badge>
-                        )}
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div className="grid md:grid-cols-4 gap-4">
-                        <div>
-                          <span className="text-sm font-medium">Sicil No:</span>
-                          <p className="text-sm text-gray-600" data-testid={`text-registration-${record.id}`}>
-                            {record.employeeRegistrationNumber || "---"}
-                          </p>
-                        </div>
-                        <div>
-                          <span className="text-sm font-medium">Ad-Soyad:</span>
-                          <p className="text-sm text-gray-600" data-testid={`text-employee-name-${record.id}`}>
-                            {record.employeeName || "---"}
-                          </p>
-                        </div>
-                        <div>
-                          <span className="text-sm font-medium">Görev:</span>
-                          <p className="text-sm text-gray-600" data-testid={`text-position-${record.id}`}>
-                            {record.position || "---"}
-                          </p>
-                        </div>
-                        <div>
-                          <span className="text-sm font-medium">Gün Kaybı:</span>
-                          <p className="text-sm text-gray-600" data-testid={`text-work-loss-${record.id}`}>
-                            {record.workDayLoss || 0} gün
-                          </p>
-                        </div>
-                      </div>
-                      <div className="grid md:grid-cols-2 gap-4">
-                        <div>
-                          <span className="text-sm font-medium">Tarih:</span>
-                          <p className="text-sm text-gray-600" data-testid={`text-date-${record.id}`}>
-                            {safeFormatDate(record.eventDate)}
-                          </p>
-                        </div>
-                        <div>
-                          <span className="text-sm font-medium">Alan:</span>
-                          <p className="text-sm text-gray-600" data-testid={`text-area-${record.id}`}>
-                            {record.eventArea || "---"}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={() => handleViewAccidentDetails(record.id)}
-                          data-testid={`button-view-${record.id}`}
-                        >
-                          <FileText className="mr-2 h-4 w-4" />
-                          Detayları Gör
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
-              )}
-            </div>
+              </CardHeader>
+              <CardContent>
+                {isLoading ? (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500">Kayıtlar yüklüyor...</p>
+                  </div>
+                ) : isError ? (
+                  <div className="text-center py-8">
+                    <AlertTriangle className="h-16 w-16 text-red-300 mx-auto mb-4" />
+                    <p className="text-red-500">Kayıtlar yüklenirken hata oluştu. Lütfen sayfayı yenileyin.</p>
+                  </div>
+                ) : workAccidents.length === 0 ? (
+                  <div className="text-center py-8">
+                    <AlertTriangle className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-500">
+                      {searchTerm ? "Arama kriterlerine uygun iş kazası bulunamadı." : "Henüz iş kazası kaydı bulunmuyor."}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Tarih</TableHead>
+                          <TableHead>Sicil No</TableHead>
+                          <TableHead>Ad-Soyad</TableHead>
+                          <TableHead>Görev</TableHead>
+                          <TableHead>Ciddiyet</TableHead>
+                          <TableHead>Gün Kaybı</TableHead>
+                          <TableHead>Alan</TableHead>
+                          <TableHead className="text-right">Eylemler</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {workAccidents.map((record) => (
+                          <TableRow key={record.id} data-testid={`row-accident-${record.id}`} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                            <TableCell data-testid={`cell-date-${record.id}`}>
+                              {safeFormatDate(record.eventDate)}
+                            </TableCell>
+                            <TableCell data-testid={`cell-registration-${record.id}`} className="font-medium">
+                              {record.employeeRegistrationNumber || "---"}
+                            </TableCell>
+                            <TableCell data-testid={`cell-employee-name-${record.id}`}>
+                              {record.employeeName || "---"}
+                            </TableCell>
+                            <TableCell data-testid={`cell-position-${record.id}`}>
+                              {record.position || "---"}
+                            </TableCell>
+                            <TableCell data-testid={`cell-severity-${record.id}`}>
+                              {record.accidentSeverity ? (
+                                <Badge className={getSeverityColor(record.accidentSeverity)}>
+                                  {record.accidentSeverity.replace(" Ciddiyet", "")}
+                                </Badge>
+                              ) : (
+                                "---"
+                              )}
+                            </TableCell>
+                            <TableCell data-testid={`cell-work-loss-${record.id}`}>
+                              <span className={`font-medium ${
+                                Number(record.workDayLoss) > 0 ? 'text-red-600' : 'text-green-600'
+                              }`}>
+                                {record.workDayLoss || 0} gün
+                              </span>
+                            </TableCell>
+                            <TableCell data-testid={`cell-area-${record.id}`}>
+                              {record.eventArea || "---"}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex gap-1 justify-end">
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  onClick={() => handleViewAccidentDetails(record.id)}
+                                  data-testid={`button-view-${record.id}`}
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  onClick={() => handleEditAccidentDetails(record.id)}
+                                  data-testid={`button-edit-${record.id}`}
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="near-miss" className="space-y-4">
-            <div className="space-y-4">
-              {isLoading ? (
-                <div className="text-center py-8">
-                  <p className="text-gray-500">Kayıtlar yüklüyor...</p>
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Activity className="h-5 w-5 text-yellow-600" />
+                      Ramak Kala Olayları
+                    </CardTitle>
+                    <CardDescription>
+                      {nearMisses.length} ramak kala olayı listeleniyor
+                    </CardDescription>
+                  </div>
                 </div>
-              ) : isError ? (
-                <div className="text-center py-8">
-                  <Activity className="h-16 w-16 text-red-300 mx-auto mb-4" />
-                  <p className="text-red-500">Kayıtlar yüklenirken hata oluştu. Lütfen sayfayı yenileyin.</p>
-                </div>
-              ) : nearMisses.length === 0 ? (
-                <div className="text-center py-8">
-                  <Activity className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-500">
-                    {searchTerm ? "Arama kriterlerine uygun ramak kala olayı bulunamadı." : "Henüz ramak kala olayı kaydı bulunmuyor."}
-                  </p>
-                </div>
-              ) : (
-                nearMisses.map((record) => (
-                  <Card key={record.id} data-testid={`card-nearmiss-${record.id}`}>
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2">
-                          <Activity className="h-5 w-5 text-yellow-600" />
-                          <CardTitle className="text-lg" data-testid={`text-nearmiss-title-${record.id}`}>
-                            {record.eventDescription || "Ramak Kala Olayı"}
-                          </CardTitle>
-                        </div>
-                        {record.accidentSeverity && (
-                          <Badge 
-                            variant="outline" 
-                            className={
-                              record.accidentSeverity === "Yüksek Ciddiyet" ? "bg-red-50 text-red-700" :
-                              record.accidentSeverity === "Orta Ciddiyet" ? "bg-orange-50 text-orange-700" :
-                              "bg-yellow-50 text-yellow-700"
-                            }
-                            data-testid={`badge-nearmiss-severity-${record.id}`}
-                          >
-                            {record.accidentSeverity}
-                          </Badge>
-                        )}
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div className="grid md:grid-cols-4 gap-4">
-                        <div>
-                          <span className="text-sm font-medium">Sicil No:</span>
-                          <p className="text-sm text-gray-600" data-testid={`text-nearmiss-registration-${record.id}`}>
-                            {record.employeeRegistrationNumber || "---"}
-                          </p>
-                        </div>
-                        <div>
-                          <span className="text-sm font-medium">Ad-Soyad:</span>
-                          <p className="text-sm text-gray-600" data-testid={`text-nearmiss-employee-name-${record.id}`}>
-                            {record.employeeName || "---"}
-                          </p>
-                        </div>
-                        <div>
-                          <span className="text-sm font-medium">Görev:</span>
-                          <p className="text-sm text-gray-600" data-testid={`text-nearmiss-position-${record.id}`}>
-                            {record.position || "---"}
-                          </p>
-                        </div>
-                        <div>
-                          <span className="text-sm font-medium">Raporlayan:</span>
-                          <p className="text-sm text-gray-600" data-testid={`text-nearmiss-reporter-${record.id}`}>
-                            {record.reportedBy || "---"}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="grid md:grid-cols-2 gap-4">
-                        <div>
-                          <span className="text-sm font-medium">Tarih:</span>
-                          <p className="text-sm text-gray-600" data-testid={`text-nearmiss-date-${record.id}`}>
-                            {safeFormatDate(record.eventDate)}
-                          </p>
-                        </div>
-                        <div>
-                          <span className="text-sm font-medium">Alan:</span>
-                          <p className="text-sm text-gray-600" data-testid={`text-nearmiss-area-${record.id}`}>
-                            {record.eventArea || "---"}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={() => handleViewAccidentDetails(record.id)}
-                          data-testid={`button-nearmiss-view-${record.id}`}
-                        >
-                          <FileText className="mr-2 h-4 w-4" />
-                          Detayları Gör
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
-              )}
-            </div>
+              </CardHeader>
+              <CardContent>
+                {isLoading ? (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500">Kayıtlar yüklüyor...</p>
+                  </div>
+                ) : isError ? (
+                  <div className="text-center py-8">
+                    <Activity className="h-16 w-16 text-red-300 mx-auto mb-4" />
+                    <p className="text-red-500">Kayıtlar yüklenirken hata oluştu. Lütfen sayfayı yenileyin.</p>
+                  </div>
+                ) : nearMisses.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Activity className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-500">
+                      {searchTerm ? "Arama kriterlerine uygun ramak kala olayı bulunamadı." : "Henüz ramak kala olayı kaydı bulunmuyor."}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Tarih</TableHead>
+                          <TableHead>Sicil No</TableHead>
+                          <TableHead>Ad-Soyad</TableHead>
+                          <TableHead>Görev</TableHead>
+                          <TableHead>Ciddiyet</TableHead>
+                          <TableHead>Raporlayan</TableHead>
+                          <TableHead>Alan</TableHead>
+                          <TableHead className="text-right">Eylemler</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {nearMisses.map((record) => (
+                          <TableRow key={record.id} data-testid={`row-nearmiss-${record.id}`} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                            <TableCell data-testid={`cell-nearmiss-date-${record.id}`}>
+                              {safeFormatDate(record.eventDate)}
+                            </TableCell>
+                            <TableCell data-testid={`cell-nearmiss-registration-${record.id}`} className="font-medium">
+                              {record.employeeRegistrationNumber || "---"}
+                            </TableCell>
+                            <TableCell data-testid={`cell-nearmiss-employee-name-${record.id}`}>
+                              {record.employeeName || "---"}
+                            </TableCell>
+                            <TableCell data-testid={`cell-nearmiss-position-${record.id}`}>
+                              {record.position || "---"}
+                            </TableCell>
+                            <TableCell data-testid={`cell-nearmiss-severity-${record.id}`}>
+                              {record.accidentSeverity ? (
+                                <Badge className={getSeverityColor(record.accidentSeverity)}>
+                                  {record.accidentSeverity.replace(" Ciddiyet", "")}
+                                </Badge>
+                              ) : (
+                                "---"
+                              )}
+                            </TableCell>
+                            <TableCell data-testid={`cell-nearmiss-reporter-${record.id}`}>
+                              {record.reportedBy || "---"}
+                            </TableCell>
+                            <TableCell data-testid={`cell-nearmiss-area-${record.id}`}>
+                              {record.eventArea || "---"}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex gap-1 justify-end">
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  onClick={() => handleViewAccidentDetails(record.id)}
+                                  data-testid={`button-nearmiss-view-${record.id}`}
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  onClick={() => handleEditAccidentDetails(record.id)}
+                                  data-testid={`button-nearmiss-edit-${record.id}`}
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
 
         </Tabs>
