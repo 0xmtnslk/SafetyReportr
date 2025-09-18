@@ -50,7 +50,7 @@ import sharp from "sharp";
 import path from "path";
 import crypto from "crypto";
 
-const JWT_SECRET = "dev-secret-key";
+const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-key"; // TODO: Must set JWT_SECRET in production
 
 // Multer setup for image uploads
 const storage_multer = multer.memoryStorage();
@@ -1256,9 +1256,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const objectPath = req.params.objectPath;
       console.log('Serving object:', objectPath);
       
-      // Block public access to accident documents for security
-      if (objectPath.includes('accident-docs/')) {
-        return res.status(403).json({ error: 'Bu dosyalara doğrudan erişim engellendi. Lütfen güvenli indirme linkini kullanın.' });
+      // SECURITY: Block all sensitive document access and prevent directory traversal
+      const normalizedPath = objectPath.toLowerCase().replace(/\.\./g, '').replace(/%2e%2e/g, '');
+      
+      // Block access to sensitive folders completely
+      const blockedPrefixes = ['accident-docs', 'private', 'sensitive', 'admin'];
+      for (const prefix of blockedPrefixes) {
+        if (normalizedPath.includes(prefix)) {
+          return res.status(403).json({ error: 'Bu dosyalara doğrudan erişim engellendi.' });
+        }
+      }
+      
+      // Additional directory traversal protection
+      if (objectPath.includes('..') || objectPath.includes('%2e%2e') || objectPath.includes('~')) {
+        return res.status(403).json({ error: 'Geçersiz dosya yolu.' });
       }
       
       // Try to get the file directly from private storage
