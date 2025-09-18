@@ -6,7 +6,7 @@ import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { useLocation, useSearch } from "wouter";
 import { format, differenceInDays } from "date-fns";
 import { tr } from "date-fns/locale";
-import { Calendar, CalendarDays, Clock } from "lucide-react";
+import { Calendar, CalendarDays, Clock, Eye } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -80,8 +80,8 @@ const canManageRecord = (userRole: string, createdAt: string | null | undefined)
   }
 };
 
-// Authenticated document download helper
-const downloadDocument = async (recordId: string, documentType: 'sgk-form' | 'analysis-form', fileName: string) => {
+// Authenticated document view helper - opens document in new tab with proper auth
+const viewDocument = async (recordId: string, documentType: 'sgk-form' | 'analysis-form') => {
   try {
     const response = await fetch(`/api/accident-records/${recordId}/documents/${documentType}`, {
       headers: {
@@ -90,21 +90,25 @@ const downloadDocument = async (recordId: string, documentType: 'sgk-form' | 'an
     });
     
     if (!response.ok) {
-      throw new Error('Download failed');
+      throw new Error('Document fetch failed');
     }
     
     const blob = await response.blob();
     const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    window.URL.revokeObjectURL(url);
-    document.body.removeChild(a);
+    
+    // Open in new tab for viewing
+    const newWindow = window.open(url, '_blank');
+    
+    // Clean up blob URL after a delay to allow the new window to load
+    setTimeout(() => {
+      window.URL.revokeObjectURL(url);
+    }, 1000);
+    
+    if (!newWindow) {
+      console.error('Popup blocked - please allow popups for this site');
+    }
   } catch (error) {
-    console.error('Document download failed:', error);
-    // Could show toast error here
+    console.error('View document error:', error);
   }
 };
 
@@ -660,10 +664,11 @@ export default function AccidentDetailsPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => downloadDocument(existingRecord.id!, 'sgk-form', 'SGK_Bildirim_Formu.pdf')}
-                          data-testid="button-download-sgk-form"
+                          onClick={() => viewDocument(existingRecord.id!, 'sgk-form')}
+                          data-testid="button-view-sgk-form"
                         >
-                          İndir
+                          <Eye className="h-4 w-4 mr-2" />
+                          Görüntüle
                         </Button>
                       </div>
                     ) : (
@@ -688,10 +693,11 @@ export default function AccidentDetailsPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => downloadDocument(existingRecord.id!, 'analysis-form', 'Kaza_Analiz_Formu.pdf')}
-                          data-testid="button-download-analysis-form"
+                          onClick={() => viewDocument(existingRecord.id!, 'analysis-form')}
+                          data-testid="button-view-analysis-form"
                         >
-                          İndir
+                          <Eye className="h-4 w-4 mr-2" />
+                          Görüntüle
                         </Button>
                       </div>
                     ) : (

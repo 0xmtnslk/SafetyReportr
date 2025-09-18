@@ -3979,16 +3979,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log('Serving secure accident document:', objectPath);
       
-      // Set secure headers for document download
+      // Set secure headers for document viewing (inline display)
       res.set({
-        'Content-Disposition': 'attachment',
+        'Content-Disposition': 'inline',
         'Cache-Control': 'private, no-cache',
         'X-Content-Type-Options': 'nosniff'
       });
       
       // Serve the file through existing object serving logic but with security
       const { Storage } = require('@google-cloud/storage');
-      const storage = new Storage({
+      const gcsStorage = new Storage({
         credentials: {
           audience: "replit",
           subject_token_type: "access_token",
@@ -4007,7 +4007,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       const [bucketName, objectName] = objectPath.split('/', 2);
-      const bucket = storage.bucket(bucketName);
+      const bucket = gcsStorage.bucket(bucketName);
       const file = bucket.file(objectName);
 
       const [exists] = await file.exists();
