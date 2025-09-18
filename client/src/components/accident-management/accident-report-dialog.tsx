@@ -6,6 +6,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format } from "date-fns";
 import { Calendar as CalendarIcon } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -81,11 +84,38 @@ type AccidentReportFormValues = z.infer<typeof accidentReportSchema>;
 
 interface AccidentReportDialogProps {
   children: React.ReactNode;
-  onSubmit: (data: AccidentReportFormValues & { workDurationDays: number }) => void;
+  onSubmit?: (data: AccidentReportFormValues & { workDurationDays: number }) => void;
 }
 
 export function AccidentReportDialog({ children, onSubmit }: AccidentReportDialogProps) {
   const [open, setOpen] = useState(false);
+  const { toast } = useToast();
+  
+  // React Query mutation for creating accident record
+  const createAccidentRecordMutation = useMutation({
+    mutationFn: (data: any) => apiRequest("/api/accident-records", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    }),
+    onSuccess: () => {
+      toast({
+        title: "Başarılı",
+        description: "Kaza kaydı başarıyla oluşturuldu.",
+      });
+      // Invalidate accident records query to refresh the list
+      queryClient.invalidateQueries({ queryKey: ["/api/accident-records"] });
+      setOpen(false);
+      form.reset();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Hata",
+        description: error.message || "Kaza kaydı oluşturulurken bir hata oluştu.",
+        variant: "destructive",
+      });
+    },
+  });
   
   const form = useForm<AccidentReportFormValues>({
     resolver: zodResolver(accidentReportSchema),
@@ -129,9 +159,28 @@ export function AccidentReportDialog({ children, onSubmit }: AccidentReportDialo
 
   const handleSubmit = (data: AccidentReportFormValues) => {
     const workDurationDays = calculateWorkDuration();
-    onSubmit({ ...data, workDurationDays });
-    setOpen(false);
-    form.reset();
+    
+    // Prepare data for the API - locationId will be enforced by backend based on user's location
+    const submitData: any = {
+      ...data,
+      workDurationDays,
+      // Backend will set locationId from user context for security
+      // Convert date objects to ISO strings for the API (schema handles both formats)
+      eventDate: data.eventDate.toISOString(),
+      employeeStartDate: data.employeeStartDate.toISOString(),
+    };
+    
+    // Only include sgkNotificationDate if it has a value (send undefined, not null)
+    if (data.sgkNotificationDate) {
+      submitData.sgkNotificationDate = data.sgkNotificationDate.toISOString();
+    }
+    
+    createAccidentRecordMutation.mutate(submitData);
+    
+    // Also call the onSubmit prop if provided (for backward compatibility)
+    if (onSubmit) {
+      onSubmit({ ...data, workDurationDays });
+    }
   };
 
   const workDurationDays = calculateWorkDuration();
@@ -568,8 +617,12 @@ export function AccidentReportDialog({ children, onSubmit }: AccidentReportDialo
               >
                 İptal
               </Button>
-              <Button type="submit" data-testid="button-submit">
-                Olay Bildir
+              <Button 
+                type="submit" 
+                disabled={createAccidentRecordMutation.isPending}
+                data-testid="button-submit"
+              >
+                {createAccidentRecordMutation.isPending ? "Kaydediliyor..." : "Olay Bildir"}
               </Button>
             </div>
           </form>

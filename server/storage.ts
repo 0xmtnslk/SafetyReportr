@@ -308,6 +308,14 @@ export interface IStorage {
   getEmployeesNeedingInitialExam(locationId: string): Promise<Employee[]>;
   getEmployeesNeedingPeriodicExam(locationId: string, currentMonth?: boolean): Promise<(Employee & { lastExamination?: MedicalExamination; nextExamDate?: Date })[]>;
   getEmployeesWithOverdueExams(locationId: string): Promise<(Employee & { lastExamination?: MedicalExamination; daysPastDue?: number })[]>;
+  
+  // Accident Record operations
+  getAllAccidentRecords(locationId?: string): Promise<AccidentRecord[]>;
+  getAccidentRecord(id: string): Promise<AccidentRecord | undefined>;
+  getUserAccidentRecords(userId: string): Promise<AccidentRecord[]>;
+  createAccidentRecord(record: InsertAccidentRecord & { reportedBy: string }): Promise<AccidentRecord>;
+  updateAccidentRecord(id: string, record: Partial<InsertAccidentRecord>): Promise<AccidentRecord>;
+  deleteAccidentRecord(id: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2916,6 +2924,53 @@ export class DatabaseStorage implements IStorage {
     }
 
     return results;
+  }
+
+  // Accident Record operations
+  async getAllAccidentRecords(locationId?: string): Promise<AccidentRecord[]> {
+    let query = db.select().from(accidentRecords);
+    
+    if (locationId) {
+      query = query.where(eq(accidentRecords.locationId, locationId));
+    }
+    
+    return await query.orderBy(desc(accidentRecords.createdAt));
+  }
+
+  async getAccidentRecord(id: string): Promise<AccidentRecord | undefined> {
+    const [record] = await db.select().from(accidentRecords).where(eq(accidentRecords.id, id));
+    return record;
+  }
+
+  async getUserAccidentRecords(userId: string): Promise<AccidentRecord[]> {
+    return await db.select().from(accidentRecords)
+      .where(eq(accidentRecords.reportedBy, userId))
+      .orderBy(desc(accidentRecords.createdAt));
+  }
+
+  async createAccidentRecord(record: InsertAccidentRecord & { reportedBy: string }): Promise<AccidentRecord> {
+    const [newRecord] = await db
+      .insert(accidentRecords)
+      .values(record)
+      .returning();
+    return newRecord;
+  }
+
+  async updateAccidentRecord(id: string, record: Partial<InsertAccidentRecord>): Promise<AccidentRecord> {
+    const [updatedRecord] = await db
+      .update(accidentRecords)
+      .set({ 
+        ...record, 
+        updatedAt: new Date()
+      })
+      .where(eq(accidentRecords.id, id))
+      .returning();
+    return updatedRecord;
+  }
+
+  async deleteAccidentRecord(id: string): Promise<boolean> {
+    const result = await db.delete(accidentRecords).where(eq(accidentRecords.id, id));
+    return (result.rowCount || 0) > 0;
   }
 }
 

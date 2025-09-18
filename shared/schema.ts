@@ -1516,6 +1516,7 @@ export const insertAccidentRecordSchema = createInsertSchema(accidentRecords).om
   createdAt: true,
   updatedAt: true,
 }).extend({
+  locationId: z.string().uuid().optional(), // Optional - server enforces based on user role
   eventDate: z.string().or(z.date()).transform((val) => new Date(val)),
   employeeStartDate: z.string().or(z.date()).transform((val) => new Date(val)),
   sgkNotificationDate: z.string().or(z.date()).transform((val) => new Date(val)).optional(),

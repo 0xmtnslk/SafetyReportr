@@ -3888,6 +3888,166 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // =======================
+  // ACCIDENT RECORDS ROUTES
+  // =======================
+
+  // Get all accident records
+  app.get('/api/accident-records', authenticateToken, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      const locationId = req.query.locationId as string;
+      
+      let records;
+      
+      if (user.role === 'central_admin') {
+        records = await storage.getAllAccidentRecords(locationId);
+      } else {
+        records = await storage.getAllAccidentRecords(user.locationId);
+      }
+      
+      res.json(records);
+    } catch (error: any) {
+      console.error('Get accident records error:', error);
+      res.status(500).json({ message: 'Kaza kayıtları getirilirken hata oluştu: ' + error.message });
+    }
+  });
+
+  // Get single accident record
+  app.get('/api/accident-records/:id', authenticateToken, async (req: Request, res: Response) => {
+    try {
+      const record = await storage.getAccidentRecord(req.params.id);
+      
+      if (!record) {
+        return res.status(404).json({ message: 'Kaza kaydı bulunamadı' });
+      }
+      
+      const user = (req as any).user;
+      
+      // Check access permissions
+      if (user.role !== 'central_admin' && record.locationId !== user.locationId) {
+        return res.status(403).json({ message: 'Bu kaza kaydını görüntüleme yetkiniz bulunmamaktadır' });
+      }
+      
+      res.json(record);
+    } catch (error: any) {
+      console.error('Get accident record error:', error);
+      res.status(500).json({ message: 'Kaza kaydı getirilirken hata oluştu: ' + error.message });
+    }
+  });
+
+  // Get user's accident records
+  app.get('/api/accident-records/user/:userId', authenticateToken, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      const userId = req.params.userId;
+      
+      // Users can only view their own records unless they're central admin
+      if (user.role !== 'central_admin' && user.id !== userId) {
+        return res.status(403).json({ message: 'Bu kullanıcının kaza kayıtlarını görüntüleme yetkiniz bulunmamaktadır' });
+      }
+      
+      const records = await storage.getUserAccidentRecords(userId);
+      res.json(records);
+    } catch (error: any) {
+      console.error('Get user accident records error:', error);
+      res.status(500).json({ message: 'Kullanıcı kaza kayıtları getirilirken hata oluştu: ' + error.message });
+    }
+  });
+
+  // Create new accident record
+  app.post('/api/accident-records', authenticateToken, requireSafetySpecialist, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      
+      // Validate request body
+      const validatedData = insertAccidentRecordSchema.parse(req.body);
+      
+      // Enforce location security: non-admin users can only create records for their location
+      let locationId = validatedData.locationId;
+      if (user.role !== 'central_admin') {
+        locationId = user.locationId; // Override with user's location for security
+      } else if (!locationId) {
+        return res.status(400).json({ message: 'Central admin must provide locationId' });
+      }
+      
+      // Add reporter information and secure locationId
+      const recordData = {
+        ...validatedData,
+        locationId,
+        reportedBy: user.id
+      };
+      
+      const newRecord = await storage.createAccidentRecord(recordData);
+      res.status(201).json(newRecord);
+    } catch (error: any) {
+      console.error('Create accident record error:', error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: 'Geçersiz veri formatı', errors: error.errors });
+      }
+      res.status(500).json({ message: 'Kaza kaydı oluşturulurken hata oluştu: ' + error.message });
+    }
+  });
+
+  // Update accident record
+  app.put('/api/accident-records/:id', authenticateToken, requireSafetySpecialist, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      
+      // Check if record exists
+      const existingRecord = await storage.getAccidentRecord(req.params.id);
+      if (!existingRecord) {
+        return res.status(404).json({ message: 'Kaza kaydı bulunamadı' });
+      }
+      
+      // Check access permissions
+      if (user.role !== 'central_admin' && existingRecord.locationId !== user.locationId) {
+        return res.status(403).json({ message: 'Bu kaza kaydını güncelleme yetkiniz bulunmamaktadır' });
+      }
+      
+      // Validate request body
+      const validatedData = insertAccidentRecordSchema.partial().parse(req.body);
+      
+      const updatedRecord = await storage.updateAccidentRecord(req.params.id, validatedData);
+      res.json(updatedRecord);
+    } catch (error: any) {
+      console.error('Update accident record error:', error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: 'Geçersiz veri formatı', errors: error.errors });
+      }
+      res.status(500).json({ message: 'Kaza kaydı güncellenirken hata oluştu: ' + error.message });
+    }
+  });
+
+  // Delete accident record
+  app.delete('/api/accident-records/:id', authenticateToken, requireSafetySpecialist, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      
+      // Check if record exists
+      const existingRecord = await storage.getAccidentRecord(req.params.id);
+      if (!existingRecord) {
+        return res.status(404).json({ message: 'Kaza kaydı bulunamadı' });
+      }
+      
+      // Check access permissions
+      if (user.role !== 'central_admin' && existingRecord.locationId !== user.locationId) {
+        return res.status(403).json({ message: 'Bu kaza kaydını silme yetkiniz bulunmamaktadır' });
+      }
+      
+      const deleted = await storage.deleteAccidentRecord(req.params.id);
+      
+      if (deleted) {
+        res.json({ message: 'Kaza kaydı başarıyla silindi' });
+      } else {
+        res.status(500).json({ message: 'Kaza kaydı silinirken hata oluştu' });
+      }
+    } catch (error: any) {
+      console.error('Delete accident record error:', error);
+      res.status(500).json({ message: 'Kaza kaydı silinirken hata oluştu: ' + error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
