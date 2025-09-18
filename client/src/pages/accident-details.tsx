@@ -19,6 +19,7 @@ import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { ObjectUploader } from "@/components/ObjectUploader";
 
 import {
   WORK_SHIFTS,
@@ -74,7 +75,11 @@ const accidentFormSchema = z.object({
   additionalTrainingDate: z.string().optional(),
   
   // Description
-  eventDescription: z.string().min(10, "Olay açıklaması en az 10 karakter olmalıdır")
+  eventDescription: z.string().min(10, "Olay açıklaması en az 10 karakter olmalıdır"),
+
+  // Document URLs
+  sgkNotificationFormUrl: z.string().optional(),
+  accidentAnalysisFormUrl: z.string().optional()
 });
 
 type AccidentFormData = z.infer<typeof accidentFormSchema>;
@@ -90,7 +95,27 @@ export default function AccidentDetailsPage() {
   const { data: currentUser } = useQuery({
     queryKey: ["/api/auth/me"],
     enabled: true
-  });
+  }) as { data: any };
+
+  // Document upload state
+  const [sgkFormUploaded, setSgkFormUploaded] = useState<string>("");
+  const [analysisFormUploaded, setAnalysisFormUploaded] = useState<string>("");
+
+  // Function to get upload parameters for documents
+  const getUploadParameters = async (): Promise<{ method: "PUT"; url: string; }> => {
+    const response = await fetch('/api/objects/upload', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    const data = await response.json();
+    return {
+      method: "PUT",
+      url: data.uploadURL || ""
+    };
+  };
 
   const form = useForm<AccidentFormData>({
     resolver: zodResolver(accidentFormSchema),
@@ -115,7 +140,9 @@ export default function AccidentDetailsPage() {
       dangerousSelection: "",
       dangerousSelection2: "",
       workDayLoss: 0,
-      eventDescription: ""
+      eventDescription: "",
+      sgkNotificationFormUrl: "",
+      accidentAnalysisFormUrl: ""
     }
   });
 
@@ -941,6 +968,80 @@ export default function AccidentDetailsPage() {
                   </FormItem>
                 )}
               />
+            </CardContent>
+          </Card>
+
+          {/* Document Upload Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Gerekli Belgeler</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* SGK Notification Form */}
+              <div className="space-y-2">
+                <FormLabel>SGK Bildirim Formu (PDF, JPEG, PNG)</FormLabel>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+                  <ObjectUploader
+                    maxNumberOfFiles={1}
+                    maxFileSize={10485760} // 10MB
+                    allowedFileTypes={['application/pdf', 'image/jpeg', 'image/png', 'image/jpg', '.pdf', '.jpeg', '.jpg', '.png']}
+                    onGetUploadParameters={getUploadParameters}
+                    onComplete={(result) => {
+                      if (result.successful && result.successful.length > 0) {
+                        const uploadedFile = result.successful[0];
+                        const fileUrl = uploadedFile.uploadURL || "";
+                        setSgkFormUploaded(fileUrl);
+                        form.setValue('sgkNotificationFormUrl', fileUrl);
+                      }
+                    }}
+                    buttonClassName="w-full"
+                  >
+                    <div className="text-center">
+                      <div className="text-sm text-gray-600">
+                        {sgkFormUploaded ? 
+                          '✅ SGK formu yüklendi' : 
+                          'SGK Bildirim Formunu yükleyin (PDF, JPEG, PNG)'
+                        }
+                      </div>
+                    </div>
+                  </ObjectUploader>
+                </div>
+              </div>
+
+              {/* Accident Analysis Form */}
+              <div className="space-y-2">
+                <FormLabel>İş Kazası / Ramak Kala Analiz Formu (PDF, JPEG, PNG)</FormLabel>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+                  <ObjectUploader
+                    maxNumberOfFiles={1}
+                    maxFileSize={10485760} // 10MB
+                    allowedFileTypes={['application/pdf', 'image/jpeg', 'image/png', 'image/jpg', '.pdf', '.jpeg', '.jpg', '.png']}
+                    onGetUploadParameters={getUploadParameters}
+                    onComplete={(result) => {
+                      if (result.successful && result.successful.length > 0) {
+                        const uploadedFile = result.successful[0];
+                        const fileUrl = uploadedFile.uploadURL || "";
+                        setAnalysisFormUploaded(fileUrl);
+                        form.setValue('accidentAnalysisFormUrl', fileUrl);
+                      }
+                    }}
+                    buttonClassName="w-full"
+                  >
+                    <div className="text-center">
+                      <div className="text-sm text-gray-600">
+                        {analysisFormUploaded ? 
+                          '✅ Analiz formu yüklendi' : 
+                          'Analiz Formunu yükleyin (PDF, JPEG, PNG)'
+                        }
+                      </div>
+                    </div>
+                  </ObjectUploader>
+                </div>
+              </div>
+
+              <div className="text-xs text-gray-500 bg-blue-50 p-3 rounded">
+                <strong>Bilgi:</strong> Bu belgeler sisteme kaydedilecektir. Lütfen dosyalarınızı PDF, JPEG veya PNG formatında ve maksimum 10MB boyutunda olduğundan emin olun.
+              </div>
             </CardContent>
           </Card>
 

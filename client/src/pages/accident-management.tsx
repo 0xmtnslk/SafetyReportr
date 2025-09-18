@@ -19,7 +19,7 @@ export default function AccidentManagementPage() {
   const { data: accidentRecords = [], isLoading, isError } = useQuery({
     queryKey: ["/api/accident-records"],
     enabled: true
-  });
+  }) as { data: any[], isLoading: boolean, isError: boolean };
 
   const handleNewAccidentReport = () => {
     setLocation("/accident-details");
@@ -59,7 +59,7 @@ export default function AccidentManagementPage() {
   };
 
   // Filter and separate records by type
-  const filterRecords = (records: any[], eventType: string) => {
+  const filterRecords = (records: any[], eventType: string): any[] => {
     return records
       .filter(record => record.eventType === eventType)
       .filter(record => {
@@ -76,10 +76,10 @@ export default function AccidentManagementPage() {
 
   // Calculate stats - independent of search
   const currentDate = new Date();
-  const allWorkAccidents = accidentRecords.filter(record => record.eventType === "İş Kazası");
-  const allNearMisses = accidentRecords.filter(record => record.eventType === "Ramak Kala");
+  const allWorkAccidents = (accidentRecords as any[]).filter((record: any) => record.eventType === "İş Kazası");
+  const allNearMisses = (accidentRecords as any[]).filter((record: any) => record.eventType === "Ramak Kala");
   
-  const thisMonthAccidents = allWorkAccidents.filter(record => {
+  const thisMonthAccidents = allWorkAccidents.filter((record: any) => {
     if (!record.eventDate) return false;
     try {
       return isSameMonth(new Date(record.eventDate), currentDate);
@@ -88,7 +88,7 @@ export default function AccidentManagementPage() {
     }
   }).length;
   
-  const thisMonthNearMisses = allNearMisses.filter(record => {
+  const thisMonthNearMisses = allNearMisses.filter((record: any) => {
     if (!record.eventDate) return false;
     try {
       return isSameMonth(new Date(record.eventDate), currentDate);
@@ -97,7 +97,7 @@ export default function AccidentManagementPage() {
     }
   }).length;
   
-  const totalWorkDayLoss = allWorkAccidents.reduce((sum, record) => sum + Number(record.workDayLoss || 0), 0);
+  const totalWorkDayLoss = allWorkAccidents.reduce((sum: number, record: any) => sum + Number(record.workDayLoss || 0), 0);
 
   // Apply search filters for display
   const workAccidents = filterRecords(accidentRecords, "İş Kazası");
@@ -213,7 +213,7 @@ export default function AccidentManagementPage() {
                       İş Kazaları
                     </CardTitle>
                     <CardDescription>
-                      {workAccidents.length} kaza kaydı listeleniyor
+                      {(accidentRecords as any[]).filter((r: any) => r.eventType === "İş Kazası").length} kaza kaydı listeleniyor
                     </CardDescription>
                   </div>
                 </div>

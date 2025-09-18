@@ -483,6 +483,10 @@ export const accidentRecords = pgTable("accident_records", {
   // Event Description
   eventDescription: text("event_description").notNull(), // Olay Açıklaması
   
+  // Document Fields
+  sgkNotificationFormUrl: text("sgk_notification_form_url"), // SGK Bildirim Formu (PDF, JPEG, PNG)
+  accidentAnalysisFormUrl: text("accident_analysis_form_url"), // İş Kazası/Ramak Kala Analiz Formu (PDF, JPEG, PNG)
+  
   // System fields
   reportedBy: varchar("reported_by").references(() => users.id).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
