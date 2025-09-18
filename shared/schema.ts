@@ -1534,6 +1534,7 @@ export const insertAccidentRecordSchema = createInsertSchema(accidentRecords).om
   eventDate: z.string().or(z.date()).transform((val) => new Date(val)),
   employeeStartDate: z.string().or(z.date()).transform((val) => new Date(val)),
   sgkNotificationDate: z.string().or(z.date()).transform((val) => new Date(val)).optional(),
+  additionalTrainingDate: z.string().or(z.date()).transform((val) => new Date(val)).optional(),
   eventTime: z.string().min(1, "Event time is required"),
   employeeRegistrationNumber: z.string().min(1, "Employee registration number is required"),
   employeeName: z.string().min(1, "Employee name is required"),

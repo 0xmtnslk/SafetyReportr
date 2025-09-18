@@ -173,10 +173,10 @@ export default function AccidentDetailsPage() {
         personnelNumber: undefined,
         fullName: undefined,
         startWorkDate: undefined,
-        // Handle dates properly
+        // Handle dates properly - only send non-empty dates
         eventDate: data.eventDate,
-        sgkNotificationDate: data.sgkNotificationDate || undefined,
-        additionalTrainingDate: data.additionalTrainingDate || undefined
+        sgkNotificationDate: data.sgkNotificationDate && data.sgkNotificationDate.trim() ? data.sgkNotificationDate : undefined,
+        additionalTrainingDate: data.additionalTrainingDate && data.additionalTrainingDate.trim() ? data.additionalTrainingDate : undefined
       };
       
       return apiRequest("POST", "/api/accident-records", payload);
