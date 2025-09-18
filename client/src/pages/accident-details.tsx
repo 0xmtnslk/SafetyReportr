@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { format, differenceInDays } from "date-fns";
 import { tr } from "date-fns/locale";
 import { Calendar, CalendarDays, Clock } from "lucide-react";
@@ -86,16 +86,30 @@ type AccidentFormData = z.infer<typeof accidentFormSchema>;
 
 export default function AccidentDetailsPage() {
   const [location, setLocation] = useLocation();
+  const searchString = useSearch();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedArea, setSelectedArea] = useState<string>("");
   const [selectedCauseType, setSelectedCauseType] = useState<string>("");
+
+  // Parse URL parameters
+  const urlParams = new URLSearchParams(searchString);
+  const recordId = urlParams.get('id');
+  const mode = urlParams.get('mode') || 'create'; // create, edit, view
+  const isEditMode = mode === 'edit';
+  const isViewMode = mode === 'view';
 
   // Get current user information for hospital context
   const { data: currentUser } = useQuery({
     queryKey: ["/api/auth/me"],
     enabled: true
   }) as { data: any };
+
+  // Fetch existing accident record if in edit/view mode
+  const { data: existingRecord, isLoading: isLoadingRecord } = useQuery({
+    queryKey: ["/api/accident-records", recordId],
+    enabled: !!recordId && (isEditMode || isViewMode)
+  }) as { data: any, isLoading: boolean };
 
   // Document upload state
   const [sgkFormUploaded, setSgkFormUploaded] = useState<string>("");
@@ -160,6 +174,48 @@ export default function AccidentDetailsPage() {
       accidentAnalysisFormUrl: ""
     }
   });
+
+  // Populate form with existing record data
+  useEffect(() => {
+    if (existingRecord && (isEditMode || isViewMode)) {
+      const record = existingRecord;
+      
+      form.reset({
+        eventDate: record.eventDate ? format(new Date(record.eventDate), 'yyyy-MM-dd') : "",
+        eventTime: record.eventTime || "",
+        eventType: record.eventType || "İş Kazası",
+        workShift: record.workShift || "",
+        eventArea: record.eventArea || "",
+        eventPlace: record.eventPlace || "",
+        personnelNumber: record.employeeRegistrationNumber || "",
+        fullName: record.employeeName || "",
+        startWorkDate: record.employeeStartDate ? format(new Date(record.employeeStartDate), 'yyyy-MM-dd') : "",
+        employeeStatus: record.employeeStatus || "",
+        professionGroup: record.professionGroup || "",
+        department: record.department || "",
+        position: record.position || "",
+        accidentSeverity: record.accidentSeverity || "",
+        injuredBodyPart: record.injuredBodyPart || "",
+        causingEquipment: record.causingEquipment || "",
+        accidentCauseType: record.accidentCauseType || "",
+        dangerousSelection: record.dangerousSelection || "",
+        dangerousSelection2: record.dangerousSelection2 || "",
+        workDayLoss: record.workDayLoss || 0,
+        additionalTrainingDate: record.additionalTrainingDate ? format(new Date(record.additionalTrainingDate), 'yyyy-MM-dd') : "",
+        eventDescription: record.eventDescription || "",
+        sgkNotificationFormUrl: record.sgkNotificationFormUrl || "",
+        accidentAnalysisFormUrl: record.accidentAnalysisFormUrl || ""
+      });
+      
+      // Set document upload states
+      setSgkFormUploaded(record.sgkNotificationFormUrl || "");
+      setAnalysisFormUploaded(record.accidentAnalysisFormUrl || "");
+      
+      // Set dependent field states
+      setSelectedArea(record.eventArea || "");
+      setSelectedCauseType(record.accidentCauseType || "");
+    }
+  }, [existingRecord, isEditMode, isViewMode, form]);
 
   // Calculate working days when dates change
   const watchEventDate = form.watch("eventDate");
@@ -241,7 +297,16 @@ export default function AccidentDetailsPage() {
   });
 
   const onSubmit = (data: AccidentFormData) => {
-    createAccidentMutation.mutate(data);
+    if (isEditMode) {
+      // TODO: Implement update mutation
+      toast({
+        title: "Geliştirme Aşamasında",
+        description: "Düzenleme özelliği yakında eklenecek.",
+        variant: "destructive",
+      });
+    } else {
+      createAccidentMutation.mutate(data);
+    }
   };
 
   const watchEventType = form.watch("eventType");
@@ -257,12 +322,38 @@ export default function AccidentDetailsPage() {
     form.setValue(fieldName as any, value);
   };
 
+  // Loading state for fetching existing record
+  if (isLoadingRecord && recordId) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Kaza kaydı yükleniyor...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Get page title based on mode
+  const getPageTitle = () => {
+    if (isViewMode) return "Kaza / Ramak Kala Kaydı - Görüntüle";
+    if (isEditMode) return "Kaza / Ramak Kala Kaydı - Düzenle";
+    return "Yeni Kaza / Ramak Kala Kaydı";
+  };
+
   return (
     <div className="container mx-auto p-6 max-w-4xl">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold" data-testid="title-accident-details">
-          Olay Bildir - {watchEventType} Formu
+          {getPageTitle()}
         </h1>
+        {(isEditMode || isViewMode) && existingRecord && (
+          <div className="text-sm text-gray-600 dark:text-gray-400">
+            <span className="bg-blue-100 dark:bg-blue-900 px-3 py-1 rounded-full">
+              ID: {existingRecord.id?.slice(0, 8)}...
+            </span>
+          </div>
+        )}
         <Button 
           variant="outline" 
           onClick={() => setLocation("/accident-management")}
@@ -318,6 +409,7 @@ export default function AccidentDetailsPage() {
                             type="date"
                             {...field}
                             className="flex-1"
+                            disabled={isViewMode}
                             data-testid="input-event-date"
                           />
                         </FormControl>
@@ -1095,15 +1187,22 @@ export default function AccidentDetailsPage() {
               onClick={() => setLocation("/accident-management")}
               data-testid="button-cancel"
             >
-              İptal
+              {isViewMode ? "Geri Dön" : "İptal"}
             </Button>
-            <Button 
-              type="submit" 
-              disabled={createAccidentMutation.isPending}
-              data-testid="button-submit-accident"
-            >
-              {createAccidentMutation.isPending ? "Kaydediliyor..." : "Kaydet"}
-            </Button>
+            {!isViewMode && (
+              <Button 
+                type="submit" 
+                disabled={createAccidentMutation.isPending}
+                data-testid="button-submit-accident"
+              >
+                {createAccidentMutation.isPending 
+                  ? "Kaydediliyor..." 
+                  : isEditMode 
+                    ? "Güncelle" 
+                    : "Kaydet"
+                }
+              </Button>
+            )}
           </div>
         </form>
       </Form>
