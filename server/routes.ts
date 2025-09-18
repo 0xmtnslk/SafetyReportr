@@ -30,6 +30,7 @@ import {
   insertDetectionBookEntrySchema,
   insertEmployeeSchema,
   insertMedicalExaminationSchema,
+  insertAccidentRecordSchema,
   CHECKLIST_CATEGORIES,
   EVALUATION_OPTIONS,
   FINE_KINNEY_PROBABILITY,

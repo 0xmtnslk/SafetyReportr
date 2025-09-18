@@ -3,8 +3,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertTriangle, Activity, FileText, TrendingUp, Users, Clock, PlusCircle, Shield } from "lucide-react";
+import { AccidentReportDialog } from "@/components/accident-management/accident-report-dialog";
 
 export default function AccidentManagementPage() {
+  const handleAccidentReport = (data: any) => {
+    console.log("Accident Report Data:", data);
+    // Here we'll add the API call to submit the accident report
+  };
+
   return (
       <div className="container mx-auto p-6 space-y-6">
         {/* Header */}
@@ -17,10 +23,12 @@ export default function AccidentManagementPage() {
               İş kazalarının ve ramak kala olaylarının yönetimi
             </p>
           </div>
-          <Button>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Yeni Olay Bildir
-          </Button>
+          <AccidentReportDialog onSubmit={handleAccidentReport}>
+            <Button data-testid="button-new-report">
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Yeni Olay Bildir
+            </Button>
+          </AccidentReportDialog>
         </div>
 
         {/* Quick Stats */}
