@@ -27,12 +27,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { HybridDateInput } from "@/components/ui/hybrid-date-input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { cn } from "@/lib/utils";
 
@@ -204,40 +199,19 @@ export function AccidentReportDialog({ children, onSubmit }: AccidentReportDialo
                   control={form.control}
                   name="eventDate"
                   render={({ field }) => (
-                    <FormItem className="flex flex-col">
+                    <FormItem>
                       <FormLabel>Olayın Gerçekleştiği Tarih*</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant="outline"
-                              className={cn(
-                                "w-full pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground"
-                              )}
-                              data-testid="input-event-date"
-                            >
-                              {field.value ? (
-                                format(field.value, "dd/MM/yyyy")
-                              ) : (
-                                <span>Tarih seçiniz</span>
-                              )}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            disabled={(date) =>
-                              date > new Date() || date < new Date("1900-01-01")
-                            }
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
+                      <FormControl>
+                        <HybridDateInput
+                          value={field.value}
+                          onChange={field.onChange}
+                          placeholder="GG/AA/YYYY - Olay tarihini giriniz"
+                          maxDate={new Date()}
+                          minDate={new Date("1900-01-01")}
+                          required
+                          data-testid="input-event-date"
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -369,40 +343,18 @@ export function AccidentReportDialog({ children, onSubmit }: AccidentReportDialo
                 control={form.control}
                 name="sgkNotificationDate"
                 render={({ field }) => (
-                  <FormItem className="flex flex-col">
+                  <FormItem>
                     <FormLabel>SGK'ya Bildirim Tarihi</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "w-full pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                            data-testid="input-sgk-date"
-                          >
-                            {field.value ? (
-                              format(field.value, "dd/MM/yyyy")
-                            ) : (
-                              <span>Tarih seçiniz (opsiyonel)</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={(date) =>
-                            date > new Date() || date < new Date("1900-01-01")
-                          }
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
+                    <FormControl>
+                      <HybridDateInput
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder="GG/AA/YYYY - SGK bildirim tarihi (opsiyonel)"
+                        maxDate={new Date()}
+                        minDate={new Date("1900-01-01")}
+                        data-testid="input-sgk-date"
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -457,38 +409,19 @@ export function AccidentReportDialog({ children, onSubmit }: AccidentReportDialo
                   control={form.control}
                   name="employeeStartDate"
                   render={({ field }) => (
-                    <FormItem className="flex flex-col">
+                    <FormItem>
                       <FormLabel>İşe Başlama Tarihi*</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant="outline"
-                              className={cn(
-                                "w-full pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground"
-                              )}
-                              data-testid="input-employee-start-date"
-                            >
-                              {field.value ? (
-                                format(field.value, "dd/MM/yyyy")
-                              ) : (
-                                <span>Tarih seçiniz</span>
-                              )}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            disabled={(date) => date > new Date()}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
+                      <FormControl>
+                        <HybridDateInput
+                          value={field.value}
+                          onChange={field.onChange}
+                          placeholder="GG/AA/YYYY - İşe başlama tarihini giriniz"
+                          maxDate={new Date()}
+                          minDate={new Date("1950-01-01")}
+                          required
+                          data-testid="input-employee-start-date"
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}

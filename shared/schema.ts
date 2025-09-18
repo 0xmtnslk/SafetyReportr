@@ -1513,6 +1513,7 @@ export const calculateRequiredTeamMembers = (
 export const insertAccidentRecordSchema = createInsertSchema(accidentRecords).omit({
   id: true,
   workDurationDays: true, // Auto-calculated
+  reportedBy: true, // Server sets this from user context
   createdAt: true,
   updatedAt: true,
 }).extend({
