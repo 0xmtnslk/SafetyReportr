@@ -27,7 +27,12 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { DateInput } from "@/components/ui/date-input";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { cn } from "@/lib/utils";
 
@@ -88,7 +93,7 @@ export function AccidentReportDialog({ children, onSubmit }: AccidentReportDialo
   
   // React Query mutation for creating accident record
   const createAccidentRecordMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("/api/accident-records", "POST", data),
+    mutationFn: (data: any) => apiRequest("POST", "/api/accident-records", data),
     onSuccess: () => {
       toast({
         title: "Başarılı",
@@ -199,19 +204,40 @@ export function AccidentReportDialog({ children, onSubmit }: AccidentReportDialo
                   control={form.control}
                   name="eventDate"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="flex flex-col">
                       <FormLabel>Olayın Gerçekleştiği Tarih*</FormLabel>
-                      <FormControl>
-                        <DateInput
-                          value={field.value}
-                          onChange={field.onChange}
-                          placeholder="GG/AA/YYYY - Tarih giriniz veya seçiniz"
-                          maxDate={new Date()}
-                          minDate={new Date("1900-01-01")}
-                          required
-                          data-testid="input-event-date"
-                        />
-                      </FormControl>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "w-full pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                              )}
+                              data-testid="input-event-date"
+                            >
+                              {field.value ? (
+                                format(field.value, "dd/MM/yyyy")
+                              ) : (
+                                <span>Tarih seçiniz</span>
+                              )}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            disabled={(date) =>
+                              date > new Date() || date < new Date("1900-01-01")
+                            }
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -343,18 +369,40 @@ export function AccidentReportDialog({ children, onSubmit }: AccidentReportDialo
                 control={form.control}
                 name="sgkNotificationDate"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="flex flex-col">
                     <FormLabel>SGK'ya Bildirim Tarihi</FormLabel>
-                    <FormControl>
-                      <DateInput
-                        value={field.value}
-                        onChange={field.onChange}
-                        placeholder="GG/AA/YYYY - SGK bildirim tarihi (opsiyonel)"
-                        maxDate={new Date()}
-                        minDate={new Date("1900-01-01")}
-                        data-testid="input-sgk-date"
-                      />
-                    </FormControl>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-full pl-3 text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                            )}
+                            data-testid="input-sgk-date"
+                          >
+                            {field.value ? (
+                              format(field.value, "dd/MM/yyyy")
+                            ) : (
+                              <span>Tarih seçiniz (opsiyonel)</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          disabled={(date) =>
+                            date > new Date() || date < new Date("1900-01-01")
+                          }
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -409,19 +457,38 @@ export function AccidentReportDialog({ children, onSubmit }: AccidentReportDialo
                   control={form.control}
                   name="employeeStartDate"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="flex flex-col">
                       <FormLabel>İşe Başlama Tarihi*</FormLabel>
-                      <FormControl>
-                        <DateInput
-                          value={field.value}
-                          onChange={field.onChange}
-                          placeholder="GG/AA/YYYY - İşe başlama tarihini giriniz"
-                          maxDate={new Date()}
-                          minDate={new Date("1900-01-01")}
-                          required
-                          data-testid="input-employee-start-date"
-                        />
-                      </FormControl>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "w-full pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                              )}
+                              data-testid="input-employee-start-date"
+                            >
+                              {field.value ? (
+                                format(field.value, "dd/MM/yyyy")
+                              ) : (
+                                <span>Tarih seçiniz</span>
+                              )}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            disabled={(date) => date > new Date()}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
                       <FormMessage />
                     </FormItem>
                   )}
