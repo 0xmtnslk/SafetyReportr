@@ -5,15 +5,32 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { AlertTriangle, Activity, FileText, TrendingUp, Users, Clock, PlusCircle, Shield, Search, Eye, Edit, Download } from "lucide-react";
+import { AlertTriangle, Activity, FileText, TrendingUp, Users, Clock, PlusCircle, Shield, Search, Eye, Edit, Download, Trash2 } from "lucide-react";
 import { useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 import { format, isSameMonth } from "date-fns";
 import { tr } from "date-fns/locale";
+
+// Check if record can be edited/deleted (within 7 days of creation)
+const canEditRecord = (createdAt: string | null | undefined): boolean => {
+  if (!createdAt) return false;
+  try {
+    const recordDate = new Date(createdAt);
+    const now = new Date();
+    const daysDifference = Math.floor((now.getTime() - recordDate.getTime()) / (1000 * 60 * 60 * 24));
+    return daysDifference <= 7;
+  } catch {
+    return false;
+  }
+};
 
 export default function AccidentManagementPage() {
   const [, setLocation] = useLocation();
   const [searchTerm, setSearchTerm] = useState("");
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   // Fetch accident records
   const { data: accidentRecords = [], isLoading, isError } = useQuery({
@@ -31,6 +48,33 @@ export default function AccidentManagementPage() {
 
   const handleEditAccidentDetails = (recordId: string) => {
     setLocation(`/accident-details?id=${recordId}&mode=edit`);
+  };
+
+  // Delete mutation
+  const deleteAccidentMutation = useMutation({
+    mutationFn: (recordId: string) => {
+      return apiRequest("DELETE", `/api/accident-records/${recordId}`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Başarılı",
+        description: "Kaza kaydı başarıyla silindi.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/accident-records"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Hata",
+        description: error.message || "Kayıt silinirken hata oluştu.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDeleteAccident = (recordId: string, recordTitle: string) => {
+    if (window.confirm(`"${recordTitle}" kaydını silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`)) {
+      deleteAccidentMutation.mutate(recordId);
+    }
   };
 
   const getSeverityColor = (severity: string) => {
@@ -295,15 +339,33 @@ export default function AccidentManagementPage() {
                                 >
                                   <Eye className="h-4 w-4" />
                                 </Button>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
-                                  onClick={() => handleEditAccidentDetails(record.id)}
-                                  data-testid={`button-edit-${record.id}`}
-                                  className="h-8 w-8 p-0"
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
+                                {canEditRecord(record.createdAt) ? (
+                                  <>
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm" 
+                                      onClick={() => handleEditAccidentDetails(record.id)}
+                                      data-testid={`button-edit-${record.id}`}
+                                      className="h-8 w-8 p-0"
+                                    >
+                                      <Edit className="h-4 w-4" />
+                                    </Button>
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm" 
+                                      onClick={() => handleDeleteAccident(record.id, `${record.employeeName} - ${record.eventType}`)}
+                                      data-testid={`button-delete-${record.id}`}
+                                      className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                      disabled={deleteAccidentMutation.isPending}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </>
+                                ) : (
+                                  <div className="h-8 w-8 p-0 flex items-center justify-center">
+                                    <span className="text-xs text-gray-400" title="7 günlük düzenleme süresi doldu">🔒</span>
+                                  </div>
+                                )}
                               </div>
                             </TableCell>
                           </TableRow>
@@ -404,15 +466,33 @@ export default function AccidentManagementPage() {
                                 >
                                   <Eye className="h-4 w-4" />
                                 </Button>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
-                                  onClick={() => handleEditAccidentDetails(record.id)}
-                                  data-testid={`button-nearmiss-edit-${record.id}`}
-                                  className="h-8 w-8 p-0"
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
+                                {canEditRecord(record.createdAt) ? (
+                                  <>
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm" 
+                                      onClick={() => handleEditAccidentDetails(record.id)}
+                                      data-testid={`button-nearmiss-edit-${record.id}`}
+                                      className="h-8 w-8 p-0"
+                                    >
+                                      <Edit className="h-4 w-4" />
+                                    </Button>
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm" 
+                                      onClick={() => handleDeleteAccident(record.id, `${record.employeeName} - ${record.eventType}`)}
+                                      data-testid={`button-nearmiss-delete-${record.id}`}
+                                      className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                      disabled={deleteAccidentMutation.isPending}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </>
+                                ) : (
+                                  <div className="h-8 w-8 p-0 flex items-center justify-center">
+                                    <span className="text-xs text-gray-400" title="7 günlük düzenleme süresi doldu">🔒</span>
+                                  </div>
+                                )}
                               </div>
                             </TableCell>
                           </TableRow>
