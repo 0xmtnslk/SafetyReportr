@@ -440,6 +440,42 @@ export const regulations = pgTable("regulations", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// ACCIDENT MANAGEMENT SYSTEM
+export const accidentRecords = pgTable("accident_records", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  locationId: varchar("location_id").references(() => locations.id).notNull(),
+  
+  // Basic Event Information
+  eventDate: timestamp("event_date").notNull(), // Olayın Gerçekleştiği Tarih
+  eventTime: text("event_time").notNull(), // Olayın Gerçekleştiği Saat
+  eventType: text("event_type").notNull(), // "İş Kazası" or "Ramak Kala"
+  workShift: text("work_shift").notNull(), // "Gündüz Mesaisi" or "Gece Mesaisi"
+  
+  // Location Information
+  eventArea: text("event_area").notNull(), // Olayın Gerçekleştiği Alan (main category)
+  eventPlace: text("event_place").notNull(), // Olayın Gerçekleştiği Yer (sub-location based on area)
+  
+  // Official Information
+  sgkNotificationDate: timestamp("sgk_notification_date"), // SGK'ya Bildirim Tarihi
+  
+  // Employee Information
+  employeeRegistrationNumber: text("employee_registration_number").notNull(), // Personel Sicil No
+  employeeName: text("employee_name").notNull(), // Ad-Soyad
+  employeeStartDate: timestamp("employee_start_date").notNull(), // İşe Başlama Tarihi
+  workDurationDays: integer("work_duration_days"), // Çalışma Süresi (Gün) - calculated
+  
+  // Employee Classification
+  employeeStatus: text("employee_status").notNull(), // Statüsü
+  professionGroup: text("profession_group").notNull(), // Meslek Grubu
+  department: text("department").notNull(), // Departmanı
+  position: text("position").notNull(), // Görevi / Unvanı
+  
+  // System fields
+  reportedBy: varchar("reported_by").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Insert schemas  
 export const insertLocationSchema = createInsertSchema(locations).pick({
   name: true,
@@ -1472,3 +1508,22 @@ export const calculateRequiredTeamMembers = (
   
   return Math.ceil(totalEmployees / ratio);
 };
+
+// Accident Records insert schema
+export const insertAccidentRecordSchema = createInsertSchema(accidentRecords).omit({
+  id: true,
+  workDurationDays: true, // Auto-calculated
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  eventDate: z.string().or(z.date()).transform((val) => new Date(val)),
+  employeeStartDate: z.string().or(z.date()).transform((val) => new Date(val)),
+  sgkNotificationDate: z.string().or(z.date()).transform((val) => new Date(val)).optional(),
+  eventTime: z.string().min(1, "Event time is required"),
+  employeeRegistrationNumber: z.string().min(1, "Employee registration number is required"),
+  employeeName: z.string().min(1, "Employee name is required"),
+});
+
+// Accident Record types
+export type AccidentRecord = typeof accidentRecords.$inferSelect;
+export type InsertAccidentRecord = z.infer<typeof insertAccidentRecordSchema>;
