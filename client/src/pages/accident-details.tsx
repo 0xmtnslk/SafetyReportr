@@ -173,11 +173,7 @@ export default function AccidentDetailsPage() {
     enabled: true
   }) as { data: any };
   
-  // Get reporter user data (who created the record)
-  const { data: reporterUser } = useQuery({
-    queryKey: ["/api/admin/users", existingRecord?.reportedBy],
-    enabled: !!existingRecord?.reportedBy,
-  });
+  // Reporter data is now included in existingRecord.creator via backend JOIN
 
   // Fetch existing accident record if in edit/view mode
   const { data: existingRecord, isLoading: isLoadingRecord } = useQuery({
@@ -723,18 +719,18 @@ export default function AccidentDetailsPage() {
                               </svg>
                             </div>
                             <div>
-                              <p className="font-medium text-gray-900 dark:text-white">{currentUser?.fullName || currentUser?.name || existingRecord.reportedBy || '—'}</p>
+                              <p className="font-medium text-gray-900 dark:text-white">{existingRecord?.creator?.fullName || existingRecord?.reportedBy || '—'}</p>
                               <p className="text-sm text-gray-600 dark:text-gray-400">
-                                {currentUser?.safetySpecialistClass || (
-                                  currentUser?.role === 'central_admin' ? 'Merkez Yönetici' :
-                                  currentUser?.role === 'safety_specialist' ? 'İş Güvenliği Uzmanı' :
-                                  currentUser?.role === 'occupational_physician' ? 'İş Yeri Hekimi' :
-                                  currentUser?.role === 'responsible_manager' ? 'Sorumlu Müdür' :
-                                  currentUser?.role || 'Kullanıcı'
+                                {existingRecord?.creator?.safetySpecialistClass || (
+                                  existingRecord?.creator?.role === 'central_admin' ? 'Merkez Yönetici' :
+                                  existingRecord?.creator?.role === 'safety_specialist' ? 'İş Güvenliği Uzmanı' :
+                                  existingRecord?.creator?.role === 'occupational_physician' ? 'İş Yeri Hekimi' :
+                                  existingRecord?.creator?.role === 'responsible_manager' ? 'Sorumlu Müdür' :
+                                  existingRecord?.creator?.role || 'Kullanıcı'
                                 )}
                               </p>
-                              {currentUser?.certificateNumber && (
-                                <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">Belge No: {currentUser.certificateNumber}</p>
+                              {existingRecord?.creator?.certificateNumber && (
+                                <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">Belge No: {existingRecord.creator.certificateNumber}</p>
                               )}
                               {currentUser?.hospital && (
                                 <p className="text-xs text-gray-500 dark:text-gray-400">{currentUser.hospital}</p>

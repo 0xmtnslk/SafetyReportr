@@ -2938,8 +2938,22 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAccidentRecord(id: string): Promise<AccidentRecord | undefined> {
-    const [record] = await db.select().from(accidentRecords).where(eq(accidentRecords.id, id));
-    return record;
+    const [result] = await db
+      .select({
+        ...getTableColumns(accidentRecords),
+        creator: {
+          id: users.id,
+          fullName: users.fullName,
+          role: users.role,
+          safetySpecialistClass: users.safetySpecialistClass,
+          certificateNumber: users.certificateNumber,
+        }
+      })
+      .from(accidentRecords)
+      .leftJoin(users, eq(accidentRecords.reportedBy, users.id))
+      .where(eq(accidentRecords.id, id));
+    
+    return result;
   }
 
   async getUserAccidentRecords(userId: string): Promise<AccidentRecord[]> {
