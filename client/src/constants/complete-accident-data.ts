@@ -160,6 +160,33 @@ export const DEPARTMENTS = [
 // Export the complete 700+ positions from Turkish healthcare settings
 export const COMPLETE_POSITIONS = ALL_HEALTHCARE_POSITIONS;
 
+// Accident Cause Types
+export const ACCIDENT_CAUSE_TYPES = [
+  { value: "Tehlikeli Durum", label: "Tehlikeli Durum" },
+  { value: "Tehlikeli Hareket", label: "Tehlikeli Hareket" },
+  { value: "Tehlikeli Durum ve Tehlikeli Hareket", label: "Tehlikeli Durum ve Tehlikeli Hareket" }
+];
+
+// Dangerous Situations from attached document
+export const DANGEROUS_SITUATIONS = [
+  { value: "Bakımsız, Kusurlu veya Uygun Olmayan Makine, Alet", label: "Bakımsız, Kusurlu veya Uygun Olmayan Makine, Alet" },
+  { value: "Bina Kusurları", label: "Bina Kusurları" },
+  { value: "Bozuk Zemin", label: "Bozuk Zemin" },
+  { value: "Eğitim Eksikliği", label: "Eğitim Eksikliği" },
+  { value: "Ekipman Eksikliği", label: "Ekipman Eksikliği" },
+  { value: "Ekipmanın Erişim Alanı, Yetersiz Alet ve Makine", label: "Ekipmanın Erişim Alanı, Yetersiz Alet ve Makine" },
+  { value: "Emniyetsiz Yöntem ve Şartlar", label: "Emniyetsiz Yöntem ve Şartlar" },
+  { value: "Kaygan Zemin", label: "Kaygan Zemin" },
+  { value: "Kişisel Koruyucu Donanımlar", label: "Kişisel Koruyucu Donanımlar" },
+  { value: "Mobbing", label: "Mobbing" },
+  { value: "Uygun Olmayan Koruyucular", label: "Uygun Olmayan Koruyucular" },
+  { value: "Yetersiz Havalandırma", label: "Yetersiz Havalandırma" },
+  { value: "Yetersiz Personel", label: "Yetersiz Personel" },
+  { value: "Kişisel Koruyucu Donanım Kullanımı", label: "Kişisel Koruyucu Donanım Kullanımı" },
+  { value: "Uygun Olmayan Aydınlatma", label: "Uygun Olmayan Aydınlatma" },
+  { value: "Uygun Olmayan Elektrik Tesisatı", label: "Uygun Olmayan Elektrik Tesisatı" }
+];
+
 // Dangerous Actions/Behaviors from attached document
 export const DANGEROUS_ACTIONS = [
   { value: "Atık Yönetimi Kurallarına Uyulmaması", label: "Atık Yönetimi Kurallarına Uyulmaması" },
@@ -185,4 +212,18 @@ export const DANGEROUS_ACTIONS = [
 // Helper function to get places based on selected area
 export const getEventPlacesByArea = (area: string) => {
   return EVENT_PLACES[area as keyof typeof EVENT_PLACES] || [];
+};
+
+// Helper functions for dangerous situations and actions based on accident cause type
+export const getDangerousOptions = (causeType: string) => {
+  switch (causeType) {
+    case "Tehlikeli Durum":
+      return DANGEROUS_SITUATIONS;
+    case "Tehlikeli Hareket":
+      return DANGEROUS_ACTIONS;
+    case "Tehlikeli Durum ve Tehlikeli Hareket":
+      return [...DANGEROUS_SITUATIONS, ...DANGEROUS_ACTIONS];
+    default:
+      return [];
+  }
 };

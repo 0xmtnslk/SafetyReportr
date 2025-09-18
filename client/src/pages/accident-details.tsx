@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -29,14 +30,17 @@ import {
   PROFESSION_GROUPS,
   DEPARTMENTS,
   COMPLETE_POSITIONS,
+  ACCIDENT_CAUSE_TYPES,
+  DANGEROUS_SITUATIONS,
   DANGEROUS_ACTIONS,
-  getEventPlacesByArea
+  getEventPlacesByArea,
+  getDangerousOptions
 } from "@/constants/complete-accident-data";
 
 // Form Schema
 const accidentFormSchema = z.object({
   // Basic Event Information
-  eventDate: z.date(),
+  eventDate: z.string().min(1, "Tarih zorunludur"),
   eventTime: z.string().min(1, "Saat zorunludur").regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Saat formatı HH:MM olmalıdır (örn: 14:30)"),
   eventType: z.enum(["İş Kazası", "Ramak Kala"]),
   workShift: z.string(),
@@ -44,10 +48,10 @@ const accidentFormSchema = z.object({
   eventPlace: z.string(),
   
   // SGK and Personnel Information
-  sgkNotificationDate: z.date().optional(),
+  sgkNotificationDate: z.string().optional(),
   personnelNumber: z.string().min(1, "Personel sicil no zorunludur"),
   fullName: z.string().min(1, "Ad-Soyad zorunludur"),
-  startWorkDate: z.date(),
+  startWorkDate: z.string().min(1, "İşe başlama tarihi zorunludur"),
   workingDays: z.number().optional(),
   
   // Employment Classification
@@ -56,11 +60,12 @@ const accidentFormSchema = z.object({
   department: z.string(),
   position: z.string(),
   
-  // Work Accident Specific Fields (conditional)
-  dangerousAction: z.string().optional(),
+  // Accident Cause Classification
+  accidentCauseType: z.string().optional(),
+  dangerousSelection: z.string().optional(),
   correctiveAction: z.string().optional(),
   workDayLoss: z.number().default(0),
-  additionalTrainingDate: z.date().optional(),
+  additionalTrainingDate: z.string().optional(),
   
   // Description
   eventDescription: z.string().min(10, "Olay açıklaması en az 10 karakter olmalıdır")
@@ -73,11 +78,12 @@ export default function AccidentDetailsPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedArea, setSelectedArea] = useState<string>("");
+  const [selectedCauseType, setSelectedCauseType] = useState<string>("");
 
   const form = useForm<AccidentFormData>({
     resolver: zodResolver(accidentFormSchema),
     defaultValues: {
-      eventDate: new Date(),
+      eventDate: "",
       eventTime: "",
       eventType: "İş Kazası",
       workShift: "",
@@ -85,11 +91,13 @@ export default function AccidentDetailsPage() {
       eventPlace: "",
       personnelNumber: "",
       fullName: "",
-      startWorkDate: new Date(),
+      startWorkDate: "",
       employeeStatus: "",
       professionGroup: "",
       department: "",
       position: "",
+      accidentCauseType: "",
+      dangerousSelection: "",
       workDayLoss: 0,
       eventDescription: ""
     }
@@ -101,8 +109,12 @@ export default function AccidentDetailsPage() {
   
   useEffect(() => {
     if (watchEventDate && watchStartWorkDate) {
-      const days = differenceInDays(watchEventDate, watchStartWorkDate);
-      form.setValue("workingDays", Math.max(0, days));
+      const eventDate = new Date(watchEventDate);
+      const startDate = new Date(watchStartWorkDate);
+      if (!isNaN(eventDate.getTime()) && !isNaN(startDate.getTime())) {
+        const days = differenceInDays(eventDate, startDate);
+        form.setValue("workingDays", Math.max(0, days));
+      }
     }
   }, [watchEventDate, watchStartWorkDate, form]);
 
@@ -115,8 +127,20 @@ export default function AccidentDetailsPage() {
     }
   }, [watchEventArea, selectedArea, form]);
 
+  // Handle accident cause type change
+  const watchAccidentCauseType = form.watch("accidentCauseType");
+  useEffect(() => {
+    if (watchAccidentCauseType !== selectedCauseType) {
+      setSelectedCauseType(watchAccidentCauseType);
+      form.setValue("dangerousSelection", ""); // Reset dangerous selection when cause type changes
+    }
+  }, [watchAccidentCauseType, selectedCauseType, form]);
+
   // Get available places based on selected area
   const availablePlaces = selectedArea ? getEventPlacesByArea(selectedArea) : [];
+  
+  // Get available dangerous options based on selected cause type
+  const availableDangerousOptions = selectedCauseType ? getDangerousOptions(selectedCauseType) : [];
 
   // Submit mutation
   const createAccidentMutation = useMutation({
@@ -125,10 +149,10 @@ export default function AccidentDetailsPage() {
         method: "POST",
         body: JSON.stringify({
           ...data,
-          eventDate: data.eventDate.toISOString(),
-          sgkNotificationDate: data.sgkNotificationDate?.toISOString(),
-          startWorkDate: data.startWorkDate.toISOString(),
-          additionalTrainingDate: data.additionalTrainingDate?.toISOString()
+          eventDate: data.eventDate,
+          sgkNotificationDate: data.sgkNotificationDate || null,
+          startWorkDate: data.startWorkDate,
+          additionalTrainingDate: data.additionalTrainingDate || null
         })
       });
     },
@@ -156,11 +180,21 @@ export default function AccidentDetailsPage() {
   const watchEventType = form.watch("eventType");
   const isWorkAccident = watchEventType === "İş Kazası";
 
+  // Date helper functions
+  const formatDateForInput = (dateString: string) => {
+    if (!dateString) return "";
+    return dateString.split('T')[0]; // Convert to YYYY-MM-DD format
+  };
+
+  const handleDateChange = (fieldName: string, value: string) => {
+    form.setValue(fieldName as any, value);
+  };
+
   return (
     <div className="container mx-auto p-6 max-w-4xl">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold" data-testid="title-accident-details">
-          {isWorkAccident ? "İş Kazası" : "Ramak Kala"} Detay Formu
+          Olay Bildir - Detay Formu
         </h1>
         <Button 
           variant="outline" 
@@ -170,6 +204,39 @@ export default function AccidentDetailsPage() {
           Geri Dön
         </Button>
       </div>
+
+      <Tabs value={watchEventType.toLowerCase().replace(" ", "-")} className="w-full">
+        <TabsList className="grid w-full grid-cols-2 mb-6">
+          <TabsTrigger 
+            value="iş-kazası" 
+            onClick={() => form.setValue("eventType", "İş Kazası")}
+            data-testid="tab-work-accident"
+          >
+            İş Kazası
+          </TabsTrigger>
+          <TabsTrigger 
+            value="ramak-kala" 
+            onClick={() => form.setValue("eventType", "Ramak Kala")}
+            data-testid="tab-near-miss"
+          >
+            Ramak Kala
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="iş-kazası">
+          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <h3 className="font-semibold text-red-800">İş Kazası Formu</h3>
+            <p className="text-sm text-red-600">Gerçekleşmiş iş kazaları için kullanılır.</p>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="ramak-kala">
+          <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <h3 className="font-semibold text-yellow-800">Ramak Kala Formu</h3>
+            <p className="text-sm text-yellow-600">Neredeyse kaza olacak durumlar için kullanılır.</p>
+          </div>
+        </TabsContent>
+      </Tabs>
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -191,29 +258,42 @@ export default function AccidentDetailsPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Olayın Gerçekleştiği Tarih</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant="outline"
-                              className="w-full pl-3 text-left font-normal"
-                              data-testid="button-event-date"
-                            >
-                              {field.value ? format(field.value, "dd MMMM yyyy", { locale: tr }) : "Tarih seçin"}
-                              <CalendarDays className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <CalendarComponent
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
-                            initialFocus
+                      <div className="flex gap-2">
+                        <FormControl>
+                          <Input
+                            type="date"
+                            {...field}
+                            className="flex-1"
+                            data-testid="input-event-date"
                           />
-                        </PopoverContent>
-                      </Popover>
+                        </FormControl>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              data-testid="button-event-date-calendar"
+                            >
+                              <CalendarDays className="h-4 w-4" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <CalendarComponent
+                              mode="single"
+                              selected={field.value ? new Date(field.value) : undefined}
+                              onSelect={(date) => {
+                                if (date) {
+                                  const formattedDate = format(date, "yyyy-MM-dd");
+                                  field.onChange(formattedDate);
+                                }
+                              }}
+                              disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -347,29 +427,42 @@ export default function AccidentDetailsPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>SGK'ya Bildirim Tarihi</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant="outline"
-                              className="w-full pl-3 text-left font-normal"
-                              data-testid="button-sgk-date"
-                            >
-                              {field.value ? format(field.value, "dd MMMM yyyy", { locale: tr }) : "SGK bildirim tarihi"}
-                              <CalendarDays className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <CalendarComponent
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            disabled={(date) => date > new Date()}
-                            initialFocus
+                      <div className="flex gap-2">
+                        <FormControl>
+                          <Input
+                            type="date"
+                            {...field}
+                            className="flex-1"
+                            data-testid="input-sgk-date"
                           />
-                        </PopoverContent>
-                      </Popover>
+                        </FormControl>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              data-testid="button-sgk-date-calendar"
+                            >
+                              <CalendarDays className="h-4 w-4" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <CalendarComponent
+                              mode="single"
+                              selected={field.value ? new Date(field.value) : undefined}
+                              onSelect={(date) => {
+                                if (date) {
+                                  const formattedDate = format(date, "yyyy-MM-dd");
+                                  field.onChange(formattedDate);
+                                }
+                              }}
+                              disabled={(date) => date > new Date()}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -424,29 +517,42 @@ export default function AccidentDetailsPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>İşe Başlama Tarihi</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant="outline"
-                              className="w-full pl-3 text-left font-normal"
-                              data-testid="button-start-work-date"
-                            >
-                              {field.value ? format(field.value, "dd/MM/yyyy", { locale: tr }) : "Başlama tarihi"}
-                              <CalendarDays className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <CalendarComponent
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            disabled={(date) => date > new Date()}
-                            initialFocus
+                      <div className="flex gap-2">
+                        <FormControl>
+                          <Input
+                            type="date"
+                            {...field}
+                            className="flex-1"
+                            data-testid="input-start-work-date"
                           />
-                        </PopoverContent>
-                      </Popover>
+                        </FormControl>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              data-testid="button-start-work-date-calendar"
+                            >
+                              <CalendarDays className="h-4 w-4" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <CalendarComponent
+                              mode="single"
+                              selected={field.value ? new Date(field.value) : undefined}
+                              onSelect={(date) => {
+                                if (date) {
+                                  const formattedDate = format(date, "yyyy-MM-dd");
+                                  field.onChange(formattedDate);
+                                }
+                              }}
+                              disabled={(date) => date > new Date()}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -564,33 +670,59 @@ export default function AccidentDetailsPage() {
             </CardContent>
           </Card>
 
-          {/* Work Accident Specific Fields - Only for İş Kazası */}
-          {isWorkAccident && (
-            <Card data-testid="card-work-accident-details">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <span data-testid="title-work-accident-details">İş Kazası Detayları</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Dangerous Action */}
+          {/* Accident Cause and Details */}
+          <Card data-testid="card-accident-cause">
+            <CardHeader>
+              <CardTitle>Kaza Nedeni ve Detayları</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Accident Cause Type */}
+              <FormField
+                control={form.control}
+                name="accidentCauseType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Kaza Nedeni</FormLabel>
+                    <SearchableSelect
+                      options={ACCIDENT_CAUSE_TYPES}
+                      value={field.value || ""}
+                      onValueChange={field.onChange}
+                      placeholder="Kaza nedeni seçin"
+                      data-testid="select-accident-cause-type"
+                    />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Dangerous Selection - conditional based on cause type */}
+              {selectedCauseType && (
                 <FormField
                   control={form.control}
-                  name="dangerousAction"
+                  name="dangerousSelection"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel data-testid="label-dangerous-action">Tehlikeli Hareket Açıklaması</FormLabel>
+                      <FormLabel>
+                        {selectedCauseType === "Tehlikeli Durum" && "Tehlikeli Durum Açıklaması"}
+                        {selectedCauseType === "Tehlikeli Hareket" && "Tehlikeli Hareket Açıklaması"}
+                        {selectedCauseType === "Tehlikeli Durum ve Tehlikeli Hareket" && "Tehlikeli Durum/Hareket Açıklaması"}
+                      </FormLabel>
                       <SearchableSelect
-                        options={DANGEROUS_ACTIONS}
+                        options={availableDangerousOptions}
                         value={field.value || ""}
                         onValueChange={field.onChange}
-                        placeholder="Tehlikeli hareket seçin veya arayın"
-                        data-testid="select-dangerous-action"
+                        placeholder={
+                          selectedCauseType === "Tehlikeli Durum" ? "Tehlikeli durum seçin" :
+                          selectedCauseType === "Tehlikeli Hareket" ? "Tehlikeli hareket seçin" :
+                          "Tehlikeli durum veya hareket seçin"
+                        }
+                        data-testid="select-dangerous-selection"
                       />
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+              )}
 
                 <div className="grid md:grid-cols-2 gap-4">
                   {/* Work Day Loss */}
@@ -615,64 +747,78 @@ export default function AccidentDetailsPage() {
                     )}
                   />
 
-                  {/* Additional Training Date */}
-                  <FormField
-                    control={form.control}
-                    name="additionalTrainingDate"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>İş Kazası Sonrası İlave Eğitim Tarihi</FormLabel>
-                        <Popover>
-                          <PopoverTrigger asChild>
+                  {/* Additional Training Date - only for work accidents */}
+                  {isWorkAccident && (
+                    <FormField
+                      control={form.control}
+                      name="additionalTrainingDate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>İş Kazası Sonrası İlave Eğitim Tarihi</FormLabel>
+                          <div className="flex gap-2">
                             <FormControl>
-                              <Button
-                                variant="outline"
-                                className="w-full pl-3 text-left font-normal"
-                                data-testid="button-training-date"
-                              >
-                                {field.value ? format(field.value, "dd/MM/yyyy", { locale: tr }) : "Eğitim tarihi"}
-                                <CalendarDays className="ml-auto h-4 w-4 opacity-50" />
-                              </Button>
+                              <Input
+                                type="date"
+                                {...field}
+                                className="flex-1"
+                                data-testid="input-training-date"
+                              />
                             </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <CalendarComponent
-                              mode="single"
-                              selected={field.value}
-                              onSelect={field.onChange}
-                              disabled={(date) => date < new Date()}
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="icon"
+                                  data-testid="button-training-date-calendar"
+                                >
+                                  <CalendarDays className="h-4 w-4" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                <CalendarComponent
+                                  mode="single"
+                                  selected={field.value ? new Date(field.value) : undefined}
+                                  onSelect={(date) => {
+                                    if (date) {
+                                      const formattedDate = format(date, "yyyy-MM-dd");
+                                      field.onChange(formattedDate);
+                                    }
+                                  }}
+                                  disabled={(date) => date < new Date()}
+                                  initialFocus
+                                />
+                              </PopoverContent>
+                            </Popover>
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
                 </div>
 
-                {/* Corrective Action */}
-                <FormField
-                  control={form.control}
-                  name="correctiveAction"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Yapılan Düzeltici / Önleyici Faaliyet</FormLabel>
-                      <FormControl>
-                        <Textarea 
-                          placeholder="Uzman tarafından yapılan işlemlerle ilgili açıklama..." 
-                          className="min-h-[100px]"
-                          {...field}
-                          data-testid="textarea-corrective-action"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </CardContent>
-            </Card>
-          )}
+              {/* Corrective Action */}
+              <FormField
+                control={form.control}
+                name="correctiveAction"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Yapılan Düzeltici / Önleyici Faaliyet</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Uzman tarafından yapılan işlemlerle ilgili açıklama..." 
+                        className="min-h-[100px]"
+                        {...field}
+                        data-testid="textarea-corrective-action"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
 
           {/* Event Description */}
           <Card>
