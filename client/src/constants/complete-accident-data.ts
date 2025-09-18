@@ -167,6 +167,63 @@ export const ACCIDENT_CAUSE_TYPES = [
   { value: "Tehlikeli Durum ve Tehlikeli Hareket", label: "Tehlikeli Durum ve Tehlikeli Hareket" }
 ];
 
+// Kaza Ciddiyeti
+export const ACCIDENT_SEVERITY = [
+  { value: "Sadece Zarar", label: "Sadece Zarar" },
+  { value: "Hafif Yaralanma", label: "Hafif Yaralanma" },
+  { value: "Ciddi Yaralanma", label: "Ciddi Yaralanma" },
+  { value: "Çok Ciddi Yaralanma", label: "Çok Ciddi Yaralanma" },
+  { value: "Ölümcül Kaza", label: "Ölümcül Kaza" }
+];
+
+// Kazalanan Vücut Bölgesi
+export const INJURED_BODY_PARTS = [
+  { value: "Ayak", label: "Ayak" },
+  { value: "Bacak", label: "Bacak" },
+  { value: "Bel", label: "Bel" },
+  { value: "Boyun", label: "Boyun" },
+  { value: "Göğüs", label: "Göğüs" },
+  { value: "Göz", label: "Göz" },
+  { value: "Kol", label: "Kol" },
+  { value: "Kulak", label: "Kulak" },
+  { value: "Omuz", label: "Omuz" },
+  { value: "Parmak", label: "Parmak" },
+  { value: "Sırt", label: "Sırt" },
+  { value: "Solunum Bölgesi", label: "Solunum Bölgesi" },
+  { value: "Yüz", label: "Yüz" },
+  { value: "Vücudun Çeşitli Bölgeleri", label: "Vücudun Çeşitli Bölgeleri" }
+];
+
+// Yaralanmaya Neden Olan Unsur / Ekipman
+export const CAUSING_EQUIPMENT = [
+  { value: "Asansör ve Yürüyen Merdivenler", label: "Asansör ve Yürüyen Merdivenler" },
+  { value: "Basınçlı Gaz Tüpleri", label: "Basınçlı Gaz Tüpleri" },
+  { value: "Bina Tamamlayıcı Unsurları (Kaplamalar, Korkuluklar, Kapılar ve Pencereler vb.)", label: "Bina Tamamlayıcı Unsurları (Kaplamalar, Korkuluklar, Kapılar ve Pencereler vb.)" },
+  { value: "Bina Yapısal Unsurları (Zeminler, Duvarlar, Çatı, Merdiven vb.)", label: "Bina Yapısal Unsurları (Zeminler, Duvarlar, Çatı, Merdiven vb.)" },
+  { value: "Döner Kapı, Kayar kapı veya şeffaf kapılar", label: "Döner Kapı, Kayar kapı veya şeffaf kapılar" },
+  { value: "El Aletleri (Tornavida, pense, çekiç vb.)", label: "El Aletleri (Tornavida, pense, çekiç vb.)" },
+  { value: "Elektrikli El Aletleri (Matkap, taşlama, testere vb.)", label: "Elektrikli El Aletleri (Matkap, taşlama, testere vb.)" },
+  { value: "Elektrikli Mutfak Aletleri (Sıyırıcı-doğrama makineleri, su ısıtıcıları, benmariler vb.)", label: "Elektrikli Mutfak Aletleri (Sıyırıcı-doğrama makineleri, su ısıtıcıları, benmariler vb.)" },
+  { value: "Elektrikli Ofis Aletleri (Bilgisayar, yazıcı, televizyon vb.)", label: "Elektrikli Ofis Aletleri (Bilgisayar, yazıcı, televizyon vb.)" },
+  { value: "Evsel Atıklar", label: "Evsel Atıklar" },
+  { value: "Hasta Ampulleri", label: "Hasta Ampulleri" },
+  { value: "İğne ve İğne Uçları", label: "İğne ve İğne Uçları" },
+  { value: "Isı Ampulleri", label: "Isı Ampulleri" },
+  { value: "Kaldırma ve Taşıma Araçları (Forklift, Manlift, Transpalet vb.)", label: "Kaldırma ve Taşıma Araçları (Forklift, Manlift, Transpalet vb.)" },
+  { value: "Kaygan Zemin", label: "Kaygan Zemin" },
+  { value: "Kesici Mutfak Aletleri (Bıçaklar, soymalar ve doğrama araçları vb.)", label: "Kesici Mutfak Aletleri (Bıçaklar, soymalar ve doğrama araçları vb.)" },
+  { value: "Kesici Tıbbi Materyaller (Bistüri, Kotter Ucu, Lam-Lamel vb.)", label: "Kesici Tıbbi Materyaller (Bistüri, Kotter Ucu, Lam-Lamel vb.)" },
+  { value: "Kimyasal Maddeler ve Atıkları", label: "Kimyasal Maddeler ve Atıkları" },
+  { value: "Motorlu Taşıtlar", label: "Motorlu Taşıtlar" },
+  { value: "Sıcak İçecekler", label: "Sıcak İçecekler" },
+  { value: "Sitotoksik İlaçlar ve Atıklar", label: "Sitotoksik İlaçlar ve Atıklar" },
+  { value: "Temizlik Arabaları", label: "Temizlik Arabaları" },
+  { value: "Tıbbi Atık", label: "Tıbbi Atık" },
+  { value: "Tıbbi Cihazlar", label: "Tıbbi Cihazlar" },
+  { value: "Pasif Olmayan Unsurlar (Dolap, koltuk, sandalye, mobilya vb.)", label: "Pasif Olmayan Unsurlar (Dolap, koltuk, sandalye, mobilya vb.)" },
+  { value: "Yenik Taşıma Arabaları", label: "Yenik Taşıma Arabaları" }
+];
+
 // Dangerous Situations from attached document
 export const DANGEROUS_SITUATIONS = [
   { value: "Bakımsız, Kusurlu veya Uygun Olmayan Makine, Alet", label: "Bakımsız, Kusurlu veya Uygun Olmayan Makine, Alet" },

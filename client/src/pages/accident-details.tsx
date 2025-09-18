@@ -17,7 +17,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -31,6 +30,9 @@ import {
   DEPARTMENTS,
   COMPLETE_POSITIONS,
   ACCIDENT_CAUSE_TYPES,
+  ACCIDENT_SEVERITY,
+  INJURED_BODY_PARTS,
+  CAUSING_EQUIPMENT,
   DANGEROUS_SITUATIONS,
   DANGEROUS_ACTIONS,
   getEventPlacesByArea,
@@ -60,7 +62,10 @@ const accidentFormSchema = z.object({
   department: z.string(),
   position: z.string(),
   
-  // Accident Cause Classification
+  // Accident Details
+  accidentSeverity: z.string().optional(),
+  injuredBodyPart: z.string().optional(),
+  causingEquipment: z.string().optional(),
   accidentCauseType: z.string().optional(),
   dangerousSelection: z.string().optional(),
   correctiveAction: z.string().optional(),
@@ -96,6 +101,9 @@ export default function AccidentDetailsPage() {
       professionGroup: "",
       department: "",
       position: "",
+      accidentSeverity: "",
+      injuredBodyPart: "",
+      causingEquipment: "",
       accidentCauseType: "",
       dangerousSelection: "",
       workDayLoss: 0,
@@ -131,7 +139,7 @@ export default function AccidentDetailsPage() {
   const watchAccidentCauseType = form.watch("accidentCauseType");
   useEffect(() => {
     if (watchAccidentCauseType !== selectedCauseType) {
-      setSelectedCauseType(watchAccidentCauseType);
+      setSelectedCauseType(watchAccidentCauseType || "");
       form.setValue("dangerousSelection", ""); // Reset dangerous selection when cause type changes
     }
   }, [watchAccidentCauseType, selectedCauseType, form]);
@@ -145,15 +153,18 @@ export default function AccidentDetailsPage() {
   // Submit mutation
   const createAccidentMutation = useMutation({
     mutationFn: async (data: AccidentFormData) => {
-      return apiRequest("/api/accident-records", {
+      const payload = {
+        ...data,
+        eventDate: data.eventDate,
+        sgkNotificationDate: data.sgkNotificationDate || null,
+        startWorkDate: data.startWorkDate,
+        additionalTrainingDate: data.additionalTrainingDate || null
+      };
+      
+      return apiRequest({
+        url: "/api/accident-records",
         method: "POST",
-        body: JSON.stringify({
-          ...data,
-          eventDate: data.eventDate,
-          sgkNotificationDate: data.sgkNotificationDate || null,
-          startWorkDate: data.startWorkDate,
-          additionalTrainingDate: data.additionalTrainingDate || null
-        })
+        body: JSON.stringify(payload)
       });
     },
     onSuccess: () => {
@@ -194,7 +205,7 @@ export default function AccidentDetailsPage() {
     <div className="container mx-auto p-6 max-w-4xl">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold" data-testid="title-accident-details">
-          Olay Bildir - Detay Formu
+          Olay Bildir - {watchEventType} Formu
         </h1>
         <Button 
           variant="outline" 
@@ -205,38 +216,25 @@ export default function AccidentDetailsPage() {
         </Button>
       </div>
 
-      <Tabs value={watchEventType.toLowerCase().replace(" ", "-")} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 mb-6">
-          <TabsTrigger 
-            value="iş-kazası" 
-            onClick={() => form.setValue("eventType", "İş Kazası")}
-            data-testid="tab-work-accident"
-          >
-            İş Kazası
-          </TabsTrigger>
-          <TabsTrigger 
-            value="ramak-kala" 
-            onClick={() => form.setValue("eventType", "Ramak Kala")}
-            data-testid="tab-near-miss"
-          >
-            Ramak Kala
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="iş-kazası">
-          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-            <h3 className="font-semibold text-red-800">İş Kazası Formu</h3>
-            <p className="text-sm text-red-600">Gerçekleşmiş iş kazaları için kullanılır.</p>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="ramak-kala">
-          <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <h3 className="font-semibold text-yellow-800">Ramak Kala Formu</h3>
-            <p className="text-sm text-yellow-600">Neredeyse kaza olacak durumlar için kullanılır.</p>
-          </div>
-        </TabsContent>
-      </Tabs>
+      <div className={`mb-4 p-4 rounded-lg ${
+        watchEventType === "İş Kazası" 
+          ? "bg-red-50 border border-red-200" 
+          : "bg-yellow-50 border border-yellow-200"
+      }`}>
+        <h3 className={`font-semibold ${
+          watchEventType === "İş Kazası" ? "text-red-800" : "text-yellow-800"
+        }`}>
+          {watchEventType} Formu
+        </h3>
+        <p className={`text-sm ${
+          watchEventType === "İş Kazası" ? "text-red-600" : "text-yellow-600"
+        }`}>
+          {watchEventType === "İş Kazası" 
+            ? "Gerçekleşmiş iş kazaları için kullanılır." 
+            : "Neredeyse kaza olacak durumlar için kullanılır."
+          }
+        </p>
+      </div>
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -670,12 +668,71 @@ export default function AccidentDetailsPage() {
             </CardContent>
           </Card>
 
-          {/* Accident Cause and Details */}
-          <Card data-testid="card-accident-cause">
+          {/* Accident Details */}
+          <Card data-testid="card-accident-details">
             <CardHeader>
-              <CardTitle>Kaza Nedeni ve Detayları</CardTitle>
+              <CardTitle>Kaza Detayları</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Accident Severity */}
+                <FormField
+                  control={form.control}
+                  name="accidentSeverity"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Kaza Ciddiyeti</FormLabel>
+                      <SearchableSelect
+                        options={ACCIDENT_SEVERITY}
+                        value={field.value || ""}
+                        onValueChange={field.onChange}
+                        placeholder="Kaza ciddiyeti seçin"
+                        data-testid="select-accident-severity"
+                      />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Injured Body Part */}
+                <FormField
+                  control={form.control}
+                  name="injuredBodyPart"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Kazalanan Vücut Bölgesi</FormLabel>
+                      <SearchableSelect
+                        options={INJURED_BODY_PARTS}
+                        value={field.value || ""}
+                        onValueChange={field.onChange}
+                        placeholder="Vücut bölgesi seçin"
+                        data-testid="select-injured-body-part"
+                      />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Causing Equipment */}
+              <FormField
+                control={form.control}
+                name="causingEquipment"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Yaralanmaya Neden Olan Unsur / Ekipman</FormLabel>
+                    <SearchableSelect
+                      options={CAUSING_EQUIPMENT}
+                      value={field.value || ""}
+                      onValueChange={field.onChange}
+                      placeholder="Neden olan unsur seçin"
+                      data-testid="select-causing-equipment"
+                    />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               {/* Accident Cause Type */}
               <FormField
                 control={form.control}
