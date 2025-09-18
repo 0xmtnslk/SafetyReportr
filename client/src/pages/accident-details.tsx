@@ -68,6 +68,7 @@ const accidentFormSchema = z.object({
   causingEquipment: z.string().optional(),
   accidentCauseType: z.string().optional(),
   dangerousSelection: z.string().optional(),
+  dangerousSelection2: z.string().optional(), // Second selection for combined type
   correctiveAction: z.string().optional(),
   workDayLoss: z.number().default(0),
   additionalTrainingDate: z.string().optional(),
@@ -112,6 +113,7 @@ export default function AccidentDetailsPage() {
       causingEquipment: "",
       accidentCauseType: "",
       dangerousSelection: "",
+      dangerousSelection2: "",
       workDayLoss: 0,
       eventDescription: ""
     }
@@ -147,6 +149,7 @@ export default function AccidentDetailsPage() {
     if (watchAccidentCauseType !== selectedCauseType) {
       setSelectedCauseType(watchAccidentCauseType || "");
       form.setValue("dangerousSelection", ""); // Reset dangerous selection when cause type changes
+      form.setValue("dangerousSelection2", ""); // Reset second dangerous selection
     }
   }, [watchAccidentCauseType, selectedCauseType, form]);
 
@@ -162,10 +165,18 @@ export default function AccidentDetailsPage() {
       const payload = {
         ...data,
         locationId: currentUser?.locationId, // Automatically set hospital from user session
+        // Map frontend field names to backend expected names
+        employeeRegistrationNumber: data.personnelNumber,
+        employeeName: data.fullName,
+        employeeStartDate: data.startWorkDate,
+        // Remove frontend-only fields
+        personnelNumber: undefined,
+        fullName: undefined,
+        startWorkDate: undefined,
+        // Handle dates properly
         eventDate: data.eventDate,
-        sgkNotificationDate: data.sgkNotificationDate || null,
-        startWorkDate: data.startWorkDate,
-        additionalTrainingDate: data.additionalTrainingDate || null
+        sgkNotificationDate: data.sgkNotificationDate || undefined,
+        additionalTrainingDate: data.additionalTrainingDate || undefined
       };
       
       return apiRequest("POST", "/api/accident-records", payload);
@@ -756,32 +767,85 @@ export default function AccidentDetailsPage() {
               />
 
               {/* Dangerous Selection - conditional based on cause type */}
-              {selectedCauseType && (
+              {selectedCauseType === "Tehlikeli Durum" && (
                 <FormField
                   control={form.control}
                   name="dangerousSelection"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>
-                        {selectedCauseType === "Tehlikeli Durum" && "Tehlikeli Durum Açıklaması"}
-                        {selectedCauseType === "Tehlikeli Hareket" && "Tehlikeli Hareket Açıklaması"}
-                        {selectedCauseType === "Tehlikeli Durum ve Tehlikeli Hareket" && "Tehlikeli Durum/Hareket Açıklaması"}
-                      </FormLabel>
+                      <FormLabel>Tehlikeli Durum Açıklaması</FormLabel>
                       <SearchableSelect
-                        options={availableDangerousOptions}
+                        options={DANGEROUS_SITUATIONS}
                         value={field.value || ""}
                         onValueChange={field.onChange}
-                        placeholder={
-                          selectedCauseType === "Tehlikeli Durum" ? "Tehlikeli durum seçin" :
-                          selectedCauseType === "Tehlikeli Hareket" ? "Tehlikeli hareket seçin" :
-                          "Tehlikeli durum veya hareket seçin"
-                        }
-                        data-testid="select-dangerous-selection"
+                        placeholder="Tehlikeli durum seçin"
+                        data-testid="select-dangerous-situation"
                       />
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+              )}
+
+              {selectedCauseType === "Tehlikeli Hareket" && (
+                <FormField
+                  control={form.control}
+                  name="dangerousSelection"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tehlikeli Hareket Açıklaması</FormLabel>
+                      <SearchableSelect
+                        options={DANGEROUS_ACTIONS}
+                        value={field.value || ""}
+                        onValueChange={field.onChange}
+                        placeholder="Tehlikeli hareket seçin"
+                        data-testid="select-dangerous-action"
+                      />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              {/* Combined selection - both situation and action */}
+              {selectedCauseType === "Tehlikeli Durum ve Tehlikeli Hareket" && (
+                <div className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="dangerousSelection"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Tehlikeli Durum Açıklaması</FormLabel>
+                        <SearchableSelect
+                          options={DANGEROUS_SITUATIONS}
+                          value={field.value || ""}
+                          onValueChange={field.onChange}
+                          placeholder="Tehlikeli durum seçin"
+                          data-testid="select-dangerous-situation-combined"
+                        />
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="dangerousSelection2"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Tehlikeli Hareket Açıklaması</FormLabel>
+                        <SearchableSelect
+                          options={DANGEROUS_ACTIONS}
+                          value={field.value || ""}
+                          onValueChange={field.onChange}
+                          placeholder="Tehlikeli hareket seçin"
+                          data-testid="select-dangerous-action-combined"
+                        />
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
               )}
 
                 <div className="grid md:grid-cols-2 gap-4">
