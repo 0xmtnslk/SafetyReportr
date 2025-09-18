@@ -52,6 +52,7 @@ import AnnualPlansPage from "@/pages/annual-plans";
 import EmergencyManagementPage from "@/pages/emergency-management";
 import HazardousMaterialsPage from "@/pages/hazardous-materials";
 import AccidentManagementPage from "@/pages/accident-management";
+import AccidentDetailsPage from "@/pages/accident-details";
 import IncidentManagementPage from "@/pages/incident-management";
 import AuditManagementPage from "@/pages/audit-management";
 import DetectionBookPage from "@/pages/detection-book";
@@ -98,7 +99,7 @@ function Router() {
   }
 
   // Protected routes - require authentication
-  const protectedRoutes = ['/dashboard', '/create-report', '/reports', '/edit-report', '/view-report', '/admin', '/change-password', '/checklist', '/live-checklist', '/inspection-results', '/admin/inspections', '/inspection-history', '/inspection-results-admin', '/hospital-inspections', '/checklist-inspections', '/inspection-title-detail', '/inspection-analysis', '/specialist', '/profile/edit', '/notifications', '/hospital-management', '/risk-assessment', '/annual-plans', '/emergency-management', '/hazardous-materials', '/accident-management', '/incident-management', '/audit-management', '/environmental', '/annual-evaluation', '/detection-book', '/medical-examinations', '/medical-examinations/new', '/medical-examinations/edit', '/hospital-sections'];
+  const protectedRoutes = ['/dashboard', '/create-report', '/reports', '/edit-report', '/view-report', '/admin', '/change-password', '/checklist', '/live-checklist', '/inspection-results', '/admin/inspections', '/inspection-history', '/inspection-results-admin', '/hospital-inspections', '/checklist-inspections', '/inspection-title-detail', '/inspection-analysis', '/specialist', '/profile/edit', '/notifications', '/hospital-management', '/risk-assessment', '/annual-plans', '/emergency-management', '/hazardous-materials', '/accident-management', '/accident-details', '/incident-management', '/audit-management', '/environmental', '/annual-evaluation', '/detection-book', '/medical-examinations', '/medical-examinations/new', '/medical-examinations/edit', '/hospital-sections'];
   const isProtectedRoute = protectedRoutes.some(route => location.startsWith(route));
 
   if (isProtectedRoute && !user) {
@@ -238,6 +239,9 @@ function Router() {
             </Route>
             <Route path="/accident-management">
               {() => ['central_admin', 'safety_specialist', 'occupational_physician'].includes(user?.role || '') ? <AccidentManagementPage /> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
+            </Route>
+            <Route path="/accident-details">
+              {() => ['central_admin', 'safety_specialist', 'occupational_physician'].includes(user?.role || '') ? <AccidentDetailsPage /> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
             </Route>
             <Route path="/incident-management">
               {() => ['central_admin', 'safety_specialist', 'occupational_physician'].includes(user?.role || '') ? <IncidentManagementPage /> : <div className="p-8"><div>Yetkisiz Erişim</div></div>}
