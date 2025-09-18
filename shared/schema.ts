@@ -470,6 +470,19 @@ export const accidentRecords = pgTable("accident_records", {
   department: text("department").notNull(), // Departmanı
   position: text("position").notNull(), // Görevi / Unvanı
   
+  // Accident Details - New Fields
+  accidentSeverity: text("accident_severity"), // Kaza Ciddiyeti
+  injuredBodyPart: text("injured_body_part"), // Kazalanan Vücut Bölgesi  
+  causingEquipment: text("causing_equipment"), // Yaralanmaya Neden Olan Unsur/Ekipman
+  accidentCauseType: text("accident_cause_type"), // Kaza Nedeni (Tehlikeli Durum/Hareket)
+  dangerousSelection: text("dangerous_selection"), // Selected dangerous situation or action
+  correctiveAction: text("corrective_action"), // Yaptılan Düzeltici/Önleyici Faaliyet
+  workDayLoss: integer("work_day_loss").default(0), // İş Günü Kaybı
+  additionalTrainingDate: timestamp("additional_training_date"), // İlave Eğitim Tarihi
+  
+  // Event Description
+  eventDescription: text("event_description").notNull(), // Olay Açıklaması
+  
   // System fields
   reportedBy: varchar("reported_by").references(() => users.id).notNull(),
   createdAt: timestamp("created_at").defaultNow(),

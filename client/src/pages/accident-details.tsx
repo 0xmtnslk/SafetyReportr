@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { format, differenceInDays } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -85,6 +85,12 @@ export default function AccidentDetailsPage() {
   const [selectedArea, setSelectedArea] = useState<string>("");
   const [selectedCauseType, setSelectedCauseType] = useState<string>("");
 
+  // Get current user information for hospital context
+  const { data: currentUser } = useQuery({
+    queryKey: ["/api/auth/me"],
+    enabled: true
+  });
+
   const form = useForm<AccidentFormData>({
     resolver: zodResolver(accidentFormSchema),
     defaultValues: {
@@ -155,17 +161,14 @@ export default function AccidentDetailsPage() {
     mutationFn: async (data: AccidentFormData) => {
       const payload = {
         ...data,
+        locationId: currentUser?.locationId, // Automatically set hospital from user session
         eventDate: data.eventDate,
         sgkNotificationDate: data.sgkNotificationDate || null,
         startWorkDate: data.startWorkDate,
         additionalTrainingDate: data.additionalTrainingDate || null
       };
       
-      return apiRequest({
-        url: "/api/accident-records",
-        method: "POST",
-        body: JSON.stringify(payload)
-      });
+      return apiRequest("POST", "/api/accident-records", payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/accident-records"] });
