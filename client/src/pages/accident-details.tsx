@@ -65,7 +65,10 @@ const safeDateForInput = (dateString: string | null | undefined): string => {
 };
 
 // Check if record can be edited/deleted (within 7 days of creation)
-const canEditRecord = (createdAt: string | null | undefined): boolean => {
+const canManageRecord = (userRole: string, createdAt: string | null | undefined): boolean => {
+  // Central admin can always manage records
+  if (userRole === 'central_admin') return true;
+  
   if (!createdAt) return false;
   try {
     const recordDate = new Date(createdAt);

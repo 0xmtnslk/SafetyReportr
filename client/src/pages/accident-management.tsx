@@ -14,7 +14,10 @@ import { format, isSameMonth } from "date-fns";
 import { tr } from "date-fns/locale";
 
 // Check if record can be edited/deleted (within 7 days of creation)
-const canEditRecord = (createdAt: string | null | undefined): boolean => {
+const canManageRecord = (userRole: string, createdAt: string | null | undefined): boolean => {
+  // Central admin can always manage records
+  if (userRole === 'central_admin') return true;
+  
   if (!createdAt) return false;
   try {
     const recordDate = new Date(createdAt);
@@ -31,6 +34,11 @@ export default function AccidentManagementPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // Get current user for role-based permissions
+  const { data: currentUser } = useQuery({
+    queryKey: ["/api/user/me"],
+  });
 
   // Fetch accident records
   const { data: accidentRecords = [], isLoading, isError } = useQuery({
@@ -339,7 +347,7 @@ export default function AccidentManagementPage() {
                                 >
                                   <Eye className="h-4 w-4" />
                                 </Button>
-                                {canEditRecord(record.createdAt) ? (
+                                {canManageRecord(currentUser?.role, record.createdAt) ? (
                                   <>
                                     <Button 
                                       variant="ghost" 
@@ -362,8 +370,8 @@ export default function AccidentManagementPage() {
                                     </Button>
                                   </>
                                 ) : (
-                                  <div className="h-8 w-8 p-0 flex items-center justify-center">
-                                    <span className="text-xs text-gray-400" title="7 günlük düzenleme süresi doldu">🔒</span>
+                                  <div className="h-8 w-8 p-0 flex items-center justify-center" data-testid={`locked-state-${record.id}`}>
+                                    <span className="text-xs text-gray-400" title="7 günlük düzenleme süresi dolmuş. Sadece görüntüleme mümkün.">🔒</span>
                                   </div>
                                 )}
                               </div>
@@ -466,7 +474,7 @@ export default function AccidentManagementPage() {
                                 >
                                   <Eye className="h-4 w-4" />
                                 </Button>
-                                {canEditRecord(record.createdAt) ? (
+                                {canManageRecord(currentUser?.role, record.createdAt) ? (
                                   <>
                                     <Button 
                                       variant="ghost" 
@@ -489,8 +497,8 @@ export default function AccidentManagementPage() {
                                     </Button>
                                   </>
                                 ) : (
-                                  <div className="h-8 w-8 p-0 flex items-center justify-center">
-                                    <span className="text-xs text-gray-400" title="7 günlük düzenleme süresi doldu">🔒</span>
+                                  <div className="h-8 w-8 p-0 flex items-center justify-center" data-testid={`locked-state-${record.id}`}>
+                                    <span className="text-xs text-gray-400" title="7 günlük düzenleme süresi dolmuş. Sadece görüntüleme mümkün.">🔒</span>
                                   </div>
                                 )}
                               </div>

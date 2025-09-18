@@ -4153,6 +4153,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: 'Bu kaza kaydını güncelleme yetkiniz bulunmamaktadır' });
       }
       
+      // Check 7-day edit restriction (only for non-central_admin users)
+      if (user.role !== 'central_admin') {
+        if (!existingRecord.createdAt) {
+          return res.status(403).json({ message: 'Kayıt tarihi eksik olduğu için düzenleme yapılamaz' });
+        }
+        
+        const recordDate = new Date(existingRecord.createdAt);
+        const now = new Date();
+        const daysDifference = Math.floor((now.getTime() - recordDate.getTime()) / (1000 * 60 * 60 * 24));
+        
+        if (daysDifference > 7) {
+          return res.status(403).json({ message: 'Kaza kayıtları sadece oluşturulduktan sonraki 7 gün içinde düzenlenebilir' });
+        }
+      }
+      
       // Validate request body
       const validatedData = insertAccidentRecordSchema.partial().parse(req.body);
       
@@ -4181,6 +4196,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check access permissions
       if (user.role !== 'central_admin' && existingRecord.locationId !== user.locationId) {
         return res.status(403).json({ message: 'Bu kaza kaydını silme yetkiniz bulunmamaktadır' });
+      }
+      
+      // Check 7-day delete restriction (only for non-central_admin users)
+      if (user.role !== 'central_admin') {
+        if (!existingRecord.createdAt) {
+          return res.status(403).json({ message: 'Kayıt tarihi eksik olduğu için silme yapılamaz' });
+        }
+        
+        const recordDate = new Date(existingRecord.createdAt);
+        const now = new Date();
+        const daysDifference = Math.floor((now.getTime() - recordDate.getTime()) / (1000 * 60 * 60 * 24));
+        
+        if (daysDifference > 7) {
+          return res.status(403).json({ message: 'Kaza kayıtları sadece oluşturulduktan sonraki 7 gün içinde silinebilir' });
+        }
       }
       
       const deleted = await storage.deleteAccidentRecord(req.params.id);
