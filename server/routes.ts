@@ -4197,8 +4197,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Update accident record
-  app.put('/api/accident-records/:id', authenticateToken, requireSafetySpecialist, async (req: Request, res: Response) => {
+  // Update accident record with file uploads
+  app.put('/api/accident-records/:id', authenticateToken, requireSafetySpecialist, upload.fields([
+    { name: 'sgkNotificationForm', maxCount: 1 },
+    { name: 'accidentAnalysisForm', maxCount: 1 }
+  ]), async (req: Request, res: Response) => {
     try {
       const user = (req as any).user;
       
@@ -4228,10 +4231,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Validate request body
-      const validatedData = insertAccidentRecordSchema.partial().parse(req.body);
+      // Process form data - convert types from strings 
+      const processedData = {
+        ...req.body,
+        workDayLoss: req.body.workDayLoss ? parseInt(req.body.workDayLoss) : 0,
+        // Handle dates
+        eventDate: req.body.eventDate ? new Date(req.body.eventDate) : undefined,
+        sgkNotificationDate: req.body.sgkNotificationDate ? new Date(req.body.sgkNotificationDate) : undefined,
+        employeeStartDate: req.body.employeeStartDate ? new Date(req.body.employeeStartDate) : undefined,
+        additionalTrainingDate: req.body.additionalTrainingDate ? new Date(req.body.additionalTrainingDate) : undefined
+      };
       
-      const updatedRecord = await storage.updateAccidentRecord(req.params.id, validatedData);
+      // Validate request body
+      const validatedData = insertAccidentRecordSchema.partial().parse(processedData);
+      
+      // Handle file uploads - save locally for now 
+      let sgkNotificationFormUrl = existingRecord.sgkNotificationFormUrl; // Keep existing if no new file
+      let accidentAnalysisFormUrl = existingRecord.accidentAnalysisFormUrl; // Keep existing if no new file
+      
+      const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+      
+      if (files?.sgkNotificationForm?.[0]) {
+        const file = files.sgkNotificationForm[0];
+        console.log('📄 SGK form güncelleniyor:', file.originalname, `(${(file.size / 1024 / 1024).toFixed(2)} MB)`);
+        
+        // Simple file saving instead of complex object storage
+        const fs = await import('fs/promises');
+        const path = await import('path');
+        
+        const uploadsDir = path.join(process.cwd(), 'uploads');
+        await fs.mkdir(uploadsDir, { recursive: true });
+        
+        const filename = `sgk_${Date.now()}_${file.originalname}`;
+        const filepath = path.join(uploadsDir, filename);
+        await fs.writeFile(filepath, file.buffer);
+        
+        sgkNotificationFormUrl = `/uploads/${filename}`;
+        console.log('✅ SGK form güncellendi:', sgkNotificationFormUrl);
+      }
+      
+      if (files?.accidentAnalysisForm?.[0]) {
+        const file = files.accidentAnalysisForm[0];
+        console.log('📄 Analiz formu güncelleniyor:', file.originalname, `(${(file.size / 1024 / 1024).toFixed(2)} MB)`);
+        
+        // Simple file saving instead of complex object storage
+        const fs = await import('fs/promises');
+        const path = await import('path');
+        
+        const uploadsDir = path.join(process.cwd(), 'uploads');
+        await fs.mkdir(uploadsDir, { recursive: true });
+        
+        const filename = `analysis_${Date.now()}_${file.originalname}`;
+        const filepath = path.join(uploadsDir, filename);
+        await fs.writeFile(filepath, file.buffer);
+        
+        accidentAnalysisFormUrl = `/uploads/${filename}`;
+        console.log('✅ Analiz formu güncellendi:', accidentAnalysisFormUrl);
+      }
+      
+      // Add document URLs to update data
+      const updateData = {
+        ...validatedData,
+        sgkNotificationFormUrl,
+        accidentAnalysisFormUrl
+      };
+      
+      const updatedRecord = await storage.updateAccidentRecord(req.params.id, updateData);
       res.json(updatedRecord);
     } catch (error: any) {
       console.error('Update accident record error:', error);

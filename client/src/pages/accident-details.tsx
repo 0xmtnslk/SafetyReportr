@@ -384,7 +384,7 @@ export default function AccidentDetailsPage() {
   // Get available dangerous options based on selected cause type
   const availableDangerousOptions = selectedCauseType ? getDangerousOptions(selectedCauseType) : [];
 
-  // Submit mutation
+  // Create mutation
   const createAccidentMutation = useMutation({
     mutationFn: async (data: AccidentFormData & { sgkFile?: File, analysisFile?: File }) => {
       const formData = new FormData();
@@ -464,13 +464,92 @@ export default function AccidentDetailsPage() {
     }
   });
 
+  // Update mutation
+  const updateAccidentMutation = useMutation({
+    mutationFn: async (data: AccidentFormData & { sgkFile?: File, analysisFile?: File }) => {
+      const formData = new FormData();
+      
+      // Add all form fields
+      formData.append('eventDate', data.eventDate);
+      formData.append('eventTime', data.eventTime);
+      formData.append('eventType', data.eventType);
+      formData.append('workShift', data.workShift);
+      formData.append('eventArea', data.eventArea);
+      formData.append('eventPlace', data.eventPlace);
+      formData.append('employeeRegistrationNumber', data.personnelNumber);
+      formData.append('employeeName', data.fullName);
+      formData.append('employeeStartDate', data.startWorkDate);
+      formData.append('employeeStatus', data.employeeStatus);
+      if (data.affiliatedCompany) {
+        formData.append('affiliatedCompany', data.affiliatedCompany);
+      }
+      formData.append('professionGroup', data.professionGroup);
+      formData.append('department', data.department);
+      formData.append('position', data.position);
+      formData.append('eventDescription', data.eventDescription);
+      
+      // Add optional fields
+      if (data.sgkNotificationDate && data.sgkNotificationDate.trim()) {
+        formData.append('sgkNotificationDate', data.sgkNotificationDate);
+      }
+      if (data.accidentSeverity) formData.append('accidentSeverity', data.accidentSeverity);
+      if (data.injuredBodyPart) formData.append('injuredBodyPart', data.injuredBodyPart);
+      if (data.causingEquipment) formData.append('causingEquipment', data.causingEquipment);
+      if (data.accidentCauseType) formData.append('accidentCauseType', data.accidentCauseType);
+      if (data.dangerousSelection) formData.append('dangerousSelection', data.dangerousSelection);
+      if (data.correctiveAction) formData.append('correctiveAction', data.correctiveAction);
+      if (data.workDayLoss !== undefined) formData.append('workDayLoss', data.workDayLoss.toString());
+      if (data.additionalTrainingDate && data.additionalTrainingDate.trim()) {
+        formData.append('additionalTrainingDate', data.additionalTrainingDate);
+      }
+
+      // Add files if they are new
+      if (data.sgkFile) {
+        formData.append('sgkNotificationForm', data.sgkFile);
+      }
+      if (data.analysisFile) {
+        formData.append('accidentAnalysisForm', data.analysisFile);
+      }
+      
+      const response = await fetch(`/api/accident-records/${recordId}`, {
+        method: 'PUT',
+        body: formData,
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Kayıt güncellenirken hata oluştu');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/accident-records"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/accident-records", recordId] });
+      toast({
+        title: "Başarılı",
+        description: "Kaza/ramak kala kaydı başarıyla güncellendi."
+      });
+      setLocation("/accident-management");
+    },
+    onError: () => {
+      toast({
+        title: "Hata",
+        description: "Kayıt güncellenirken bir hata oluştu.",
+        variant: "destructive"
+      });
+    }
+  });
+
   const onSubmit = (data: AccidentFormData) => {
     if (isEditMode) {
-      // TODO: Implement update mutation
-      toast({
-        title: "Geliştirme Aşamasında",
-        description: "Düzenleme özelliği yakında eklenecek.",
-        variant: "destructive",
+      updateAccidentMutation.mutate({
+        ...data,
+        sgkFile: sgkFormFile || undefined,
+        analysisFile: analysisFormFile || undefined
       });
     } else {
       createAccidentMutation.mutate({
