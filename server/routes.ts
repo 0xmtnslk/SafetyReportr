@@ -4134,36 +4134,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate request body
       const validatedData = insertAccidentRecordSchema.parse(processedData);
       
-      // Handle file uploads to object storage
+      // Handle file uploads - save locally for now 
       let sgkNotificationFormUrl = null;
       let accidentAnalysisFormUrl = null;
       
       const files = req.files as { [fieldname: string]: Express.Multer.File[] };
       
       if (files?.sgkNotificationForm?.[0]) {
-        console.log('📄 SGK form yükleniyor:', files.sgkNotificationForm[0].originalname);
-        const { ObjectStorageService } = await import("./objectStorage");
-        const objectStorageService = new ObjectStorageService();
+        const file = files.sgkNotificationForm[0];
+        console.log('📄 SGK form yükleniyor:', file.originalname, `(${(file.size / 1024 / 1024).toFixed(2)} MB)`);
         
-        sgkNotificationFormUrl = await objectStorageService.uploadFile(
-          files.sgkNotificationForm[0].buffer,
-          files.sgkNotificationForm[0].originalname,
-          files.sgkNotificationForm[0].mimetype
-        );
-        console.log('✅ SGK form upload edildi:', sgkNotificationFormUrl);
+        // Simple file saving instead of complex object storage
+        const fs = await import('fs/promises');
+        const path = await import('path');
+        
+        const uploadsDir = path.join(process.cwd(), 'uploads');
+        await fs.mkdir(uploadsDir, { recursive: true });
+        
+        const filename = `sgk_${Date.now()}_${file.originalname}`;
+        const filepath = path.join(uploadsDir, filename);
+        await fs.writeFile(filepath, file.buffer);
+        
+        sgkNotificationFormUrl = `/uploads/${filename}`;
+        console.log('✅ SGK form kaydedildi:', sgkNotificationFormUrl);
       }
       
       if (files?.accidentAnalysisForm?.[0]) {
-        console.log('📄 Analiz formu yükleniyor:', files.accidentAnalysisForm[0].originalname);
-        const { ObjectStorageService } = await import("./objectStorage");
-        const objectStorageService = new ObjectStorageService();
+        const file = files.accidentAnalysisForm[0];
+        console.log('📄 Analiz formu yükleniyor:', file.originalname, `(${(file.size / 1024 / 1024).toFixed(2)} MB)`);
         
-        accidentAnalysisFormUrl = await objectStorageService.uploadFile(
-          files.accidentAnalysisForm[0].buffer,
-          files.accidentAnalysisForm[0].originalname,
-          files.accidentAnalysisForm[0].mimetype
-        );
-        console.log('✅ Analiz formu upload edildi:', accidentAnalysisFormUrl);
+        // Simple file saving instead of complex object storage
+        const fs = await import('fs/promises');
+        const path = await import('path');
+        
+        const uploadsDir = path.join(process.cwd(), 'uploads');
+        await fs.mkdir(uploadsDir, { recursive: true });
+        
+        const filename = `analysis_${Date.now()}_${file.originalname}`;
+        const filepath = path.join(uploadsDir, filename);
+        await fs.writeFile(filepath, file.buffer);
+        
+        accidentAnalysisFormUrl = `/uploads/${filename}`;
+        console.log('✅ Analiz formu kaydedildi:', accidentAnalysisFormUrl);
       }
       
       // Add reporter information and document URLs
