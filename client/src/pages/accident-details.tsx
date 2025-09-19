@@ -132,7 +132,7 @@ const accidentFormSchema = z.object({
   
   // Employment Classification
   employeeStatus: z.string(),
-  // affiliatedCompany: z.string().optional(),
+  affiliatedCompany: z.string().optional(),
   professionGroup: z.string(),
   department: z.string(),
   position: z.string(),
@@ -261,7 +261,7 @@ export default function AccidentDetailsPage() {
       fullName: "",
       startWorkDate: "",
       employeeStatus: "",
-      // affiliatedCompany: "",
+      affiliatedCompany: "",
       professionGroup: "",
       department: "",
       position: "",
@@ -294,7 +294,7 @@ export default function AccidentDetailsPage() {
         fullName: record.employeeName || "",
         startWorkDate: safeDateForInput(record.employeeStartDate),
         employeeStatus: record.employeeStatus || "",
-        // affiliatedCompany: record.affiliatedCompany || "",
+        affiliatedCompany: record.affiliatedCompany || "",
         professionGroup: record.professionGroup || "",
         department: record.department || "",
         position: record.position || "",
@@ -378,9 +378,9 @@ export default function AccidentDetailsPage() {
       formData.append('employeeName', data.fullName);
       formData.append('employeeStartDate', data.startWorkDate);
       formData.append('employeeStatus', data.employeeStatus);
-      // if (data.affiliatedCompany) {
-      //   formData.append('affiliatedCompany', data.affiliatedCompany);
-      // }
+      if (data.affiliatedCompany) {
+        formData.append('affiliatedCompany', data.affiliatedCompany);
+      }
       formData.append('professionGroup', data.professionGroup);
       formData.append('department', data.department);
       formData.append('position', data.position);
@@ -614,7 +614,7 @@ export default function AccidentDetailsPage() {
                       </div>
                       <div>
                         <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Bağlı Olduğu Firma:</span>
-                        <p className="text-gray-900 dark:text-white font-medium">—</p>{/* temporarily disabled */}
+                        <p className="text-gray-900 dark:text-white font-medium">{existingRecord.affiliatedCompany || '—'}</p>
                       </div>
                       <div>
                         <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Meslek Grubu:</span>
@@ -1271,7 +1271,7 @@ export default function AccidentDetailsPage() {
                   )}
                 />
 
-                {/* Affiliated Company - temporarily disabled for migration
+                {/* Affiliated Company */}
                 <FormField
                   control={form.control}
                   name="affiliatedCompany"
@@ -1289,7 +1289,6 @@ export default function AccidentDetailsPage() {
                     </FormItem>
                   )}
                 />
-                */}
               </div>
 
               <div className="grid md:grid-cols-2 gap-4">
