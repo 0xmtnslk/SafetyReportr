@@ -7,8 +7,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { AlertTriangle, Activity, FileText, TrendingUp, Users, Clock, PlusCircle, Shield, Search, Eye, Edit, Download, Trash2, Calendar, BarChart3, PieChart } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RechartsPieChart, Cell } from "recharts";
+import { AlertTriangle, Activity, FileText, TrendingUp, Users, Clock, PlusCircle, Shield, Search, Eye, Edit, Download, Trash2, Calendar, BarChart3, PieChart as PieChartIcon } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -72,6 +72,7 @@ export default function AccidentManagementPage() {
   const [analyticsCategory, setAnalyticsCategory] = useState<string>("eventTime");
   const [analyticsYear, setAnalyticsYear] = useState<string>("all");
   const [analyticsMonth, setAnalyticsMonth] = useState<string>("all");
+  const [analyticsEventType, setAnalyticsEventType] = useState<string>("all");
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -317,7 +318,7 @@ export default function AccidentManagementPage() {
 
   // Analytics data preparation
   const analyticsData = useMemo(() => {
-    // Filter records by selected year and month for analytics
+    // Filter records by selected year, month, and event type for analytics
     let filteredRecords = accidentRecords.filter((record: any) => {
       if (!record.eventDate) return false;
       try {
@@ -327,6 +328,7 @@ export default function AccidentManagementPage() {
         
         if (analyticsYear !== "all" && recordYear !== analyticsYear) return false;
         if (analyticsMonth !== "all" && recordMonth !== analyticsMonth) return false;
+        if (analyticsEventType !== "all" && record.eventType !== analyticsEventType) return false;
         
         return true;
       } catch {
@@ -351,8 +353,21 @@ export default function AccidentManagementPage() {
             }
             break;
           case "workExperience":
-            if (record.workDurationDays !== undefined && record.workDurationDays !== null) {
-              key = convertWorkingDaysToYearsMonths(record.workDurationDays);
+            let workDays = record.workDurationDays;
+            // If workDurationDays is not available, calculate from dates
+            if ((workDays === undefined || workDays === null) && record.eventDate && record.employeeStartDate) {
+              try {
+                const eventDate = new Date(record.eventDate);
+                const startDate = new Date(record.employeeStartDate);
+                if (!isNaN(eventDate.getTime()) && !isNaN(startDate.getTime())) {
+                  workDays = Math.max(0, Math.floor((eventDate.getTime() - startDate.getTime()) / (24 * 60 * 60 * 1000)));
+                }
+              } catch {
+                workDays = undefined;
+              }
+            }
+            if (workDays !== undefined && workDays !== null && !isNaN(workDays)) {
+              key = convertWorkingDaysToYearsMonths(workDays);
             }
             break;
           case "professionGroup":
@@ -388,7 +403,7 @@ export default function AccidentManagementPage() {
     };
 
     return prepareAnalyticsData(analyticsCategory, filteredRecords);
-  }, [accidentRecords, analyticsCategory, analyticsYear, analyticsMonth]);
+  }, [accidentRecords, analyticsCategory, analyticsYear, analyticsMonth, analyticsEventType]);
 
   // Get month keys sorted by most recent first
   const getSortedMonthKeys = (grouped: { [key: string]: any[] }): string[] => {
@@ -542,7 +557,7 @@ export default function AccidentManagementPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <PieChart className="h-5 w-5" />
+                  <PieChartIcon className="h-5 w-5" />
                   Analiz Filtreleri
                 </CardTitle>
                 <CardDescription>
@@ -550,12 +565,27 @@ export default function AccidentManagementPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  {/* Event Type Selection */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Olay Türü</label>
+                    <Select value={analyticsEventType} onValueChange={setAnalyticsEventType}>
+                      <SelectTrigger data-testid="select-event-type">
+                        <SelectValue placeholder="Olay türü seçin" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Tümü</SelectItem>
+                        <SelectItem value="İş Kazası">İş Kazası</SelectItem>
+                        <SelectItem value="Ramak Kala">Ramak Kala</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
                   {/* Category Selection */}
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Analiz Kategorisi</label>
                     <Select value={analyticsCategory} onValueChange={setAnalyticsCategory}>
-                      <SelectTrigger>
+                      <SelectTrigger data-testid="select-analytics-category">
                         <SelectValue placeholder="Kategori seçin" />
                       </SelectTrigger>
                       <SelectContent>
@@ -572,7 +602,7 @@ export default function AccidentManagementPage() {
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Yıl</label>
                     <Select value={analyticsYear} onValueChange={setAnalyticsYear}>
-                      <SelectTrigger>
+                      <SelectTrigger data-testid="select-analytics-year">
                         <SelectValue placeholder="Yıl seçin" />
                       </SelectTrigger>
                       <SelectContent>
@@ -590,7 +620,7 @@ export default function AccidentManagementPage() {
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Ay</label>
                     <Select value={analyticsMonth} onValueChange={setAnalyticsMonth}>
-                      <SelectTrigger>
+                      <SelectTrigger data-testid="select-analytics-month">
                         <SelectValue placeholder="Ay seçin" />
                       </SelectTrigger>
                       <SelectContent>
@@ -630,23 +660,27 @@ export default function AccidentManagementPage() {
                 <CardContent>
                   {analyticsData.length > 0 ? (
                     <ResponsiveContainer width="100%" height={300}>
-                      <BarChart data={analyticsData}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis 
-                          dataKey="name" 
-                          angle={-45}
-                          textAnchor="end"
-                          height={100}
-                          fontSize={12}
-                        />
-                        <YAxis />
-                        <Tooltip />
-                        <Bar dataKey="value" fill="#3b82f6" />
-                      </BarChart>
+                      <PieChart>
+                        <Pie
+                          data={analyticsData}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                          outerRadius={80}
+                          fill="#8884d8"
+                          dataKey="value"
+                        >
+                          {analyticsData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(value, name) => [value, name]} />
+                      </PieChart>
                     </ResponsiveContainer>
                   ) : (
                     <div className="text-center py-8">
-                      <BarChart3 className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                      <PieChartIcon className="h-16 w-16 text-gray-300 mx-auto mb-4" />
                       <p className="text-gray-500">Seçilen kriterlere uygun veri bulunamadı</p>
                     </div>
                   )}
