@@ -6,7 +6,7 @@ import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { useLocation, useSearch } from "wouter";
 import { format, differenceInDays } from "date-fns";
 import { tr } from "date-fns/locale";
-import { Calendar, CalendarDays, Clock, Eye } from "lucide-react";
+import { Calendar, CalendarDays, Clock, Eye, Upload, CheckCircle2, X, FileText } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -27,6 +27,7 @@ import {
   EVENT_AREAS,
   EVENT_PLACES,
   EMPLOYEE_STATUS,
+  AFFILIATED_COMPANIES,
   PROFESSION_GROUPS,
   DEPARTMENTS,
   COMPLETE_POSITIONS,
@@ -131,6 +132,7 @@ const accidentFormSchema = z.object({
   
   // Employment Classification
   employeeStatus: z.string(),
+  affiliatedCompany: z.string().optional(),
   professionGroup: z.string(),
   department: z.string(),
   position: z.string(),
@@ -233,6 +235,7 @@ export default function AccidentDetailsPage() {
       fullName: "",
       startWorkDate: "",
       employeeStatus: "",
+      affiliatedCompany: "",
       professionGroup: "",
       department: "",
       position: "",
@@ -265,6 +268,7 @@ export default function AccidentDetailsPage() {
         fullName: record.employeeName || "",
         startWorkDate: safeDateForInput(record.employeeStartDate),
         employeeStatus: record.employeeStatus || "",
+        affiliatedCompany: record.affiliatedCompany || "",
         professionGroup: record.professionGroup || "",
         department: record.department || "",
         position: record.position || "",
@@ -536,6 +540,10 @@ export default function AccidentDetailsPage() {
                       <div>
                         <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Çalışan Durumu:</span>
                         <p className="text-gray-900 dark:text-white font-medium">{existingRecord.employeeStatus || '—'}</p>
+                      </div>
+                      <div>
+                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Bağlı Olduğu Firma:</span>
+                        <p className="text-gray-900 dark:text-white font-medium">{existingRecord.affiliatedCompany || '—'}</p>
                       </div>
                       <div>
                         <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Meslek Grubu:</span>
@@ -1192,6 +1200,27 @@ export default function AccidentDetailsPage() {
                   )}
                 />
 
+                {/* Affiliated Company */}
+                <FormField
+                  control={form.control}
+                  name="affiliatedCompany"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Bağlı Olduğu Firma</FormLabel>
+                      <SearchableSelect
+                        options={AFFILIATED_COMPANIES}
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        placeholder="Firma seçin"
+                        data-testid="select-affiliated-company"
+                      />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4">
                 {/* Profession Group */}
                 <FormField
                   control={form.control}
@@ -1525,62 +1554,120 @@ export default function AccidentDetailsPage() {
               {/* SGK Notification Form */}
               <div className="space-y-2">
                 <FormLabel>SGK Bildirim Formu (PDF, JPEG, PNG)</FormLabel>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
-                  <ObjectUploader
-                    maxNumberOfFiles={1}
-                    maxFileSize={10485760} // 10MB
-                    allowedFileTypes={['application/pdf', 'image/jpeg', 'image/png', 'image/jpg', '.pdf', '.jpeg', '.jpg', '.png']}
-                    onGetUploadParameters={getUploadParameters}
-                    onComplete={(result) => {
-                      if (result.successful && result.successful.length > 0) {
-                        const uploadedFile = result.successful[0];
-                        const fileUrl = uploadedFile.uploadURL || "";
-                        setSgkFormUploaded(fileUrl);
-                        form.setValue('sgkNotificationFormUrl', fileUrl);
-                      }
-                    }}
-                    buttonClassName="w-full"
-                  >
-                    <div className="text-center">
-                      <div className="text-sm text-gray-600">
-                        {sgkFormUploaded ? 
-                          '✅ SGK formu yüklendi' : 
-                          'SGK Bildirim Formunu yükleyin (PDF, JPEG, PNG)'
-                        }
+                <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center hover:border-blue-400 dark:hover:border-blue-500 transition-colors">
+                  {sgkFormUploaded ? (
+                    <div className="space-y-3">
+                      <div className="text-green-600 dark:text-green-400">
+                        <CheckCircle2 className="h-12 w-12 mx-auto" />
+                      </div>
+                      <p className="text-sm font-medium text-green-700 dark:text-green-300">SGK Bildirim Formu yüklendi</p>
+                      <div className="flex justify-center gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => {
+                            setSgkFormUploaded("");
+                            form.setValue('sgkNotificationFormUrl', '');
+                          }}
+                          data-testid="button-remove-sgk-form"
+                        >
+                          <X className="h-4 w-4 mr-2" />
+                          Kaldır
+                        </Button>
                       </div>
                     </div>
-                  </ObjectUploader>
+                  ) : (
+                    <ObjectUploader
+                      maxNumberOfFiles={1}
+                      maxFileSize={10485760}
+                      allowedFileTypes={['application/pdf', 'image/jpeg', 'image/png', 'image/jpg', '.pdf', '.jpeg', '.jpg', '.png']}
+                      onGetUploadParameters={getUploadParameters}
+                      onComplete={(result) => {
+                        if (result.successful && result.successful.length > 0) {
+                          const uploadedFile = result.successful[0];
+                          const fileUrl = uploadedFile.uploadURL || "";
+                          setSgkFormUploaded(fileUrl);
+                          form.setValue('sgkNotificationFormUrl', fileUrl);
+                          toast({
+                            description: "SGK Bildirim Formu başarıyla yüklendi"
+                          });
+                        }
+                      }}
+                      buttonClassName="w-full p-0 border-0 bg-transparent hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
+                    >
+                      <div className="space-y-3">
+                        <Upload className="mx-auto h-12 w-12 text-gray-400" />
+                        <div>
+                          <p className="text-base font-medium text-gray-700 dark:text-gray-300">SGK Bildirim Formunu Yükleyin</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">PDF, JPEG, PNG formatında, maksimum 10MB</p>
+                        </div>
+                        <Button variant="outline" size="sm" data-testid="button-upload-sgk-form">
+                          <FileText className="h-4 w-4 mr-2" />
+                          Dosya Seç
+                        </Button>
+                      </div>
+                    </ObjectUploader>
+                  )}
                 </div>
               </div>
 
               {/* Accident Analysis Form */}
               <div className="space-y-2">
                 <FormLabel>İş Kazası / Ramak Kala Analiz Formu (PDF, JPEG, PNG)</FormLabel>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
-                  <ObjectUploader
-                    maxNumberOfFiles={1}
-                    maxFileSize={10485760} // 10MB
-                    allowedFileTypes={['application/pdf', 'image/jpeg', 'image/png', 'image/jpg', '.pdf', '.jpeg', '.jpg', '.png']}
-                    onGetUploadParameters={getUploadParameters}
-                    onComplete={(result) => {
-                      if (result.successful && result.successful.length > 0) {
-                        const uploadedFile = result.successful[0];
-                        const fileUrl = uploadedFile.uploadURL || "";
-                        setAnalysisFormUploaded(fileUrl);
-                        form.setValue('accidentAnalysisFormUrl', fileUrl);
-                      }
-                    }}
-                    buttonClassName="w-full"
-                  >
-                    <div className="text-center">
-                      <div className="text-sm text-gray-600">
-                        {analysisFormUploaded ? 
-                          '✅ Analiz formu yüklendi' : 
-                          'Analiz Formunu yükleyin (PDF, JPEG, PNG)'
-                        }
+                <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center hover:border-blue-400 dark:hover:border-blue-500 transition-colors">
+                  {analysisFormUploaded ? (
+                    <div className="space-y-3">
+                      <div className="text-green-600 dark:text-green-400">
+                        <CheckCircle2 className="h-12 w-12 mx-auto" />
+                      </div>
+                      <p className="text-sm font-medium text-green-700 dark:text-green-300">Analiz Formu yüklendi</p>
+                      <div className="flex justify-center gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => {
+                            setAnalysisFormUploaded("");
+                            form.setValue('accidentAnalysisFormUrl', '');
+                          }}
+                          data-testid="button-remove-analysis-form"
+                        >
+                          <X className="h-4 w-4 mr-2" />
+                          Kaldır
+                        </Button>
                       </div>
                     </div>
-                  </ObjectUploader>
+                  ) : (
+                    <ObjectUploader
+                      maxNumberOfFiles={1}
+                      maxFileSize={10485760}
+                      allowedFileTypes={['application/pdf', 'image/jpeg', 'image/png', 'image/jpg', '.pdf', '.jpeg', '.jpg', '.png']}
+                      onGetUploadParameters={getUploadParameters}
+                      onComplete={(result) => {
+                        if (result.successful && result.successful.length > 0) {
+                          const uploadedFile = result.successful[0];
+                          const fileUrl = uploadedFile.uploadURL || "";
+                          setAnalysisFormUploaded(fileUrl);
+                          form.setValue('accidentAnalysisFormUrl', fileUrl);
+                          toast({
+                            description: "Analiz Formu başarıyla yüklendi"
+                          });
+                        }
+                      }}
+                      buttonClassName="w-full p-0 border-0 bg-transparent hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
+                    >
+                      <div className="space-y-3">
+                        <Upload className="mx-auto h-12 w-12 text-gray-400" />
+                        <div>
+                          <p className="text-base font-medium text-gray-700 dark:text-gray-300">Analiz Formunu Yükleyin</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">PDF, JPEG, PNG formatında, maksimum 10MB</p>
+                        </div>
+                        <Button variant="outline" size="sm" data-testid="button-upload-analysis-form">
+                          <FileText className="h-4 w-4 mr-2" />
+                          Dosya Seç
+                        </Button>
+                      </div>
+                    </ObjectUploader>
+                  )}
                 </div>
               </div>
 
