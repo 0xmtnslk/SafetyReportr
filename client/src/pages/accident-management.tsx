@@ -54,6 +54,7 @@ const analyticsCategories = [
   { value: "eventTime", label: "Olayın Gerçekleştiği Saat Dilimi" },
   { value: "workExperience", label: "Çalışma Süresi" },
   { value: "professionGroup", label: "Meslek Grubu" },
+  { value: "accidentCauseFactor", label: "Kazaya Sebep Olan Etmenler (Kaza Türü)" },
   { value: "accidentSeverity", label: "Kaza Ciddiyeti" },
   { value: "injuredBodyPart", label: "Kazalanan Vücut Bölgesi" },
   { value: "causingEquipment", label: "Yaralanmaya Neden Olan Unsur / Ekipman" },
@@ -372,6 +373,9 @@ export default function AccidentManagementPage() {
             break;
           case "professionGroup":
             key = record.professionGroup || "Belirtilmemiş";
+            break;
+          case "accidentCauseFactor":
+            key = record.accidentCauseFactor || "Belirtilmemiş";
             break;
           case "accidentSeverity":
             key = record.accidentSeverity || "Belirtilmemiş";

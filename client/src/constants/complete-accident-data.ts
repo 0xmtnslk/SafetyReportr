@@ -174,6 +174,38 @@ export const DEPARTMENTS = [
 export const COMPLETE_POSITIONS = ALL_HEALTHCARE_POSITIONS;
 
 // Accident Cause Types
+export const ACCIDENT_CAUSE_FACTORS = [
+  { value: "Bilinç Kaybı, Nöbet, Kâriz vb.", label: "Bilinç Kaybı, Nöbet, Kâriz vb." },
+  { value: "Bir Cisme Çarpma (Sabit Cisim)", label: "Bir Cisme Çarpma (Sabit Cisim)" },
+  { value: "Bir Cismin Batması - Kesmesi", label: "Bir Cismin Batması - Kesmesi" },
+  { value: "Bir Cismin Çarpması (Hareketli Cisim)", label: "Bir Cismin Çarpması (Hareketli Cisim)" },
+  { value: "Burkulmalar - İncinmeler", label: "Burkulmalar - İncinmeler" },
+  { value: "Cisim Düşmesi", label: "Cisim Düşmesi" },
+  { value: "Düşme (Aynı Düzeyde)", label: "Düşme (Aynı Düzeyde)" },
+  { value: "Düşme (Yüksekten Düşme)", label: "Düşme (Yüksekten Düşme)" },
+  { value: "Elektrik Çarpması", label: "Elektrik Çarpması" },
+  { value: "Fiziksel Darbeler (Hastalar Tarafından Bilinç Dışı)", label: "Fiziksel Darbeler (Hastalar Tarafından Bilinç Dışı)" },
+  { value: "Hayvan Isırığı / Saldırısı vb. Yaralanmalar", label: "Hayvan Isırığı / Saldırısı vb. Yaralanmalar" },
+  { value: "Isı İle Temas (Sıcak Yanıkları)", label: "Isı İle Temas (Sıcak Yanıkları)" },
+  { value: "Isı İle Temas (Soğuk Yanıkları)", label: "Isı İle Temas (Soğuk Yanıkları)" },
+  { value: "İntihar", label: "İntihar" },
+  { value: "Kan ve Vücut Sıvısına Maruziyet (Tüm Yollar)", label: "Kan ve Vücut Sıvısına Maruziyet (Tüm Yollar)" },
+  { value: "Kesici - Delici Alet Yaralanması", label: "Kesici - Delici Alet Yaralanması" },
+  { value: "Kırık - Çıkık - Çatlak", label: "Kırık - Çıkık - Çatlak" },
+  { value: "Radyasyona Maruziyet (İyonlaştırıcı)", label: "Radyasyona Maruziyet (İyonlaştırıcı)" },
+  { value: "Radyasyona Maruziyet (Optik Radyasyon)", label: "Radyasyona Maruziyet (Optik Radyasyon)" },
+  { value: "Sıkışma (Tüm Vücut)", label: "Sıkışma (Tüm Vücut)" },
+  { value: "Sıkışma (Uzağı)", label: "Sıkışma (Uzağı)" },
+  { value: "Şiddete Maruz Kalma", label: "Şiddete Maruz Kalma" },
+  { value: "Takılma - Kayma (Düşmeyle Sonuçlanmayan)", label: "Takılma - Kayma (Düşmeyle Sonuçlanmayan)" },
+  { value: "Taşıt Kazası", label: "Taşıt Kazası" },
+  { value: "Tehlikeli Kimyasala Maruziyet (Tüm Yollar)", label: "Tehlikeli Kimyasala Maruziyet (Tüm Yollar)" },
+  { value: "Vücudun Doğal Boşluklarından Cisim Kaçması", label: "Vücudun Doğal Boşluklarından Cisim Kaçması" },
+  { value: "Vücudun Zorlanmasından İleri Gelen Yaralanmalar", label: "Vücudun Zorlanmasından İleri Gelen Yaralanmalar" },
+  { value: "Zehirlenme - Gıda Zehirlenmesi", label: "Zehirlenme - Gıda Zehirlenmesi" },
+  { value: "Zehirlenme - Kimyasal Madde Zehirlenmesi", label: "Zehirlenme - Kimyasal Madde Zehirlenmesi" }
+];
+
 export const ACCIDENT_CAUSE_TYPES = [
   { value: "Tehlikeli Durum", label: "Tehlikeli Durum" },
   { value: "Tehlikeli Hareket", label: "Tehlikeli Hareket" },

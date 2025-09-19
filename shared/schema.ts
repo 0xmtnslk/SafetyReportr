@@ -474,7 +474,8 @@ export const accidentRecords = pgTable("accident_records", {
   // Accident Details - New Fields
   accidentSeverity: text("accident_severity"), // Kaza Ciddiyeti
   injuredBodyPart: text("injured_body_part"), // Kazalanan Vücut Bölgesi  
-  causingEquipment: text("causing_equipment"), // Yaralanmaya Neden Olan Unsur/Ekipman
+  causingEquipment: text("causing_equipment"), // Yaralanmaye Neden Olan Unsur/Ekipman
+  accidentCauseFactor: text("accident_cause_factor"), // Kazaya Sebep Olan Etmenler (Kaza Türü)
   accidentCauseType: text("accident_cause_type"), // Kaza Nedeni (Tehlikeli Durum/Hareket)
   dangerousSelection: text("dangerous_selection"), // Selected dangerous situation or action
   correctiveAction: text("corrective_action"), // Yaptılan Düzeltici/Önleyici Faaliyet

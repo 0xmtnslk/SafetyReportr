@@ -31,6 +31,7 @@ import {
   PROFESSION_GROUPS,
   DEPARTMENTS,
   COMPLETE_POSITIONS,
+  ACCIDENT_CAUSE_FACTORS,
   ACCIDENT_CAUSE_TYPES,
   ACCIDENT_SEVERITY,
   INJURED_BODY_PARTS,
@@ -141,6 +142,7 @@ const accidentFormSchema = z.object({
   accidentSeverity: z.string().optional(),
   injuredBodyPart: z.string().optional(),
   causingEquipment: z.string().optional(),
+  accidentCauseFactor: z.string().optional(),
   accidentCauseType: z.string().optional(),
   dangerousSelection: z.string().optional(),
   dangerousSelection2: z.string().optional(), // Second selection for combined type
@@ -291,6 +293,7 @@ export default function AccidentDetailsPage() {
       accidentSeverity: "",
       injuredBodyPart: "",
       causingEquipment: "",
+      accidentCauseFactor: "",
       accidentCauseType: "",
       dangerousSelection: "",
       dangerousSelection2: "",
@@ -324,6 +327,7 @@ export default function AccidentDetailsPage() {
         accidentSeverity: record.accidentSeverity || "",
         injuredBodyPart: record.injuredBodyPart || "",
         causingEquipment: record.causingEquipment || "",
+        accidentCauseFactor: record.accidentCauseFactor || "",
         accidentCauseType: record.accidentCauseType || "",
         dangerousSelection: record.dangerousSelection || "",
         dangerousSelection2: record.dangerousSelection2 || "",
@@ -421,6 +425,7 @@ export default function AccidentDetailsPage() {
       if (data.accidentSeverity) formData.append('accidentSeverity', data.accidentSeverity);
       if (data.injuredBodyPart) formData.append('injuredBodyPart', data.injuredBodyPart);
       if (data.causingEquipment) formData.append('causingEquipment', data.causingEquipment);
+      if (data.accidentCauseFactor) formData.append('accidentCauseFactor', data.accidentCauseFactor);
       if (data.accidentCauseType) formData.append('accidentCauseType', data.accidentCauseType);
       if (data.dangerousSelection) formData.append('dangerousSelection', data.dangerousSelection);
       if (data.correctiveAction) formData.append('correctiveAction', data.correctiveAction);
@@ -505,6 +510,7 @@ export default function AccidentDetailsPage() {
       if (data.accidentSeverity) formData.append('accidentSeverity', data.accidentSeverity);
       if (data.injuredBodyPart) formData.append('injuredBodyPart', data.injuredBodyPart);
       if (data.causingEquipment) formData.append('causingEquipment', data.causingEquipment);
+      if (data.accidentCauseFactor) formData.append('accidentCauseFactor', data.accidentCauseFactor);
       if (data.accidentCauseType) formData.append('accidentCauseType', data.accidentCauseType);
       if (data.dangerousSelection) formData.append('dangerousSelection', data.dangerousSelection);
       if (data.correctiveAction) formData.append('correctiveAction', data.correctiveAction);
@@ -783,6 +789,10 @@ export default function AccidentDetailsPage() {
                         <div>
                           <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Kazaya Neden Olan Ekipman:</span>
                           <p className="text-gray-900 dark:text-white font-medium">{existingRecord.causingEquipment || '—'}</p>
+                        </div>
+                        <div>
+                          <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Kazaya Sebep Olan Etmenler (Kaza Türü):</span>
+                          <p className="text-gray-900 dark:text-white font-medium">{existingRecord.accidentCauseFactor || '—'}</p>
                         </div>
                         <div>
                           <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Kaza Nedeni Türü:</span>
@@ -1539,6 +1549,25 @@ export default function AccidentDetailsPage() {
                       onValueChange={field.onChange}
                       placeholder="Neden olan unsur seçin"
                       data-testid="select-causing-equipment"
+                    />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Accident Cause Factor */}
+              <FormField
+                control={form.control}
+                name="accidentCauseFactor"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Kazaya Sebep Olan Etmenler (Kaza Türü)</FormLabel>
+                    <SearchableSelect
+                      options={ACCIDENT_CAUSE_FACTORS}
+                      value={field.value || ""}
+                      onValueChange={field.onChange}
+                      placeholder="Kazaya sebep olan etmeni seçin"
+                      data-testid="select-accident-cause-factor"
                     />
                     <FormMessage />
                   </FormItem>
