@@ -165,6 +165,29 @@ export default function AccidentDetailsPage() {
   const queryClient = useQueryClient();
   const [selectedArea, setSelectedArea] = useState<string>("");
   const [selectedCauseType, setSelectedCauseType] = useState<string>("");
+  
+  // State for document upload status
+  const [sgkFormUploaded, setSgkFormUploaded] = useState<string>("");
+  const [analysisFormUploaded, setAnalysisFormUploaded] = useState<string>("");
+
+  // Document viewing function
+  const viewDocument = (recordId: string, type: 'sgk-form' | 'analysis-form') => {
+    if (!existingRecord) return;
+    
+    const url = type === 'sgk-form' 
+      ? existingRecord.sgkNotificationFormUrl 
+      : existingRecord.accidentAnalysisFormUrl;
+      
+    if (url) {
+      window.open(url, '_blank');
+    } else {
+      toast({
+        variant: "destructive",
+        title: "Hata",
+        description: "Belge bulunamadı"
+      });
+    }
+  };
 
   // Parse URL parameters
   const urlParams = new URLSearchParams(searchString);
@@ -1625,13 +1648,42 @@ export default function AccidentDetailsPage() {
               {/* SGK Notification Form */}
               <div className="space-y-2">
                 <FormLabel>SGK Bildirim Formu (PDF, JPEG, PNG)</FormLabel>
+                
+                {/* Show existing document in edit mode */}
+                {isEditMode && sgkFormUploaded && !sgkFormFile && (
+                  <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800 mb-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-blue-100 dark:bg-blue-800 rounded">
+                          <FileText className="h-5 w-5 text-blue-600 dark:text-blue-300" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900 dark:text-white">Mevcut SGK Bildirim Formu</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">Değiştirmek için yeni dosya seçin</p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => viewDocument(existingRecord?.id!, 'sgk-form')}
+                        data-testid="button-view-existing-sgk-form"
+                      >
+                        <Eye className="h-4 w-4 mr-2" />
+                        Görüntüle
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
                 <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center hover:border-blue-400 dark:hover:border-blue-500 transition-colors">
                   {sgkFormFile ? (
                     <div className="space-y-3">
                       <div className="text-green-600 dark:text-green-400">
                         <CheckCircle2 className="h-12 w-12 mx-auto" />
                       </div>
-                      <p className="text-sm font-medium text-green-700 dark:text-green-300">SGK Bildirim Formu seçildi</p>
+                      <p className="text-sm font-medium text-green-700 dark:text-green-300">
+                        {isEditMode ? "Yeni SGK Bildirim Formu seçildi" : "SGK Bildirim Formu seçildi"}
+                      </p>
                       <p className="text-xs text-gray-600 dark:text-gray-400">{sgkFormFile.name}</p>
                       <div className="flex justify-center gap-2">
                         <Button 
@@ -1649,7 +1701,9 @@ export default function AccidentDetailsPage() {
                     <div className="space-y-3">
                       <Upload className="mx-auto h-12 w-12 text-gray-400" />
                       <div>
-                        <p className="text-base font-medium text-gray-700 dark:text-gray-300">SGK Bildirim Formunu Seçin</p>
+                        <p className="text-base font-medium text-gray-700 dark:text-gray-300">
+                          {isEditMode && sgkFormUploaded ? "Yeni SGK Bildirim Formunu Seçin" : "SGK Bildirim Formunu Seçin"}
+                        </p>
                         <p className="text-sm text-gray-500 dark:text-gray-400">PDF, JPEG, PNG formatında, maksimum 10MB</p>
                       </div>
                       <Input
@@ -1667,13 +1721,42 @@ export default function AccidentDetailsPage() {
               {/* Accident Analysis Form */}
               <div className="space-y-2">
                 <FormLabel>İş Kazası / Ramak Kala Analiz Formu (PDF, JPEG, PNG)</FormLabel>
+                
+                {/* Show existing document in edit mode */}
+                {isEditMode && analysisFormUploaded && !analysisFormFile && (
+                  <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800 mb-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-purple-100 dark:bg-purple-800 rounded">
+                          <FileText className="h-5 w-5 text-purple-600 dark:text-purple-300" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900 dark:text-white">Mevcut Kaza Analiz Formu</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">Değiştirmek için yeni dosya seçin</p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => viewDocument(existingRecord?.id!, 'analysis-form')}
+                        data-testid="button-view-existing-analysis-form"
+                      >
+                        <Eye className="h-4 w-4 mr-2" />
+                        Görüntüle
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
                 <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center hover:border-blue-400 dark:hover:border-blue-500 transition-colors">
                   {analysisFormFile ? (
                     <div className="space-y-3">
                       <div className="text-green-600 dark:text-green-400">
                         <CheckCircle2 className="h-12 w-12 mx-auto" />
                       </div>
-                      <p className="text-sm font-medium text-green-700 dark:text-green-300">Analiz Formu seçildi</p>
+                      <p className="text-sm font-medium text-green-700 dark:text-green-300">
+                        {isEditMode ? "Yeni Analiz Formu seçildi" : "Analiz Formu seçildi"}
+                      </p>
                       <p className="text-xs text-gray-600 dark:text-gray-400">{analysisFormFile.name}</p>
                       <div className="flex justify-center gap-2">
                         <Button 
@@ -1691,7 +1774,9 @@ export default function AccidentDetailsPage() {
                     <div className="space-y-3">
                       <Upload className="mx-auto h-12 w-12 text-gray-400" />
                       <div>
-                        <p className="text-base font-medium text-gray-700 dark:text-gray-300">Analiz Formunu Seçin</p>
+                        <p className="text-base font-medium text-gray-700 dark:text-gray-300">
+                          {isEditMode && analysisFormUploaded ? "Yeni Analiz Formunu Seçin" : "Analiz Formunu Seçin"}
+                        </p>
                         <p className="text-sm text-gray-500 dark:text-gray-400">PDF, JPEG, PNG formatında, maksimum 10MB</p>
                       </div>
                       <Input
