@@ -4111,9 +4111,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const user = (req as any).user;
       
+      // Enforce location security first: non-admin users can only create records for their location
+      let locationId = req.body.locationId;
+      if (user.role !== 'central_admin') {
+        locationId = user.locationId; // Override with user's location for security
+      } else if (!locationId) {
+        return res.status(400).json({ message: 'Central admin must provide locationId' });
+      }
+      
       // Process form data - convert types from strings 
       const processedData = {
         ...req.body,
+        locationId, // Use the corrected locationId
         workDayLoss: req.body.workDayLoss ? parseInt(req.body.workDayLoss) : 0,
         // Handle dates
         eventDate: req.body.eventDate ? new Date(req.body.eventDate) : undefined,
@@ -4124,14 +4133,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Validate request body
       const validatedData = insertAccidentRecordSchema.parse(processedData);
-      
-      // Enforce location security: non-admin users can only create records for their location
-      let locationId = validatedData.locationId;
-      if (user.role !== 'central_admin') {
-        locationId = user.locationId; // Override with user's location for security
-      } else if (!locationId) {
-        return res.status(400).json({ message: 'Central admin must provide locationId' });
-      }
       
       // Handle file uploads to object storage
       let sgkNotificationFormUrl = null;
@@ -4165,10 +4166,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log('✅ Analiz formu upload edildi:', accidentAnalysisFormUrl);
       }
       
-      // Add reporter information, secure locationId, and document URLs
+      // Add reporter information and document URLs
       const recordData = {
         ...validatedData,
-        locationId,
         reportedBy: user.id,
         sgkNotificationFormUrl,
         accidentAnalysisFormUrl
