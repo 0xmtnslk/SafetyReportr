@@ -4120,15 +4120,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Process form data - convert types from strings
-      console.log('🔍 DEBUG - Raw req.body.workDurationDays:', req.body.workDurationDays, 'type:', typeof req.body.workDurationDays);
-      
       // First handle numeric conversions (handle "0" properly)
       const workDayLoss = req.body.workDayLoss !== undefined && req.body.workDayLoss !== null && req.body.workDayLoss !== ''
         ? Number(req.body.workDayLoss) : 0;
       const workDurationDays = req.body.workDurationDays !== undefined && req.body.workDurationDays !== null && req.body.workDurationDays !== ''
         ? Number(req.body.workDurationDays) : undefined;
-        
-      console.log('🔍 DEBUG - Converted workDurationDays:', workDurationDays, 'type:', typeof workDurationDays);
       
       const processedData = {
         ...req.body,

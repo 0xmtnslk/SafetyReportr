@@ -643,7 +643,7 @@ export default function AccidentManagementPage() {
                                       )}
                                     </TableCell>
                                     <TableCell data-testid={`cell-nearmiss-reporter-${record.id}`}>
-                                      {record.reportedBy || "---"}
+                                      {record.creator?.fullName || record.reportedBy || "---"}
                                     </TableCell>
                                     <TableCell data-testid={`cell-nearmiss-area-${record.id}`}>
                                       {record.eventArea || "---"}
