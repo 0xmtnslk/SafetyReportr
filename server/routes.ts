@@ -4119,22 +4119,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'Central admin must provide locationId' });
       }
       
-      // Process form data - convert types from strings 
-      console.log('🔍 Debug - req.body.workDurationDays:', req.body.workDurationDays, 'type:', typeof req.body.workDurationDays);
+      // Process form data - convert types from strings
+      // First handle numeric conversions (handle "0" properly)
+      const workDayLoss = req.body.workDayLoss !== undefined && req.body.workDayLoss !== null && req.body.workDayLoss !== ''
+        ? Number(req.body.workDayLoss) : 0;
+      const workDurationDays = req.body.workDurationDays !== undefined && req.body.workDurationDays !== null && req.body.workDurationDays !== ''
+        ? Number(req.body.workDurationDays) : undefined;
       
       const processedData = {
         ...req.body,
         locationId, // Use the corrected locationId
-        workDayLoss: req.body.workDayLoss ? parseInt(req.body.workDayLoss) : 0,
-        workDurationDays: req.body.workDurationDays ? parseInt(req.body.workDurationDays) : undefined,
+        workDayLoss,
+        workDurationDays,
         // Handle dates
         eventDate: req.body.eventDate ? new Date(req.body.eventDate) : undefined,
         sgkNotificationDate: req.body.sgkNotificationDate ? new Date(req.body.sgkNotificationDate) : undefined,
         employeeStartDate: req.body.employeeStartDate ? new Date(req.body.employeeStartDate) : undefined,
         additionalTrainingDate: req.body.additionalTrainingDate ? new Date(req.body.additionalTrainingDate) : undefined
       };
-      
-      console.log('🔍 Debug - processedData.workDurationDays:', processedData.workDurationDays, 'type:', typeof processedData.workDurationDays);
       
       // Validate request body
       const validatedData = insertAccidentRecordSchema.parse(processedData);
