@@ -3987,7 +3987,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       // Serve the file through existing object serving logic but with security
-      const { Storage } = require('@google-cloud/storage');
+      const { Storage } = await import('@google-cloud/storage');
       const gcsStorage = new Storage({
         credentials: {
           audience: "replit",

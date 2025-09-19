@@ -112,6 +112,19 @@ export const EMPLOYEE_STATUS = [
   { value: "Sürekli Taşeron", label: "Sürekli Taşeron" }
 ];
 
+export const AFFILIATED_COMPANIES = [
+  { value: "MLPCARE", label: "MLPCARE" },
+  { value: "İSS", label: "İSS" },
+  { value: "All Service", label: "All Service" },
+  { value: "Binsat", label: "Binsat" },
+  { value: "PSL Vale", label: "PSL Vale" },
+  { value: "Sardunya", label: "Sardunya" },
+  { value: "Globus", label: "Globus" },
+  { value: "Seven Güvenlik", label: "Seven Güvenlik" },
+  { value: "Esser Güvenlik", label: "Esser Güvenlik" },
+  { value: "Diğer", label: "Diğer" }
+];
+
 export const PROFESSION_GROUPS = [
   { value: "Atık Personeli", label: "Atık Personeli" },
   { value: "Destek Personeli", label: "Destek Personeli" },
