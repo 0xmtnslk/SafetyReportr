@@ -4235,6 +4235,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const processedData = {
         ...req.body,
         workDayLoss: req.body.workDayLoss ? parseInt(req.body.workDayLoss) : 0,
+        workDurationDays: req.body.workDurationDays ? parseInt(req.body.workDurationDays) : undefined,
         // Handle dates
         eventDate: req.body.eventDate ? new Date(req.body.eventDate) : undefined,
         sgkNotificationDate: req.body.sgkNotificationDate ? new Date(req.body.sgkNotificationDate) : undefined,

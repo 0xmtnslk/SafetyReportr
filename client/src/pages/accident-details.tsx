@@ -405,6 +405,11 @@ export default function AccidentDetailsPage() {
         formData.append('affiliatedCompany', data.affiliatedCompany);
       }
       formData.append('professionGroup', data.professionGroup);
+      
+      // Add calculated working days
+      if (data.workingDays !== undefined) {
+        formData.append('workDurationDays', data.workingDays.toString());
+      }
       formData.append('department', data.department);
       formData.append('position', data.position);
       formData.append('eventDescription', data.eventDescription);
@@ -484,6 +489,11 @@ export default function AccidentDetailsPage() {
         formData.append('affiliatedCompany', data.affiliatedCompany);
       }
       formData.append('professionGroup', data.professionGroup);
+      
+      // Add calculated working days
+      if (data.workingDays !== undefined) {
+        formData.append('workDurationDays', data.workingDays.toString());
+      }
       formData.append('department', data.department);
       formData.append('position', data.position);
       formData.append('eventDescription', data.eventDescription);
@@ -706,7 +716,14 @@ export default function AccidentDetailsPage() {
                       </div>
                       <div>
                         <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Çalışma Süresi:</span>
-                        <p className="text-gray-900 dark:text-white font-medium">{existingRecord.workDurationDays ? `${existingRecord.workDurationDays} gün` : '—'}</p>
+                        <p className="text-gray-900 dark:text-white font-medium" data-testid="text-working-days">
+                          {existingRecord.workDurationDays !== undefined && existingRecord.workDurationDays !== null
+                            ? `${existingRecord.workDurationDays} gün` 
+                            : existingRecord.eventDate && existingRecord.employeeStartDate
+                              ? `${Math.max(0, differenceInDays(new Date(existingRecord.eventDate), new Date(existingRecord.employeeStartDate)))} gün`
+                              : '—'
+                          }
+                        </p>
                       </div>
                     </div>
                     <div className="space-y-3">
