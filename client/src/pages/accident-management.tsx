@@ -643,7 +643,18 @@ export default function AccidentManagementPage() {
                                       )}
                                     </TableCell>
                                     <TableCell data-testid={`cell-nearmiss-reporter-${record.id}`}>
-                                      {record.creator?.fullName || record.reportedBy || "---"}
+                                      {record.creator ? (
+                                        <div className="text-sm">
+                                          <div className="font-medium">{record.creator.fullName}</div>
+                                          {record.creator.safetySpecialistClass && record.creator.certificateNumber && (
+                                            <div className="text-gray-500 dark:text-gray-400">
+                                              {record.creator.safetySpecialistClass} - {record.creator.certificateNumber}
+                                            </div>
+                                          )}
+                                        </div>
+                                      ) : (
+                                        record.reportedBy || "---"
+                                      )}
                                     </TableCell>
                                     <TableCell data-testid={`cell-nearmiss-area-${record.id}`}>
                                       {record.eventArea || "---"}

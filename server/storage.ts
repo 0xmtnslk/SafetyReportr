@@ -2928,7 +2928,19 @@ export class DatabaseStorage implements IStorage {
 
   // Accident Record operations
   async getAllAccidentRecords(locationId?: string): Promise<AccidentRecord[]> {
-    let query = db.select().from(accidentRecords);
+    let query = db
+      .select({
+        ...getTableColumns(accidentRecords),
+        creator: {
+          id: users.id,
+          fullName: users.fullName,
+          role: users.role,
+          safetySpecialistClass: users.safetySpecialistClass,
+          certificateNumber: users.certificateNumber,
+        }
+      })
+      .from(accidentRecords)
+      .leftJoin(users, eq(accidentRecords.reportedBy, users.id));
     
     if (locationId) {
       query = query.where(eq(accidentRecords.locationId, locationId));
