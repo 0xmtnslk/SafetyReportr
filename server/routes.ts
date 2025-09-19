@@ -4120,6 +4120,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Process form data - convert types from strings 
+      console.log('🔍 Debug - req.body.workDurationDays:', req.body.workDurationDays, 'type:', typeof req.body.workDurationDays);
+      
       const processedData = {
         ...req.body,
         locationId, // Use the corrected locationId
@@ -4131,6 +4133,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         employeeStartDate: req.body.employeeStartDate ? new Date(req.body.employeeStartDate) : undefined,
         additionalTrainingDate: req.body.additionalTrainingDate ? new Date(req.body.additionalTrainingDate) : undefined
       };
+      
+      console.log('🔍 Debug - processedData.workDurationDays:', processedData.workDurationDays, 'type:', typeof processedData.workDurationDays);
       
       // Validate request body
       const validatedData = insertAccidentRecordSchema.parse(processedData);
