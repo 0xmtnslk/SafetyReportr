@@ -5,8 +5,9 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { AlertTriangle, Activity, FileText, TrendingUp, Users, Clock, PlusCircle, Shield, Search, Eye, Edit, Download, Trash2 } from "lucide-react";
+import { AlertTriangle, Activity, FileText, TrendingUp, Users, Clock, PlusCircle, Shield, Search, Eye, Edit, Download, Trash2, Calendar } from "lucide-react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -33,6 +34,7 @@ const canManageRecord = (userRole: string, createdAt: string | null | undefined)
 export default function AccidentManagementPage() {
   const [, setLocation] = useLocation();
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedYear, setSelectedYear] = useState<string>("all");
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -125,11 +127,43 @@ export default function AccidentManagementPage() {
     }
   };
 
-  // Filter and separate records by type
+  // Get available years from records for filter dropdown
+  const getAvailableYears = (records: any[]): number[] => {
+    const years = new Set<number>();
+    records.forEach(record => {
+      if (record.eventDate) {
+        try {
+          const year = new Date(record.eventDate).getFullYear();
+          if (!isNaN(year)) {
+            years.add(year);
+          }
+        } catch {
+          // Skip invalid dates
+        }
+      }
+    });
+    return Array.from(years).sort((a, b) => b - a); // Most recent first
+  };
+
+  // Filter and separate records by type with date sorting and year filtering
   const filterRecords = (records: any[], eventType: string): any[] => {
     return records
       .filter(record => record.eventType === eventType)
       .filter(record => {
+        // Year filter
+        if (selectedYear !== "all") {
+          if (!record.eventDate) return false;
+          try {
+            const recordYear = new Date(record.eventDate).getFullYear();
+            if (recordYear !== parseInt(selectedYear)) return false;
+          } catch {
+            return false;
+          }
+        }
+        return true;
+      })
+      .filter(record => {
+        // Search filter
         if (!searchTerm) return true;
         const searchLower = searchTerm.toLowerCase();
         return (
@@ -138,6 +172,25 @@ export default function AccidentManagementPage() {
           String(record.position || "").toLowerCase().includes(searchLower) ||
           String(record.accidentSeverity || "").toLowerCase().includes(searchLower)
         );
+      })
+      .sort((a, b) => {
+        // Sort by eventDate (newest first)
+        if (!a.eventDate && !b.eventDate) return 0;
+        if (!a.eventDate) return 1; // Records without date go to end
+        if (!b.eventDate) return -1;
+        
+        const dateA = new Date(a.eventDate);
+        const dateB = new Date(b.eventDate);
+        
+        // Handle invalid dates - push them to the end
+        const isValidA = !isNaN(dateA.getTime());
+        const isValidB = !isNaN(dateB.getTime());
+        
+        if (!isValidA && !isValidB) return 0;
+        if (!isValidA) return 1; // Invalid dates go to end
+        if (!isValidB) return -1;
+        
+        return dateB.getTime() - dateA.getTime(); // Newest first
       });
   };
 
@@ -165,6 +218,9 @@ export default function AccidentManagementPage() {
   }).length;
   
   const totalWorkDayLoss = allWorkAccidents.reduce((sum: number, record: any) => sum + Number(record.workDayLoss || 0), 0);
+
+  // Get available years for dropdown
+  const availableYears = getAvailableYears(accidentRecords);
 
   // Apply search filters for display
   const workAccidents = filterRecords(accidentRecords, "İş Kazası");
@@ -239,9 +295,9 @@ export default function AccidentManagementPage() {
           </Card>
         </div>
 
-        {/* Search */}
-        <div className="flex items-center space-x-2">
-          <div className="relative flex-1 max-w-sm">
+        {/* Search and Filters */}
+        <div className="flex items-center space-x-4 flex-wrap gap-2">
+          <div className="relative flex-1 min-w-[300px] max-w-sm">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
               type="text"
@@ -252,14 +308,37 @@ export default function AccidentManagementPage() {
               data-testid="input-search"
             />
           </div>
-          {searchTerm && (
+          
+          {/* Year Filter */}
+          <div className="flex items-center space-x-2">
+            <Calendar className="h-4 w-4 text-gray-400" />
+            <Select value={selectedYear} onValueChange={setSelectedYear} data-testid="select-year">
+              <SelectTrigger className="w-[120px]">
+                <SelectValue placeholder="Yıl" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tümü</SelectItem>
+                {availableYears.map(year => (
+                  <SelectItem key={year} value={year.toString()}>
+                    {year}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          {/* Clear Filters */}
+          {(searchTerm || selectedYear !== "all") && (
             <Button 
               variant="outline" 
               size="sm" 
-              onClick={() => setSearchTerm("")} 
-              data-testid="button-clear-search"
+              onClick={() => {
+                setSearchTerm("");
+                setSelectedYear("all");
+              }}
+              data-testid="button-clear-filters"
             >
-              Temizle
+              Filtreleri Temizle
             </Button>
           )}
         </div>
@@ -280,7 +359,7 @@ export default function AccidentManagementPage() {
                       İş Kazaları
                     </CardTitle>
                     <CardDescription>
-                      {(accidentRecords as any[]).filter((r: any) => r.eventType === "İş Kazası").length} kaza kaydı listeleniyor
+                      {workAccidents.length} kaza kaydı listeleniyor
                     </CardDescription>
                   </div>
                 </div>
