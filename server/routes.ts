@@ -4103,13 +4103,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create new accident record
-  app.post('/api/accident-records', authenticateToken, requireSafetySpecialist, async (req: Request, res: Response) => {
+  // Create new accident record with file uploads
+  app.post('/api/accident-records', authenticateToken, requireSafetySpecialist, upload.fields([
+    { name: 'sgkNotificationForm', maxCount: 1 },
+    { name: 'accidentAnalysisForm', maxCount: 1 }
+  ]), async (req: Request, res: Response) => {
     try {
       const user = (req as any).user;
       
+      // Process form data - convert types from strings 
+      const processedData = {
+        ...req.body,
+        workDayLoss: req.body.workDayLoss ? parseInt(req.body.workDayLoss) : 0,
+        // Handle dates
+        eventDate: req.body.eventDate ? new Date(req.body.eventDate) : undefined,
+        sgkNotificationDate: req.body.sgkNotificationDate ? new Date(req.body.sgkNotificationDate) : undefined,
+        employeeStartDate: req.body.employeeStartDate ? new Date(req.body.employeeStartDate) : undefined,
+        additionalTrainingDate: req.body.additionalTrainingDate ? new Date(req.body.additionalTrainingDate) : undefined
+      };
+      
       // Validate request body
-      const validatedData = insertAccidentRecordSchema.parse(req.body);
+      const validatedData = insertAccidentRecordSchema.parse(processedData);
       
       // Enforce location security: non-admin users can only create records for their location
       let locationId = validatedData.locationId;
@@ -4119,11 +4133,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'Central admin must provide locationId' });
       }
       
-      // Add reporter information and secure locationId
+      // Handle file uploads to object storage
+      let sgkNotificationFormUrl = null;
+      let accidentAnalysisFormUrl = null;
+      
+      const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+      
+      if (files?.sgkNotificationForm?.[0]) {
+        console.log('📄 SGK form yükleniyor:', files.sgkNotificationForm[0].originalname);
+        const { ObjectStorageService } = await import("./objectStorage");
+        const objectStorageService = new ObjectStorageService();
+        
+        sgkNotificationFormUrl = await objectStorageService.uploadFile(
+          files.sgkNotificationForm[0].buffer,
+          files.sgkNotificationForm[0].originalname,
+          files.sgkNotificationForm[0].mimetype
+        );
+        console.log('✅ SGK form upload edildi:', sgkNotificationFormUrl);
+      }
+      
+      if (files?.accidentAnalysisForm?.[0]) {
+        console.log('📄 Analiz formu yükleniyor:', files.accidentAnalysisForm[0].originalname);
+        const { ObjectStorageService } = await import("./objectStorage");
+        const objectStorageService = new ObjectStorageService();
+        
+        accidentAnalysisFormUrl = await objectStorageService.uploadFile(
+          files.accidentAnalysisForm[0].buffer,
+          files.accidentAnalysisForm[0].originalname,
+          files.accidentAnalysisForm[0].mimetype
+        );
+        console.log('✅ Analiz formu upload edildi:', accidentAnalysisFormUrl);
+      }
+      
+      // Add reporter information, secure locationId, and document URLs
       const recordData = {
         ...validatedData,
         locationId,
-        reportedBy: user.id
+        reportedBy: user.id,
+        sgkNotificationFormUrl,
+        accidentAnalysisFormUrl
       };
       
       const newRecord = await storage.createAccidentRecord(recordData);

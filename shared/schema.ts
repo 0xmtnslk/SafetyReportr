@@ -466,7 +466,7 @@ export const accidentRecords = pgTable("accident_records", {
   
   // Employee Classification
   employeeStatus: text("employee_status").notNull(), // Statüsü
-  // affiliatedCompany: text("affiliated_company"), // Bağlı Olduğu Firma - Will add after migration
+  affiliatedCompany: text("affiliated_company"), // Bağlı Olduğu Firma
   professionGroup: text("profession_group").notNull(), // Meslek Grubu
   department: text("department").notNull(), // Departmanı
   position: text("position").notNull(), // Görevi / Unvanı

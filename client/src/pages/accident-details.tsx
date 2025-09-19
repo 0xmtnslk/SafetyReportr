@@ -19,7 +19,7 @@ import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { ObjectUploader } from "@/components/ObjectUploader";
+// ObjectUploader removed - using simple file inputs now
 
 import {
   WORK_SHIFTS,
@@ -188,38 +188,64 @@ export default function AccidentDetailsPage() {
   }) as { data: any, isLoading: boolean };
 
   // Document upload state
-  const [sgkFormUploaded, setSgkFormUploaded] = useState<string>("");
-  const [analysisFormUploaded, setAnalysisFormUploaded] = useState<string>("");
+  const [sgkFormFile, setSgkFormFile] = useState<File | null>(null);
+  const [analysisFormFile, setAnalysisFormFile] = useState<File | null>(null);
 
-  // Function to get upload parameters for documents with file validation
-  const getUploadParameters = async (file?: any): Promise<{ method: "PUT"; url: string; }> => {
-    const requestBody: any = {};
-    
-    // Add file information for server-side validation if available
+  // File upload handlers
+  const handleSgkFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
     if (file) {
-      requestBody.contentType = file.type;
-      requestBody.fileName = file.name;
+      // Check file type
+      const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+      if (!allowedTypes.includes(file.type)) {
+        toast({
+          variant: "destructive",
+          title: "Hata",
+          description: "Sadece PDF veya resim dosyaları (JPG, PNG) yüklenebilir"
+        });
+        return;
+      }
+
+      // Check file size (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        toast({
+          variant: "destructive",
+          title: "Hata", 
+          description: "Dosya boyutu 10MB'dan büyük olamaz"
+        });
+        return;
+      }
+
+      setSgkFormFile(file);
     }
-    
-    const response = await fetch('/api/objects/upload/accident-docs', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(requestBody)
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Upload URL alınamadı');
+  };
+
+  const handleAnalysisFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Check file type
+      const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+      if (!allowedTypes.includes(file.type)) {
+        toast({
+          variant: "destructive",
+          title: "Hata",
+          description: "Sadece PDF veya resim dosyaları (JPG, PNG) yüklenebilir"
+        });
+        return;
+      }
+
+      // Check file size (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        toast({
+          variant: "destructive",
+          title: "Hata", 
+          description: "Dosya boyutu 10MB'dan büyük olamaz"
+        });
+        return;
+      }
+
+      setAnalysisFormFile(file);
     }
-    
-    const data = await response.json();
-    return {
-      method: "PUT",
-      url: data.uploadURL || ""
-    };
   };
 
   const form = useForm<AccidentFormData>({
@@ -337,25 +363,66 @@ export default function AccidentDetailsPage() {
 
   // Submit mutation
   const createAccidentMutation = useMutation({
-    mutationFn: async (data: AccidentFormData) => {
-      const payload = {
-        ...data,
-        locationId: currentUser?.locationId, // Automatically set hospital from user session
-        // Map frontend field names to backend expected names
-        employeeRegistrationNumber: data.personnelNumber,
-        employeeName: data.fullName,
-        employeeStartDate: data.startWorkDate,
-        // Remove frontend-only fields
-        personnelNumber: undefined,
-        fullName: undefined,
-        startWorkDate: undefined,
-        // Handle dates properly - only send non-empty dates
-        eventDate: data.eventDate,
-        sgkNotificationDate: data.sgkNotificationDate && data.sgkNotificationDate.trim() ? data.sgkNotificationDate : undefined,
-        additionalTrainingDate: data.additionalTrainingDate && data.additionalTrainingDate.trim() ? data.additionalTrainingDate : undefined
-      };
+    mutationFn: async (data: AccidentFormData & { sgkFile?: File, analysisFile?: File }) => {
+      const formData = new FormData();
       
-      return apiRequest("POST", "/api/accident-records", payload);
+      // Add all form fields
+      formData.append('locationId', currentUser?.locationId || '');
+      formData.append('eventDate', data.eventDate);
+      formData.append('eventTime', data.eventTime);
+      formData.append('eventType', data.eventType);
+      formData.append('workShift', data.workShift);
+      formData.append('eventArea', data.eventArea);
+      formData.append('eventPlace', data.eventPlace);
+      formData.append('employeeRegistrationNumber', data.personnelNumber);
+      formData.append('employeeName', data.fullName);
+      formData.append('employeeStartDate', data.startWorkDate);
+      formData.append('employeeStatus', data.employeeStatus);
+      if (data.affiliatedCompany) {
+        formData.append('affiliatedCompany', data.affiliatedCompany);
+      }
+      formData.append('professionGroup', data.professionGroup);
+      formData.append('department', data.department);
+      formData.append('position', data.position);
+      formData.append('eventDescription', data.eventDescription);
+      
+      // Add optional fields
+      if (data.sgkNotificationDate && data.sgkNotificationDate.trim()) {
+        formData.append('sgkNotificationDate', data.sgkNotificationDate);
+      }
+      if (data.accidentSeverity) formData.append('accidentSeverity', data.accidentSeverity);
+      if (data.injuredBodyPart) formData.append('injuredBodyPart', data.injuredBodyPart);
+      if (data.causingEquipment) formData.append('causingEquipment', data.causingEquipment);
+      if (data.accidentCauseType) formData.append('accidentCauseType', data.accidentCauseType);
+      if (data.dangerousSelection) formData.append('dangerousSelection', data.dangerousSelection);
+      if (data.correctiveAction) formData.append('correctiveAction', data.correctiveAction);
+      if (data.workDayLoss !== undefined) formData.append('workDayLoss', data.workDayLoss.toString());
+      if (data.additionalTrainingDate && data.additionalTrainingDate.trim()) {
+        formData.append('additionalTrainingDate', data.additionalTrainingDate);
+      }
+
+      // Add files
+      if (data.sgkFile) {
+        formData.append('sgkNotificationForm', data.sgkFile);
+      }
+      if (data.analysisFile) {
+        formData.append('accidentAnalysisForm', data.analysisFile);
+      }
+      
+      const response = await fetch('/api/accident-records', {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Kayıt oluşturulurken hata oluştu');
+      }
+      
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/accident-records"] });
@@ -383,7 +450,11 @@ export default function AccidentDetailsPage() {
         variant: "destructive",
       });
     } else {
-      createAccidentMutation.mutate(data);
+      createAccidentMutation.mutate({
+        ...data,
+        sgkFile: sgkFormFile || undefined,
+        analysisFile: analysisFormFile || undefined
+      });
     }
   };
 
@@ -1555,20 +1626,18 @@ export default function AccidentDetailsPage() {
               <div className="space-y-2">
                 <FormLabel>SGK Bildirim Formu (PDF, JPEG, PNG)</FormLabel>
                 <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center hover:border-blue-400 dark:hover:border-blue-500 transition-colors">
-                  {sgkFormUploaded ? (
+                  {sgkFormFile ? (
                     <div className="space-y-3">
                       <div className="text-green-600 dark:text-green-400">
                         <CheckCircle2 className="h-12 w-12 mx-auto" />
                       </div>
-                      <p className="text-sm font-medium text-green-700 dark:text-green-300">SGK Bildirim Formu yüklendi</p>
+                      <p className="text-sm font-medium text-green-700 dark:text-green-300">SGK Bildirim Formu seçildi</p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400">{sgkFormFile.name}</p>
                       <div className="flex justify-center gap-2">
                         <Button 
                           variant="outline" 
                           size="sm"
-                          onClick={() => {
-                            setSgkFormUploaded("");
-                            form.setValue('sgkNotificationFormUrl', '');
-                          }}
+                          onClick={() => setSgkFormFile(null)}
                           data-testid="button-remove-sgk-form"
                         >
                           <X className="h-4 w-4 mr-2" />
@@ -1577,36 +1646,20 @@ export default function AccidentDetailsPage() {
                       </div>
                     </div>
                   ) : (
-                    <ObjectUploader
-                      maxNumberOfFiles={1}
-                      maxFileSize={10485760}
-                      allowedFileTypes={['application/pdf', 'image/jpeg', 'image/png', 'image/jpg', '.pdf', '.jpeg', '.jpg', '.png']}
-                      onGetUploadParameters={getUploadParameters}
-                      onComplete={(result) => {
-                        if (result.successful && result.successful.length > 0) {
-                          const uploadedFile = result.successful[0];
-                          const fileUrl = uploadedFile.uploadURL || "";
-                          setSgkFormUploaded(fileUrl);
-                          form.setValue('sgkNotificationFormUrl', fileUrl);
-                          toast({
-                            description: "SGK Bildirim Formu başarıyla yüklendi"
-                          });
-                        }
-                      }}
-                      buttonClassName="w-full p-0 border-0 bg-transparent hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
-                    >
-                      <div className="space-y-3">
-                        <Upload className="mx-auto h-12 w-12 text-gray-400" />
-                        <div>
-                          <p className="text-base font-medium text-gray-700 dark:text-gray-300">SGK Bildirim Formunu Yükleyin</p>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">PDF, JPEG, PNG formatında, maksimum 10MB</p>
-                        </div>
-                        <Button variant="outline" size="sm" data-testid="button-upload-sgk-form">
-                          <FileText className="h-4 w-4 mr-2" />
-                          Dosya Seç
-                        </Button>
+                    <div className="space-y-3">
+                      <Upload className="mx-auto h-12 w-12 text-gray-400" />
+                      <div>
+                        <p className="text-base font-medium text-gray-700 dark:text-gray-300">SGK Bildirim Formunu Seçin</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">PDF, JPEG, PNG formatında, maksimum 10MB</p>
                       </div>
-                    </ObjectUploader>
+                      <Input
+                        type="file"
+                        accept="application/pdf,image/jpeg,image/jpg,image/png"
+                        onChange={handleSgkFileChange}
+                        className="cursor-pointer max-w-xs mx-auto"
+                        data-testid="input-sgk-form-upload"
+                      />
+                    </div>
                   )}
                 </div>
               </div>
@@ -1615,20 +1668,18 @@ export default function AccidentDetailsPage() {
               <div className="space-y-2">
                 <FormLabel>İş Kazası / Ramak Kala Analiz Formu (PDF, JPEG, PNG)</FormLabel>
                 <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center hover:border-blue-400 dark:hover:border-blue-500 transition-colors">
-                  {analysisFormUploaded ? (
+                  {analysisFormFile ? (
                     <div className="space-y-3">
                       <div className="text-green-600 dark:text-green-400">
                         <CheckCircle2 className="h-12 w-12 mx-auto" />
                       </div>
-                      <p className="text-sm font-medium text-green-700 dark:text-green-300">Analiz Formu yüklendi</p>
+                      <p className="text-sm font-medium text-green-700 dark:text-green-300">Analiz Formu seçildi</p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400">{analysisFormFile.name}</p>
                       <div className="flex justify-center gap-2">
                         <Button 
                           variant="outline" 
                           size="sm"
-                          onClick={() => {
-                            setAnalysisFormUploaded("");
-                            form.setValue('accidentAnalysisFormUrl', '');
-                          }}
+                          onClick={() => setAnalysisFormFile(null)}
                           data-testid="button-remove-analysis-form"
                         >
                           <X className="h-4 w-4 mr-2" />
@@ -1637,36 +1688,20 @@ export default function AccidentDetailsPage() {
                       </div>
                     </div>
                   ) : (
-                    <ObjectUploader
-                      maxNumberOfFiles={1}
-                      maxFileSize={10485760}
-                      allowedFileTypes={['application/pdf', 'image/jpeg', 'image/png', 'image/jpg', '.pdf', '.jpeg', '.jpg', '.png']}
-                      onGetUploadParameters={getUploadParameters}
-                      onComplete={(result) => {
-                        if (result.successful && result.successful.length > 0) {
-                          const uploadedFile = result.successful[0];
-                          const fileUrl = uploadedFile.uploadURL || "";
-                          setAnalysisFormUploaded(fileUrl);
-                          form.setValue('accidentAnalysisFormUrl', fileUrl);
-                          toast({
-                            description: "Analiz Formu başarıyla yüklendi"
-                          });
-                        }
-                      }}
-                      buttonClassName="w-full p-0 border-0 bg-transparent hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
-                    >
-                      <div className="space-y-3">
-                        <Upload className="mx-auto h-12 w-12 text-gray-400" />
-                        <div>
-                          <p className="text-base font-medium text-gray-700 dark:text-gray-300">Analiz Formunu Yükleyin</p>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">PDF, JPEG, PNG formatında, maksimum 10MB</p>
-                        </div>
-                        <Button variant="outline" size="sm" data-testid="button-upload-analysis-form">
-                          <FileText className="h-4 w-4 mr-2" />
-                          Dosya Seç
-                        </Button>
+                    <div className="space-y-3">
+                      <Upload className="mx-auto h-12 w-12 text-gray-400" />
+                      <div>
+                        <p className="text-base font-medium text-gray-700 dark:text-gray-300">Analiz Formunu Seçin</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">PDF, JPEG, PNG formatında, maksimum 10MB</p>
                       </div>
-                    </ObjectUploader>
+                      <Input
+                        type="file"
+                        accept="application/pdf,image/jpeg,image/jpg,image/png"
+                        onChange={handleAnalysisFileChange}
+                        className="cursor-pointer max-w-xs mx-auto"
+                        data-testid="input-analysis-form-upload"
+                      />
+                    </div>
                   )}
                 </div>
               </div>
