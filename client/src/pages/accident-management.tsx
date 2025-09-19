@@ -12,7 +12,7 @@ import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { format, isSameMonth } from "date-fns";
+import { format, isSameMonth, startOfMonth, compareDesc } from "date-fns";
 import { tr } from "date-fns/locale";
 
 // Check if record can be edited/deleted (within 7 days of creation)
@@ -219,12 +219,71 @@ export default function AccidentManagementPage() {
   
   const totalWorkDayLoss = allWorkAccidents.reduce((sum: number, record: any) => sum + Number(record.workDayLoss || 0), 0);
 
+  // Group records by month
+  const groupRecordsByMonth = (records: any[]): { [key: string]: any[] } => {
+    const grouped: { [key: string]: any[] } = {};
+    
+    records.forEach(record => {
+      if (!record.eventDate) {
+        // Group records without date under a special category
+        if (!grouped['no-date']) grouped['no-date'] = [];
+        grouped['no-date'].push(record);
+        return;
+      }
+      
+      try {
+        const date = new Date(record.eventDate);
+        if (isNaN(date.getTime())) {
+          // Invalid dates go to no-date group
+          if (!grouped['no-date']) grouped['no-date'] = [];
+          grouped['no-date'].push(record);
+          return;
+        }
+        
+        const monthKey = format(startOfMonth(date), 'yyyy-MM', { locale: tr });
+        const monthDisplay = format(date, 'MMMM yyyy', { locale: tr });
+        
+        if (!grouped[monthKey]) grouped[monthKey] = [];
+        grouped[monthKey].push(record);
+        grouped[monthKey].monthDisplay = monthDisplay;
+        
+      } catch {
+        // Error parsing date - put in no-date group
+        if (!grouped['no-date']) grouped['no-date'] = [];
+        grouped['no-date'].push(record);
+      }
+    });
+    
+    return grouped;
+  };
+
+  // Format month header with count
+  const formatMonthHeader = (monthKey: string, records: any[]): string => {
+    if (monthKey === 'no-date') {
+      return `Tarih Belirtilmemiş (${records.length})`;
+    }
+    return `${records.monthDisplay} (${records.length})`;
+  };
+
   // Get available years for dropdown
   const availableYears = getAvailableYears(accidentRecords);
 
   // Apply search filters for display
   const workAccidents = filterRecords(accidentRecords, "İş Kazası");
   const nearMisses = filterRecords(accidentRecords, "Ramak Kala");
+
+  // Group filtered results by month
+  const workAccidentsGrouped = groupRecordsByMonth(workAccidents);
+  const nearMissesGrouped = groupRecordsByMonth(nearMisses);
+
+  // Get month keys sorted by most recent first
+  const getSortedMonthKeys = (grouped: { [key: string]: any[] }): string[] => {
+    return Object.keys(grouped).sort((a, b) => {
+      if (a === 'no-date') return 1; // Put no-date at the end
+      if (b === 'no-date') return -1;
+      return b.localeCompare(a); // Descending order (2024-12, 2024-11, etc.)
+    });
+  };
 
   return (
       <div className="container mx-auto p-6 space-y-6">
@@ -382,98 +441,116 @@ export default function AccidentManagementPage() {
                     </p>
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Tarih</TableHead>
-                          <TableHead>Sicil No</TableHead>
-                          <TableHead>Ad-Soyad</TableHead>
-                          <TableHead>Görev</TableHead>
-                          <TableHead>Ciddiyet</TableHead>
-                          <TableHead>Gün Kaybı</TableHead>
-                          <TableHead>Alan</TableHead>
-                          <TableHead className="text-right">Eylemler</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {workAccidents.map((record) => (
-                          <TableRow key={record.id} data-testid={`row-accident-${record.id}`} className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                            <TableCell data-testid={`cell-date-${record.id}`}>
-                              {safeFormatDate(record.eventDate)}
-                            </TableCell>
-                            <TableCell data-testid={`cell-registration-${record.id}`} className="font-medium">
-                              {record.employeeRegistrationNumber || "---"}
-                            </TableCell>
-                            <TableCell data-testid={`cell-employee-name-${record.id}`}>
-                              {record.employeeName || "---"}
-                            </TableCell>
-                            <TableCell data-testid={`cell-position-${record.id}`}>
-                              {record.position || "---"}
-                            </TableCell>
-                            <TableCell data-testid={`cell-severity-${record.id}`}>
-                              {record.accidentSeverity ? (
-                                <Badge className={getSeverityColor(record.accidentSeverity)}>
-                                  {record.accidentSeverity.replace(" Ciddiyet", "")}
-                                </Badge>
-                              ) : (
-                                "---"
-                              )}
-                            </TableCell>
-                            <TableCell data-testid={`cell-work-loss-${record.id}`}>
-                              <span className={`font-medium ${
-                                Number(record.workDayLoss) > 0 ? 'text-red-600' : 'text-green-600'
-                              }`}>
-                                {record.workDayLoss || 0} gün
-                              </span>
-                            </TableCell>
-                            <TableCell data-testid={`cell-area-${record.id}`}>
-                              {record.eventArea || "---"}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex gap-1 justify-end">
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
-                                  onClick={() => handleViewAccidentDetails(record.id)}
-                                  data-testid={`button-view-${record.id}`}
-                                  className="h-8 w-8 p-0"
-                                >
-                                  <Eye className="h-4 w-4" />
-                                </Button>
-                                {canManageRecord(currentUser?.role, record.createdAt) ? (
-                                  <>
-                                    <Button 
-                                      variant="ghost" 
-                                      size="sm" 
-                                      onClick={() => handleEditAccidentDetails(record.id)}
-                                      data-testid={`button-edit-${record.id}`}
-                                      className="h-8 w-8 p-0"
-                                    >
-                                      <Edit className="h-4 w-4" />
-                                    </Button>
-                                    <Button 
-                                      variant="ghost" 
-                                      size="sm" 
-                                      onClick={() => handleDeleteAccident(record.id, `${record.employeeName} - ${record.eventType}`)}
-                                      data-testid={`button-delete-${record.id}`}
-                                      className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                      disabled={deleteAccidentMutation.isPending}
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                  </>
-                                ) : (
-                                  <div className="h-8 w-8 p-0 flex items-center justify-center" data-testid={`locked-state-${record.id}`}>
-                                    <span className="text-xs text-gray-400" title="7 günlük düzenleme süresi dolmuş. Sadece görüntüleme mümkün.">🔒</span>
-                                  </div>
-                                )}
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                  <div className="space-y-6">
+                    {getSortedMonthKeys(workAccidentsGrouped).map((monthKey) => {
+                      const monthRecords = workAccidentsGrouped[monthKey];
+                      return (
+                        <div key={monthKey} className="space-y-2">
+                          {/* Month Header */}
+                          <div className="bg-gray-50 dark:bg-gray-800 px-4 py-2 rounded-lg">
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                              <Calendar className="h-5 w-5" />
+                              {formatMonthHeader(monthKey, monthRecords)}
+                            </h3>
+                          </div>
+                          
+                          {/* Month Records Table */}
+                          <div className="overflow-x-auto">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Tarih</TableHead>
+                                  <TableHead>Sicil No</TableHead>
+                                  <TableHead>Ad-Soyad</TableHead>
+                                  <TableHead>Görev</TableHead>
+                                  <TableHead>Ciddiyet</TableHead>
+                                  <TableHead>Gün Kaybı</TableHead>
+                                  <TableHead>Alan</TableHead>
+                                  <TableHead className="text-right">Eylemler</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {monthRecords.map((record) => (
+                                  <TableRow key={record.id} data-testid={`row-accident-${record.id}`} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                                    <TableCell data-testid={`cell-date-${record.id}`}>
+                                      {safeFormatDate(record.eventDate)}
+                                    </TableCell>
+                                    <TableCell data-testid={`cell-registration-${record.id}`} className="font-medium">
+                                      {record.employeeRegistrationNumber || "---"}
+                                    </TableCell>
+                                    <TableCell data-testid={`cell-employee-name-${record.id}`}>
+                                      {record.employeeName || "---"}
+                                    </TableCell>
+                                    <TableCell data-testid={`cell-position-${record.id}`}>
+                                      {record.position || "---"}
+                                    </TableCell>
+                                    <TableCell data-testid={`cell-severity-${record.id}`}>
+                                      {record.accidentSeverity ? (
+                                        <Badge className={getSeverityColor(record.accidentSeverity)}>
+                                          {record.accidentSeverity.replace(" Ciddiyet", "")}
+                                        </Badge>
+                                      ) : (
+                                        "---"
+                                      )}
+                                    </TableCell>
+                                    <TableCell data-testid={`cell-work-loss-${record.id}`}>
+                                      <span className={`font-medium ${
+                                        Number(record.workDayLoss) > 0 ? 'text-red-600' : 'text-green-600'
+                                      }`}>
+                                        {record.workDayLoss || 0} gün
+                                      </span>
+                                    </TableCell>
+                                    <TableCell data-testid={`cell-area-${record.id}`}>
+                                      {record.eventArea || "---"}
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                      <div className="flex gap-1 justify-end">
+                                        <Button 
+                                          variant="ghost" 
+                                          size="sm" 
+                                          onClick={() => handleViewAccidentDetails(record.id)}
+                                          data-testid={`button-view-${record.id}`}
+                                          className="h-8 w-8 p-0"
+                                        >
+                                          <Eye className="h-4 w-4" />
+                                        </Button>
+                                        {canManageRecord(currentUser?.role, record.createdAt) ? (
+                                          <>
+                                            <Button 
+                                              variant="ghost" 
+                                              size="sm" 
+                                              onClick={() => handleEditAccidentDetails(record.id)}
+                                              data-testid={`button-edit-${record.id}`}
+                                              className="h-8 w-8 p-0"
+                                            >
+                                              <Edit className="h-4 w-4" />
+                                            </Button>
+                                            <Button 
+                                              variant="ghost" 
+                                              size="sm" 
+                                              onClick={() => handleDeleteAccident(record.id, `${record.employeeName} - ${record.eventType}`)}
+                                              data-testid={`button-delete-${record.id}`}
+                                              className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                              disabled={deleteAccidentMutation.isPending}
+                                            >
+                                              <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                          </>
+                                        ) : (
+                                          <div className="h-8 w-8 p-0 flex items-center justify-center" data-testid={`locked-state-${record.id}`}>
+                                            <span className="text-xs text-gray-400" title="7 günlük düzenleme süresi dolmuş. Sadece görüntüleme mümkün.">🔒</span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </CardContent>
@@ -513,94 +590,112 @@ export default function AccidentManagementPage() {
                     </p>
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Tarih</TableHead>
-                          <TableHead>Sicil No</TableHead>
-                          <TableHead>Ad-Soyad</TableHead>
-                          <TableHead>Görev</TableHead>
-                          <TableHead>Ciddiyet</TableHead>
-                          <TableHead>Raporlayan</TableHead>
-                          <TableHead>Alan</TableHead>
-                          <TableHead className="text-right">Eylemler</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {nearMisses.map((record) => (
-                          <TableRow key={record.id} data-testid={`row-nearmiss-${record.id}`} className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                            <TableCell data-testid={`cell-nearmiss-date-${record.id}`}>
-                              {safeFormatDate(record.eventDate)}
-                            </TableCell>
-                            <TableCell data-testid={`cell-nearmiss-registration-${record.id}`} className="font-medium">
-                              {record.employeeRegistrationNumber || "---"}
-                            </TableCell>
-                            <TableCell data-testid={`cell-nearmiss-employee-name-${record.id}`}>
-                              {record.employeeName || "---"}
-                            </TableCell>
-                            <TableCell data-testid={`cell-nearmiss-position-${record.id}`}>
-                              {record.position || "---"}
-                            </TableCell>
-                            <TableCell data-testid={`cell-nearmiss-severity-${record.id}`}>
-                              {record.accidentSeverity ? (
-                                <Badge className={getSeverityColor(record.accidentSeverity)}>
-                                  {record.accidentSeverity.replace(" Ciddiyet", "")}
-                                </Badge>
-                              ) : (
-                                "---"
-                              )}
-                            </TableCell>
-                            <TableCell data-testid={`cell-nearmiss-reporter-${record.id}`}>
-                              {record.reportedBy || "---"}
-                            </TableCell>
-                            <TableCell data-testid={`cell-nearmiss-area-${record.id}`}>
-                              {record.eventArea || "---"}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex gap-1 justify-end">
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
-                                  onClick={() => handleViewAccidentDetails(record.id)}
-                                  data-testid={`button-nearmiss-view-${record.id}`}
-                                  className="h-8 w-8 p-0"
-                                >
-                                  <Eye className="h-4 w-4" />
-                                </Button>
-                                {canManageRecord(currentUser?.role, record.createdAt) ? (
-                                  <>
-                                    <Button 
-                                      variant="ghost" 
-                                      size="sm" 
-                                      onClick={() => handleEditAccidentDetails(record.id)}
-                                      data-testid={`button-nearmiss-edit-${record.id}`}
-                                      className="h-8 w-8 p-0"
-                                    >
-                                      <Edit className="h-4 w-4" />
-                                    </Button>
-                                    <Button 
-                                      variant="ghost" 
-                                      size="sm" 
-                                      onClick={() => handleDeleteAccident(record.id, `${record.employeeName} - ${record.eventType}`)}
-                                      data-testid={`button-nearmiss-delete-${record.id}`}
-                                      className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                      disabled={deleteAccidentMutation.isPending}
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                  </>
-                                ) : (
-                                  <div className="h-8 w-8 p-0 flex items-center justify-center" data-testid={`locked-state-${record.id}`}>
-                                    <span className="text-xs text-gray-400" title="7 günlük düzenleme süresi dolmuş. Sadece görüntüleme mümkün.">🔒</span>
-                                  </div>
-                                )}
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                  <div className="space-y-6">
+                    {getSortedMonthKeys(nearMissesGrouped).map((monthKey) => {
+                      const monthRecords = nearMissesGrouped[monthKey];
+                      return (
+                        <div key={monthKey} className="space-y-2">
+                          {/* Month Header */}
+                          <div className="bg-gray-50 dark:bg-gray-800 px-4 py-2 rounded-lg">
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                              <Calendar className="h-5 w-5" />
+                              {formatMonthHeader(monthKey, monthRecords)}
+                            </h3>
+                          </div>
+                          
+                          {/* Month Records Table */}
+                          <div className="overflow-x-auto">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Tarih</TableHead>
+                                  <TableHead>Sicil No</TableHead>
+                                  <TableHead>Ad-Soyad</TableHead>
+                                  <TableHead>Görev</TableHead>
+                                  <TableHead>Ciddiyet</TableHead>
+                                  <TableHead>Raporlayan</TableHead>
+                                  <TableHead>Alan</TableHead>
+                                  <TableHead className="text-right">Eylemler</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {monthRecords.map((record) => (
+                                  <TableRow key={record.id} data-testid={`row-nearmiss-${record.id}`} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                                    <TableCell data-testid={`cell-nearmiss-date-${record.id}`}>
+                                      {safeFormatDate(record.eventDate)}
+                                    </TableCell>
+                                    <TableCell data-testid={`cell-nearmiss-registration-${record.id}`} className="font-medium">
+                                      {record.employeeRegistrationNumber || "---"}
+                                    </TableCell>
+                                    <TableCell data-testid={`cell-nearmiss-employee-name-${record.id}`}>
+                                      {record.employeeName || "---"}
+                                    </TableCell>
+                                    <TableCell data-testid={`cell-nearmiss-position-${record.id}`}>
+                                      {record.position || "---"}
+                                    </TableCell>
+                                    <TableCell data-testid={`cell-nearmiss-severity-${record.id}`}>
+                                      {record.accidentSeverity ? (
+                                        <Badge className={getSeverityColor(record.accidentSeverity)}>
+                                          {record.accidentSeverity.replace(" Ciddiyet", "")}
+                                        </Badge>
+                                      ) : (
+                                        "---"
+                                      )}
+                                    </TableCell>
+                                    <TableCell data-testid={`cell-nearmiss-reporter-${record.id}`}>
+                                      {record.reportedBy || "---"}
+                                    </TableCell>
+                                    <TableCell data-testid={`cell-nearmiss-area-${record.id}`}>
+                                      {record.eventArea || "---"}
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                      <div className="flex gap-1 justify-end">
+                                        <Button 
+                                          variant="ghost" 
+                                          size="sm" 
+                                          onClick={() => handleViewAccidentDetails(record.id)}
+                                          data-testid={`button-nearmiss-view-${record.id}`}
+                                          className="h-8 w-8 p-0"
+                                        >
+                                          <Eye className="h-4 w-4" />
+                                        </Button>
+                                        {canManageRecord(currentUser?.role, record.createdAt) ? (
+                                          <>
+                                            <Button 
+                                              variant="ghost" 
+                                              size="sm" 
+                                              onClick={() => handleEditAccidentDetails(record.id)}
+                                              data-testid={`button-nearmiss-edit-${record.id}`}
+                                              className="h-8 w-8 p-0"
+                                            >
+                                              <Edit className="h-4 w-4" />
+                                            </Button>
+                                            <Button 
+                                              variant="ghost" 
+                                              size="sm" 
+                                              onClick={() => handleDeleteAccident(record.id, `${record.employeeName} - ${record.eventType}`)}
+                                              data-testid={`button-nearmiss-delete-${record.id}`}
+                                              className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                              disabled={deleteAccidentMutation.isPending}
+                                            >
+                                              <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                          </>
+                                        ) : (
+                                          <div className="h-8 w-8 p-0 flex items-center justify-center" data-testid={`locked-state-${record.id}`}>
+                                            <span className="text-xs text-gray-400" title="7 günlük düzenleme süresi dolmuş. Sadece görüntüleme mümkün.">🔒</span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </CardContent>
