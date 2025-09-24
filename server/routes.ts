@@ -31,6 +31,7 @@ import {
   insertEmployeeSchema,
   insertMedicalExaminationSchema,
   insertAccidentRecordSchema,
+  evaluateAccidentCompletion,
   CHECKLIST_CATEGORIES,
   EVALUATION_OPTIONS,
   FINE_KINNEY_PROBABILITY,
@@ -4194,7 +4195,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       
       const newRecord = await storage.createAccidentRecord(recordData);
-      res.status(201).json(newRecord);
+      
+      // Calculate completion status after record creation
+      const completionEval = evaluateAccidentCompletion(newRecord);
+      
+      // Update the record with the calculated completion status
+      const updatedRecord = await storage.updateAccidentRecord(newRecord.id, {
+        completionStatus: completionEval.status
+      });
+      
+      res.status(201).json(updatedRecord);
     } catch (error: any) {
       console.error('Create accident record error:', error);
       if (error.name === 'ZodError') {
@@ -4305,7 +4315,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       
       const updatedRecord = await storage.updateAccidentRecord(req.params.id, updateData);
-      res.json(updatedRecord);
+      
+      // Calculate completion status after record update
+      const completionEval = evaluateAccidentCompletion(updatedRecord);
+      
+      // Update the record with the calculated completion status if needed
+      const finalRecord = await storage.updateAccidentRecord(req.params.id, {
+        completionStatus: completionEval.status
+      });
+      
+      res.json(finalRecord);
     } catch (error: any) {
       console.error('Update accident record error:', error);
       if (error.name === 'ZodError') {
