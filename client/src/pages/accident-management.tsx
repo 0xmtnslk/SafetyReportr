@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { format, isSameMonth, startOfMonth, compareDesc } from "date-fns";
 import { tr } from "date-fns/locale";
+import { ACCIDENT_CAUSE_FACTORS } from "@/constants/complete-accident-data";
 
 // Check if record can be edited/deleted (within 7 days of creation)
 const canManageRecord = (userRole: string, createdAt: string | null | undefined): boolean => {
@@ -70,9 +71,11 @@ export default function AccidentManagementPage() {
   const [, setLocation] = useLocation();
   
   // Analytics filters
+  const [analyticsSearchTerm, setAnalyticsSearchTerm] = useState("");
   const [analyticsCategory, setAnalyticsCategory] = useState<string>("eventTime");
   const [analyticsYear, setAnalyticsYear] = useState<string>("all");
   const [analyticsMonth, setAnalyticsMonth] = useState<string>("all");
+  const [analyticsAccidentCauseFactor, setAnalyticsAccidentCauseFactor] = useState<string>("all");
   const [analyticsEventType, setAnalyticsEventType] = useState<string>("all");
   
   // İş Kazaları tab filters
@@ -376,17 +379,38 @@ export default function AccidentManagementPage() {
 
   // Analytics data preparation
   const analyticsData = useMemo(() => {
-    // Filter records by selected year, month, and event type for analytics
+    // Filter records by selected year, month, event type, search term, and accident cause factor for analytics
     let filteredRecords = accidentRecords.filter((record: any) => {
       if (!record.eventDate) return false;
+      
       try {
         const recordDate = new Date(record.eventDate);
         const recordYear = recordDate.getFullYear().toString();
         const recordMonth = (recordDate.getMonth() + 1).toString().padStart(2, '0');
         
+        // Date filters
         if (analyticsYear !== "all" && recordYear !== analyticsYear) return false;
         if (analyticsMonth !== "all" && recordMonth !== analyticsMonth) return false;
         if (analyticsEventType !== "all" && record.eventType !== analyticsEventType) return false;
+        
+        // Search term filter
+        if (analyticsSearchTerm) {
+          const searchTerm = analyticsSearchTerm.toLowerCase();
+          const searchableText = [
+            record.registrationNumber,
+            record.employeeFirstName,
+            record.employeeLastName,
+            record.position,
+            record.department,
+            record.professionGroup,
+            record.eventDescription
+          ].filter(Boolean).join(' ').toLowerCase();
+          
+          if (!searchableText.includes(searchTerm)) return false;
+        }
+        
+        // Accident cause factor filter
+        if (analyticsAccidentCauseFactor !== "all" && record.accidentCauseFactor !== analyticsAccidentCauseFactor) return false;
         
         return true;
       } catch {
@@ -464,7 +488,7 @@ export default function AccidentManagementPage() {
     };
 
     return prepareAnalyticsData(analyticsCategory, filteredRecords);
-  }, [accidentRecords, analyticsCategory, analyticsYear, analyticsMonth, analyticsEventType]);
+  }, [accidentRecords, analyticsCategory, analyticsYear, analyticsMonth, analyticsEventType, analyticsSearchTerm, analyticsAccidentCauseFactor]);
 
   // Get month keys sorted by most recent first
   const getSortedMonthKeys = (grouped: { [key: string]: any[] }): string[] => {
@@ -566,6 +590,144 @@ export default function AccidentManagementPage() {
                 </p>
               </div>
             </div>
+
+            {/* Analytics Search and Filters */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5 text-blue-600" />
+                  Analiz Filtreleri
+                </CardTitle>
+                <CardDescription>
+                  Analiz yapmak istediğiniz veriyi filtrelemek için aşağıdaki seçenekleri kullanın
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                  {/* Search */}
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      type="text"
+                      placeholder="Sicil no, Ad-soyad, Görev ile ara..."
+                      value={analyticsSearchTerm}
+                      onChange={(e) => setAnalyticsSearchTerm(e.target.value)}
+                      className="pl-10"
+                      data-testid="input-analytics-search"
+                    />
+                  </div>
+                  
+                  {/* Analytics Category */}
+                  <div>
+                    <Select value={analyticsCategory} onValueChange={setAnalyticsCategory} data-testid="select-analytics-category">
+                      <SelectTrigger>
+                        <SelectValue placeholder="Analiz kategorisi" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {analyticsCategories.map((category) => (
+                          <SelectItem key={category.value} value={category.value}>
+                            {category.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Event Type Filter */}
+                  <div>
+                    <Select value={analyticsEventType} onValueChange={setAnalyticsEventType} data-testid="select-analytics-event-type">
+                      <SelectTrigger>
+                        <SelectValue placeholder="Olay türü" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Tüm Olaylar</SelectItem>
+                        <SelectItem value="İş Kazası">İş Kazası</SelectItem>
+                        <SelectItem value="Ramak Kala">Ramak Kala</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Year Filter */}
+                  <div className="flex items-center space-x-2">
+                    <Calendar className="h-4 w-4 text-gray-400" />
+                    <Select value={analyticsYear} onValueChange={setAnalyticsYear} data-testid="select-analytics-year">
+                      <SelectTrigger>
+                        <SelectValue placeholder="Yıl" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Tüm Yıllar</SelectItem>
+                        {availableYears.map(year => (
+                          <SelectItem key={year} value={year.toString()}>
+                            {year}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Month Filter */}
+                  <div>
+                    <Select value={analyticsMonth} onValueChange={setAnalyticsMonth} data-testid="select-analytics-month">
+                      <SelectTrigger>
+                        <SelectValue placeholder="Ay" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Tüm Aylar</SelectItem>
+                        <SelectItem value="1">Ocak</SelectItem>
+                        <SelectItem value="2">Şubat</SelectItem>
+                        <SelectItem value="3">Mart</SelectItem>
+                        <SelectItem value="4">Nisan</SelectItem>
+                        <SelectItem value="5">Mayıs</SelectItem>
+                        <SelectItem value="6">Haziran</SelectItem>
+                        <SelectItem value="7">Temmuz</SelectItem>
+                        <SelectItem value="8">Ağustos</SelectItem>
+                        <SelectItem value="9">Eylül</SelectItem>
+                        <SelectItem value="10">Ekim</SelectItem>
+                        <SelectItem value="11">Kasım</SelectItem>
+                        <SelectItem value="12">Aralık</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Accident Cause Factor Filter */}
+                  <div>
+                    <Select value={analyticsAccidentCauseFactor} onValueChange={setAnalyticsAccidentCauseFactor} data-testid="select-analytics-accident-cause-factor">
+                      <SelectTrigger>
+                        <SelectValue placeholder="Kaza türü" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Tüm Kaza Türleri</SelectItem>
+                        {ACCIDENT_CAUSE_FACTORS.map((factor, index) => (
+                          <SelectItem key={index} value={factor}>
+                            {factor}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Clear Filters */}
+                {(analyticsSearchTerm || analyticsCategory !== "eventTime" || analyticsYear !== "all" || 
+                  analyticsMonth !== "all" || analyticsEventType !== "all" || analyticsAccidentCauseFactor !== "all") && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => {
+                      setAnalyticsSearchTerm("");
+                      setAnalyticsCategory("eventTime");
+                      setAnalyticsYear("all");
+                      setAnalyticsMonth("all");
+                      setAnalyticsEventType("all");
+                      setAnalyticsAccidentCauseFactor("all");
+                    }}
+                    data-testid="button-clear-analytics-filters"
+                  >
+                    Tüm Filtreleri Temizle
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
 
 
             {/* Analytics Results */}
