@@ -16,6 +16,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { format, isSameMonth, startOfMonth, compareDesc } from "date-fns";
 import { tr } from "date-fns/locale";
 import { ACCIDENT_CAUSE_FACTORS } from "@/constants/complete-accident-data";
+import { evaluateAccidentCompletion } from "@shared/schema";
 
 // Check if record can be edited/deleted (within 7 days of creation)
 const canManageRecord = (userRole: string, createdAt: string | null | undefined): boolean => {
@@ -103,6 +104,13 @@ export default function AccidentManagementPage() {
     queryKey: ["/api/accident-records"],
     enabled: true
   }) as { data: any[], isLoading: boolean, isError: boolean };
+
+  // Fetch draft accident records
+  const { data: draftRecords = [], isLoading: isDraftLoading } = useQuery({
+    queryKey: ["/api/accident-records", { status: "draft" }],
+    queryFn: () => apiRequest("/api/accident-records?status=draft"),
+    enabled: true
+  }) as { data: any[], isLoading: boolean };
 
   const handleNewAccidentReport = () => {
     setLocation("/accident-details");
@@ -549,8 +557,9 @@ export default function AccidentManagementPage() {
 
 
         <Tabs defaultValue="analytics">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="analytics">Analiz</TabsTrigger>
+            <TabsTrigger value="drafts">Taslaklar</TabsTrigger>
             <TabsTrigger value="accidents">İş Kazaları</TabsTrigger>
             <TabsTrigger value="near-miss">Ramak Kala</TabsTrigger>
           </TabsList>
@@ -820,6 +829,141 @@ export default function AccidentManagementPage() {
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+
+          <TabsContent value="drafts" className="space-y-4">
+            {/* Taslaklar Header */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-orange-600" />
+                  Taslaklar - Tamamlanmamış Kayıtlar
+                </CardTitle>
+                <CardDescription>
+                  Zorunlu alanları eksik veya belgeler yüklenmemiş kayıtları burada görüntüleyebilirsiniz
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            {/* Draft Records Display */}
+            {draftRecords && draftRecords.length > 0 ? (
+              <Card>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[100px]">Tarih</TableHead>
+                        <TableHead className="w-[120px]">Sicil No</TableHead>
+                        <TableHead>Ad-Soyad</TableHead>
+                        <TableHead>Olay Türü</TableHead>
+                        <TableHead>Ciddiyet</TableHead>
+                        <TableHead className="w-[80px]">İş Günü</TableHead>
+                        <TableHead>Bildirimci</TableHead>
+                        <TableHead>Eksikler</TableHead>
+                        <TableHead className="w-[150px]">İşlemler</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {draftRecords.map((record) => (
+                        <TableRow key={record.id} data-testid={`row-draft-${record.id}`}>
+                          <TableCell data-testid={`text-date-${record.id}`}>
+                            {format(new Date(record.eventDate), "dd.MM.yyyy", { locale: tr })}
+                          </TableCell>
+                          <TableCell data-testid={`text-employee-id-${record.id}`}>
+                            {record.employeeRegistrationNumber}
+                          </TableCell>
+                          <TableCell data-testid={`text-name-${record.id}`}>
+                            {record.employeeName}
+                          </TableCell>
+                          <TableCell data-testid={`text-event-type-${record.id}`}>
+                            <Badge variant={record.eventType === "İş Kazası" ? "destructive" : "default"}>
+                              {record.eventType}
+                            </Badge>
+                          </TableCell>
+                          <TableCell data-testid={`text-severity-${record.id}`}>
+                            {record.accidentSeverity || "-"}
+                          </TableCell>
+                          <TableCell data-testid={`text-days-lost-${record.id}`}>
+                            {record.workDayLoss || 0}
+                          </TableCell>
+                          <TableCell data-testid={`text-reporter-${record.id}`}>
+                            {reporterNames[record.reportedBy] || "Bilinmiyor"}
+                          </TableCell>
+                          <TableCell data-testid={`text-missing-fields-${record.id}`}>
+                            <div className="flex flex-col gap-1 text-xs">
+                              {(() => {
+                                const evaluation = evaluateAccidentCompletion(record);
+                                return (
+                                  <div className="space-y-1">
+                                    {evaluation.missingFields.length > 0 && (
+                                      <div>
+                                        <span className="text-red-600 font-medium">Eksik alanlar:</span>
+                                        <div className="ml-2">
+                                          {evaluation.missingFields.slice(0, 3).map((field, index) => (
+                                            <div key={index} className="text-red-600">{field}</div>
+                                          ))}
+                                          {evaluation.missingFields.length > 3 && (
+                                            <div className="text-red-600">+{evaluation.missingFields.length - 3} diğer</div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    )}
+                                    {evaluation.missingDocuments.length > 0 && (
+                                      <div>
+                                        <span className="text-orange-600 font-medium">Eksik belgeler:</span>
+                                        <div className="ml-2">
+                                          {evaluation.missingDocuments.map((doc, index) => (
+                                            <div key={index} className="text-orange-600">{doc}</div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })()}
+                            </div>
+                          </TableCell>
+                          <TableCell data-testid={`actions-${record.id}`}>
+                            <div className="flex items-center space-x-1">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setLocation(`/accident-details/${record.id}`)}
+                                data-testid={`button-view-${record.id}`}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              {canManageRecord(user?.role || '', record.createdAt) && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setLocation(`/accident-details/${record.id}?edit=true`)}
+                                  data-testid={`button-edit-${record.id}`}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <CardContent className="text-center py-12">
+                  <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                    Taslak kayıt yok
+                  </h3>
+                  <p className="text-gray-600 dark:text-gray-400">
+                    Tüm kayıtlar tamamlanmış durumda.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           <TabsContent value="accidents" className="space-y-4">
