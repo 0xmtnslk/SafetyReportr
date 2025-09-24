@@ -305,8 +305,9 @@ export default function AccidentManagementPage() {
 
   // Calculate stats - independent of search (using only completed records)
   const currentDate = new Date();
-  const allWorkAccidents = (completedRecords as any[]).filter((record: any) => record.eventType === "İş Kazası");
-  const allNearMisses = (completedRecords as any[]).filter((record: any) => record.eventType === "Ramak Kala");
+  const safeCompletedRecords = Array.isArray(completedRecords) ? completedRecords : [];
+  const allWorkAccidents = safeCompletedRecords.filter((record: any) => record.eventType === "İş Kazası");
+  const allNearMisses = safeCompletedRecords.filter((record: any) => record.eventType === "Ramak Kala");
   
   const thisMonthAccidents = allWorkAccidents.filter((record: any) => {
     if (!record.eventDate) return false;
@@ -380,8 +381,9 @@ export default function AccidentManagementPage() {
   const availableYears = getAvailableYears(accidentRecords);
 
   // Apply search filters for display (using completed records for main tabs)
-  const workAccidents = filterAccidentRecords(completedRecords);
-  const nearMisses = filterNearMissRecords(completedRecords);
+  const safeCompletedRecordsForFilter = Array.isArray(completedRecords) ? completedRecords : [];
+  const workAccidents = filterAccidentRecords(safeCompletedRecordsForFilter);
+  const nearMisses = filterNearMissRecords(safeCompletedRecordsForFilter);
 
   // Group filtered results by month
   const workAccidentsGrouped = groupRecordsByMonth(workAccidents);
@@ -390,7 +392,8 @@ export default function AccidentManagementPage() {
   // Analytics data preparation
   const analyticsData = useMemo(() => {
     // Filter records by selected year, month, and event type for analytics (using only completed records)
-    let filteredRecords = completedRecords.filter((record: any) => {
+    const safeCompletedForAnalytics = Array.isArray(completedRecords) ? completedRecords : [];
+    let filteredRecords = safeCompletedForAnalytics.filter((record: any) => {
       if (!record.eventDate) return false;
       
       try {
@@ -850,11 +853,12 @@ export default function AccidentManagementPage() {
             </Card>
 
             {/* Draft Records Display - Two Column Layout */}
-            {draftRecords && draftRecords.length > 0 ? (
+            {Array.isArray(draftRecords) && draftRecords.length > 0 ? (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* İş Kazası Taslakları */}
                 {(() => {
-                  const accidentDrafts = draftRecords.filter(record => record.eventType === "İş Kazası");
+                  const safeDraftRecords = Array.isArray(draftRecords) ? draftRecords : [];
+                  const accidentDrafts = safeDraftRecords.filter(record => record.eventType === "İş Kazası");
                   return (
                     <Card>
                       <CardHeader>
@@ -935,7 +939,8 @@ export default function AccidentManagementPage() {
 
                 {/* Ramak Kala Taslakları */}
                 {(() => {
-                  const nearMissDrafts = draftRecords.filter(record => record.eventType === "Ramak Kala");
+                  const safeDraftRecordsNearMiss = Array.isArray(draftRecords) ? draftRecords : [];
+                  const nearMissDrafts = safeDraftRecordsNearMiss.filter(record => record.eventType === "Ramak Kala");
                   return (
                     <Card>
                       <CardHeader>
