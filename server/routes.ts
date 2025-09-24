@@ -4046,6 +4046,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const user = (req as any).user;
       const locationId = req.query.locationId as string;
+      const status = req.query.status as string; // "draft" | "completed"
       
       let records;
       
@@ -4053,6 +4054,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         records = await storage.getAllAccidentRecords(locationId);
       } else {
         records = await storage.getAllAccidentRecords(user.locationId);
+      }
+      
+      // Filter by completion status if provided
+      if (status && (status === 'draft' || status === 'completed')) {
+        records = records.filter(record => record.completionStatus === status);
       }
       
       res.json(records);
