@@ -852,112 +852,171 @@ export default function AccidentManagementPage() {
               </CardHeader>
             </Card>
 
-            {/* Draft Records Display */}
+            {/* Draft Records Display - Two Column Layout */}
             {draftRecords && draftRecords.length > 0 ? (
-              <Card>
-                <CardContent className="p-0">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-[100px]">Tarih</TableHead>
-                        <TableHead className="w-[120px]">Sicil No</TableHead>
-                        <TableHead>Ad-Soyad</TableHead>
-                        <TableHead>Olay Türü</TableHead>
-                        <TableHead>Ciddiyet</TableHead>
-                        <TableHead className="w-[80px]">İş Günü</TableHead>
-                        <TableHead>Bildirimci</TableHead>
-                        <TableHead>Eksikler</TableHead>
-                        <TableHead className="w-[150px]">İşlemler</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {draftRecords.map((record) => (
-                        <TableRow key={record.id} data-testid={`row-draft-${record.id}`}>
-                          <TableCell data-testid={`text-date-${record.id}`}>
-                            {format(new Date(record.eventDate), "dd.MM.yyyy", { locale: tr })}
-                          </TableCell>
-                          <TableCell data-testid={`text-employee-id-${record.id}`}>
-                            {record.employeeRegistrationNumber}
-                          </TableCell>
-                          <TableCell data-testid={`text-name-${record.id}`}>
-                            {record.employeeName}
-                          </TableCell>
-                          <TableCell data-testid={`text-event-type-${record.id}`}>
-                            <Badge variant={record.eventType === "İş Kazası" ? "destructive" : "default"}>
-                              {record.eventType}
-                            </Badge>
-                          </TableCell>
-                          <TableCell data-testid={`text-severity-${record.id}`}>
-                            {record.accidentSeverity || "-"}
-                          </TableCell>
-                          <TableCell data-testid={`text-days-lost-${record.id}`}>
-                            {record.workDayLoss || 0}
-                          </TableCell>
-                          <TableCell data-testid={`text-reporter-${record.id}`}>
-                            {reporterNames[record.reportedBy] || "Bilinmiyor"}
-                          </TableCell>
-                          <TableCell data-testid={`text-missing-fields-${record.id}`}>
-                            <div className="flex flex-col gap-1 text-xs">
-                              {(() => {
-                                const evaluation = evaluateAccidentCompletion(record);
-                                return (
-                                  <div className="space-y-1">
-                                    {evaluation.missingFields.length > 0 && (
-                                      <div>
-                                        <span className="text-red-600 font-medium">Eksik alanlar:</span>
-                                        <div className="ml-2">
-                                          {evaluation.missingFields.slice(0, 3).map((field, index) => (
-                                            <div key={index} className="text-red-600">{field}</div>
-                                          ))}
-                                          {evaluation.missingFields.length > 3 && (
-                                            <div className="text-red-600">+{evaluation.missingFields.length - 3} diğer</div>
-                                          )}
-                                        </div>
-                                      </div>
-                                    )}
-                                    {evaluation.missingDocuments.length > 0 && (
-                                      <div>
-                                        <span className="text-orange-600 font-medium">Eksik belgeler:</span>
-                                        <div className="ml-2">
-                                          {evaluation.missingDocuments.map((doc, index) => (
-                                            <div key={index} className="text-orange-600">{doc}</div>
-                                          ))}
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
-                                );
-                              })()}
-                            </div>
-                          </TableCell>
-                          <TableCell data-testid={`actions-${record.id}`}>
-                            <div className="flex items-center space-x-1">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setLocation(`/accident-details/${record.id}`)}
-                                data-testid={`button-view-${record.id}`}
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              {canManageRecord(user?.role || '', record.createdAt) && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => setLocation(`/accident-details/${record.id}?edit=true`)}
-                                  data-testid={`button-edit-${record.id}`}
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                              )}
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* İş Kazası Taslakları */}
+                {(() => {
+                  const accidentDrafts = draftRecords.filter(record => record.eventType === "İş Kazası");
+                  return (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-lg">
+                          <AlertTriangle className="h-5 w-5 text-red-600" />
+                          İş Kazası Taslakları ({accidentDrafts.length})
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="p-0">
+                        {accidentDrafts.length > 0 ? (
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead className="w-[80px]">Tarih</TableHead>
+                                <TableHead className="w-[80px]">Sicil</TableHead>
+                                <TableHead>Ad-Soyad</TableHead>
+                                <TableHead>Eksikler</TableHead>
+                                <TableHead className="w-[80px]">İşlem</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {accidentDrafts.map((record) => (
+                                <TableRow key={record.id} data-testid={`row-accident-draft-${record.id}`}>
+                                  <TableCell data-testid={`text-date-${record.id}`} className="text-xs">
+                                    {format(new Date(record.eventDate), "dd.MM.yy", { locale: tr })}
+                                  </TableCell>
+                                  <TableCell data-testid={`text-employee-id-${record.id}`} className="text-xs">
+                                    {record.employeeRegistrationNumber}
+                                  </TableCell>
+                                  <TableCell data-testid={`text-name-${record.id}`} className="text-sm font-medium">
+                                    {record.employeeName}
+                                  </TableCell>
+                                  <TableCell data-testid={`text-missing-fields-${record.id}`}>
+                                    <div className="text-xs">
+                                      {(() => {
+                                        const evaluation = evaluateAccidentCompletion(record);
+                                        return (
+                                          <div className="space-y-1">
+                                            {evaluation.missingFields.length > 0 && (
+                                              <div className="text-red-600">
+                                                {evaluation.missingFields.length} alan eksik
+                                              </div>
+                                            )}
+                                            {evaluation.missingDocuments.length > 0 && (
+                                              <div className="text-orange-600">
+                                                {evaluation.missingDocuments.length} belge eksik
+                                              </div>
+                                            )}
+                                          </div>
+                                        );
+                                      })()}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell data-testid={`actions-${record.id}`}>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => setLocation(`/accident-details/${record.id}?edit=true`)}
+                                      data-testid={`button-edit-${record.id}`}
+                                    >
+                                      <Edit className="h-3 w-3" />
+                                    </Button>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        ) : (
+                          <div className="text-center py-8 text-gray-500">
+                            <AlertTriangle className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                            <p className="text-sm">İş Kazası taslağı yok</p>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })()}
+
+                {/* Ramak Kala Taslakları */}
+                {(() => {
+                  const nearMissDrafts = draftRecords.filter(record => record.eventType === "Ramak Kala");
+                  return (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-lg">
+                          <Activity className="h-5 w-5 text-blue-600" />
+                          Ramak Kala Taslakları ({nearMissDrafts.length})
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="p-0">
+                        {nearMissDrafts.length > 0 ? (
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead className="w-[80px]">Tarih</TableHead>
+                                <TableHead className="w-[80px]">Sicil</TableHead>
+                                <TableHead>Ad-Soyad</TableHead>
+                                <TableHead>Eksikler</TableHead>
+                                <TableHead className="w-[80px]">İşlem</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {nearMissDrafts.map((record) => (
+                                <TableRow key={record.id} data-testid={`row-nearmiss-draft-${record.id}`}>
+                                  <TableCell data-testid={`text-date-${record.id}`} className="text-xs">
+                                    {format(new Date(record.eventDate), "dd.MM.yy", { locale: tr })}
+                                  </TableCell>
+                                  <TableCell data-testid={`text-employee-id-${record.id}`} className="text-xs">
+                                    {record.employeeRegistrationNumber}
+                                  </TableCell>
+                                  <TableCell data-testid={`text-name-${record.id}`} className="text-sm font-medium">
+                                    {record.employeeName}
+                                  </TableCell>
+                                  <TableCell data-testid={`text-missing-fields-${record.id}`}>
+                                    <div className="text-xs">
+                                      {(() => {
+                                        const evaluation = evaluateAccidentCompletion(record);
+                                        return (
+                                          <div className="space-y-1">
+                                            {evaluation.missingFields.length > 0 && (
+                                              <div className="text-red-600">
+                                                {evaluation.missingFields.length} alan eksik
+                                              </div>
+                                            )}
+                                            {evaluation.missingDocuments.length > 0 && (
+                                              <div className="text-orange-600">
+                                                {evaluation.missingDocuments.length} belge eksik
+                                              </div>
+                                            )}
+                                          </div>
+                                        );
+                                      })()}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell data-testid={`actions-${record.id}`}>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => setLocation(`/accident-details/${record.id}?edit=true`)}
+                                      data-testid={`button-edit-${record.id}`}
+                                    >
+                                      <Edit className="h-3 w-3" />
+                                    </Button>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        ) : (
+                          <div className="text-center py-8 text-gray-500">
+                            <Activity className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                            <p className="text-sm">Ramak Kala taslağı yok</p>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })()}
+              </div>
             ) : (
               <Card>
                 <CardContent className="text-center py-12">
