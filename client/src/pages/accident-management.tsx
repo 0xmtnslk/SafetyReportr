@@ -104,16 +104,36 @@ export default function AccidentManagementPage() {
     queryKey: ["/api/accident-records"]
   }) as { data: any[], isLoading: boolean, isError: boolean };
 
-  // Fetch draft accident records
+  // Fetch draft accident records  
   const { data: draftRecords = [], isLoading: isDraftLoading } = useQuery({
-    queryKey: ["/api/accident-records-draft"],
-    queryFn: () => apiRequest("GET", "/api/accident-records?status=draft")
+    queryKey: ["accident-records", "draft"],
+    queryFn: async () => {
+      console.log('Fetching DRAFT records...');
+      const response = await fetch('/api/accident-records?status=draft', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      const data = await response.json();
+      console.log('Draft records received:', data?.length || 0);
+      return data;
+    }
   }) as { data: any[], isLoading: boolean };
 
   // Fetch completed accident records
   const { data: completedRecords = [], isLoading: isCompletedLoading } = useQuery({
-    queryKey: ["/api/accident-records-completed"],
-    queryFn: () => apiRequest("GET", "/api/accident-records?status=completed")
+    queryKey: ["accident-records", "completed"],
+    queryFn: async () => {
+      console.log('Fetching COMPLETED records...');
+      const response = await fetch('/api/accident-records?status=completed', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      const data = await response.json();
+      console.log('Completed records received:', data?.length || 0);
+      return data;
+    }
   }) as { data: any[], isLoading: boolean };
   const handleNewAccidentReport = () => {
     setLocation("/accident-details");
