@@ -698,8 +698,8 @@ export default function AccidentManagementPage() {
                       <SelectContent>
                         <SelectItem value="all">Tüm Kaza Türleri</SelectItem>
                         {ACCIDENT_CAUSE_FACTORS.map((factor, index) => (
-                          <SelectItem key={index} value={factor}>
-                            {factor}
+                          <SelectItem key={index} value={factor.value}>
+                            {factor.label}
                           </SelectItem>
                         ))}
                       </SelectContent>
