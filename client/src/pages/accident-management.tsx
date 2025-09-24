@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { AlertTriangle, Activity, FileText, TrendingUp, Users, Clock, PlusCircle, Shield, Search, Eye, Edit, Download, Trash2, Calendar, BarChart3, PieChart as PieChartIcon } from "lucide-react";
+import { AlertTriangle, Activity, FileText, TrendingUp, Users, Clock, PlusCircle, Shield, Search, Eye, Edit, Download, Trash2, Calendar, BarChart3, PieChart as PieChartIcon, FileX } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -976,18 +976,37 @@ export default function AccidentManagementPage() {
                                       </span>
                                     </TableCell>
                                     <TableCell data-testid={`cell-reporter-${record.id}`}>
-                                      {record.creator ? (
-                                        <div className="text-sm">
-                                          <div className="font-medium">{record.creator.fullName}</div>
-                                          {record.creator.safetySpecialistClass && record.creator.certificateNumber && (
-                                            <div className="text-gray-500 dark:text-gray-400">
-                                              {record.creator.safetySpecialistClass} - {record.creator.certificateNumber}
+                                      <div className="flex items-start gap-2">
+                                        <div className="flex-1 text-sm">
+                                          {record.creator ? (
+                                            <div>
+                                              <div className="font-medium">{record.creator.fullName}</div>
+                                              {record.creator.safetySpecialistClass && record.creator.certificateNumber && (
+                                                <div className="text-gray-500 dark:text-gray-400">
+                                                  {record.creator.safetySpecialistClass} - {record.creator.certificateNumber}
+                                                </div>
+                                              )}
                                             </div>
+                                          ) : (
+                                            record.reportedBy || "---"
                                           )}
                                         </div>
-                                      ) : (
-                                        record.reportedBy || "---"
-                                      )}
+                                        {/* Missing Documents Indicators */}
+                                        <div className="flex flex-col gap-1">
+                                          {!record.sgkNotificationFormUrl && (
+                                            <FileX 
+                                              className="h-4 w-4 text-red-500" 
+                                              title="SGK Bildirim Formu eksik"
+                                            />
+                                          )}
+                                          {!record.accidentAnalysisFormUrl && (
+                                            <FileX 
+                                              className="h-4 w-4 text-orange-500" 
+                                              title="Kaza Analiz Formu eksik"
+                                            />
+                                          )}
+                                        </div>
+                                      </div>
                                     </TableCell>
                                     <TableCell className="text-right">
                                       <div className="flex gap-1 justify-end">
@@ -1195,18 +1214,37 @@ export default function AccidentManagementPage() {
                                       </span>
                                     </TableCell>
                                     <TableCell data-testid={`cell-nearmiss-reporter-${record.id}`}>
-                                      {record.creator ? (
-                                        <div className="text-sm">
-                                          <div className="font-medium">{record.creator.fullName}</div>
-                                          {record.creator.safetySpecialistClass && record.creator.certificateNumber && (
-                                            <div className="text-gray-500 dark:text-gray-400">
-                                              {record.creator.safetySpecialistClass} - {record.creator.certificateNumber}
+                                      <div className="flex items-start gap-2">
+                                        <div className="flex-1 text-sm">
+                                          {record.creator ? (
+                                            <div>
+                                              <div className="font-medium">{record.creator.fullName}</div>
+                                              {record.creator.safetySpecialistClass && record.creator.certificateNumber && (
+                                                <div className="text-gray-500 dark:text-gray-400">
+                                                  {record.creator.safetySpecialistClass} - {record.creator.certificateNumber}
+                                                </div>
+                                              )}
                                             </div>
+                                          ) : (
+                                            record.reportedBy || "---"
                                           )}
                                         </div>
-                                      ) : (
-                                        record.reportedBy || "---"
-                                      )}
+                                        {/* Missing Documents Indicators */}
+                                        <div className="flex flex-col gap-1">
+                                          {!record.sgkNotificationFormUrl && (
+                                            <FileX 
+                                              className="h-4 w-4 text-red-500" 
+                                              title="SGK Bildirim Formu eksik"
+                                            />
+                                          )}
+                                          {!record.accidentAnalysisFormUrl && (
+                                            <FileX 
+                                              className="h-4 w-4 text-orange-500" 
+                                              title="Kaza Analiz Formu eksik"
+                                            />
+                                          )}
+                                        </div>
+                                      </div>
                                     </TableCell>
                                     <TableCell className="text-right">
                                       <div className="flex gap-1 justify-end">
