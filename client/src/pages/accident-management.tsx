@@ -624,8 +624,8 @@ export default function AccidentManagementPage() {
                         <SelectValue placeholder="Analiz kategorisi" />
                       </SelectTrigger>
                       <SelectContent>
-                        {analyticsCategories.map((category) => (
-                          <SelectItem key={category.value} value={category.value}>
+                        {analyticsCategories.map((category, index) => (
+                          <SelectItem key={index} value={category.value}>
                             {category.label}
                           </SelectItem>
                         ))}
@@ -673,15 +673,15 @@ export default function AccidentManagementPage() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">Tüm Aylar</SelectItem>
-                        <SelectItem value="1">Ocak</SelectItem>
-                        <SelectItem value="2">Şubat</SelectItem>
-                        <SelectItem value="3">Mart</SelectItem>
-                        <SelectItem value="4">Nisan</SelectItem>
-                        <SelectItem value="5">Mayıs</SelectItem>
-                        <SelectItem value="6">Haziran</SelectItem>
-                        <SelectItem value="7">Temmuz</SelectItem>
-                        <SelectItem value="8">Ağustos</SelectItem>
-                        <SelectItem value="9">Eylül</SelectItem>
+                        <SelectItem value="01">Ocak</SelectItem>
+                        <SelectItem value="02">Şubat</SelectItem>
+                        <SelectItem value="03">Mart</SelectItem>
+                        <SelectItem value="04">Nisan</SelectItem>
+                        <SelectItem value="05">Mayıs</SelectItem>
+                        <SelectItem value="06">Haziran</SelectItem>
+                        <SelectItem value="07">Temmuz</SelectItem>
+                        <SelectItem value="08">Ağustos</SelectItem>
+                        <SelectItem value="09">Eylül</SelectItem>
                         <SelectItem value="10">Ekim</SelectItem>
                         <SelectItem value="11">Kasım</SelectItem>
                         <SelectItem value="12">Aralık</SelectItem>
