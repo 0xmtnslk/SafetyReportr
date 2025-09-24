@@ -937,10 +937,10 @@ export default function AccidentManagementPage() {
                                   <TableHead>Tarih</TableHead>
                                   <TableHead>Sicil No</TableHead>
                                   <TableHead>Ad-Soyad</TableHead>
-                                  <TableHead>Görev</TableHead>
+                                  <TableHead>Kaza Türü</TableHead>
                                   <TableHead>Ciddiyet</TableHead>
                                   <TableHead>Gün Kaybı</TableHead>
-                                  <TableHead>Alan</TableHead>
+                                  <TableHead>Raporlayan</TableHead>
                                   <TableHead className="text-right">Eylemler</TableHead>
                                 </TableRow>
                               </TableHeader>
@@ -956,8 +956,8 @@ export default function AccidentManagementPage() {
                                     <TableCell data-testid={`cell-employee-name-${record.id}`}>
                                       {record.employeeName || "---"}
                                     </TableCell>
-                                    <TableCell data-testid={`cell-position-${record.id}`}>
-                                      {record.position || "---"}
+                                    <TableCell data-testid={`cell-accident-cause-${record.id}`}>
+                                      {record.accidentCauseFactor || "---"}
                                     </TableCell>
                                     <TableCell data-testid={`cell-severity-${record.id}`}>
                                       {record.accidentSeverity ? (
@@ -975,8 +975,19 @@ export default function AccidentManagementPage() {
                                         {record.workDayLoss || 0} gün
                                       </span>
                                     </TableCell>
-                                    <TableCell data-testid={`cell-area-${record.id}`}>
-                                      {record.eventArea || "---"}
+                                    <TableCell data-testid={`cell-reporter-${record.id}`}>
+                                      {record.creator ? (
+                                        <div className="text-sm">
+                                          <div className="font-medium">{record.creator.fullName}</div>
+                                          {record.creator.safetySpecialistClass && record.creator.certificateNumber && (
+                                            <div className="text-gray-500 dark:text-gray-400">
+                                              {record.creator.safetySpecialistClass} - {record.creator.certificateNumber}
+                                            </div>
+                                          )}
+                                        </div>
+                                      ) : (
+                                        record.reportedBy || "---"
+                                      )}
                                     </TableCell>
                                     <TableCell className="text-right">
                                       <div className="flex gap-1 justify-end">
