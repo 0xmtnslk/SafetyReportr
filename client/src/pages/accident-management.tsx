@@ -108,7 +108,7 @@ export default function AccidentManagementPage() {
 
   // Fetch draft accident records
   const { data: draftRecords = [], isLoading: isDraftLoading } = useQuery({
-    queryKey: ["/api/accident-records", { status: "draft" }],
+    queryKey: ["/api/accident-records-draft"],
     queryFn: () => apiRequest("GET", "/api/accident-records?status=draft")
   }) as { data: any[], isLoading: boolean };
   
@@ -116,7 +116,7 @@ export default function AccidentManagementPage() {
 
   // Fetch completed accident records
   const { data: completedRecords = [], isLoading: isCompletedLoading } = useQuery({
-    queryKey: ["/api/accident-records", { status: "completed" }],
+    queryKey: ["/api/accident-records-completed"],
     queryFn: () => apiRequest("GET", "/api/accident-records?status=completed")
   }) as { data: any[], isLoading: boolean };
   
