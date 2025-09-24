@@ -714,6 +714,67 @@ export default function AccidentManagementPage() {
           </TabsContent>
 
           <TabsContent value="accidents" className="space-y-4">
+            {/* İş Kazaları Search and Filters */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-red-600" />
+                  İş Kazaları - Arama ve Filtreleme
+                </CardTitle>
+                <CardDescription>
+                  Aradığınız kaza kaydını bulmak için arama ve filtre seçeneklerini kullanın
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center space-x-4 flex-wrap gap-2 mb-4">
+                  <div className="relative flex-1 min-w-[300px] max-w-sm">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      type="text"
+                      placeholder="Sicil no, Ad-soyad, Görev ile ara..."
+                      value={accidentSearchTerm}
+                      onChange={(e) => setAccidentSearchTerm(e.target.value)}
+                      className="pl-10"
+                      data-testid="input-accident-search"
+                    />
+                  </div>
+                  
+                  {/* Year Filter */}
+                  <div className="flex items-center space-x-2">
+                    <Calendar className="h-4 w-4 text-gray-400" />
+                    <Select value={accidentSelectedYear} onValueChange={setAccidentSelectedYear} data-testid="select-accident-year">
+                      <SelectTrigger className="w-[120px]">
+                        <SelectValue placeholder="Yıl" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Tümü</SelectItem>
+                        {availableYears.map(year => (
+                          <SelectItem key={year} value={year.toString()}>
+                            {year}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  {/* Clear Filters */}
+                  {(accidentSearchTerm || accidentSelectedYear !== "all") && (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => {
+                        setAccidentSearchTerm("");
+                        setAccidentSelectedYear("all");
+                      }}
+                      data-testid="button-clear-accident-filters"
+                    >
+                      Filtreleri Temizle
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -742,7 +803,7 @@ export default function AccidentManagementPage() {
                   <div className="text-center py-8">
                     <AlertTriangle className="h-16 w-16 text-gray-300 mx-auto mb-4" />
                     <p className="text-gray-500">
-                      {searchTerm ? "Arama kriterlerine uygun iş kazası bulunamadı." : "Henüz iş kazası kaydı bulunmuyor."}
+                      {accidentSearchTerm ? "Arama kriterlerine uygun iş kazası bulunamadı." : "Henüz iş kazası kaydı bulunmuyor."}
                     </p>
                   </div>
                 ) : (
@@ -863,6 +924,67 @@ export default function AccidentManagementPage() {
           </TabsContent>
 
           <TabsContent value="near-miss" className="space-y-4">
+            {/* Ramak Kala Search and Filters */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Activity className="h-5 w-5 text-yellow-600" />
+                  Ramak Kala - Arama ve Filtreleme
+                </CardTitle>
+                <CardDescription>
+                  Aradığınız ramak kala olayını bulmak için arama ve filtre seçeneklerini kullanın
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center space-x-4 flex-wrap gap-2 mb-4">
+                  <div className="relative flex-1 min-w-[300px] max-w-sm">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      type="text"
+                      placeholder="Sicil no, Ad-soyad, Görev ile ara..."
+                      value={nearMissSearchTerm}
+                      onChange={(e) => setNearMissSearchTerm(e.target.value)}
+                      className="pl-10"
+                      data-testid="input-near-miss-search"
+                    />
+                  </div>
+                  
+                  {/* Year Filter */}
+                  <div className="flex items-center space-x-2">
+                    <Calendar className="h-4 w-4 text-gray-400" />
+                    <Select value={nearMissSelectedYear} onValueChange={setNearMissSelectedYear} data-testid="select-near-miss-year">
+                      <SelectTrigger className="w-[120px]">
+                        <SelectValue placeholder="Yıl" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Tümü</SelectItem>
+                        {availableYears.map(year => (
+                          <SelectItem key={year} value={year.toString()}>
+                            {year}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  {/* Clear Filters */}
+                  {(nearMissSearchTerm || nearMissSelectedYear !== "all") && (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => {
+                        setNearMissSearchTerm("");
+                        setNearMissSelectedYear("all");
+                      }}
+                      data-testid="button-clear-near-miss-filters"
+                    >
+                      Filtreleri Temizle
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -891,7 +1013,7 @@ export default function AccidentManagementPage() {
                   <div className="text-center py-8">
                     <Activity className="h-16 w-16 text-gray-300 mx-auto mb-4" />
                     <p className="text-gray-500">
-                      {searchTerm ? "Arama kriterlerine uygun ramak kala olayı bulunamadı." : "Henüz ramak kala olayı kaydı bulunmuyor."}
+                      {nearMissSearchTerm ? "Arama kriterlerine uygun ramak kala olayı bulunamadı." : "Henüz ramak kala olayı kaydı bulunmuyor."}
                     </p>
                   </div>
                 ) : (
