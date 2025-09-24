@@ -1237,18 +1237,8 @@ export default function AccidentManagementPage() {
                                             record.reportedBy || "---"
                                           )}
                                         </div>
-                                        {/* Document Status Indicators */}
+                                        {/* Document Status Indicators - Only Analysis Form for Near Miss */}
                                         <div className="flex flex-col gap-0.5 text-xs">
-                                          <div className="flex items-center gap-1">
-                                            {record.sgkNotificationFormUrl ? (
-                                              <Check className="h-3 w-3 text-green-600" />
-                                            ) : (
-                                              <X className="h-3 w-3 text-red-500" />
-                                            )}
-                                            <span className={record.sgkNotificationFormUrl ? "text-green-600" : "text-red-500"}>
-                                              SGK Formu
-                                            </span>
-                                          </div>
                                           <div className="flex items-center gap-1">
                                             {record.accidentAnalysisFormUrl ? (
                                               <Check className="h-3 w-3 text-green-600" />
