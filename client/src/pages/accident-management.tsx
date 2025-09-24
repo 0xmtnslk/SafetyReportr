@@ -71,11 +71,9 @@ export default function AccidentManagementPage() {
   const [, setLocation] = useLocation();
   
   // Analytics filters
-  const [analyticsSearchTerm, setAnalyticsSearchTerm] = useState("");
   const [analyticsCategory, setAnalyticsCategory] = useState<string>("eventTime");
   const [analyticsYear, setAnalyticsYear] = useState<string>("all");
   const [analyticsMonth, setAnalyticsMonth] = useState<string>("all");
-  const [analyticsAccidentCauseFactor, setAnalyticsAccidentCauseFactor] = useState<string>("all");
   const [analyticsEventType, setAnalyticsEventType] = useState<string>("all");
   
   // İş Kazaları tab filters
@@ -379,7 +377,7 @@ export default function AccidentManagementPage() {
 
   // Analytics data preparation
   const analyticsData = useMemo(() => {
-    // Filter records by selected year, month, event type, search term, and accident cause factor for analytics
+    // Filter records by selected year, month, and event type for analytics
     let filteredRecords = accidentRecords.filter((record: any) => {
       if (!record.eventDate) return false;
       
@@ -392,25 +390,6 @@ export default function AccidentManagementPage() {
         if (analyticsYear !== "all" && recordYear !== analyticsYear) return false;
         if (analyticsMonth !== "all" && recordMonth !== analyticsMonth) return false;
         if (analyticsEventType !== "all" && record.eventType !== analyticsEventType) return false;
-        
-        // Search term filter
-        if (analyticsSearchTerm) {
-          const searchTerm = analyticsSearchTerm.toLowerCase();
-          const searchableText = [
-            record.registrationNumber,
-            record.employeeFirstName,
-            record.employeeLastName,
-            record.position,
-            record.department,
-            record.professionGroup,
-            record.eventDescription
-          ].filter(Boolean).join(' ').toLowerCase();
-          
-          if (!searchableText.includes(searchTerm)) return false;
-        }
-        
-        // Accident cause factor filter
-        if (analyticsAccidentCauseFactor !== "all" && record.accidentCauseFactor !== analyticsAccidentCauseFactor) return false;
         
         return true;
       } catch {
@@ -488,7 +467,7 @@ export default function AccidentManagementPage() {
     };
 
     return prepareAnalyticsData(analyticsCategory, filteredRecords);
-  }, [accidentRecords, analyticsCategory, analyticsYear, analyticsMonth, analyticsEventType, analyticsSearchTerm, analyticsAccidentCauseFactor]);
+  }, [accidentRecords, analyticsCategory, analyticsYear, analyticsMonth, analyticsEventType]);
 
   // Get month keys sorted by most recent first
   const getSortedMonthKeys = (grouped: { [key: string]: any[] }): string[] => {
@@ -603,37 +582,8 @@ export default function AccidentManagementPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                  {/* Search */}
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input
-                      type="text"
-                      placeholder="Sicil no, Ad-soyad, Görev ile ara..."
-                      value={analyticsSearchTerm}
-                      onChange={(e) => setAnalyticsSearchTerm(e.target.value)}
-                      className="pl-10"
-                      data-testid="input-analytics-search"
-                    />
-                  </div>
-                  
-                  {/* Analytics Category */}
-                  <div>
-                    <Select value={analyticsCategory} onValueChange={setAnalyticsCategory} data-testid="select-analytics-category">
-                      <SelectTrigger>
-                        <SelectValue placeholder="Analiz kategorisi" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {analyticsCategories.map((category, index) => (
-                          <SelectItem key={index} value={category.value}>
-                            {category.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Event Type Filter */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                  {/* Event Type Filter - First */}
                   <div>
                     <Select value={analyticsEventType} onValueChange={setAnalyticsEventType} data-testid="select-analytics-event-type">
                       <SelectTrigger>
@@ -647,7 +597,7 @@ export default function AccidentManagementPage() {
                     </Select>
                   </div>
 
-                  {/* Year Filter */}
+                  {/* Year Filter - Second */}
                   <div className="flex items-center space-x-2">
                     <Calendar className="h-4 w-4 text-gray-400" />
                     <Select value={analyticsYear} onValueChange={setAnalyticsYear} data-testid="select-analytics-year">
@@ -665,7 +615,7 @@ export default function AccidentManagementPage() {
                     </Select>
                   </div>
 
-                  {/* Month Filter */}
+                  {/* Month Filter - Third */}
                   <div>
                     <Select value={analyticsMonth} onValueChange={setAnalyticsMonth} data-testid="select-analytics-month">
                       <SelectTrigger>
@@ -689,17 +639,16 @@ export default function AccidentManagementPage() {
                     </Select>
                   </div>
 
-                  {/* Accident Cause Factor Filter */}
+                  {/* Analytics Category - Fourth */}
                   <div>
-                    <Select value={analyticsAccidentCauseFactor} onValueChange={setAnalyticsAccidentCauseFactor} data-testid="select-analytics-accident-cause-factor">
+                    <Select value={analyticsCategory} onValueChange={setAnalyticsCategory} data-testid="select-analytics-category">
                       <SelectTrigger>
-                        <SelectValue placeholder="Kaza türü" />
+                        <SelectValue placeholder="Analiz kategorisi" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">Tüm Kaza Türleri</SelectItem>
-                        {ACCIDENT_CAUSE_FACTORS.map((factor, index) => (
-                          <SelectItem key={index} value={factor.value}>
-                            {factor.label}
+                        {analyticsCategories.map((category, index) => (
+                          <SelectItem key={index} value={category.value}>
+                            {category.label}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -708,18 +657,16 @@ export default function AccidentManagementPage() {
                 </div>
 
                 {/* Clear Filters */}
-                {(analyticsSearchTerm || analyticsCategory !== "eventTime" || analyticsYear !== "all" || 
-                  analyticsMonth !== "all" || analyticsEventType !== "all" || analyticsAccidentCauseFactor !== "all") && (
+                {(analyticsCategory !== "eventTime" || analyticsYear !== "all" || 
+                  analyticsMonth !== "all" || analyticsEventType !== "all") && (
                   <Button 
                     variant="outline" 
                     size="sm" 
                     onClick={() => {
-                      setAnalyticsSearchTerm("");
                       setAnalyticsCategory("eventTime");
                       setAnalyticsYear("all");
                       setAnalyticsMonth("all");
                       setAnalyticsEventType("all");
-                      setAnalyticsAccidentCauseFactor("all");
                     }}
                     data-testid="button-clear-analytics-filters"
                   >
