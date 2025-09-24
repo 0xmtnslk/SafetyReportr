@@ -994,16 +994,14 @@ export default function AccidentManagementPage() {
                                         {/* Missing Documents Indicators */}
                                         <div className="flex flex-col gap-1">
                                           {!record.sgkNotificationFormUrl && (
-                                            <FileX 
-                                              className="h-4 w-4 text-red-500" 
-                                              title="SGK Bildirim Formu eksik"
-                                            />
+                                            <div title="SGK Bildirim Formu eksik">
+                                              <FileX className="h-4 w-4 text-red-500" />
+                                            </div>
                                           )}
                                           {!record.accidentAnalysisFormUrl && (
-                                            <FileX 
-                                              className="h-4 w-4 text-orange-500" 
-                                              title="Kaza Analiz Formu eksik"
-                                            />
+                                            <div title="Kaza Analiz Formu eksik">
+                                              <FileX className="h-4 w-4 text-orange-500" />
+                                            </div>
                                           )}
                                         </div>
                                       </div>
@@ -1232,16 +1230,14 @@ export default function AccidentManagementPage() {
                                         {/* Missing Documents Indicators */}
                                         <div className="flex flex-col gap-1">
                                           {!record.sgkNotificationFormUrl && (
-                                            <FileX 
-                                              className="h-4 w-4 text-red-500" 
-                                              title="SGK Bildirim Formu eksik"
-                                            />
+                                            <div title="SGK Bildirim Formu eksik">
+                                              <FileX className="h-4 w-4 text-red-500" />
+                                            </div>
                                           )}
                                           {!record.accidentAnalysisFormUrl && (
-                                            <FileX 
-                                              className="h-4 w-4 text-orange-500" 
-                                              title="Kaza Analiz Formu eksik"
-                                            />
+                                            <div title="Kaza Analiz Formu eksik">
+                                              <FileX className="h-4 w-4 text-orange-500" />
+                                            </div>
                                           )}
                                         </div>
                                       </div>
