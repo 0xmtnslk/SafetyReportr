@@ -84,6 +84,9 @@ export default function AccidentManagementPage() {
   // Ramak Kala tab filters
   const [nearMissSearchTerm, setNearMissSearchTerm] = useState("");
   const [nearMissSelectedYear, setNearMissSelectedYear] = useState<string>("all");
+  
+  // Drafts tab filters
+  const [draftSearchTerm, setDraftSearchTerm] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -865,13 +868,53 @@ export default function AccidentManagementPage() {
               </CardHeader>
             </Card>
 
+            {/* Draft Records Search */}
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex gap-4 items-center">
+                  <div className="flex-1 relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                    <Input
+                      placeholder="Ad-soyad, sicil numarası veya tarih ile arama yapın..."
+                      value={draftSearchTerm}
+                      onChange={(e) => setDraftSearchTerm(e.target.value)}
+                      className="pl-10"
+                      data-testid="input-draft-search"
+                    />
+                  </div>
+                  {draftSearchTerm && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setDraftSearchTerm("")}
+                      data-testid="button-clear-draft-search"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Draft Records Display - Two Column Layout */}
             {Array.isArray(draftRecords) && draftRecords.length > 0 ? (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* İş Kazası Taslakları */}
                 {(() => {
                   const safeDraftRecords = Array.isArray(draftRecords) ? draftRecords : [];
-                  const accidentDrafts = safeDraftRecords.filter(record => record.eventType === "İş Kazası");
+                  const accidentDrafts = safeDraftRecords
+                    .filter(record => record.eventType === "İş Kazası")
+                    .filter(record => {
+                      if (!draftSearchTerm) return true;
+                      const searchLower = draftSearchTerm.toLowerCase();
+                      const employeeName = (record.employeeName || "").toLowerCase();
+                      const registrationNumber = (record.employeeRegistrationNumber || "").toLowerCase();
+                      const eventDate = record.eventDate ? format(new Date(record.eventDate), "dd.MM.yyyy", { locale: tr }) : "";
+                      
+                      return employeeName.includes(searchLower) ||
+                             registrationNumber.includes(searchLower) ||
+                             eventDate.includes(searchLower);
+                    });
                   return (
                     <Card>
                       <CardHeader>
@@ -964,7 +1007,19 @@ export default function AccidentManagementPage() {
                 {/* Ramak Kala Taslakları */}
                 {(() => {
                   const safeDraftRecordsNearMiss = Array.isArray(draftRecords) ? draftRecords : [];
-                  const nearMissDrafts = safeDraftRecordsNearMiss.filter(record => record.eventType === "Ramak Kala");
+                  const nearMissDrafts = safeDraftRecordsNearMiss
+                    .filter(record => record.eventType === "Ramak Kala")
+                    .filter(record => {
+                      if (!draftSearchTerm) return true;
+                      const searchLower = draftSearchTerm.toLowerCase();
+                      const employeeName = (record.employeeName || "").toLowerCase();
+                      const registrationNumber = (record.employeeRegistrationNumber || "").toLowerCase();
+                      const eventDate = record.eventDate ? format(new Date(record.eventDate), "dd.MM.yyyy", { locale: tr }) : "";
+                      
+                      return employeeName.includes(searchLower) ||
+                             registrationNumber.includes(searchLower) ||
+                             eventDate.includes(searchLower);
+                    });
                   return (
                     <Card>
                       <CardHeader>
