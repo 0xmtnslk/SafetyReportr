@@ -4041,6 +4041,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ACCIDENT RECORDS ROUTES
   // ======================="
 
+  // Maintenance endpoint to recalculate completion status for all records
+  app.post('/api/accident-records/recalculate-status', authenticateToken, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      
+      // Only allow central admins to run maintenance tasks
+      if (user.role !== 'central_admin') {
+        return res.status(403).json({ message: 'Bu işlem için yetkiniz bulunmamaktadır' });
+      }
+      
+      // Get all accident records
+      const allRecords = await storage.getAllAccidentRecords();
+      
+      let updatedCount = 0;
+      const results = [];
+      
+      for (const record of allRecords) {
+        // Calculate completion status
+        const evaluation = evaluateAccidentCompletion(record);
+        
+        // Update if status has changed
+        if (record.completionStatus !== evaluation.status) {
+          await storage.updateAccidentRecord(record.id, {
+            completionStatus: evaluation.status
+          });
+          updatedCount++;
+          results.push({
+            id: record.id,
+            employeeName: record.employeeName,
+            eventType: record.eventType,
+            oldStatus: record.completionStatus,
+            newStatus: evaluation.status,
+            missingFields: evaluation.missingFields,
+            missingDocuments: evaluation.missingDocuments
+          });
+        }
+      }
+      
+      res.json({ 
+        message: `${updatedCount} kayıt güncellendi`,
+        totalRecords: allRecords.length,
+        updatedRecords: updatedCount,
+        results
+      });
+    } catch (error: any) {
+      console.error('Recalculate status error:', error);
+      res.status(500).json({ message: 'Status yeniden hesaplama hatası: ' + error.message });
+    }
+  });
+
   // Get all accident records
   app.get('/api/accident-records', authenticateToken, async (req: Request, res: Response) => {
     try {
