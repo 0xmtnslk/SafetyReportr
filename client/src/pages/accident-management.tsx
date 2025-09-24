@@ -1158,10 +1158,10 @@ export default function AccidentManagementPage() {
                                   <TableHead>Tarih</TableHead>
                                   <TableHead>Sicil No</TableHead>
                                   <TableHead>Ad-Soyad</TableHead>
-                                  <TableHead>Görev</TableHead>
+                                  <TableHead>Kaza Türü</TableHead>
                                   <TableHead>Ciddiyet</TableHead>
+                                  <TableHead>Gün Kaybı</TableHead>
                                   <TableHead>Raporlayan</TableHead>
-                                  <TableHead>Alan</TableHead>
                                   <TableHead className="text-right">Eylemler</TableHead>
                                 </TableRow>
                               </TableHeader>
@@ -1177,8 +1177,8 @@ export default function AccidentManagementPage() {
                                     <TableCell data-testid={`cell-nearmiss-employee-name-${record.id}`}>
                                       {record.employeeName || "---"}
                                     </TableCell>
-                                    <TableCell data-testid={`cell-nearmiss-position-${record.id}`}>
-                                      {record.position || "---"}
+                                    <TableCell data-testid={`cell-nearmiss-accident-cause-${record.id}`}>
+                                      {record.accidentCauseFactor || "---"}
                                     </TableCell>
                                     <TableCell data-testid={`cell-nearmiss-severity-${record.id}`}>
                                       {record.accidentSeverity ? (
@@ -1188,6 +1188,11 @@ export default function AccidentManagementPage() {
                                       ) : (
                                         "---"
                                       )}
+                                    </TableCell>
+                                    <TableCell data-testid={`cell-nearmiss-work-loss-${record.id}`}>
+                                      <span className="font-medium text-green-600">
+                                        0 gün
+                                      </span>
                                     </TableCell>
                                     <TableCell data-testid={`cell-nearmiss-reporter-${record.id}`}>
                                       {record.creator ? (
@@ -1202,9 +1207,6 @@ export default function AccidentManagementPage() {
                                       ) : (
                                         record.reportedBy || "---"
                                       )}
-                                    </TableCell>
-                                    <TableCell data-testid={`cell-nearmiss-area-${record.id}`}>
-                                      {record.eventArea || "---"}
                                     </TableCell>
                                     <TableCell className="text-right">
                                       <div className="flex gap-1 justify-end">
