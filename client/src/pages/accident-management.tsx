@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { AlertTriangle, Activity, FileText, TrendingUp, Users, Clock, PlusCircle, Shield, Search, Eye, Edit, Download, Trash2, Calendar, BarChart3, PieChart as PieChartIcon, FileX } from "lucide-react";
+import { AlertTriangle, Activity, FileText, TrendingUp, Users, Clock, PlusCircle, Shield, Search, Eye, Edit, Download, Trash2, Calendar, BarChart3, PieChart as PieChartIcon, Check, X } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -991,18 +991,28 @@ export default function AccidentManagementPage() {
                                             record.reportedBy || "---"
                                           )}
                                         </div>
-                                        {/* Missing Documents Indicators */}
-                                        <div className="flex flex-col gap-1">
-                                          {!record.sgkNotificationFormUrl && (
-                                            <div title="SGK Bildirim Formu eksik">
-                                              <FileX className="h-4 w-4 text-red-500" />
-                                            </div>
-                                          )}
-                                          {!record.accidentAnalysisFormUrl && (
-                                            <div title="Kaza Analiz Formu eksik">
-                                              <FileX className="h-4 w-4 text-orange-500" />
-                                            </div>
-                                          )}
+                                        {/* Document Status Indicators */}
+                                        <div className="flex flex-col gap-0.5 text-xs">
+                                          <div className="flex items-center gap-1">
+                                            {record.sgkNotificationFormUrl ? (
+                                              <Check className="h-3 w-3 text-green-600" />
+                                            ) : (
+                                              <X className="h-3 w-3 text-red-500" />
+                                            )}
+                                            <span className={record.sgkNotificationFormUrl ? "text-green-600" : "text-red-500"}>
+                                              SGK Formu
+                                            </span>
+                                          </div>
+                                          <div className="flex items-center gap-1">
+                                            {record.accidentAnalysisFormUrl ? (
+                                              <Check className="h-3 w-3 text-green-600" />
+                                            ) : (
+                                              <X className="h-3 w-3 text-red-500" />
+                                            )}
+                                            <span className={record.accidentAnalysisFormUrl ? "text-green-600" : "text-red-500"}>
+                                              Analiz Formu
+                                            </span>
+                                          </div>
                                         </div>
                                       </div>
                                     </TableCell>
@@ -1227,18 +1237,28 @@ export default function AccidentManagementPage() {
                                             record.reportedBy || "---"
                                           )}
                                         </div>
-                                        {/* Missing Documents Indicators */}
-                                        <div className="flex flex-col gap-1">
-                                          {!record.sgkNotificationFormUrl && (
-                                            <div title="SGK Bildirim Formu eksik">
-                                              <FileX className="h-4 w-4 text-red-500" />
-                                            </div>
-                                          )}
-                                          {!record.accidentAnalysisFormUrl && (
-                                            <div title="Kaza Analiz Formu eksik">
-                                              <FileX className="h-4 w-4 text-orange-500" />
-                                            </div>
-                                          )}
+                                        {/* Document Status Indicators */}
+                                        <div className="flex flex-col gap-0.5 text-xs">
+                                          <div className="flex items-center gap-1">
+                                            {record.sgkNotificationFormUrl ? (
+                                              <Check className="h-3 w-3 text-green-600" />
+                                            ) : (
+                                              <X className="h-3 w-3 text-red-500" />
+                                            )}
+                                            <span className={record.sgkNotificationFormUrl ? "text-green-600" : "text-red-500"}>
+                                              SGK Formu
+                                            </span>
+                                          </div>
+                                          <div className="flex items-center gap-1">
+                                            {record.accidentAnalysisFormUrl ? (
+                                              <Check className="h-3 w-3 text-green-600" />
+                                            ) : (
+                                              <X className="h-3 w-3 text-red-500" />
+                                            )}
+                                            <span className={record.accidentAnalysisFormUrl ? "text-green-600" : "text-red-500"}>
+                                              Analiz Formu
+                                            </span>
+                                          </div>
                                         </div>
                                       </div>
                                     </TableCell>
