@@ -108,15 +108,12 @@ export default function AccidentManagementPage() {
   const { data: draftRecords = [], isLoading: isDraftLoading } = useQuery({
     queryKey: ["accident-records", "draft"],
     queryFn: async () => {
-      console.log('Fetching DRAFT records...');
       const response = await fetch('/api/accident-records?status=draft', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
-      const data = await response.json();
-      console.log('Draft records received:', data?.length || 0);
-      return data;
+      return response.json();
     }
   }) as { data: any[], isLoading: boolean };
 
@@ -124,15 +121,12 @@ export default function AccidentManagementPage() {
   const { data: completedRecords = [], isLoading: isCompletedLoading } = useQuery({
     queryKey: ["accident-records", "completed"],
     queryFn: async () => {
-      console.log('Fetching COMPLETED records...');
       const response = await fetch('/api/accident-records?status=completed', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
-      const data = await response.json();
-      console.log('Completed records received:', data?.length || 0);
-      return data;
+      return response.json();
     }
   }) as { data: any[], isLoading: boolean };
   const handleNewAccidentReport = () => {
@@ -932,14 +926,25 @@ export default function AccidentManagementPage() {
                                     </div>
                                   </TableCell>
                                   <TableCell data-testid={`actions-${record.id}`}>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => setLocation(`/accident-details/${record.id}?edit=true`)}
-                                      data-testid={`button-edit-${record.id}`}
-                                    >
-                                      <Edit className="h-3 w-3" />
-                                    </Button>
+                                    <div className="flex gap-2">
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleEditAccidentDetails(record.id)}
+                                        data-testid={`button-edit-${record.id}`}
+                                      >
+                                        <Edit className="h-3 w-3" />
+                                      </Button>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleDeleteAccident(record.id, `${record.employeeName} - ${record.eventType}`)}
+                                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                        data-testid={`button-delete-draft-${record.id}`}
+                                      >
+                                        <Trash2 className="h-3 w-3" />
+                                      </Button>
+                                    </div>
                                   </TableCell>
                                 </TableRow>
                               ))}
@@ -1014,14 +1019,25 @@ export default function AccidentManagementPage() {
                                     </div>
                                   </TableCell>
                                   <TableCell data-testid={`actions-${record.id}`}>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => setLocation(`/accident-details/${record.id}?edit=true`)}
-                                      data-testid={`button-edit-${record.id}`}
-                                    >
-                                      <Edit className="h-3 w-3" />
-                                    </Button>
+                                    <div className="flex gap-2">
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleEditAccidentDetails(record.id)}
+                                        data-testid={`button-edit-${record.id}`}
+                                      >
+                                        <Edit className="h-3 w-3" />
+                                      </Button>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleDeleteAccident(record.id, `${record.employeeName} - ${record.eventType}`)}
+                                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                        data-testid={`button-delete-draft-nearmiss-${record.id}`}
+                                      >
+                                        <Trash2 className="h-3 w-3" />
+                                      </Button>
+                                    </div>
                                   </TableCell>
                                 </TableRow>
                               ))}

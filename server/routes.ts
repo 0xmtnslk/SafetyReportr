@@ -4098,8 +4098,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const locationId = req.query.locationId as string;
       const status = req.query.status as string; // "draft" | "completed"
       
-      console.log('DEBUG - Query params:', { locationId, status });
-      
       let records;
       
       if (user.role === 'central_admin') {
