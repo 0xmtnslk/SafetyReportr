@@ -382,9 +382,9 @@ export default function AccidentManagementPage() {
   // Get available years for dropdown
   const availableYears = getAvailableYears(accidentRecords);
 
-  // Apply search filters for display (using only completed records)
-  const workAccidents = filterAccidentRecords(completedRecords);
-  const nearMisses = filterNearMissRecords(completedRecords);
+  // Apply search filters for display (using all records for main tabs)
+  const workAccidents = filterAccidentRecords(accidentRecords);
+  const nearMisses = filterNearMissRecords(accidentRecords);
 
   // Group filtered results by month
   const workAccidentsGrouped = groupRecordsByMonth(workAccidents);
