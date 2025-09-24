@@ -489,6 +489,9 @@ export const accidentRecords = pgTable("accident_records", {
   sgkNotificationFormUrl: text("sgk_notification_form_url"), // SGK Bildirim Formu (PDF, JPEG, PNG)
   accidentAnalysisFormUrl: text("accident_analysis_form_url"), // İş Kazası/Ramak Kala Analiz Formu (PDF, JPEG, PNG)
   
+  // Completion Status
+  completionStatus: text("completion_status").notNull().default("draft"), // "draft" | "completed"
+  
   // System fields
   reportedBy: varchar("reported_by").references(() => users.id).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
@@ -1550,3 +1553,70 @@ export const insertAccidentRecordSchema = createInsertSchema(accidentRecords).om
 // Accident Record types
 export type AccidentRecord = typeof accidentRecords.$inferSelect;
 export type InsertAccidentRecord = z.infer<typeof insertAccidentRecordSchema>;
+
+// Completion Status Validator
+export function evaluateAccidentCompletion(record: AccidentRecord): {
+  status: "draft" | "completed";
+  missingFields: string[];
+  missingDocuments: string[];
+} {
+  const missingFields: string[] = [];
+  const missingDocuments: string[] = [];
+
+  // Required core fields for all event types
+  const requiredCoreFields = {
+    eventDate: "Olay Tarihi",
+    eventTime: "Olay Saati", 
+    eventArea: "Olay Alanı",
+    eventPlace: "Olay Yeri",
+    employeeRegistrationNumber: "Sicil No",
+    employeeName: "Ad-Soyad", 
+    employeeStartDate: "İşe Başlama Tarihi",
+    position: "Görev",
+    department: "Departman",
+    professionGroup: "Meslek Grubu",
+    employeeStatus: "Personel Statüsü",
+    workShift: "Vardiya",
+    eventDescription: "Olay Açıklaması"
+  };
+
+  // Check core fields
+  for (const [field, label] of Object.entries(requiredCoreFields)) {
+    if (!record[field as keyof AccidentRecord] || 
+        String(record[field as keyof AccidentRecord]).trim() === "") {
+      missingFields.push(label);
+    }
+  }
+
+  // Event type specific requirements
+  if (record.eventType === "İş Kazası") {
+    // İş Kazası specific required fields
+    if (!record.accidentSeverity || record.accidentSeverity.trim() === "") {
+      missingFields.push("Kaza Ciddiyeti");
+    }
+    
+    // Required documents for İş Kazası
+    if (!record.sgkNotificationFormUrl || record.sgkNotificationFormUrl.trim() === "") {
+      missingDocuments.push("SGK Bildirim Formu");
+    }
+    if (!record.accidentAnalysisFormUrl || record.accidentAnalysisFormUrl.trim() === "") {
+      missingDocuments.push("Kaza Analiz Formu");
+    }
+  } else if (record.eventType === "Ramak Kala") {
+    // Required documents for Ramak Kala (no SGK form needed)
+    if (!record.accidentAnalysisFormUrl || record.accidentAnalysisFormUrl.trim() === "") {
+      missingDocuments.push("Analiz Formu");
+    }
+  }
+
+  // Determine status
+  const status = (missingFields.length === 0 && missingDocuments.length === 0) 
+    ? "completed" 
+    : "draft";
+
+  return {
+    status,
+    missingFields,
+    missingDocuments
+  };
+}
