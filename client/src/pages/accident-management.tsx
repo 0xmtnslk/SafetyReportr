@@ -68,12 +68,20 @@ const CHART_COLORS = ['#3b82f6', '#ef4444', '#f59e0b', '#10b981', '#8b5cf6', '#f
 
 export default function AccidentManagementPage() {
   const [, setLocation] = useLocation();
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedYear, setSelectedYear] = useState<string>("all");
+  
+  // Analytics filters
   const [analyticsCategory, setAnalyticsCategory] = useState<string>("eventTime");
   const [analyticsYear, setAnalyticsYear] = useState<string>("all");
   const [analyticsMonth, setAnalyticsMonth] = useState<string>("all");
   const [analyticsEventType, setAnalyticsEventType] = useState<string>("all");
+  
+  // İş Kazaları tab filters
+  const [accidentSearchTerm, setAccidentSearchTerm] = useState("");
+  const [accidentSelectedYear, setAccidentSelectedYear] = useState<string>("all");
+  
+  // Ramak Kala tab filters
+  const [nearMissSearchTerm, setNearMissSearchTerm] = useState("");
+  const [nearMissSelectedYear, setNearMissSelectedYear] = useState<string>("all");
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -184,17 +192,17 @@ export default function AccidentManagementPage() {
     return Array.from(years).sort((a, b) => b - a); // Most recent first
   };
 
-  // Filter and separate records by type with date sorting and year filtering
-  const filterRecords = (records: any[], eventType: string): any[] => {
+  // Filter accident records separately for İş Kazaları tab
+  const filterAccidentRecords = (records: any[]): any[] => {
     return records
-      .filter(record => record.eventType === eventType)
+      .filter(record => record.eventType === "İş Kazası")
       .filter(record => {
         // Year filter
-        if (selectedYear !== "all") {
+        if (accidentSelectedYear !== "all") {
           if (!record.eventDate) return false;
           try {
             const recordYear = new Date(record.eventDate).getFullYear();
-            if (recordYear !== parseInt(selectedYear)) return false;
+            if (recordYear !== parseInt(accidentSelectedYear)) return false;
           } catch {
             return false;
           }
@@ -203,8 +211,57 @@ export default function AccidentManagementPage() {
       })
       .filter(record => {
         // Search filter
-        if (!searchTerm) return true;
-        const searchLower = searchTerm.toLowerCase();
+        if (!accidentSearchTerm) return true;
+        const searchLower = accidentSearchTerm.toLowerCase();
+        return (
+          String(record.employeeRegistrationNumber || "").toLowerCase().includes(searchLower) ||
+          String(record.employeeName || "").toLowerCase().includes(searchLower) ||
+          String(record.position || "").toLowerCase().includes(searchLower) ||
+          String(record.accidentSeverity || "").toLowerCase().includes(searchLower)
+        );
+      })
+      .sort((a, b) => {
+        // Sort by eventDate (newest first)
+        if (!a.eventDate && !b.eventDate) return 0;
+        if (!a.eventDate) return 1; // Records without date go to end
+        if (!b.eventDate) return -1;
+        
+        const dateA = new Date(a.eventDate);
+        const dateB = new Date(b.eventDate);
+        
+        // Handle invalid dates - push them to the end
+        const isValidA = !isNaN(dateA.getTime());
+        const isValidB = !isNaN(dateB.getTime());
+        
+        if (!isValidA && !isValidB) return 0;
+        if (!isValidA) return 1; // Invalid dates go to end
+        if (!isValidB) return -1;
+        
+        return dateB.getTime() - dateA.getTime(); // Newest first
+      });
+  };
+
+  // Filter near miss records separately for Ramak Kala tab
+  const filterNearMissRecords = (records: any[]): any[] => {
+    return records
+      .filter(record => record.eventType === "Ramak Kala")
+      .filter(record => {
+        // Year filter
+        if (nearMissSelectedYear !== "all") {
+          if (!record.eventDate) return false;
+          try {
+            const recordYear = new Date(record.eventDate).getFullYear();
+            if (recordYear !== parseInt(nearMissSelectedYear)) return false;
+          } catch {
+            return false;
+          }
+        }
+        return true;
+      })
+      .filter(record => {
+        // Search filter
+        if (!nearMissSearchTerm) return true;
+        const searchLower = nearMissSearchTerm.toLowerCase();
         return (
           String(record.employeeRegistrationNumber || "").toLowerCase().includes(searchLower) ||
           String(record.employeeName || "").toLowerCase().includes(searchLower) ||
@@ -310,8 +367,8 @@ export default function AccidentManagementPage() {
   const availableYears = getAvailableYears(accidentRecords);
 
   // Apply search filters for display
-  const workAccidents = filterRecords(accidentRecords, "İş Kazası");
-  const nearMisses = filterRecords(accidentRecords, "Ramak Kala");
+  const workAccidents = filterAccidentRecords(accidentRecords);
+  const nearMisses = filterNearMissRecords(accidentRecords);
 
   // Group filtered results by month
   const workAccidentsGrouped = groupRecordsByMonth(workAccidents);
@@ -487,53 +544,6 @@ export default function AccidentManagementPage() {
           </Card>
         </div>
 
-        {/* Search and Filters */}
-        <div className="flex items-center space-x-4 flex-wrap gap-2">
-          <div className="relative flex-1 min-w-[300px] max-w-sm">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              type="text"
-              placeholder="Sicil no, Ad-soyad, Görev ile ara..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-              data-testid="input-search"
-            />
-          </div>
-          
-          {/* Year Filter */}
-          <div className="flex items-center space-x-2">
-            <Calendar className="h-4 w-4 text-gray-400" />
-            <Select value={selectedYear} onValueChange={setSelectedYear} data-testid="select-year">
-              <SelectTrigger className="w-[120px]">
-                <SelectValue placeholder="Yıl" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tümü</SelectItem>
-                {availableYears.map(year => (
-                  <SelectItem key={year} value={year.toString()}>
-                    {year}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          
-          {/* Clear Filters */}
-          {(searchTerm || selectedYear !== "all") && (
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => {
-                setSearchTerm("");
-                setSelectedYear("all");
-              }}
-              data-testid="button-clear-filters"
-            >
-              Filtreleri Temizle
-            </Button>
-          )}
-        </div>
 
         <Tabs defaultValue="analytics">
           <TabsList className="grid w-full grid-cols-3">
@@ -557,96 +567,6 @@ export default function AccidentManagementPage() {
               </div>
             </div>
 
-            {/* Analytics Controls */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <PieChartIcon className="h-5 w-5" />
-                  Analiz Filtreleri
-                </CardTitle>
-                <CardDescription>
-                  Analiz yapmak istediğiniz kategori ve zaman aralığını seçin
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  {/* Event Type Selection */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Olay Türü</label>
-                    <Select value={analyticsEventType} onValueChange={setAnalyticsEventType}>
-                      <SelectTrigger data-testid="select-event-type">
-                        <SelectValue placeholder="Olay türü seçin" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Tümü</SelectItem>
-                        <SelectItem value="İş Kazası">İş Kazası</SelectItem>
-                        <SelectItem value="Ramak Kala">Ramak Kala</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Category Selection */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Analiz Kategorisi</label>
-                    <Select value={analyticsCategory} onValueChange={setAnalyticsCategory}>
-                      <SelectTrigger data-testid="select-analytics-category">
-                        <SelectValue placeholder="Kategori seçin" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {analyticsCategories.map(category => (
-                          <SelectItem key={category.value} value={category.value}>
-                            {category.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Year Selection */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Yıl</label>
-                    <Select value={analyticsYear} onValueChange={setAnalyticsYear}>
-                      <SelectTrigger data-testid="select-analytics-year">
-                        <SelectValue placeholder="Yıl seçin" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Tüm Yıllar</SelectItem>
-                        {availableYears.map(year => (
-                          <SelectItem key={year} value={year.toString()}>
-                            {year}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Month Selection */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Ay</label>
-                    <Select value={analyticsMonth} onValueChange={setAnalyticsMonth}>
-                      <SelectTrigger data-testid="select-analytics-month">
-                        <SelectValue placeholder="Ay seçin" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Tüm Aylar</SelectItem>
-                        <SelectItem value="01">Ocak</SelectItem>
-                        <SelectItem value="02">Şubat</SelectItem>
-                        <SelectItem value="03">Mart</SelectItem>
-                        <SelectItem value="04">Nisan</SelectItem>
-                        <SelectItem value="05">Mayıs</SelectItem>
-                        <SelectItem value="06">Haziran</SelectItem>
-                        <SelectItem value="07">Temmuz</SelectItem>
-                        <SelectItem value="08">Ağustos</SelectItem>
-                        <SelectItem value="09">Eylül</SelectItem>
-                        <SelectItem value="10">Ekim</SelectItem>
-                        <SelectItem value="11">Kasım</SelectItem>
-                        <SelectItem value="12">Aralık</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
 
             {/* Analytics Results */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
