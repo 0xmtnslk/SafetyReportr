@@ -101,22 +101,19 @@ export default function AccidentManagementPage() {
 
   // Fetch accident records
   const { data: accidentRecords = [], isLoading, isError } = useQuery({
-    queryKey: ["/api/accident-records"],
-    enabled: true
+    queryKey: ["/api/accident-records"]
   }) as { data: any[], isLoading: boolean, isError: boolean };
 
   // Fetch draft accident records
   const { data: draftRecords = [], isLoading: isDraftLoading } = useQuery({
     queryKey: ["/api/accident-records", { status: "draft" }],
-    queryFn: () => apiRequest("/api/accident-records?status=draft"),
-    enabled: true
+    queryFn: () => apiRequest("/api/accident-records?status=draft")
   }) as { data: any[], isLoading: boolean };
 
   // Fetch completed accident records
   const { data: completedRecords = [], isLoading: isCompletedLoading } = useQuery({
     queryKey: ["/api/accident-records", { status: "completed" }],
-    queryFn: () => apiRequest("/api/accident-records?status=completed"),
-    enabled: true
+    queryFn: () => apiRequest("/api/accident-records?status=completed")
   }) as { data: any[], isLoading: boolean };
 
   const handleNewAccidentReport = () => {
@@ -359,7 +356,7 @@ export default function AccidentManagementPage() {
         
         if (!grouped[monthKey]) grouped[monthKey] = [];
         grouped[monthKey].push(record);
-        grouped[monthKey].monthDisplay = monthDisplay;
+        (grouped[monthKey] as any).monthDisplay = monthDisplay;
         
       } catch {
         // Error parsing date - put in no-date group
@@ -376,7 +373,7 @@ export default function AccidentManagementPage() {
     if (monthKey === 'no-date') {
       return `Tarih Belirtilmemiş (${records.length})`;
     }
-    return `${records.monthDisplay} (${records.length})`;
+    return `${(records as any).monthDisplay} (${records.length})`;
   };
 
   // Get available years for dropdown
@@ -1237,7 +1234,7 @@ export default function AccidentManagementPage() {
                                         >
                                           <Eye className="h-4 w-4" />
                                         </Button>
-                                        {canManageRecord(currentUser?.role, record.createdAt) ? (
+                                        {canManageRecord((currentUser as any)?.role, record.createdAt) ? (
                                           <>
                                             <Button 
                                               variant="ghost" 
@@ -1473,7 +1470,7 @@ export default function AccidentManagementPage() {
                                         >
                                           <Eye className="h-4 w-4" />
                                         </Button>
-                                        {canManageRecord(currentUser?.role, record.createdAt) ? (
+                                        {canManageRecord((currentUser as any)?.role, record.createdAt) ? (
                                           <>
                                             <Button 
                                               variant="ghost" 
