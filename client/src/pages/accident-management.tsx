@@ -103,24 +103,18 @@ export default function AccidentManagementPage() {
   const { data: accidentRecords = [], isLoading, isError } = useQuery({
     queryKey: ["/api/accident-records"]
   }) as { data: any[], isLoading: boolean, isError: boolean };
-  
-  console.log('DEBUG - accidentRecords:', accidentRecords);
 
   // Fetch draft accident records
   const { data: draftRecords = [], isLoading: isDraftLoading } = useQuery({
     queryKey: ["/api/accident-records-draft"],
     queryFn: () => apiRequest("GET", "/api/accident-records?status=draft")
   }) as { data: any[], isLoading: boolean };
-  
-  console.log('DEBUG - draftRecords:', draftRecords);
 
   // Fetch completed accident records
   const { data: completedRecords = [], isLoading: isCompletedLoading } = useQuery({
     queryKey: ["/api/accident-records-completed"],
     queryFn: () => apiRequest("GET", "/api/accident-records?status=completed")
   }) as { data: any[], isLoading: boolean };
-  
-  console.log('DEBUG - completedRecords:', completedRecords);
   const handleNewAccidentReport = () => {
     setLocation("/accident-details");
   };

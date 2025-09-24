@@ -310,7 +310,7 @@ export interface IStorage {
   getEmployeesWithOverdueExams(locationId: string): Promise<(Employee & { lastExamination?: MedicalExamination; daysPastDue?: number })[]>;
   
   // Accident Record operations
-  getAllAccidentRecords(locationId?: string): Promise<AccidentRecord[]>;
+  getAllAccidentRecords(locationId?: string, status?: 'draft' | 'completed'): Promise<AccidentRecord[]>;
   getAccidentRecord(id: string): Promise<AccidentRecord | undefined>;
   getUserAccidentRecords(userId: string): Promise<AccidentRecord[]>;
   createAccidentRecord(record: InsertAccidentRecord & { reportedBy: string }): Promise<AccidentRecord>;
@@ -2927,7 +2927,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Accident Record operations
-  async getAllAccidentRecords(locationId?: string): Promise<AccidentRecord[]> {
+  async getAllAccidentRecords(locationId?: string, status?: 'draft' | 'completed'): Promise<AccidentRecord[]> {
     let query = db
       .select({
         ...getTableColumns(accidentRecords),
@@ -2944,6 +2944,10 @@ export class DatabaseStorage implements IStorage {
     
     if (locationId) {
       query = query.where(eq(accidentRecords.locationId, locationId));
+    }
+    
+    if (status) {
+      query = query.where(eq(accidentRecords.completionStatus, status));
     }
     
     return await query.orderBy(desc(accidentRecords.createdAt));

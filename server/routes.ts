@@ -4101,9 +4101,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let records;
       
       if (user.role === 'central_admin') {
-        records = await storage.getAllAccidentRecords(locationId);
+        records = await storage.getAllAccidentRecords(locationId, status as 'draft' | 'completed' | undefined);
       } else {
-        records = await storage.getAllAccidentRecords(user.locationId);
+        records = await storage.getAllAccidentRecords(user.locationId, status as 'draft' | 'completed' | undefined);
       }
       
       // Filter by completion status if provided
