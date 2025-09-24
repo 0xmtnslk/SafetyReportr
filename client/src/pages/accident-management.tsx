@@ -112,6 +112,13 @@ export default function AccidentManagementPage() {
     enabled: true
   }) as { data: any[], isLoading: boolean };
 
+  // Fetch completed accident records
+  const { data: completedRecords = [], isLoading: isCompletedLoading } = useQuery({
+    queryKey: ["/api/accident-records", { status: "completed" }],
+    queryFn: () => apiRequest("/api/accident-records?status=completed"),
+    enabled: true
+  }) as { data: any[], isLoading: boolean };
+
   const handleNewAccidentReport = () => {
     setLocation("/accident-details");
   };
@@ -299,10 +306,10 @@ export default function AccidentManagementPage() {
       });
   };
 
-  // Calculate stats - independent of search
+  // Calculate stats - independent of search (using only completed records)
   const currentDate = new Date();
-  const allWorkAccidents = (accidentRecords as any[]).filter((record: any) => record.eventType === "İş Kazası");
-  const allNearMisses = (accidentRecords as any[]).filter((record: any) => record.eventType === "Ramak Kala");
+  const allWorkAccidents = (completedRecords as any[]).filter((record: any) => record.eventType === "İş Kazası");
+  const allNearMisses = (completedRecords as any[]).filter((record: any) => record.eventType === "Ramak Kala");
   
   const thisMonthAccidents = allWorkAccidents.filter((record: any) => {
     if (!record.eventDate) return false;
@@ -375,9 +382,9 @@ export default function AccidentManagementPage() {
   // Get available years for dropdown
   const availableYears = getAvailableYears(accidentRecords);
 
-  // Apply search filters for display
-  const workAccidents = filterAccidentRecords(accidentRecords);
-  const nearMisses = filterNearMissRecords(accidentRecords);
+  // Apply search filters for display (using only completed records)
+  const workAccidents = filterAccidentRecords(completedRecords);
+  const nearMisses = filterNearMissRecords(completedRecords);
 
   // Group filtered results by month
   const workAccidentsGrouped = groupRecordsByMonth(workAccidents);
@@ -385,8 +392,8 @@ export default function AccidentManagementPage() {
 
   // Analytics data preparation
   const analyticsData = useMemo(() => {
-    // Filter records by selected year, month, and event type for analytics
-    let filteredRecords = accidentRecords.filter((record: any) => {
+    // Filter records by selected year, month, and event type for analytics (using only completed records)
+    let filteredRecords = completedRecords.filter((record: any) => {
       if (!record.eventDate) return false;
       
       try {
