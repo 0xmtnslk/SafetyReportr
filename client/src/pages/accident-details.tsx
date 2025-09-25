@@ -857,10 +857,27 @@ export default function AccidentDetailsPage() {
                   </div>
                 )}
 
-                {/* 6. Ekli Belgeler */}
+                {/* 6. SGK Bildirim Tarihi - only for work accidents */}
+                {existingRecord.eventType === "İş Kazası" && existingRecord.sgkNotificationDate && (
+                  <div>
+                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4 border-b border-gray-200 dark:border-gray-700 pb-2">
+                      6. SGK Bildirim Tarihi
+                    </h2>
+                    <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border-l-4 border-blue-500">
+                      <div>
+                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">SGK'ya Bildirim Tarihi:</span>
+                        <p className="text-gray-900 dark:text-white font-medium">
+                          {safeFormatDate(existingRecord.sgkNotificationDate)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 7. Ekli Belgeler */}
                 <div>
                   <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4 border-b border-gray-200 dark:border-gray-700 pb-2">
-                    6. Ekli Belgeler
+                    7. Ekli Belgeler
                   </h2>
                   <div className="space-y-4">
                     {existingRecord.sgkNotificationFormUrl ? (
