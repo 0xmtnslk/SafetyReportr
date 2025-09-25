@@ -1346,15 +1346,8 @@ export default function AccidentDetailsPage() {
                   )}
                 />
               </div>
-            </CardContent>
-          </Card>
 
-          {/* Employment Classification */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Personel Sınıflandırması</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
+              {/* Employee Classification Fields */}
               <div className="grid md:grid-cols-2 gap-4">
                 {/* Employee Status */}
                 <FormField
@@ -1414,9 +1407,7 @@ export default function AccidentDetailsPage() {
                     </FormItem>
                   )}
                 />
-              </div>
 
-              <div className="grid md:grid-cols-2 gap-4">
                 {/* Department */}
                 <FormField
                   control={form.control}
@@ -1435,7 +1426,9 @@ export default function AccidentDetailsPage() {
                     </FormItem>
                   )}
                 />
+              </div>
 
+              <div className="grid md:grid-cols-2 gap-4">
                 {/* Position */}
                 <FormField
                   control={form.control}
