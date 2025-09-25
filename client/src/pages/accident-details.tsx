@@ -118,7 +118,7 @@ const viewDocument = async (recordId: string, documentType: 'sgk-form' | 'analys
 const accidentFormSchema = z.object({
   // Basic Event Information
   eventDate: z.string().min(1, "Tarih zorunludur"),
-  eventTime: z.string().min(1, "Saat zorunludur").regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Saat formatı HH:MM olmalıdır (örn: 14:30)"),
+  eventTime: z.string().min(1, "Saat zorunludur").regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Geçerli bir saat seçin"),
   eventType: z.enum(["İş Kazası", "Ramak Kala"]),
   workShift: z.string(),
   eventArea: z.string(),
@@ -1107,11 +1107,11 @@ export default function AccidentDetailsPage() {
                       <FormLabel>Olayın Gerçekleştiği Saat</FormLabel>
                       <FormControl>
                         <div className="relative">
-                          <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground z-10 pointer-events-none" />
                           <Input 
-                            placeholder="Örn: 14:30" 
+                            type="time"
                             {...field} 
-                            className="pl-10"
+                            className="pl-10 text-base"
                             data-testid="input-event-time"
                           />
                         </div>
