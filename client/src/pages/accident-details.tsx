@@ -1675,6 +1675,26 @@ export default function AccidentDetailsPage() {
                 </div>
               )}
 
+              {/* Event Description */}
+              <FormField
+                control={form.control}
+                name="eventDescription"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Olay Açıklaması - Detaylı Açıklama</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Olayın detaylı açıklamasını girin..." 
+                        className="min-h-[120px]"
+                        {...field}
+                        data-testid="textarea-event-description"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
                 <div className="grid md:grid-cols-2 gap-4">
                   {/* Work Day Loss */}
                   <FormField
