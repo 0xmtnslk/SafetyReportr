@@ -1218,55 +1218,6 @@ export default function AccidentDetailsPage() {
               <CardTitle>Personel Bilgileri</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* SGK Notification Date - only for work accidents */}
-              {isWorkAccident && (
-                <FormField
-                  control={form.control}
-                  name="sgkNotificationDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>SGK'ya Bildirim Tarihi</FormLabel>
-                      <div className="flex gap-2">
-                        <FormControl>
-                          <Input
-                            type="date"
-                            {...field}
-                            className="flex-1"
-                            data-testid="input-sgk-date"
-                          />
-                        </FormControl>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="icon"
-                              data-testid="button-sgk-date-calendar"
-                            >
-                              <CalendarDays className="h-4 w-4" />
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <CalendarComponent
-                              mode="single"
-                              selected={field.value ? new Date(field.value) : undefined}
-                              onSelect={(date) => {
-                                if (date) {
-                                  const formattedDate = format(date, "yyyy-MM-dd");
-                                  field.onChange(formattedDate);
-                                }
-                              }}
-                              disabled={(date) => date > new Date()}
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
 
               <div className="grid md:grid-cols-2 gap-4">
                 {/* Personnel Number */}
