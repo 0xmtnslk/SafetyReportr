@@ -1931,32 +1931,6 @@ export default function AccidentDetailsPage() {
             </CardContent>
           </Card>
 
-          {/* Event Description */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Olay Açıklaması</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <FormField
-                control={form.control}
-                name="eventDescription"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Detaylı Açıklama</FormLabel>
-                    <FormControl>
-                      <Textarea 
-                        placeholder="Olayın detaylı açıklamasını girin..." 
-                        className="min-h-[150px]"
-                        {...field}
-                        data-testid="textarea-event-description"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </CardContent>
-          </Card>
 
           {/* Action Buttons */}
           <div className="flex gap-4 justify-end">
